@@ -171,7 +171,21 @@ CREATE TABLE transactions (
     FOREIGN KEY (to_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (posted_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL,
+
+    -- Transaction Integrity Rules (CRITICAL)
+    CONSTRAINT chk_transaction_transfer_locations CHECK (
+        (type = 'transfer' AND from_location_id IS NOT NULL AND to_location_id IS NOT NULL) OR 
+        (type <> 'transfer')
+    ),
+    CONSTRAINT chk_transaction_receipt_vendor CHECK (
+        (type = 'receipt' AND vendor_id IS NOT NULL) OR 
+        (type <> 'receipt')
+    ),
+    CONSTRAINT chk_transaction_issue_no_vendor CHECK (
+        (type = 'issue' AND vendor_id IS NULL) OR 
+        (type <> 'issue')
+    )
 );
 
 CREATE TABLE transaction_lines (

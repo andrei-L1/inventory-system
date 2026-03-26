@@ -124,6 +124,12 @@ A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to:
 3.  Compare both against `inventories.quantity_on_hand`.
 4.  If a mismatch is found, it logs the error in **`reconciliation_logs`** and sends an **Admin Alert**.
 
+### 7.4 Transaction Integrity Rules (CRITICAL)
+Beyond standard foreign keys, the system enforces business logic via Database `CHECK` constraints and Model-level validation:
+*   **Transfers**: Must have both `from_location_id` AND `to_location_id`.
+*   **Receipts**: Must have a `vendor_id`.
+*   **Issues**: Must NOT have a `vendor_id` (enforce direct sale/usage).
+
 ---
 
 ## 8. Setup & Maintenance
