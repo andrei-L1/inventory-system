@@ -42,14 +42,6 @@ class Product extends Model
     }
 
     /**
-     * Get the stock movements for this product.
-     */
-    public function stockMovements(): HasMany
-    {
-        return $this->hasMany(StockMovement::class);
-    }
-
-    /**
      * Get the current inventory levels for this product.
      */
     public function inventories(): HasMany

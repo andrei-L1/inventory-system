@@ -57,21 +57,10 @@ return new class extends Migration
             $table->index('costing_method');
         });
 
-        // ─── Product Images ───────────────────────────────────────────────────
-        Schema::create('product_images', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
-            $table->string('path', 255);
-            $table->boolean('is_primary')->default(false);
-            $table->timestamps();
-
-            $table->index('product_id');
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('product_images');
         Schema::dropIfExists('products');
         Schema::dropIfExists('units_of_measure');
         Schema::dropIfExists('categories');
