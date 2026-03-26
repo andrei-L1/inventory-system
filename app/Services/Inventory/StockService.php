@@ -3,19 +3,18 @@
 namespace App\Services\Inventory;
 
 use App\Models\Inventory;
-use App\Models\Transaction;
-use App\Models\TransactionLine;
 use App\Models\InventoryCostLayer;
-use Illuminate\Support\Facades\DB;
+use App\Models\Transaction;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class StockService
 {
     /**
      * Record a stock movement with strict integrity.
-     * 
-     * @param array $data Transaction header and lines
-     * @return Transaction
+     *
+     * @param  array  $data  Transaction header and lines
+     *
      * @throws Exception
      */
     public function recordMovement(array $data): Transaction
@@ -32,14 +31,14 @@ class StockService
                     ->lockForUpdate()
                     ->firstOrCreate([
                         'product_id' => $lineData['product_id'],
-                        'location_id' => $lineData['location_id']
+                        'location_id' => $lineData['location_id'],
                     ], [
-                        'quantity_on_hand' => 0
+                        'quantity_on_hand' => 0,
                     ]);
 
                 // 3. Create Transaction Line
                 $line = $transaction->lines()->create(array_merge($lineData, [
-                    'transaction_id' => $transaction->id
+                    'transaction_id' => $transaction->id,
                 ]));
 
                 // 4. Update Inventory Cache

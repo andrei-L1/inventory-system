@@ -27,7 +27,7 @@ class StockMovement extends Model
         'quantity',
         'unit_cost',
         'total_cost',
-        'movement_date'
+        'movement_date',
     ];
 
     /**
@@ -43,7 +43,7 @@ class StockMovement extends Model
         parent::boot();
         static::creating(function ($model) {
             $model->created_at = $model->freshTimestamp();
-            if (!$model->movement_date) {
+            if (! $model->movement_date) {
                 $model->movement_date = $model->freshTimestamp();
             }
         });

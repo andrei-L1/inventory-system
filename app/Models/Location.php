@@ -32,7 +32,6 @@ class Location extends Model
         return $this->belongsTo(LocationType::class);
     }
 
-
     /**
      * Get the parent location.
      */

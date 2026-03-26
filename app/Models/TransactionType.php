@@ -27,7 +27,6 @@ class TransactionType extends Model
         return strtoupper($this->code) === strtoupper($code);
     }
 
-
     /**
      * Get the multiplier for stock updates (1 for debit, -1 for credit).
      */
@@ -36,4 +35,3 @@ class TransactionType extends Model
         return $this->is_debit ? 1 : -1;
     }
 }
-

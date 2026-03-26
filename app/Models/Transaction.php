@@ -46,7 +46,6 @@ class Transaction extends Model
         return $this->belongsTo(PurchaseOrder::class);
     }
 
-
     /**
      * Boot the model.
      */
@@ -58,7 +57,6 @@ class Transaction extends Model
             $transaction->validateIntegrity();
         });
     }
-
 
     /**
      * Get the type of this transaction.
@@ -86,26 +84,27 @@ class Transaction extends Model
 
         if ($type) {
             if ($type->matchesCode('TRFR')) {
-                if (!$this->from_location_id || !$this->to_location_id) {
+                if (! $this->from_location_id || ! $this->to_location_id) {
                     throw ValidationException::withMessages([
-                        'to_location_id' => 'A transfer transaction must specify both origin and destination.'
+                        'to_location_id' => 'A transfer transaction must specify both origin and destination.',
                     ]);
                 }
             }
 
-            if ($type->matchesCode('RCPT') && !$this->vendor_id) {
+            if ($type->matchesCode('RCPT') && ! $this->vendor_id) {
                 throw ValidationException::withMessages([
-                    'vendor_id' => 'A receipt transaction must specify a vendor.'
+                    'vendor_id' => 'A receipt transaction must specify a vendor.',
                 ]);
             }
 
             if ($type->matchesCode('ISSU') && $this->vendor_id) {
                 throw ValidationException::withMessages([
-                    'vendor_id' => 'An issue transaction must NOT have a vendor.'
+                    'vendor_id' => 'An issue transaction must NOT have a vendor.',
                 ]);
             }
         }
     }
+
     /**
      * Get the vendor for this transaction.
      */

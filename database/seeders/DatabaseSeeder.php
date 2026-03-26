@@ -25,40 +25,40 @@ class DatabaseSeeder extends Seeder
         // 2. Roles
         // ────────────────────────────────────────────────────────────────────
         $adminRoleId = DB::table('roles')->insertGetId([
-            'name'        => 'admin',
+            'name' => 'admin',
             'description' => 'Full system access',
-            'is_active'   => true,
-            'created_at'  => Carbon::now(),
-            'updated_at'  => Carbon::now(),
+            'is_active' => true,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         $staffRoleId = DB::table('roles')->insertGetId([
-            'name'        => 'staff',
+            'name' => 'staff',
             'description' => 'Can manage inventory and transactions',
-            'is_active'   => true,
-            'created_at'  => Carbon::now(),
-            'updated_at'  => Carbon::now(),
+            'is_active' => true,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         DB::table('roles')->insert([
-            'name'        => 'user',
+            'name' => 'user',
             'description' => 'Regular user with limited access',
-            'is_active'   => true,
-            'created_at'  => Carbon::now(),
-            'updated_at'  => Carbon::now(),
+            'is_active' => true,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         // ────────────────────────────────────────────────────────────────────
         // 3. Admin User
         // ────────────────────────────────────────────────────────────────────
         DB::table('users')->insert([
-            'role_id'    => $adminRoleId,
-            'username'   => 'admin',
+            'role_id' => $adminRoleId,
+            'username' => 'admin',
             'first_name' => 'System',
-            'last_name'  => 'Administrator',
-            'email'      => 'admin@example.com',
-            'password'   => Hash::make('password'),
-            'is_active'  => true,
+            'last_name' => 'Administrator',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'is_active' => true,
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ]);
@@ -76,36 +76,36 @@ class DatabaseSeeder extends Seeder
         // 5. Sample Locations  (location_types seeded above — safe to read now)
         // ────────────────────────────────────────────────────────────────────
         $warehouseTypeId = DB::table('location_types')->where('name', 'warehouse')->value('id');
-        $zoneTypeId      = DB::table('location_types')->where('name', 'zone')->value('id');
+        $zoneTypeId = DB::table('location_types')->where('name', 'zone')->value('id');
 
         $wh1 = DB::table('locations')->insertGetId([
-            'code'             => 'WH-A',
-            'name'             => 'Warehouse A',
+            'code' => 'WH-A',
+            'name' => 'Warehouse A',
             'location_type_id' => $warehouseTypeId,
-            'address'          => '123 Tech Park',
-            'is_active'        => true,
-            'created_at'       => Carbon::now(),
-            'updated_at'       => Carbon::now(),
+            'address' => '123 Tech Park',
+            'is_active' => true,
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ]);
 
         DB::table('locations')->insert([
             [
-                'code'             => 'WH-A-Z1',
-                'name'             => 'Zone 1 (Storage)',
+                'code' => 'WH-A-Z1',
+                'name' => 'Zone 1 (Storage)',
                 'location_type_id' => $zoneTypeId,
-                'parent_id'        => $wh1,
-                'is_active'        => true,
-                'created_at'       => Carbon::now(),
-                'updated_at'       => Carbon::now(),
+                'parent_id' => $wh1,
+                'is_active' => true,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
             ],
             [
-                'code'             => 'WH-A-Z2',
-                'name'             => 'Zone 2 (Dispatch)',
+                'code' => 'WH-A-Z2',
+                'name' => 'Zone 2 (Dispatch)',
                 'location_type_id' => $zoneTypeId,
-                'parent_id'        => $wh1,
-                'is_active'        => true,
-                'created_at'       => Carbon::now(),
-                'updated_at'       => Carbon::now(),
+                'parent_id' => $wh1,
+                'is_active' => true,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
             ],
         ]);
 

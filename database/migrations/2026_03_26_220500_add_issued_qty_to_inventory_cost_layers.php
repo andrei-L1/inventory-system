@@ -19,7 +19,7 @@ return new class extends Migration
         if (! Schema::hasColumn('inventory_cost_layers', 'issued_qty')) {
             Schema::table('inventory_cost_layers', function (Blueprint $table) {
                 $table->decimal('issued_qty', 18, 4)->default(0)->after('received_qty')
-                      ->comment('Total quantity consumed from this layer');
+                    ->comment('Total quantity consumed from this layer');
             });
         }
     }
