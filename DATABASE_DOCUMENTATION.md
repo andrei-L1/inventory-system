@@ -25,9 +25,12 @@ This document outlines the production-grade database architecture for the Invent
 *   **`inventories`**: The real-time "Stock on Hand" ledger per product-location pair.
 *   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method.
 
-### 2.4 Transactions & Stock Movement
+### 2.4 Transactions
 *   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Includes status control (`draft`, `pending`, `posted`, `cancelled`).
 *   **`transaction_lines`**: Detailed line items including cost and selling price snapshots at the time of the event.
+
+### 2.5 Stock Movement Ledger
+*   **`stock_movements`**: **The Immutable Ledger**. This is the flat record of every stock change. Unlike transaction lines, this table explicitly records `in` and `out` movements for each location. It is the primary source for rebuilding inventory state and auditing.
 
 ---
 
@@ -82,6 +85,9 @@ erDiagram
     PRODUCT ||--o{ INVENTORY_COST_LAYER : "accrues cost"
     TRANSACTION ||--o{ TRANSACTION_LINE : "contains"
     TRANSACTION_LINE ||--o{ INVENTORY_COST_LAYER : "updates"
+    PRODUCT ||--o{ STOCK_MOVEMENT : "audit trail"
+    LOCATION ||--o{ STOCK_MOVEMENT : "ledger for"
+    TRANSACTION_LINE ||--o{ STOCK_MOVEMENT : "generates"
     AUDIT_LOG }o--|| USER : "logged by"
     USER ||--o{ ATTACHMENT : "uploads"
     ATTACHMENT }o--|| PRODUCT : "attached to"
@@ -104,15 +110,16 @@ The `inventories.quantity_on_hand` field is treated as a **denormalized cache** 
 *   **ALL** changes must occur within an Eloquent **`DB::transaction()`** block.
 *   The system must use **Pessimistic Locking** (`SELECT FOR UPDATE`) on the `inventories` row before calculating the new total.
 
-### 7.2 The "Rule of Three" (Alignment)
-Every stock movement (Receipt, Issue, Transfer) must update three distinct sources of truth simultaneously:
-1.  **`transactions` / `transaction_lines`**: The historical audit trail.
-2.  **`inventories`**: The real-time "Stock on Hand" snapshot.
-3.  **`inventory_cost_layers`**: The accounting-grade cost pool (FIFO/LIFO).
+### 7.2 The "Rule of Four" (Alignment)
+Every stock movement (Receipt, Issue, Transfer) must update four distinct sources of truth simultaneously:
+1.  **`transactions` / `transaction_lines`**: The business event history.
+2.  **`stock_movements`**: The immutable, flat movement ledger (Audit Trail).
+3.  **`inventories`**: The real-time "Stock on Hand" cache.
+4.  **`inventory_cost_layers`**: The accounting-grade cost pool (FIFO/LIFO).
 
 ### 7.3 Nightly Reconciliation (The "Self-Heal")
 A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to:
-1.  Calculate `SUM(transaction_lines.quantity)` per product/location.
+1.  Calculate `SUM(stock_movements.quantity)` (net balance) per product/location.
 2.  Calculate `SUM(inventory_cost_layers.remaining_qty)` per product/location.
 3.  Compare both against `inventories.quantity_on_hand`.
 4.  If a mismatch is found, it logs the error in **`reconciliation_logs`** and sends an **Admin Alert**.

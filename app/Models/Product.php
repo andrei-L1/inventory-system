@@ -6,6 +6,7 @@ use App\Traits\HasAttachments;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
@@ -38,5 +39,21 @@ class Product extends Model
     public function preferredVendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'preferred_vendor_id');
+    }
+
+    /**
+     * Get the stock movements for this product.
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    /**
+     * Get the current inventory levels for this product.
+     */
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
     }
 }

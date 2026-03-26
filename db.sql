@@ -192,7 +192,25 @@ CREATE TABLE transaction_lines (
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
--- 5. Cost Layers (FIFO/LIFO Tracking)
+-- 5. Stock Ledger (Immutable Movements)
+CREATE TABLE stock_movements (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    location_id BIGINT UNSIGNED NOT NULL,
+    transaction_line_id BIGINT UNSIGNED,
+    movement_type ENUM('in', 'out') NOT NULL,
+    quantity DECIMAL(18, 4) NOT NULL,
+    unit_cost DECIMAL(18, 6) DEFAULT 0,
+    total_cost DECIMAL(18, 6) DEFAULT 0,
+    movement_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    FOREIGN KEY (transaction_line_id) REFERENCES transaction_lines(id) ON DELETE SET NULL,
+    INDEX idx_stock_movements_query (product_id, location_id, movement_date)
+);
+
+-- 6. Cost Layers (FIFO/LIFO Tracking)
 CREATE TABLE inventory_cost_layers (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_id BIGINT UNSIGNED NOT NULL,
@@ -211,7 +229,7 @@ CREATE TABLE inventory_cost_layers (
     INDEX inv_cost_layers_query_idx (product_id, location_id, is_exhausted, receipt_date)
 );
 
--- 6. Audit & Reports
+-- 7. Audit & Reports
 CREATE TABLE audit_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NULL,
@@ -248,7 +266,7 @@ CREATE TABLE stock_snapshots (
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
--- 7. General Attachments
+-- 8. General Attachments
 CREATE TABLE attachments (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     attachable_id BIGINT UNSIGNED NOT NULL,
@@ -266,7 +284,7 @@ CREATE TABLE attachments (
     INDEX (attachable_id, attachable_type)
 );
 
--- 8. Integrity & Reconciliation
+-- 9. Integrity & Reconciliation
 CREATE TABLE reconciliation_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_id BIGINT UNSIGNED NOT NULL,
