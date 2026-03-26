@@ -62,9 +62,9 @@ return new class extends Migration
         // ─── Add FK to cost layers now that transaction_lines exists ─────────
         Schema::table('inventory_cost_layers', function (Blueprint $table) {
             $table->foreign('transaction_line_id')
-                  ->references('id')
-                  ->on('transaction_lines')
-                  ->nullOnDelete();
+                ->references('id')
+                ->on('transaction_lines')
+                ->nullOnDelete();
         });
     }
 
