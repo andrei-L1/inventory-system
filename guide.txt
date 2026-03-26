@@ -1,0 +1,319 @@
+================================================================================
+  INVENTORY SYSTEM — PROJECT SETUP GUIDE
+================================================================================
+  Laravel 12 + Vue 3 + Inertia.js + TailwindCSS v4 + SQLite
+  Created: 2026-03-26
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 1: PREREQUISITES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before anything, make sure you have the following installed on your machine:
+
+  - PHP          >= 8.2        (bundled with XAMPP)
+  - Composer     >= 2.x        https://getcomposer.org/
+  - Node.js      >= 18.x       https://nodejs.org/
+  - npm          >= 9.x        (comes with Node.js)
+  - XAMPP        (for local Apache/PHP environment)
+  - Git          (optional but recommended)
+
+To verify your installations, open a terminal and run:
+  php --version
+  composer --version
+  node --version
+  npm --version
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 2: HOW THE PROJECT WAS CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  STEP 1 — Create the Laravel Project
+  -------------------------------------
+  Navigate to the XAMPP htdocs directory and create the project using Composer:
+
+    cd C:\xampp\htdocs
+    composer create-project laravel/laravel inventory-system
+
+  This scaffolds a fresh Laravel 12 application inside the
+  "inventory-system" folder.
+
+
+  STEP 2 — Install Inertia.js (Server-Side Adapter)
+  ---------------------------------------------------
+  Navigate into the project folder and install the Inertia Laravel package:
+
+    cd inventory-system
+    composer require inertiajs/inertia-laravel
+
+  Inertia.js bridges Laravel (backend) with Vue 3 (frontend) without
+  requiring a separate API layer.
+
+
+  STEP 3 — Install Node.js Dependencies for Vue 3 + Inertia
+  -----------------------------------------------------------
+  Install the required frontend packages:
+
+    npm install @inertiajs/vue3 @vitejs/plugin-vue vue
+
+  These packages add:
+    - @inertiajs/vue3       → Inertia client-side adapter for Vue 3
+    - @vitejs/plugin-vue    → Vite plugin to compile Vue Single File Components
+    - vue                   → Vue 3 framework
+
+
+  STEP 4 — Install TailwindCSS v4 (with Vite plugin)
+  ----------------------------------------------------
+  TailwindCSS v4 uses a Vite-native plugin instead of a PostCSS config:
+
+    npm install tailwindcss @tailwindcss/vite
+
+  No tailwind.config.js is needed — Tailwind v4 is configured directly
+  via CSS and the Vite plugin.
+
+
+  STEP 5 — Configure vite.config.js
+  ------------------------------------
+  The vite.config.js was updated to register all three plugins
+  (Laravel, TailwindCSS, Vue):
+
+    import { defineConfig } from 'vite';
+    import laravel from 'laravel-vite-plugin';
+    import tailwindcss from '@tailwindcss/vite';
+    import vue from '@vitejs/plugin-vue';
+
+    export default defineConfig({
+        plugins: [
+            laravel({
+                input: ['resources/css/app.css', 'resources/js/app.js'],
+                refresh: true,
+            }),
+            tailwindcss(),
+            vue(),
+        ],
+        server: {
+            watch: {
+                ignored: ['**/storage/framework/views/**'],
+            },
+        },
+    });
+
+
+  STEP 6 — Generate Application Key
+  -----------------------------------
+  Laravel requires a unique application key for encryption:
+
+    php artisan key:generate
+
+  This fills in the APP_KEY value in your .env file.
+
+
+  STEP 7 — Set Up Database (SQLite)
+  -----------------------------------
+  This project uses SQLite for simplicity. The database file is located at:
+    database/database.sqlite
+
+  To create it (if not already present):
+    type nul > database\database.sqlite      (Windows CMD)
+    New-Item database\database.sqlite        (PowerShell)
+
+  The .env file is already configured to use SQLite:
+    DB_CONNECTION=sqlite
+
+
+  STEP 8 — Run Migrations
+  -------------------------
+  Run all database migrations to create the required tables:
+
+    php artisan migrate
+
+  If prompted to create the SQLite file, confirm with "yes".
+
+
+  STEP 9 — Seed the Database (optional)
+  ----------------------------------------
+  To populate the database with sample/test data:
+
+    php artisan db:seed
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 3: INSTALLING DEPENDENCIES (CLONING / FRESH SETUP)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you cloned or copied this project from somewhere else, follow these
+steps to get it running from scratch.
+
+
+  STEP 1 — Clone or Copy the Project
+  ------------------------------------
+  If using Git:
+    git clone <repository-url> C:\xampp\htdocs\inventory-system
+    cd C:\xampp\htdocs\inventory-system
+
+  Or simply copy the project folder to:
+    C:\xampp\htdocs\inventory-system
+
+
+  STEP 2 — Install PHP Dependencies (Composer)
+  ----------------------------------------------
+  Run Composer to install all required PHP packages defined in composer.json:
+
+    composer install
+
+  This will populate the /vendor directory.
+
+
+  STEP 3 — Create Your Environment File
+  ----------------------------------------
+  Copy the example environment file:
+
+    copy .env.example .env       (Windows CMD)
+    Copy-Item .env.example .env  (PowerShell)
+
+  Then open .env and configure the following as needed:
+
+    APP_NAME=Laravel
+    APP_ENV=local
+    APP_DEBUG=true
+    APP_URL=http://localhost
+
+    DB_CONNECTION=sqlite
+    (No other DB settings needed for SQLite — it uses database/database.sqlite)
+
+    QUEUE_CONNECTION=database
+    SESSION_DRIVER=database
+    CACHE_STORE=database
+
+
+  STEP 4 — Generate Application Key
+  -----------------------------------
+    php artisan key:generate
+
+
+  STEP 5 — Create the SQLite Database File
+  ------------------------------------------
+  The SQLite database file must exist before running migrations:
+
+    Windows CMD:
+      type nul > database\database.sqlite
+
+    PowerShell:
+      New-Item -ItemType File database\database.sqlite
+
+
+  STEP 6 — Run Migrations
+  -------------------------
+    php artisan migrate
+
+  To also seed sample data:
+    php artisan db:seed
+
+  Or run both at once:
+    php artisan migrate --seed
+
+
+  STEP 7 — Install Node.js Dependencies
+  ----------------------------------------
+    npm install
+
+  This will install all frontend packages from package.json:
+    - vue, @inertiajs/vue3, @vitejs/plugin-vue
+    - tailwindcss, @tailwindcss/vite
+    - vite, laravel-vite-plugin, concurrently, axios
+
+
+  STEP 8 — Set Correct Storage Permissions
+  ------------------------------------------
+  Ensure Laravel can write to the storage and cache directories:
+
+    php artisan storage:link
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 4: RUNNING THE PROJECT LOCALLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Option A — Run everything at once (recommended)
+  -------------------------------------------------
+  The project includes a Composer "dev" script that starts all services
+  concurrently (Laravel server, queue worker, log watcher, Vite dev server):
+
+    composer run dev
+
+  Then open your browser at:
+    http://localhost:8000
+
+
+  Option B — Run individually
+  ----------------------------
+  Open separate terminal windows and run each service:
+
+    Terminal 1 (Laravel server):
+      php artisan serve
+
+    Terminal 2 (Vite dev server / hot reload):
+      npm run dev
+
+    Terminal 3 (Queue worker — required for background jobs):
+      php artisan queue:listen --tries=1 --timeout=0
+
+
+  Option C — Build for production
+  ---------------------------------
+  To compile frontend assets for production:
+
+    npm run build
+
+  Then serve the project via XAMPP Apache by visiting:
+    http://localhost/inventory-system/public
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 5: TECH STACK SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Backend:
+    - Laravel 12 (PHP ^8.2)
+    - Inertia.js Laravel Adapter (^3.0)
+    - SQLite database (via database/database.sqlite)
+    - Laravel Queues (database driver)
+    - Laravel Tinker, Pail, Pint, Sail (dev tools)
+
+  Frontend:
+    - Vue 3 (^3.5.x)
+    - Inertia.js Vue 3 Adapter (^3.0)
+    - TailwindCSS v4 (^4.0)
+    - Vite (^7.0) with laravel-vite-plugin
+    - Axios (HTTP requests)
+
+  Environment:
+    - XAMPP (PHP + Apache on Windows)
+    - Node.js >= 18
+    - Composer >= 2
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PART 6: USEFUL ARTISAN COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  php artisan serve                     Start Laravel dev server
+  php artisan migrate                   Run all pending migrations
+  php artisan migrate:fresh --seed      Drop all tables and re-migrate + seed
+  php artisan db:seed                   Run database seeders
+  php artisan make:model ModelName -mcr Create model, migration, controller
+  php artisan make:controller Name      Create a new controller
+  php artisan make:migration name       Create a new migration file
+  php artisan queue:listen              Start the queue worker
+  php artisan route:list                List all registered routes
+  php artisan config:clear              Clear cached configuration
+  php artisan cache:clear               Clear application cache
+  php artisan key:generate              Generate APP_KEY in .env
+  php artisan tinker                    Open an interactive REPL shell
+
+
+================================================================================
+  END OF GUIDE
+================================================================================
