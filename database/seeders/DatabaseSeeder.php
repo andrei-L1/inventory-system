@@ -74,5 +74,8 @@ class DatabaseSeeder extends Seeder
                 'created_at' => Carbon::now(),
             ],
         ]);
+
+        // ─── Seed Vendors ──────────────────────────────────────────
+        $this->call(VendorSeeder::class);
     }
 }

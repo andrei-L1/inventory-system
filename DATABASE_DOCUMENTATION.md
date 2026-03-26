@@ -7,8 +7,9 @@ This document outlines the production-grade database architecture for the Invent
 
 ## 2. Core Modules
 
-### 2.1 Identity & Access Management (IAM)
+### 2.1 Identity, Access Management & Partners
 *   **`roles`**: Defines system access levels (`admin`, `staff`, `user`).
+*   **`vendors`**: External partners supplying goods. Tracks contact info, address, and tax ID.
 *   **`users`**: Extended profile including `is_active` flag, last login IP, and device tracking.
 *   **`sessions`**: Production-ready session storage with parsed device info (`device_type`, `browser`, `platform`) and admin-driven termination support (`is_admin_terminated`).
 
@@ -67,6 +68,8 @@ The system natively supports three major accounting methods:
 erDiagram
     ROLE ||--o{ USER : "has"
     USER ||--o{ TRANSACTION : "creates"
+    VENDOR ||--o{ PRODUCT : "preferred for"
+    VENDOR ||--o{ TRANSACTION : "supplies"
     LOCATION ||--o{ LOCATION : "parent of"
     LOCATION ||--o{ INVENTORY : "stores"
     PRODUCT ||--o{ INVENTORY : "tracked in"
