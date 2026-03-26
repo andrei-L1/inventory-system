@@ -60,6 +60,11 @@ The system natively supports three major accounting methods:
 *   **`stock_snapshots`**: Captured daily or on-demand.
 *   **Purpose**: Provides "Point-in-Time" reporting. You can generate a valuation report for December 31st even if stocks have moved since then.
 
+### 4.3 General Attachments
+*   **`attachments`**: Polymorphic table allowing any entity (Product, Transaction, Vendor) to have multiple file uploads.
+*   **Supported types**: PDFs, images, Excel sheets, and certificates.
+
+
 ---
 
 ## 5. ER Diagram (Conceptual)
@@ -78,6 +83,10 @@ erDiagram
     TRANSACTION ||--o{ TRANSACTION_LINE : "contains"
     TRANSACTION_LINE ||--o{ INVENTORY_COST_LAYER : "updates"
     AUDIT_LOG }o--|| USER : "logged by"
+    USER ||--o{ ATTACHMENT : "uploads"
+    ATTACHMENT }o--|| PRODUCT : "attached to"
+    ATTACHMENT }o--|| VENDOR : "attached to"
+    ATTACHMENT }o--|| TRANSACTION : "attached to"
 ```
 
 ---

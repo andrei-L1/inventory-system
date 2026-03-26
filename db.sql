@@ -248,4 +248,23 @@ CREATE TABLE stock_snapshots (
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
+-- 7. General Attachments
+CREATE TABLE attachments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attachable_id BIGINT UNSIGNED NOT NULL,
+    attachable_type VARCHAR(191) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_name VARCHAR(191) NOT NULL,
+    file_type VARCHAR(80) NULL,
+    file_size BIGINT DEFAULT 0,
+    collection_name VARCHAR(50) DEFAULT 'general',
+    uploader_id BIGINT UNSIGNED NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX (attachable_id, attachable_type)
+);
+
+
 
