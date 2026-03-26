@@ -1,0 +1,10 @@
+# This is the CODEOWNERS file for the inventory-system project.
+# It identifies who is responsible for specific parts of the codebase.
+
+# Global owners by default
+*           @andrei-L1
+
+# Optional specialized ownership
+/app/Models/ @andrei-L1
+/database/   @andrei-L1
+/tests/      @andrei-L1
