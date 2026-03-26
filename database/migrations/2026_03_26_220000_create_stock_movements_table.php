@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
 
             // Indexes for performance
-            $table->index(['product_id', 'location_id', 'movement_date']);
+            $table->index(['product_id', 'location_id', 'movement_date'], 'idx_stock_movements_query');
             $table->index('movement_type');
             $table->index('movement_date');
         });

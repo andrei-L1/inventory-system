@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('units_of_measure', function (Blueprint $table) {
-            $table->tinyInteger('is_active')->default(1)->after('abbreviation');
+            $table->boolean('is_active')->default(true)->after('abbreviation');
             $table->softDeletes()->after('is_active');
         });
     }

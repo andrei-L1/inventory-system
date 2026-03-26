@@ -1,8 +1,73 @@
+-- ============================================================
+-- Laravel Infrastructure Tables (framework boilerplate)
+-- ============================================================
+
+CREATE TABLE password_reset_tokens (
+    email VARCHAR(191) NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NULL,
+    PRIMARY KEY (email)
+);
+
+CREATE TABLE cache (
+    `key` VARCHAR(255) NOT NULL,
+    value MEDIUMTEXT NOT NULL,
+    expiration INT NOT NULL,
+    PRIMARY KEY (`key`),
+    INDEX (expiration)
+);
+
+CREATE TABLE cache_locks (
+    `key` VARCHAR(255) NOT NULL,
+    owner VARCHAR(255) NOT NULL,
+    expiration INT NOT NULL,
+    PRIMARY KEY (`key`),
+    INDEX (expiration)
+);
+
+CREATE TABLE jobs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    queue VARCHAR(255) NOT NULL,
+    payload LONGTEXT NOT NULL,
+    attempts TINYINT UNSIGNED NOT NULL,
+    reserved_at INT UNSIGNED NULL,
+    available_at INT UNSIGNED NOT NULL,
+    created_at INT UNSIGNED NOT NULL,
+    INDEX (queue)
+);
+
+CREATE TABLE job_batches (
+    id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    total_jobs INT NOT NULL,
+    pending_jobs INT NOT NULL,
+    failed_jobs INT NOT NULL,
+    failed_job_ids LONGTEXT NOT NULL,
+    options MEDIUMTEXT NULL,
+    cancelled_at INT NULL,
+    created_at INT NOT NULL,
+    finished_at INT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE TABLE failed_jobs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(255) NOT NULL UNIQUE,
+    connection TEXT NOT NULL,
+    queue TEXT NOT NULL,
+    payload LONGTEXT NOT NULL,
+    exception LONGTEXT NOT NULL,
+    failed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
 -- 1. Identity, Access Control & Partners
 CREATE TABLE roles (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL
 );
@@ -114,6 +179,16 @@ CREATE TABLE units_of_measure (
     updated_at TIMESTAMP NULL
 );
 
+CREATE TABLE costing_methods (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(30) NOT NULL UNIQUE,        -- fifo, lifo, average
+    label VARCHAR(60) NOT NULL,              -- FIFO, LIFO, Weighted Average
+    description VARCHAR(255) NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
 CREATE TABLE products (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_code VARCHAR(60) NOT NULL UNIQUE,
@@ -125,7 +200,7 @@ CREATE TABLE products (
     brand VARCHAR(100) NULL,
     sku VARCHAR(100) NULL UNIQUE,
     barcode VARCHAR(100) NULL UNIQUE,
-    costing_method ENUM('fifo', 'lifo', 'average') DEFAULT 'average',
+    costing_method_id BIGINT UNSIGNED NOT NULL,  -- FK to costing_methods (replaces ENUM)
     average_cost DECIMAL(18, 6) DEFAULT 0,
     selling_price DECIMAL(18, 6) DEFAULT 0,
     reorder_point DECIMAL(18, 4) DEFAULT 0,
@@ -139,8 +214,20 @@ CREATE TABLE products (
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (uom_id) REFERENCES units_of_measure(id) ON DELETE SET NULL,
     FOREIGN KEY (preferred_vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+    FOREIGN KEY (costing_method_id) REFERENCES costing_methods(id) ON DELETE RESTRICT,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE product_images (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    path VARCHAR(255) NOT NULL,
+    is_primary TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    INDEX (product_id),
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
 -- 3. Stock Management
@@ -187,7 +274,7 @@ CREATE TABLE transactions (
     transaction_date DATE NOT NULL,
     notes TEXT NULL,
     reference_doc VARCHAR(100) NULL,
-    purchase_order_id BIGINT UNSIGNED NULL,
+    purchase_order_id BIGINT UNSIGNED NULL,  -- FK added via ALTER TABLE below (forward-ref fix)
     created_by BIGINT UNSIGNED NULL,
     posted_by BIGINT UNSIGNED NULL,
     posted_at TIMESTAMP NULL,
@@ -199,12 +286,12 @@ CREATE TABLE transactions (
     FOREIGN KEY (transaction_type_id) REFERENCES transaction_types(id),
     FOREIGN KEY (transaction_status_id) REFERENCES transaction_statuses(id),
     FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
-    FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL,
     FOREIGN KEY (from_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (to_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (posted_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX transactions_type_status_date_idx (transaction_type_id, transaction_status_id, transaction_date)
 );
 
 CREATE TABLE transaction_lines (
@@ -216,13 +303,14 @@ CREATE TABLE transaction_lines (
     unit_cost DECIMAL(18, 6) DEFAULT 0,
     total_cost DECIMAL(18, 6) DEFAULT 0,
     unit_price DECIMAL(18, 6) DEFAULT 0,
-    costing_method ENUM('fifo', 'lifo', 'average') NULL,
+    costing_method_id BIGINT UNSIGNED NULL,  -- FK snapshot of method used (nullable — historical record)
     notes TEXT NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (location_id) REFERENCES locations(id)
+    FOREIGN KEY (location_id) REFERENCES locations(id),
+    FOREIGN KEY (costing_method_id) REFERENCES costing_methods(id) ON DELETE SET NULL
 );
 
 -- 5. Stock Ledger (Immutable Movements)
@@ -240,7 +328,7 @@ CREATE TABLE stock_movements (
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (location_id) REFERENCES locations(id),
     FOREIGN KEY (transaction_line_id) REFERENCES transaction_lines(id) ON DELETE SET NULL,
-    INDEX idx_stock_movements_query (product_id, location_id, movement_date)
+    INDEX idx_stock_movements_query (product_id, location_id, movement_date)  -- explicit name matches migration
 );
 
 -- 6. Cost Layers (FIFO/LIFO Tracking)
@@ -309,7 +397,7 @@ CREATE TABLE purchase_order_lines (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 8. Audit & Reports
+-- 8. Audit & Analytics
 CREATE TABLE audit_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NULL,
@@ -327,6 +415,48 @@ CREATE TABLE audit_logs (
     tags JSON NULL,
     created_at TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE activity_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NULL,
+    action VARCHAR(100) NOT NULL,
+    description VARCHAR(500) NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    session_id VARCHAR(191) NULL,
+    metadata JSON NULL,
+    created_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE reports (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    type ENUM('stock_on_hand', 'stock_movement', 'transaction_history', 'valuation', 'transfer_history', 'low_stock', 'audit_trail', 'user_activity') NOT NULL,
+    filters JSON NULL,
+    format VARCHAR(10) DEFAULT 'pdf',
+    created_by BIGINT UNSIGNED NULL,
+    is_scheduled TINYINT(1) DEFAULT 0,
+    schedule_cron VARCHAR(60) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE report_runs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    report_id BIGINT UNSIGNED NOT NULL,
+    run_by BIGINT UNSIGNED NULL,
+    status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+    file_path VARCHAR(255) NULL,
+    error_message TEXT NULL,
+    started_at TIMESTAMP NULL,
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (run_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE stock_snapshots (
@@ -380,6 +510,8 @@ CREATE TABLE reconciliation_logs (
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
 
-
-
-
+-- 10. Deferred FK: transactions.purchase_order_id
+-- Added here because purchase_orders is defined after transactions above.
+ALTER TABLE transactions
+    ADD CONSTRAINT fk_transactions_purchase_order_id
+    FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL;

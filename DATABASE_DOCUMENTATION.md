@@ -116,15 +116,28 @@ erDiagram
 
 ---
 
+## 6. Reporting & Analytics
+
+The system features a decoupled reporting engine that supports both on-demand and scheduled execution.
+
+### 6.1 Report Engine
+*   **`reports`**: Saved report definitions (templates). Stores `filters` (JSON), `type`, and `schedule_cron` for automation.
+*   **Supported types**: `stock_on_hand`, `valuation`, `audit_trail`, `low_stock`, etc.
+*   **`report_runs`**: Historical execution records. Captures the execution `status` (pending, processing, completed, failed), the user who ran it, and the final `file_path`.
+
+### 6.2 Point-in-Time Analysis
+*   **`stock_snapshots`**: Captured daily or on-demand to provide historical valuation and audits.
+
+---
+
 ## 7. Inventory Integrity Protocol
 
 To prevent **Data Drift** (where transactions disagree with `quantity_on_hand`), the following architectural guardrails are strictly enforced:
 
-### 7.1 Transactional atomicity (Option A)
-The `inventories.quantity_on_hand` field is treated as a **denormalized cache** of the transaction history. 
+### 7.1 Transactional atomicity
 *   **NEVER** manually update `inventories` or `inventory_cost_layers`.
 *   **ALL** changes must occur within an Eloquent **`DB::transaction()`** block.
-*   The system must use **Pessimistic Locking** (`SELECT FOR UPDATE`) on the `inventories` row before calculating the new total.
+*   The system uses **Pessimistic Locking** (`SELECT FOR UPDATE`) on the `inventories` row before calculating the new total.
 
 ### 7.2 The "Rule of Four" (Alignment)
 Every stock movement (Receipt, Issue, Transfer) must update four distinct sources of truth simultaneously:
@@ -134,23 +147,7 @@ Every stock movement (Receipt, Issue, Transfer) must update four distinct source
 4.  **`inventory_cost_layers`**: The accounting-grade cost pool (FIFO/LIFO).
 
 ### 7.3 Nightly Reconciliation (The "Self-Heal")
-A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to:
-1.  Calculate `SUM(stock_movements.quantity)` (net balance) per product/location.
-2.  Calculate `SUM(inventory_cost_layers.remaining_qty)` per product/location.
-3.  Compare both against `inventories.quantity_on_hand`.
-4.  If a mismatch is found, it logs the error in **`reconciliation_logs`** and sends an **Admin Alert**.
-
-### 7.4 Transaction Integrity Rules (CRITICAL)
-Beyond standard foreign keys, the system enforces business logic via Database `CHECK` constraints and Model-level validation:
-*   **Transfers**: Must have both `from_location_id` AND `to_location_id`.
-*   **Receipts**: Must have a `vendor_id`.
-*   **Issues**: Must NOT have a `vendor_id` (enforce direct sale/usage).
-
-### 7.5 Retirement & Deletion Policy
-To maintain historical accuracy (History is King!):
-*   **Inactivation (`is_active = 0`)**: Preferred for "retiring" products, vendors, or locations. This blocks them from NEW transactions while preserving them in OLD records.
-*   **Soft Delete (`deleted_at`)**: Reserved ONLY for correcting data entry errors.
-*   **Historical Integrity**: Eloquent relationships for historical entities (Transactions, Movements, Cost Layers) must use **`withTrashed()`** to ensure the parent entity details are visible in reports even if the parent was "deleted."
+A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to calculate discrepancies and log them in **`reconciliation_logs`**.
 
 ---
 
@@ -165,10 +162,6 @@ php artisan migrate --force
 ```bash
 php artisan db:seed --force
 ```
-
-### Report Generation
-*   **Engine**: Reports are defined in the `reports` table.
-*   **Execution**: Report generation should be offloaded to queues, with results tracked in `report_runs`.
 
 ---
 
