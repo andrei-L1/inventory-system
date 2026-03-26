@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -58,6 +59,9 @@ return new class extends Migration
             $table->index(['transaction_id', 'product_id']);
             $table->index(['product_id', 'location_id']);
         });
+
+        // DB-level guard: prevent zero or negative quantities on transaction lines
+        DB::statement('ALTER TABLE transaction_lines ADD CONSTRAINT chk_txn_line_qty_positive CHECK (quantity > 0)');
 
         // ─── Add FK to cost layers now that transaction_lines exists ─────────
         Schema::table('inventory_cost_layers', function (Blueprint $table) {

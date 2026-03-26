@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('attachments', function (Blueprint $table) {
             $table->id();
-            $table->morphs('attachable'); // attachable_id and attachable_type
+            // morphs() automatically creates a composite index on (attachable_id, attachable_type)
+            $table->morphs('attachable');
             $table->string('file_path');
             $table->string('file_name');
             $table->string('file_type')->nullable();
@@ -22,8 +23,7 @@ return new class extends Migration
             $table->foreignId('uploader_id')->nullable()->constrained('users')->nullOnDelete();
             $table->softDeletes();
             $table->timestamps();
-
-            $table->index(['attachable_id', 'attachable_type']);
+            // NOTE: do NOT add ->index(['attachable_id','attachable_type']) — morphs() already does it
         });
     }
 

@@ -13,6 +13,8 @@ return new class extends Migration
             $table->id();
             $table->string('name', 50)->unique();           // admin, staff, user
             $table->string('description', 255)->nullable();
+            $table->boolean('is_active')->default(true);    // allows disabling a role without deleting it
+            $table->softDeletes();                          // consistent with all other master tables
             $table->timestamps();
         });
 

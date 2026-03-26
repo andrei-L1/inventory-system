@@ -23,11 +23,25 @@ This document outlines the production-grade database architecture for the Invent
 ### 2.3 Locations & Inventory Ledger
 *   **`locations`**: Hierarchical warehouse management (Warehouse > Zone > Bin).
 *   **`inventories`**: The real-time "Stock on Hand" ledger per product-location pair.
-*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method.
+*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method. It tracks `received_qty`, `issued_qty` (consumed amount), and the `remaining_qty`.
+    *   **Balance Rule**: The system must enforce that `received_qty = issued_qty + remaining_qty`.
 
-### 2.4 Transactions & Stock Movement
-*   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Includes status control (`draft`, `pending`, `posted`, `cancelled`).
+### 2.4 Transactions
+*   **`lookup_tables`**: **IMPROVED** architecture replaces ENUMs with dedicated tables: `transaction_types`, `transaction_statuses`, and `location_types`. Allows zero-downtime additions and metadata tracking (e.g., `is_debit`).
+*   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Linked to `transaction_types` and `transaction_statuses`. 
+*   **Reference Traceability**: Includes `purchase_order_id` to link physical arrivals to the original order.
 *   **`transaction_lines`**: Detailed line items including cost and selling price snapshots at the time of the event.
+
+### 2.5 Procurement (Purchase Orders)
+*   **`purchase_orders`**: Formal ordering module for requesting stock from `vendors`.
+*   **Tracking**: Includes `po_number`, `order_date`, `expected_delivery_date`, and `currency`.
+*   **Lifecycle**: Managed via `purchase_order_statuses` (`draft`, `open`, `partially_received`, `closed`, `cancelled`).
+*   **Approval**: Supports multi-stage workflows with `approved_by` and `approved_at` timestamps.
+*   **`purchase_order_lines`**: Detailed line items tracking `ordered_qty` vs. `received_qty`.
+    *   **Automation**: The `total_cost` is a database-level virtual column (`ordered_qty * unit_cost`).
+
+### 2.6 Stock Movement Ledger
+*   **`stock_movements`**: **The Immutable Ledger**. This is the flat record of every stock change. Unlike transaction lines, this table explicitly records `in` and `out` movements for each location. It is the primary source for rebuilding inventory state and auditing.
 
 ---
 
@@ -75,23 +89,69 @@ erDiagram
     USER ||--o{ TRANSACTION : "creates"
     VENDOR ||--o{ PRODUCT : "preferred for"
     VENDOR ||--o{ TRANSACTION : "supplies"
+    VENDOR ||--o{ PURCHASE_ORDER : "supplies"
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_LINE : "contains"
+    PURCHASE_ORDER ||--o{ TRANSACTION : "receives to"
     LOCATION ||--o{ LOCATION : "parent of"
     LOCATION ||--o{ INVENTORY : "stores"
     PRODUCT ||--o{ INVENTORY : "tracked in"
     PRODUCT ||--o{ TRANSACTION_LINE : "sold/rcvd"
+    PRODUCT ||--o{ PURCHASE_ORDER_LINE : "ordered"
     PRODUCT ||--o{ INVENTORY_COST_LAYER : "accrues cost"
     TRANSACTION ||--o{ TRANSACTION_LINE : "contains"
     TRANSACTION_LINE ||--o{ INVENTORY_COST_LAYER : "updates"
+    PRODUCT ||--o{ STOCK_MOVEMENT : "audit trail"
+    LOCATION ||--o{ STOCK_MOVEMENT : "ledger for"
+    TRANSACTION_LINE ||--o{ STOCK_MOVEMENT : "generates"
     AUDIT_LOG }o--|| USER : "logged by"
     USER ||--o{ ATTACHMENT : "uploads"
     ATTACHMENT }o--|| PRODUCT : "attached to"
     ATTACHMENT }o--|| VENDOR : "attached to"
     ATTACHMENT }o--|| TRANSACTION : "attached to"
+    ATTACHMENT }o--|| PURCHASE_ORDER : "attached to"
 ```
 
 ---
 
-## 6. Setup & Maintenance
+
+---
+
+## 6. Reporting & Analytics
+
+The system features a decoupled reporting engine that supports both on-demand and scheduled execution.
+
+### 6.1 Report Engine
+*   **`reports`**: Saved report definitions (templates). Stores `filters` (JSON), `type`, and `schedule_cron` for automation.
+*   **Supported types**: `stock_on_hand`, `valuation`, `audit_trail`, `low_stock`, etc.
+*   **`report_runs`**: Historical execution records. Captures the execution `status` (pending, processing, completed, failed), the user who ran it, and the final `file_path`.
+
+### 6.2 Point-in-Time Analysis
+*   **`stock_snapshots`**: Captured daily or on-demand to provide historical valuation and audits.
+
+---
+
+## 7. Inventory Integrity Protocol
+
+To prevent **Data Drift** (where transactions disagree with `quantity_on_hand`), the following architectural guardrails are strictly enforced:
+
+### 7.1 Transactional atomicity
+*   **NEVER** manually update `inventories` or `inventory_cost_layers`.
+*   **ALL** changes must occur within an Eloquent **`DB::transaction()`** block.
+*   The system uses **Pessimistic Locking** (`SELECT FOR UPDATE`) on the `inventories` row before calculating the new total.
+
+### 7.2 The "Rule of Four" (Alignment)
+Every stock movement (Receipt, Issue, Transfer) must update four distinct sources of truth simultaneously:
+1.  **`transactions` / `transaction_lines`**: The business event history.
+2.  **`stock_movements`**: The immutable, flat movement ledger (Audit Trail).
+3.  **`inventories`**: The real-time "Stock on Hand" cache.
+4.  **`inventory_cost_layers`**: The accounting-grade cost pool (FIFO/LIFO).
+
+### 7.3 Nightly Reconciliation (The "Self-Heal")
+A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to calculate discrepancies and log them in **`reconciliation_logs`**.
+
+---
+
+## 8. Setup & Maintenance
 
 ### Running Migrations
 ```bash
@@ -103,11 +163,8 @@ php artisan migrate --force
 php artisan db:seed --force
 ```
 
-### Report Generation
-*   **Engine**: Reports are defined in the `reports` table.
-*   **Execution**: Report generation should be offloaded to queues, with results tracked in `report_runs`.
-
 ---
 
 > [!IMPORTANT]
 > **Data Integrity Rule**: Never manually edit `inventories` or `inventory_cost_layers`. Always use a `Transaction` entity to ensure the ledger and audit trail remain synchronized.
+
