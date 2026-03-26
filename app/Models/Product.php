@@ -23,7 +23,7 @@ class Product extends Model
         'brand',
         'sku',
         'barcode',
-        'costing_method',
+        'costing_method_id',
         'average_cost',
         'selling_price',
         'reorder_point',
@@ -32,6 +32,14 @@ class Product extends Model
         'created_by',
         'updated_by',
     ];
+
+    /**
+     * Get the costing method for this product.
+     */
+    public function costingMethod(): BelongsTo
+    {
+        return $this->belongsTo(CostingMethod::class);
+    }
 
     /**
      * Get the vendor that this product prefers.

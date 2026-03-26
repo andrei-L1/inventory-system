@@ -15,9 +15,17 @@ class TransactionLine extends Model
         'unit_cost',
         'total_cost',
         'unit_price',
-        'costing_method',
+        'costing_method_id',
         'notes',
     ];
+
+    /**
+     * Get the costing method for this transaction line.
+     */
+    public function costingMethod(): BelongsTo
+    {
+        return $this->belongsTo(CostingMethod::class);
+    }
 
     /**
      * Get the transaction header.
