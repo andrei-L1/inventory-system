@@ -131,6 +131,12 @@ Beyond standard foreign keys, the system enforces business logic via Database `C
 *   **Receipts**: Must have a `vendor_id`.
 *   **Issues**: Must NOT have a `vendor_id` (enforce direct sale/usage).
 
+### 7.5 Retirement & Deletion Policy
+To maintain historical accuracy (History is King!):
+*   **Inactivation (`is_active = 0`)**: Preferred for "retiring" products, vendors, or locations. This blocks them from NEW transactions while preserving them in OLD records.
+*   **Soft Delete (`deleted_at`)**: Reserved ONLY for correcting data entry errors.
+*   **Historical Integrity**: Eloquent relationships for historical entities (Transactions, Movements, Cost Layers) must use **`withTrashed()`** to ensure the parent entity details are visible in reports even if the parent was "deleted."
+
 ---
 
 ## 8. Setup & Maintenance

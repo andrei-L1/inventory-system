@@ -99,6 +99,8 @@ CREATE TABLE units_of_measure (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     abbreviation VARCHAR(10) NOT NULL UNIQUE,
+    is_active TINYINT(1) DEFAULT 1,
+    deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL
 );

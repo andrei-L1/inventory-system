@@ -26,7 +26,7 @@ class Inventory extends Model
      */
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     /**
@@ -34,6 +34,6 @@ class Inventory extends Model
      */
     public function location(): BelongsTo
     {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(Location::class)->withTrashed();
     }
 }
