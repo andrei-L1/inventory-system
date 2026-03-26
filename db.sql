@@ -231,7 +231,8 @@ CREATE TABLE inventory_cost_layers (
     location_id BIGINT UNSIGNED NOT NULL,
     transaction_line_id BIGINT UNSIGNED NULL,
     received_qty DECIMAL(18, 4) NOT NULL,
-    remaining_qty DECIMAL(18, 4) NOT NULL,
+    issued_qty DECIMAL(18, 4) DEFAULT 0, -- Total quantity consumed from this layer
+    remaining_qty DECIMAL(18, 4) NOT NULL, -- received_qty - issued_qty
     unit_cost DECIMAL(18, 6) NOT NULL,
     receipt_date DATE NOT NULL,
     is_exhausted TINYINT(1) DEFAULT 0,

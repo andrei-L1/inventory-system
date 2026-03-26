@@ -56,4 +56,12 @@ class Product extends Model
     {
         return $this->hasMany(Inventory::class);
     }
+
+    /**
+     * Get the cost layers for this product.
+     */
+    public function costLayers(): HasMany
+    {
+        return $this->hasMany(InventoryCostLayer::class);
+    }
 }

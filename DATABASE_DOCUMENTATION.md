@@ -23,7 +23,8 @@ This document outlines the production-grade database architecture for the Invent
 ### 2.3 Locations & Inventory Ledger
 *   **`locations`**: Hierarchical warehouse management (Warehouse > Zone > Bin).
 *   **`inventories`**: The real-time "Stock on Hand" ledger per product-location pair.
-*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method.
+*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method. It tracks `received_qty`, `issued_qty` (consumed amount), and the `remaining_qty`.
+    *   **Balance Rule**: The system must enforce that `received_qty = issued_qty + remaining_qty`.
 
 ### 2.4 Transactions
 *   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Includes status control (`draft`, `pending`, `posted`, `cancelled`).
