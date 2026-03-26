@@ -27,10 +27,20 @@ This document outlines the production-grade database architecture for the Invent
     *   **Balance Rule**: The system must enforce that `received_qty = issued_qty + remaining_qty`.
 
 ### 2.4 Transactions
-*   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Includes status control (`draft`, `pending`, `posted`, `cancelled`).
+*   **`lookup_tables`**: **IMPROVED** architecture replaces ENUMs with dedicated tables: `transaction_types`, `transaction_statuses`, and `location_types`. Allows zero-downtime additions and metadata tracking (e.g., `is_debit`).
+*   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Linked to `transaction_types` and `transaction_statuses`. 
+*   **Reference Traceability**: Includes `purchase_order_id` to link physical arrivals to the original order.
 *   **`transaction_lines`**: Detailed line items including cost and selling price snapshots at the time of the event.
 
-### 2.5 Stock Movement Ledger
+### 2.5 Procurement (Purchase Orders)
+*   **`purchase_orders`**: Formal ordering module for requesting stock from `vendors`.
+*   **Tracking**: Includes `po_number`, `order_date`, `expected_delivery_date`, and `currency`.
+*   **Lifecycle**: Managed via `purchase_order_statuses` (`draft`, `open`, `partially_received`, `closed`, `cancelled`).
+*   **Approval**: Supports multi-stage workflows with `approved_by` and `approved_at` timestamps.
+*   **`purchase_order_lines`**: Detailed line items tracking `ordered_qty` vs. `received_qty`.
+    *   **Automation**: The `total_cost` is a database-level virtual column (`ordered_qty * unit_cost`).
+
+### 2.6 Stock Movement Ledger
 *   **`stock_movements`**: **The Immutable Ledger**. This is the flat record of every stock change. Unlike transaction lines, this table explicitly records `in` and `out` movements for each location. It is the primary source for rebuilding inventory state and auditing.
 
 ---
@@ -79,10 +89,14 @@ erDiagram
     USER ||--o{ TRANSACTION : "creates"
     VENDOR ||--o{ PRODUCT : "preferred for"
     VENDOR ||--o{ TRANSACTION : "supplies"
+    VENDOR ||--o{ PURCHASE_ORDER : "supplies"
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_LINE : "contains"
+    PURCHASE_ORDER ||--o{ TRANSACTION : "receives to"
     LOCATION ||--o{ LOCATION : "parent of"
     LOCATION ||--o{ INVENTORY : "stores"
     PRODUCT ||--o{ INVENTORY : "tracked in"
     PRODUCT ||--o{ TRANSACTION_LINE : "sold/rcvd"
+    PRODUCT ||--o{ PURCHASE_ORDER_LINE : "ordered"
     PRODUCT ||--o{ INVENTORY_COST_LAYER : "accrues cost"
     TRANSACTION ||--o{ TRANSACTION_LINE : "contains"
     TRANSACTION_LINE ||--o{ INVENTORY_COST_LAYER : "updates"
@@ -94,6 +108,7 @@ erDiagram
     ATTACHMENT }o--|| PRODUCT : "attached to"
     ATTACHMENT }o--|| VENDOR : "attached to"
     ATTACHMENT }o--|| TRANSACTION : "attached to"
+    ATTACHMENT }o--|| PURCHASE_ORDER : "attached to"
 ```
 
 ---

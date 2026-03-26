@@ -187,6 +187,7 @@ CREATE TABLE transactions (
     transaction_date DATE NOT NULL,
     notes TEXT NULL,
     reference_doc VARCHAR(100) NULL,
+    purchase_order_id BIGINT UNSIGNED NULL,
     created_by BIGINT UNSIGNED NULL,
     posted_by BIGINT UNSIGNED NULL,
     posted_at TIMESTAMP NULL,
@@ -198,6 +199,7 @@ CREATE TABLE transactions (
     FOREIGN KEY (transaction_type_id) REFERENCES transaction_types(id),
     FOREIGN KEY (transaction_status_id) REFERENCES transaction_statuses(id),
     FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+    FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL,
     FOREIGN KEY (from_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (to_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
@@ -261,7 +263,53 @@ CREATE TABLE inventory_cost_layers (
     INDEX inv_cost_layers_query_idx (product_id, location_id, is_exhausted, receipt_date)
 );
 
--- 7. Audit & Reports
+-- 7. Procurement (Purchase Orders)
+CREATE TABLE purchase_order_statuses (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE, -- draft, open, partially_received, closed, cancelled
+    is_editable TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
+CREATE TABLE purchase_orders (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    po_number VARCHAR(30) NOT NULL UNIQUE,
+    vendor_id BIGINT UNSIGNED NOT NULL,
+    status_id BIGINT UNSIGNED NOT NULL,
+    order_date DATE NOT NULL,
+    expected_delivery_date DATE NULL,
+    total_amount DECIMAL(18, 2) DEFAULT 0,
+    currency VARCHAR(10) DEFAULT 'USD',
+    notes TEXT NULL,
+    created_by BIGINT UNSIGNED NULL,
+    approved_by BIGINT UNSIGNED NULL,
+    approved_at TIMESTAMP NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id),
+    FOREIGN KEY (status_id) REFERENCES purchase_order_statuses(id),
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE purchase_order_lines (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    purchase_order_id BIGINT UNSIGNED NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+    ordered_qty DECIMAL(18, 4) NOT NULL,
+    received_qty DECIMAL(18, 4) DEFAULT 0,
+    unit_cost DECIMAL(18, 6) NOT NULL,
+    total_cost DECIMAL(18, 6) AS (ordered_qty * unit_cost) STORED,
+    notes TEXT NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- 8. Audit & Reports
 CREATE TABLE audit_logs (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NULL,

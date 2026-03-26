@@ -24,6 +24,7 @@ class Transaction extends Model
         'transaction_date',
         'notes',
         'reference_doc',
+        'purchase_order_id',
         'created_by',
         'posted_by',
         'posted_at',
@@ -36,6 +37,15 @@ class Transaction extends Model
         'posted_at' => 'datetime',
         'cancelled_at' => 'datetime',
     ];
+
+    /**
+     * Get the purchase order that generated this movement.
+     */
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class);
+    }
+
 
     /**
      * Boot the model.
