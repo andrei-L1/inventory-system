@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 
 class VendorSeeder extends Seeder
@@ -12,7 +12,7 @@ class VendorSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\Vendor::create([
+        Vendor::create([
             'code' => 'VEND-001',
             'name' => 'Global Supplies Inc.',
             'contact_person' => 'John Doe',
@@ -24,7 +24,7 @@ class VendorSeeder extends Seeder
             'tax_id' => '12-3456789',
         ]);
 
-        \App\Models\Vendor::create([
+        Vendor::create([
             'code' => 'VEND-002',
             'name' => 'Tech Solutions Group',
             'contact_person' => 'Jane Smith',
