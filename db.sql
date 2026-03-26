@@ -1,8 +1,25 @@
--- 1. Identity & Access Control
+-- 1. Identity, Access Control & Partners
 CREATE TABLE roles (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
+CREATE TABLE vendors (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(30) NOT NULL UNIQUE,
+    name VARCHAR(120) NOT NULL,
+    contact_person VARCHAR(80) NULL,
+    email VARCHAR(191) NULL,
+    phone VARCHAR(30) NULL,
+    address VARCHAR(255) NULL,
+    city VARCHAR(80) NULL,
+    country VARCHAR(80) NULL,
+    tax_id VARCHAR(50) NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL
 );
@@ -93,6 +110,7 @@ CREATE TABLE products (
     description TEXT NULL,
     category_id BIGINT UNSIGNED NULL,
     uom_id BIGINT UNSIGNED NULL,
+    preferred_vendor_id BIGINT UNSIGNED NULL,
     brand VARCHAR(100) NULL,
     sku VARCHAR(100) NULL UNIQUE,
     barcode VARCHAR(100) NULL UNIQUE,
@@ -109,6 +127,7 @@ CREATE TABLE products (
     updated_at TIMESTAMP NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
     FOREIGN KEY (uom_id) REFERENCES units_of_measure(id) ON DELETE SET NULL,
+    FOREIGN KEY (preferred_vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -132,6 +151,7 @@ CREATE TABLE transactions (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     reference_number VARCHAR(30) NOT NULL UNIQUE,
     type ENUM('receipt', 'issue', 'transfer', 'adjustment', 'opening_balance') NOT NULL,
+    vendor_id BIGINT UNSIGNED NULL,
     status ENUM('draft', 'pending', 'posted', 'cancelled') DEFAULT 'draft',
     from_location_id BIGINT UNSIGNED NULL,
     to_location_id BIGINT UNSIGNED NULL,
@@ -146,6 +166,7 @@ CREATE TABLE transactions (
     deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
     FOREIGN KEY (from_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (to_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
@@ -226,5 +247,24 @@ CREATE TABLE stock_snapshots (
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (location_id) REFERENCES locations(id)
 );
+
+-- 7. General Attachments
+CREATE TABLE attachments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attachable_id BIGINT UNSIGNED NOT NULL,
+    attachable_type VARCHAR(191) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    file_name VARCHAR(191) NOT NULL,
+    file_type VARCHAR(80) NULL,
+    file_size BIGINT DEFAULT 0,
+    collection_name VARCHAR(50) DEFAULT 'general',
+    uploader_id BIGINT UNSIGNED NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL,
+    FOREIGN KEY (uploader_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX (attachable_id, attachable_type)
+);
+
 
 
