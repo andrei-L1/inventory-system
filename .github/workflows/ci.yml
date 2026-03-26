@@ -24,6 +24,12 @@ jobs:
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
         coverage: none
 
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
     - name: Get Composer Cache Directory
       id: composer-cache
       run: |
@@ -39,6 +45,12 @@ jobs:
     - name: Install dependencies
       run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
+    - name: Install JS dependencies
+      run: npm install
+
+    - name: Build frontend (Vite)
+      run: npm run build
+
     - name: Copy .env.example
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
@@ -53,20 +65,3 @@ jobs:
 
     - name: Execute tests
       run: php artisan test
-
-  frontend-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install JS dependencies
-        run: npm install
-
-      - name: Build frontend
-        run: npm run build
