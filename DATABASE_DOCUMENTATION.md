@@ -91,7 +91,35 @@ erDiagram
 
 ---
 
-## 6. Setup & Maintenance
+
+---
+
+## 7. Inventory Integrity Protocol
+
+To prevent **Data Drift** (where transactions disagree with `quantity_on_hand`), the following architectural guardrails are strictly enforced:
+
+### 7.1 Transactional atomicity (Option A)
+The `inventories.quantity_on_hand` field is treated as a **denormalized cache** of the transaction history. 
+*   **NEVER** manually update `inventories` or `inventory_cost_layers`.
+*   **ALL** changes must occur within an Eloquent **`DB::transaction()`** block.
+*   The system must use **Pessimistic Locking** (`SELECT FOR UPDATE`) on the `inventories` row before calculating the new total.
+
+### 7.2 The "Rule of Three" (Alignment)
+Every stock movement (Receipt, Issue, Transfer) must update three distinct sources of truth simultaneously:
+1.  **`transactions` / `transaction_lines`**: The historical audit trail.
+2.  **`inventories`**: The real-time "Stock on Hand" snapshot.
+3.  **`inventory_cost_layers`**: The accounting-grade cost pool (FIFO/LIFO).
+
+### 7.3 Nightly Reconciliation (The "Self-Heal")
+A scheduled background job (e.g., `VerifyInventoryIntegrity`) runs nightly to:
+1.  Calculate `SUM(transaction_lines.quantity)` per product/location.
+2.  Calculate `SUM(inventory_cost_layers.remaining_qty)` per product/location.
+3.  Compare both against `inventories.quantity_on_hand`.
+4.  If a mismatch is found, it logs the error in **`reconciliation_logs`** and sends an **Admin Alert**.
+
+---
+
+## 8. Setup & Maintenance
 
 ### Running Migrations
 ```bash
@@ -111,3 +139,4 @@ php artisan db:seed --force
 
 > [!IMPORTANT]
 > **Data Integrity Rule**: Never manually edit `inventories` or `inventory_cost_layers`. Always use a `Transaction` entity to ensure the ledger and audit trail remain synchronized.
+

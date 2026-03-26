@@ -266,5 +266,22 @@ CREATE TABLE attachments (
     INDEX (attachable_id, attachable_type)
 );
 
+-- 8. Integrity & Reconciliation
+CREATE TABLE reconciliation_logs (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT UNSIGNED NOT NULL,
+    location_id BIGINT UNSIGNED NOT NULL,
+    recorded_qty DECIMAL(18, 4) NOT NULL, -- inventories.quantity_on_hand
+    calculated_qty DECIMAL(18, 4) NOT NULL, -- SUM(transaction_lines)
+    layers_qty DECIMAL(18, 4) NOT NULL, -- SUM(inventory_cost_layers)
+    discrepancy DECIMAL(18, 4) NOT NULL,
+    is_corrected TINYINT(1) DEFAULT 0,
+    run_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (location_id) REFERENCES locations(id)
+);
+
+
 
 
