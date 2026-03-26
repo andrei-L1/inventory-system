@@ -15,7 +15,7 @@ class Location extends Model
     protected $fillable = [
         'code',
         'name',
-        'type',
+        'location_type_id',
         'parent_id',
         'address',
         'city',
@@ -23,6 +23,15 @@ class Location extends Model
         'description',
         'is_active',
     ];
+
+    /**
+     * Get the type of this location.
+     */
+    public function locationType(): BelongsTo
+    {
+        return $this->belongsTo(LocationType::class);
+    }
+
 
     /**
      * Get the parent location.

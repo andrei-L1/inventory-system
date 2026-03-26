@@ -66,11 +66,19 @@ CREATE TABLE sessions (
 );
 
 -- 2. Physical Storage & Products
+CREATE TABLE location_types (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE, -- warehouse, zone, aisle, bin
+    description VARCHAR(255) NULL,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
 CREATE TABLE locations (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(30) NOT NULL UNIQUE,
     name VARCHAR(120) NOT NULL,
-    type ENUM('warehouse', 'zone', 'aisle', 'bin') DEFAULT 'warehouse',
+    location_type_id BIGINT UNSIGNED NOT NULL,
     parent_id BIGINT UNSIGNED NULL,
     address VARCHAR(255) NULL,
     city VARCHAR(80) NULL,
@@ -80,6 +88,7 @@ CREATE TABLE locations (
     deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
+    FOREIGN KEY (location_type_id) REFERENCES location_types(id),
     FOREIGN KEY (parent_id) REFERENCES locations(id) ON DELETE SET NULL
 );
 
@@ -149,12 +158,30 @@ CREATE TABLE inventories (
 );
 
 -- 4. Transaction Headers & Lines
+CREATE TABLE transaction_types (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE, -- receipt, issue, transfer, adjustment, opening_balance
+    code VARCHAR(20) NOT NULL UNIQUE, -- e.g. RCPT, ISSU, TRFR
+    affects_inventory TINYINT(1) DEFAULT 1,
+    is_debit TINYINT(1) DEFAULT 1, -- 1 = increases stock (receipt), 0 = decreases (issue)
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
+CREATE TABLE transaction_statuses (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE, -- draft, pending, posted, cancelled
+    is_modifiable TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP NULL,
+    updated_at TIMESTAMP NULL
+);
+
 CREATE TABLE transactions (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     reference_number VARCHAR(30) NOT NULL UNIQUE,
-    type ENUM('receipt', 'issue', 'transfer', 'adjustment', 'opening_balance') NOT NULL,
+    transaction_type_id BIGINT UNSIGNED NOT NULL,
     vendor_id BIGINT UNSIGNED NULL,
-    status ENUM('draft', 'pending', 'posted', 'cancelled') DEFAULT 'draft',
+    transaction_status_id BIGINT UNSIGNED NOT NULL,
     from_location_id BIGINT UNSIGNED NULL,
     to_location_id BIGINT UNSIGNED NULL,
     transaction_date DATE NOT NULL,
@@ -168,26 +195,14 @@ CREATE TABLE transactions (
     deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
+    FOREIGN KEY (transaction_type_id) REFERENCES transaction_types(id),
+    FOREIGN KEY (transaction_status_id) REFERENCES transaction_statuses(id),
     FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
     FOREIGN KEY (from_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (to_location_id) REFERENCES locations(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (posted_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL,
-
-    -- Transaction Integrity Rules (CRITICAL)
-    CONSTRAINT chk_transaction_transfer_locations CHECK (
-        (type = 'transfer' AND from_location_id IS NOT NULL AND to_location_id IS NOT NULL) OR 
-        (type <> 'transfer')
-    ),
-    CONSTRAINT chk_transaction_receipt_vendor CHECK (
-        (type = 'receipt' AND vendor_id IS NOT NULL) OR 
-        (type <> 'receipt')
-    ),
-    CONSTRAINT chk_transaction_issue_no_vendor CHECK (
-        (type = 'issue' AND vendor_id IS NULL) OR 
-        (type <> 'issue')
-    )
+    FOREIGN KEY (cancelled_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE TABLE transaction_lines (

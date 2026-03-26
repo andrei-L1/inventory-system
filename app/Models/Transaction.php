@@ -16,9 +16,9 @@ class Transaction extends Model
 
     protected $fillable = [
         'reference_number',
-        'type',
+        'transaction_type_id',
         'vendor_id',
-        'status',
+        'transaction_status_id',
         'from_location_id',
         'to_location_id',
         'transaction_date',
@@ -49,29 +49,47 @@ class Transaction extends Model
         });
     }
 
+
+    /**
+     * Get the type of this transaction.
+     */
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(TransactionType::class, 'transaction_type_id');
+    }
+
+    /**
+     * Get the status of this transaction.
+     */
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(TransactionStatus::class, 'transaction_status_id');
+    }
+
     /**
      * Validates transaction business logic rules.
      */
     public function validateIntegrity()
     {
-        if ($this->type === 'transfer') {
-            if (!$this->from_location_id || !$this->to_location_id) {
-                throw ValidationException::withMessages([
-                    'type' => 'A transfer transaction must specify both from and to locations.'
-                ]);
-            }
-        }
+        // For performance, we check the type code if the relation is missing or already loaded
+        $type = $this->type;
 
-        if ($this->type === 'receipt') {
-            if (!$this->vendor_id) {
+        if ($type) {
+            if ($type->matchesCode('TRFR')) {
+                if (!$this->from_location_id || !$this->to_location_id) {
+                    throw ValidationException::withMessages([
+                        'to_location_id' => 'A transfer transaction must specify both origin and destination.'
+                    ]);
+                }
+            }
+
+            if ($type->matchesCode('RCPT') && !$this->vendor_id) {
                 throw ValidationException::withMessages([
                     'vendor_id' => 'A receipt transaction must specify a vendor.'
                 ]);
             }
-        }
 
-        if ($this->type === 'issue') {
-            if ($this->vendor_id) {
+            if ($type->matchesCode('ISSU') && $this->vendor_id) {
                 throw ValidationException::withMessages([
                     'vendor_id' => 'An issue transaction must NOT have a vendor.'
                 ]);
