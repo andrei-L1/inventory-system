@@ -47,12 +47,4 @@ class Location extends Model
     {
         return $this->hasMany(Location::class, 'parent_id');
     }
-
-    /**
-     * Get the stock movements at this location.
-     */
-    public function stockMovements(): HasMany
-    {
-        return $this->hasMany(StockMovement::class, 'location_id');
-    }
 }
