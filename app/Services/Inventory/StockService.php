@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class StockService
 {
+    protected TransactionValidator $validator;
+
+    public function __construct(TransactionValidator $validator)
+    {
+        $this->validator = $validator;
+    }
+
     /**
      * Record a stock movement with strict integrity.
      *
@@ -19,6 +26,8 @@ class StockService
      */
     public function recordMovement(array $data): Transaction
     {
+        $this->validator->validate($data);
+
         return DB::transaction(function () use ($data) {
             // 1. Create Transaction Header
             $transaction = Transaction::create($data['header']);
