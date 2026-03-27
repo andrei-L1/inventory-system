@@ -32,7 +32,7 @@ class PermissionSeeder extends Seeder
 
             // Procurement
             ['name' => 'Manage Purchase Orders', 'slug' => 'manage-purchase-orders', 'description' => 'Can create and manage POs'],
-            
+
             // Sales
             ['name' => 'Manage Sales Orders', 'slug' => 'manage-sales-orders', 'description' => 'Can create and manage sales orders'],
 

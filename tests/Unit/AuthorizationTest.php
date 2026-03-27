@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use App\Models\User;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,7 +22,7 @@ class AuthorizationTest extends TestCase
     {
         $admin = User::where('username', 'admin')->first();
         $this->assertNotNull($admin);
-        
+
         $allPermissions = Permission::all();
         foreach ($allPermissions as $permission) {
             $this->assertTrue(
