@@ -23,7 +23,7 @@ class StockConsumptionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new StockService;
+        $this->service = app(StockService::class);
 
         // Use the system's database seeder to set up lookups and locations
         $this->seed(DatabaseSeeder::class);
