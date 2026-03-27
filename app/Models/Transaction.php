@@ -141,6 +141,14 @@ class Transaction extends Model
     }
 
     /**
+     * Get the shipments associated with this transaction.
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    /**
      * Get the transaction lines.
      */
     public function lines(): HasMany

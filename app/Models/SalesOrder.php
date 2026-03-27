@@ -48,4 +48,9 @@ class SalesOrder extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
 }
