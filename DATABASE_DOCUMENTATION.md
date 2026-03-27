@@ -15,22 +15,30 @@ This document outlines the production-grade database architecture for the Invent
 
 ### 2.2 Product Catalog
 *   **`products`**: Master record for items. Stores `product_code`, `sku`, `barcode`, and reorder point/quantity.
-*   **`costing_method`**: Per-product selection of `fifo`, `lifo`, or `average`.
+*   **`costing_method_id`**: Reference to the **`costing_methods`** lookup table. Supports `fifo`, `lifo`, or `average`.
 *   **`categories`**: Nested categorization support using `parent_id`.
-*   **`units_of_measure`**: Standardized units (pcs, kg, bx).
-*   **`product_images`**: Support for multiple images with a `primary` flag.
+*   **`units_of_measure`**: Standardized units (pcs, kg, bx). Supports soft deletes.
+*   **`product_images`**: Support for multiple images with a `primary` flag (now largely integrated into the polymorphic **`attachments`** system).
 
 ### 2.3 Locations & Inventory Ledger
-*   **`locations`**: Hierarchical warehouse management (Warehouse > Zone > Bin).
+*   **`locations`**: Hierarchical warehouse management (Warehouse > Zone > Bin). Linked to **`location_types`**.
 *   **`inventories`**: The real-time "Stock on Hand" ledger per product-location pair.
-*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost. Transactions consume these layers based on the selected costing method. It tracks `received_qty`, `issued_qty` (consumed amount), and the `remaining_qty`.
-    *   **Balance Rule**: The system must enforce that `received_qty = issued_qty + remaining_qty`.
+    *   **Guard**: Database-level `CHECK` constraint prevents `quantity_on_hand` from falling below zero (`chk_inventory_qty_non_negative`).
+*   **`inventory_cost_layers`**: **CRITICAL** table for accounting. Records every receipt of stock with its unit cost.
+    *   **Auto-Calculation**: The `remaining_qty` is a **Database Generated Column** (`received_qty - issued_qty`). This ensures it never drifts from actual receipts and issues.
+    *   **Guard**: Database-level `CHECK` constraints ensure `received_qty > 0`.
 
 ### 2.4 Transactions
-*   **`lookup_tables`**: **IMPROVED** architecture replaces ENUMs with dedicated tables: `transaction_types`, `transaction_statuses`, and `location_types`. Allows zero-downtime additions and metadata tracking (e.g., `is_debit`).
-*   **`transactions`**: High-level stock events (Receipt, Issue, Transfer, Adjustment). Linked to `transaction_types` and `transaction_statuses`. 
-*   **Reference Traceability**: Includes `purchase_order_id` to link physical arrivals to the original order.
-*   **`transaction_lines`**: Detailed line items including cost and selling price snapshots at the time of the event.
+*   **`lookup_tables`**: **MODERNIZED** architecture replaces ENUMs with dedicated tables for high extensibility:
+    *   **`transaction_types`**: Receipt, Issue, Transfer, Adjustment, Opening Balance.
+    *   **`transaction_statuses`**: Draft, Pending, Posted, Cancelled.
+    *   **`location_types`**: Warehouse, Zone, Aisle, Bin.
+    *   **`costing_methods`**: FIFO, LIFO, Weighted Average.
+*   **`transactions`**: High-level stock events. Linked to types and statuses via Foreign Keys.
+*   **Reference Traceability:** Includes `purchase_order_id` to link arrivals back to the procurement stage.
+*   **`transaction_lines`**: Detailed line items capturing `unit_cost`, `total_cost`, and a snapshot of the `costing_method_id` used for the movement.
+
+---
 
 ### 2.5 Procurement (Purchase Orders)
 *   **`purchase_orders`**: Formal ordering module for requesting stock from `vendors`.
@@ -47,10 +55,10 @@ This document outlines the production-grade database architecture for the Invent
 
 ## 3. Inventory Costing Methodologies
 
-The system natively supports three major accounting methods:
+The system natively supports three major accounting methods, managed via the `costing_methods` table:
 
 ### Weighted Average (AVCO)
-*   **Mechanism**: The system maintain a running average in `products.average_cost` and `inventories.average_cost`.
+*   **Mechanism**: The system maintains a running average in `products.average_cost` and `inventories.average_cost`.
 *   **Calculation**: `(Current Stock Value + New Stock Value) / (Current Qty + New Qty)`.
 
 ### First-In, First-Out (FIFO)
@@ -66,18 +74,15 @@ The system natively supports three major accounting methods:
 ## 4. Audit & Reliability
 
 ### 4.1 Audit Logs (The "Paper Trail")
-*   **`audit_logs`**: An immutable, append-only table.
-*   **Content**: Stores `old_values` and `new_values` as JSON strings for every record change.
+*   **`audit_logs`**: An immutable, append-only table logging all changes.
+*   **Content**: Stores `old_values` and `new_values` as JSON strings.
 *   **Context**: captures `user_id`, `ip_address`, `user_agent`, and the request `url`.
 
 ### 4.2 Stock Snapshots
-*   **`stock_snapshots`**: Captured daily or on-demand.
-*   **Purpose**: Provides "Point-in-Time" reporting. You can generate a valuation report for December 31st even if stocks have moved since then.
+*   **`stock_snapshots`**: Captured daily or on-demand for "Point-in-Time" reporting.
 
 ### 4.3 General Attachments
-*   **`attachments`**: Polymorphic table allowing any entity (Product, Transaction, Vendor) to have multiple file uploads.
-*   **Supported types**: PDFs, images, Excel sheets, and certificates.
-
+*   **`attachments`**: Polymorphic table allowing any entity (Product, Transaction, Vendor) to have file uploads.
 
 ---
 
@@ -91,13 +96,13 @@ erDiagram
     VENDOR ||--o{ TRANSACTION : "supplies"
     VENDOR ||--o{ PURCHASE_ORDER : "supplies"
     PURCHASE_ORDER ||--o{ PURCHASE_ORDER_LINE : "contains"
-    PURCHASE_ORDER ||--o{ TRANSACTION : "receives to"
     LOCATION ||--o{ LOCATION : "parent of"
     LOCATION ||--o{ INVENTORY : "stores"
     PRODUCT ||--o{ INVENTORY : "tracked in"
     PRODUCT ||--o{ TRANSACTION_LINE : "sold/rcvd"
     PRODUCT ||--o{ PURCHASE_ORDER_LINE : "ordered"
     PRODUCT ||--o{ INVENTORY_COST_LAYER : "accrues cost"
+    COSTING_METHOD ||--o{ PRODUCT : "defined in"
     TRANSACTION ||--o{ TRANSACTION_LINE : "contains"
     TRANSACTION_LINE ||--o{ INVENTORY_COST_LAYER : "updates"
     PRODUCT ||--o{ STOCK_MOVEMENT : "audit trail"

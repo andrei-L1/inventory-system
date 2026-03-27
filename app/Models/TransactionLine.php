@@ -15,9 +15,17 @@ class TransactionLine extends Model
         'unit_cost',
         'total_cost',
         'unit_price',
-        'costing_method',
+        'costing_method_id',
         'notes',
     ];
+
+    /**
+     * Get the costing method for this transaction line.
+     */
+    public function costingMethod(): BelongsTo
+    {
+        return $this->belongsTo(CostingMethod::class);
+    }
 
     /**
      * Get the transaction header.
@@ -41,5 +49,13 @@ class TransactionLine extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class)->withTrashed();
+    }
+
+    /**
+     * Get the serial numbers associated with this transaction line.
+     */
+    public function serials()
+    {
+        return $this->belongsToMany(ProductSerial::class, 'transaction_line_serials');
     }
 }

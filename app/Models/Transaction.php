@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Validation\ValidationException;
 
 class Transaction extends Model
 {
@@ -18,6 +17,7 @@ class Transaction extends Model
         'reference_number',
         'transaction_type_id',
         'vendor_id',
+        'customer_id',
         'transaction_status_id',
         'from_location_id',
         'to_location_id',
@@ -25,6 +25,8 @@ class Transaction extends Model
         'notes',
         'reference_doc',
         'purchase_order_id',
+        'sales_order_id',
+        'adjustment_reason_id',
         'created_by',
         'posted_by',
         'posted_at',
@@ -47,15 +49,27 @@ class Transaction extends Model
     }
 
     /**
-     * Boot the model.
+     * Get the sales order that generated this movement.
      */
-    protected static function boot()
+    public function salesOrder(): BelongsTo
     {
-        parent::boot();
+        return $this->belongsTo(SalesOrder::class);
+    }
 
-        static::saving(function ($transaction) {
-            $transaction->validateIntegrity();
-        });
+    /**
+     * Get the customer for this transaction.
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Get the adjustment reason for this transaction.
+     */
+    public function adjustmentReason(): BelongsTo
+    {
+        return $this->belongsTo(AdjustmentReason::class);
     }
 
     /**
@@ -75,42 +89,59 @@ class Transaction extends Model
     }
 
     /**
-     * Validates transaction business logic rules.
-     */
-    public function validateIntegrity()
-    {
-        // For performance, we check the type code if the relation is missing or already loaded
-        $type = $this->type;
-
-        if ($type) {
-            if ($type->matchesCode('TRFR')) {
-                if (! $this->from_location_id || ! $this->to_location_id) {
-                    throw ValidationException::withMessages([
-                        'to_location_id' => 'A transfer transaction must specify both origin and destination.',
-                    ]);
-                }
-            }
-
-            if ($type->matchesCode('RCPT') && ! $this->vendor_id) {
-                throw ValidationException::withMessages([
-                    'vendor_id' => 'A receipt transaction must specify a vendor.',
-                ]);
-            }
-
-            if ($type->matchesCode('ISSU') && $this->vendor_id) {
-                throw ValidationException::withMessages([
-                    'vendor_id' => 'An issue transaction must NOT have a vendor.',
-                ]);
-            }
-        }
-    }
-
-    /**
      * Get the vendor for this transaction.
      */
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    /**
+     * Get the shipments associated with this transaction.
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    /**
+     * Get the source location (for transfers/issues).
+     */
+    public function fromLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'from_location_id');
+    }
+
+    /**
+     * Get the destination location (for transfers/receipts).
+     */
+    public function toLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'to_location_id');
+    }
+
+    /**
+     * Get the user who created the transaction.
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the user who posted the transaction.
+     */
+    public function postedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'posted_by');
+    }
+
+    /**
+     * Get the user who cancelled the transaction.
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     /**

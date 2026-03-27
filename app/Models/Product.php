@@ -23,7 +23,7 @@ class Product extends Model
         'brand',
         'sku',
         'barcode',
-        'costing_method',
+        'costing_method_id',
         'average_cost',
         'selling_price',
         'reorder_point',
@@ -34,11 +34,35 @@ class Product extends Model
     ];
 
     /**
+     * Get the costing method for this product.
+     */
+    public function costingMethod(): BelongsTo
+    {
+        return $this->belongsTo(CostingMethod::class);
+    }
+
+    /**
      * Get the vendor that this product prefers.
      */
     public function preferredVendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class, 'preferred_vendor_id');
+    }
+
+    /**
+     * Get the category for this product.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the unit of measure for this product.
+     */
+    public function uom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'uom_id');
     }
 
     /**

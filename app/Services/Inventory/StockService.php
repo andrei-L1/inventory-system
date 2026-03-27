@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class StockService
 {
+    protected TransactionValidator $validator;
+
+    public function __construct(TransactionValidator $validator)
+    {
+        $this->validator = $validator;
+    }
+
     /**
      * Record a stock movement with strict integrity.
      *
@@ -19,6 +26,8 @@ class StockService
      */
     public function recordMovement(array $data): Transaction
     {
+        $this->validator->validate($data);
+
         return DB::transaction(function () use ($data) {
             // 1. Create Transaction Header
             $transaction = Transaction::create($data['header']);
@@ -68,11 +77,49 @@ class StockService
     }
 
     /**
-     * Logic to consume cost layers based on FIFO/LIFO (placeholder).
+     * Logic to consume cost layers based on FIFO/LIFO.
      */
     protected function consumeLayers(Inventory $inventory, float $quantity)
     {
-        // Implementation for FIFO/LIFO consumption would go here.
-        // It should update remaining_qty and is_exhausted fields.
+        $product = $inventory->product;
+        $method = $product->costingMethod;
+
+        // Default to FIFO if no method or 'average' is selected for layer exhaustion.
+        // In some systems, even if accounting is average, physical items are consumed FIFO.
+        $direction = ($method && $method->matchesName('lifo')) ? 'desc' : 'asc';
+
+        $layers = InventoryCostLayer::where('product_id', $inventory->product_id)
+            ->where('location_id', $inventory->location_id)
+            ->where('is_exhausted', false)
+            ->orderBy('receipt_date', $direction)
+            ->orderBy('id', $direction)
+            ->get();
+
+        $remainingToConsume = $quantity;
+
+        foreach ($layers as $layer) {
+            if ($remainingToConsume <= 0) {
+                break;
+            }
+
+            $availableInLayer = $layer->remaining_qty;
+            $consumeAmount = min($availableInLayer, $remainingToConsume);
+
+            // Accessing generated column 'remaining_qty' might require refresh,
+            // but we can update issued_qty directly.
+            $layer->issued_qty += $consumeAmount;
+            $remainingToConsume -= $consumeAmount;
+
+            // Mark as exhausted if remaining is effectively zero (handling float precision)
+            if (($layer->received_qty - $layer->issued_qty) <= 0.00001) {
+                $layer->is_exhausted = true;
+            }
+
+            $layer->save();
+        }
+
+        if ($remainingToConsume > 0.00001) {
+            throw new Exception("Insufficient cost layers to consume {$quantity} for product ID: {$inventory->product_id} at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}");
+        }
     }
 }
