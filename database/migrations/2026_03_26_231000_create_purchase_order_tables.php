@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -56,6 +57,12 @@ return new class extends Migration
 
             $table->index(['purchase_order_id', 'product_id']);
         });
+
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement(
+                'ALTER TABLE purchase_order_lines ADD CONSTRAINT chk_po_line_received_qty_bounds CHECK (received_qty >= 0 AND received_qty <= ordered_qty)'
+            );
+        }
     }
 
     public function down(): void
