@@ -27,6 +27,7 @@ class Transaction extends Model
         'reference_doc',
         'purchase_order_id',
         'sales_order_id',
+        'adjustment_reason_id',
         'created_by',
         'posted_by',
         'posted_at',
@@ -62,6 +63,14 @@ class Transaction extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Get the adjustment reason for this transaction.
+     */
+    public function adjustmentReason(): BelongsTo
+    {
+        return $this->belongsTo(AdjustmentReason::class);
     }
 
     /**
