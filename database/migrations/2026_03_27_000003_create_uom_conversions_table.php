@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -20,6 +21,15 @@ return new class extends Migration
 
             $table->unique(['from_uom_id', 'to_uom_id']);
         });
+
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement(
+                'ALTER TABLE uom_conversions ADD CONSTRAINT chk_uom_conversion_factor_positive CHECK (conversion_factor > 0)'
+            );
+            DB::statement(
+                'ALTER TABLE uom_conversions ADD CONSTRAINT chk_uom_conversion_from_to_different CHECK (from_uom_id <> to_uom_id)'
+            );
+        }
     }
 
     /**
