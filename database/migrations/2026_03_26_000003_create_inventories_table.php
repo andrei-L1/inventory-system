@@ -26,7 +26,9 @@ return new class extends Migration
         });
 
         // DB-level guard: prevent negative stock at the database engine level
-        DB::statement('ALTER TABLE inventories ADD CONSTRAINT chk_inventory_qty_non_negative CHECK (quantity_on_hand >= 0)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE inventories ADD CONSTRAINT chk_inventory_qty_non_negative CHECK (quantity_on_hand >= 0)');
+        }
 
         // ─── FIFO / LIFO Cost Layers ──────────────────────────────────────────
         // Each receipt creates a cost layer. Issues consume from layers per method.
@@ -49,8 +51,10 @@ return new class extends Migration
         });
 
         // DB-level guards on cost layer quantities
-        DB::statement('ALTER TABLE inventory_cost_layers ADD CONSTRAINT chk_layers_received_qty_positive CHECK (received_qty > 0)');
-        DB::statement('ALTER TABLE inventory_cost_layers ADD CONSTRAINT chk_layers_issued_qty_non_negative CHECK (issued_qty >= 0)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE inventory_cost_layers ADD CONSTRAINT chk_layers_received_qty_positive CHECK (received_qty > 0)');
+            DB::statement('ALTER TABLE inventory_cost_layers ADD CONSTRAINT chk_layers_issued_qty_non_negative CHECK (issued_qty >= 0)');
+        }
     }
 
     public function down(): void

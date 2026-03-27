@@ -54,8 +54,9 @@ return new class extends Migration
         $avgId = DB::table('costing_methods')->where('name', 'average')->value('id');
         DB::table('products')->whereNull('costing_method_id')->update(['costing_method_id' => $avgId]);
 
-        // C: Drop old ENUM column (also drops the index('costing_method') from 000002)
+        // C: Drop old ENUM column
         Schema::table('products', function (Blueprint $table) {
+            $table->dropIndex(['costing_method']); // Explicitly drop index for SQLite compatibility
             $table->dropColumn('costing_method');
         });
 
@@ -141,6 +142,7 @@ return new class extends Migration
             $table->dropColumn('costing_method_id');
             $table->enum('costing_method', ['fifo', 'lifo', 'average'])
                 ->default('average')->nullable(false)->change();
+            $table->index('costing_method'); // Restore the original index
         });
 
         Schema::dropIfExists('costing_methods');

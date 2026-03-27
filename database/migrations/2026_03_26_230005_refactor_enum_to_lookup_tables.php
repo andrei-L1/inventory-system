@@ -32,6 +32,7 @@ return new class extends Migration
 
         // C: Drop the old ENUM column (separate call — avoids doctrine conflict)
         Schema::table('locations', function (Blueprint $table) {
+            $table->dropIndex(['type']); // Explicitly drop index for SQLite compatibility
             $table->dropColumn('type');
         });
 
@@ -70,6 +71,7 @@ return new class extends Migration
 
         // C: Drop old ENUM columns (separate call)
         Schema::table('transactions', function (Blueprint $table) {
+            $table->dropIndex(['type', 'status']); // Explicitly drop index for SQLite compatibility
             $table->dropColumn(['type', 'status']);
         });
 
@@ -135,12 +137,13 @@ return new class extends Migration
             $table->dropColumn(['transaction_type_id', 'transaction_status_id']);
         });
 
-        // E: Make ENUM columns NOT NULL
+        // E: Make ENUM columns NOT NULL and restore index
         Schema::table('transactions', function (Blueprint $table) {
             $table->enum('type', ['receipt', 'issue', 'transfer', 'adjustment', 'opening_balance'])
                 ->nullable(false)->change();
             $table->enum('status', ['draft', 'pending', 'posted', 'cancelled'])
                 ->default('draft')->nullable(false)->change();
+            $table->index(['type', 'status']); // Restore index
         });
 
         // ══════════════════════════════════════════════════════════════════════
@@ -170,10 +173,11 @@ return new class extends Migration
             $table->dropColumn('location_type_id');
         });
 
-        // E: Make ENUM NOT NULL
+        // E: Make ENUM NOT NULL and restore index
         Schema::table('locations', function (Blueprint $table) {
             $table->enum('type', ['warehouse', 'zone', 'aisle', 'bin'])
                 ->default('warehouse')->nullable(false)->change();
+            $table->index('type'); // Restore index
         });
     }
 };
