@@ -12,6 +12,7 @@ class TransactionValidator
      * Validate transaction business logic rules.
      *
      * @param  array  $data  Transaction data (header and lines)
+     *
      * @throws ValidationException
      */
     public function validate(array $data): void
@@ -19,7 +20,7 @@ class TransactionValidator
         $header = $data['header'];
         $typeId = $header['transaction_type_id'] ?? null;
 
-        if (!$typeId) {
+        if (! $typeId) {
             return;
         }
 
@@ -43,7 +44,7 @@ class TransactionValidator
             }
 
             // 3. Issues (Outgoing): Must NOT have a vendor (vendor is for income/purchases)
-            if ($type->matchesCode('ISSU') && !empty($header['vendor_id'])) {
+            if ($type->matchesCode('ISSU') && ! empty($header['vendor_id'])) {
                 throw ValidationException::withMessages([
                     'vendor_id' => 'An issue transaction must NOT have a vendor.',
                 ]);

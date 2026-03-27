@@ -23,8 +23,8 @@ class StockConsumptionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new StockService();
-        
+        $this->service = new StockService;
+
         // Use the system's database seeder to set up lookups and locations
         $this->seed(DatabaseSeeder::class);
     }
@@ -33,7 +33,7 @@ class StockConsumptionTest extends TestCase
     {
         $location = Location::where('code', 'WH-A-Z1')->first();
         $fifoMethod = CostingMethod::where('name', 'fifo')->first();
-        
+
         // Manual product creation as no factory exists
         $product = Product::create([
             'product_code' => 'TEST-001',
@@ -83,10 +83,10 @@ class StockConsumptionTest extends TestCase
                     'location_id' => $location->id,
                     'quantity' => -15, // Issue
                     'unit_cost' => 0,
-                    // Note: StockService expects negative quantity for issues 
+                    // Note: StockService expects negative quantity for issues
                     // and handles it in recordMovement loop.
-                ]
-            ]
+                ],
+            ],
         ]);
 
         // Refresh layers from DB to get updated issued_qty and calculated remaining_qty
@@ -94,17 +94,17 @@ class StockConsumptionTest extends TestCase
         $layer2 = InventoryCostLayer::where('product_id', $product->id)->where('unit_cost', 20.00)->first();
 
         $this->assertTrue($layer1->is_exhausted, 'Layer 1 should be exhausted');
-        $this->assertEquals(10, (float)$layer1->issued_qty);
-        
+        $this->assertEquals(10, (float) $layer1->issued_qty);
+
         $this->assertFalse($layer2->is_exhausted, 'Layer 2 should NOT be exhausted');
-        $this->assertEquals(5, (float)$layer2->issued_qty);
+        $this->assertEquals(5, (float) $layer2->issued_qty);
     }
 
     public function test_lifo_consumption_consumes_newest_layers_first()
     {
         $location = Location::where('code', 'WH-A-Z1')->first();
         $lifoMethod = CostingMethod::where('name', 'lifo')->first();
-        
+
         $product = Product::create([
             'product_code' => 'TEST-002',
             'name' => 'Test Product LIFO',
@@ -153,17 +153,17 @@ class StockConsumptionTest extends TestCase
                     'location_id' => $location->id,
                     'quantity' => -15,
                     'unit_cost' => 0,
-                ]
-            ]
+                ],
+            ],
         ]);
 
         $layer1 = InventoryCostLayer::where('product_id', $product->id)->where('unit_cost', 10.00)->first();
         $layer2 = InventoryCostLayer::where('product_id', $product->id)->where('unit_cost', 20.00)->first();
 
         $this->assertTrue($layer2->is_exhausted, 'Layer 2 (Newer) should be exhausted');
-        $this->assertEquals(10, (float)$layer2->issued_qty);
-        
+        $this->assertEquals(10, (float) $layer2->issued_qty);
+
         $this->assertFalse($layer1->is_exhausted, 'Layer 1 (Older) should NOT be exhausted');
-        $this->assertEquals(5, (float)$layer1->issued_qty);
+        $this->assertEquals(5, (float) $layer1->issued_qty);
     }
 }
