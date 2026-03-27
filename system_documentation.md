@@ -12,57 +12,27 @@ The system is a production-ready ERP-grade inventory management solution built w
 - **Frontend**: Vue.js / Inertia.js (Vite-based)
 - **Tooling**: Composer, NPM, Git
 
-## 3. Installation & Setup
-1. **Repository**: Clone the repository and switch to the development branch:
-   ```bash
-   git checkout feat/inventory-standardization
-   ```
-2. **Backend Dependencies**:
-   ```bash
-   composer install
-   ```
-3. **Frontend Dependencies**:
-   ```bash
-   npm ci
-   npm run build
-   ```
-4. **Environment**: Configure [.env](file:///c:/xampp/htdocs/inventory-system/.env) with database credentials and run migrations:
-   ```bash
-   php artisan migrate
-   php artisan db:seed --class=SalesOrderStatusSeeder
-   ```
+## 3. Core Architecture & Workflow
+The system uses a **Service-Based Architecture** for all inventory movements.
 
-## 4. Module Architecture
+### A. Inventory Engine
+- **Service**: `App\Services\Inventory\StockService`
+- **Validation**: `App\Services\Inventory\TransactionValidator`
+- **Strategy**: Pessimistic Locking + Database Transactions to ensure 100% data integrity.
 
-### A. Core Inventory & Costing
-- **Costing Engine**: Supports FIFO, LIFO, and Average Costing via `inventory_cost_layers`.
-- **Traceability**: Multi-level tracking via **Batch/Lot Numbers** and **Serial Numbers**.
-- **Unit Management**: Support for base units and **UOM Conversions** (e.g., 1 Box = 12 Pieces).
+### B. Costing Engine
+- Supports **FIFO**, **LIFO**, and **Weighted Average** methods.
+- Logic is managed via `inventory_cost_layers`, enabling precise margin tracking even when prices fluctuate.
 
-### B. Procurement (Purchasing)
-- **Vendors**: Comprehensive supplier management.
-- **Purchase Orders**: Full PO lifecycle tracking (Draft -> Approved -> Received).
-- **Replenishment**: Automated reorder points and demand-based suggestions.
+### C. Data Traceability
+- **Audit Logs**: Every change to master data is logged.
+- **Transaction History**: Every stock movement has a header and detailed lines.
+- **Soft Deletes**: Used across products, orders, and vendors to preserve historical references.
 
-### C. Sales & Distribution
-- **Customers**: Comprehensive buyer management with credit limits.
-- **Pricing Strategy**: Multi-tiered **Price Lists** and **Discount Rules** (Product, Category, or Customer-specific).
-- **Sales Orders**: Full order lifecycle (Draft -> Approved -> Processing -> Shipped).
-
-### D. Logistics & Traceability
-- **Shipments**: Integration with multiple **Carriers** and real-time tracking numbers.
-- **Packaging**: Support for multi-package shipments with weights and dimensions.
-- **Audit Logs**: Full traceability of all data changes and system activities via `audit_logs` and `activity_logs`.
-
-## 5. Database Schema (Summary)
-The database contains **48 tables**, highly normalized and strictly constrained with foreign keys to ensure data integrity.
-
-- **Master Data**: `products`, `categories`, `users`, `roles`, [customers](file:///c:/xampp/htdocs/inventory-system/app/Models/PriceList.php#19-23), `vendors`.
-- **Reference Data**: `location_types`, `transaction_types`, `transaction_statuses`, `sales_order_statuses`, `purchase_order_statuses`.
-- **Operational Data**: [transactions](file:///c:/xampp/htdocs/inventory-system/app/Models/SalesOrder.php#47-51), `sales_orders`, `purchase_orders`, [shipments](file:///c:/xampp/htdocs/inventory-system/app/Models/Carrier.php#20-24).
-
-## 6. Git Workflow
-The standardization and ERP enhancements are contained within the `feat/inventory-standardization` branch, following a clean feature-branch development model.
+## 4. Module breakdown
+- **Master Data**: `products`, `categories`, `users`, `customers`, `vendors`.
+- **Reference Data**: Lookup tables for statuses and types.
+- **Operational Data**: `transactions`, `sales_orders`, `purchase_orders`, `shipments`.
 
 ---
 *Last Updated: 2026-03-27*
