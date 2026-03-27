@@ -1,3 +1,181 @@
+# Database Documentation
+
+## Purpose
+This document describes how the database in this inventory system is structured, operated, and maintained across development and production environments.
+
+It is intended for developers, QA, and operations teams.
+
+## Scope
+- Database architecture and domain modules
+- Environment configuration
+- Migration and seeding workflow
+- Data integrity and safety rules
+- Performance practices
+- Backup, restore, and incident response
+- Production readiness checklist
+
+## Technology Context
+- Framework: Laravel
+- Primary database: MySQL (local and expected production target)
+- Migration system: Laravel migrations
+- Seed system: Laravel seeders
+
+## Domain Model Overview
+The schema supports a full inventory lifecycle:
+
+- Master data: users, products, locations, vendors, customers
+- Movements: transactions and transaction lines
+- Costing: inventory cost layers and costing methods
+- Procurement: purchase orders and related statuses
+- Sales: sales orders and fulfillment linkage
+- Traceability: serials, batches/lots, attachments, audit logs
+- Planning and pricing: replenishment, price lists, discount rules
+- Logistics: shipment and carrier-related records
+- Access control: permissions and role mappings
+
+## Database Design Standards
+- Use foreign keys for all relational dependencies.
+- Default to `restrictOnDelete` for critical accounting/stock history relations.
+- Use `cascadeOnDelete` only for purely dependent child entities.
+- Enforce positive quantity and other invariant checks where possible.
+- Avoid destructive schema changes in a single release without a rollback-safe path.
+- Prefer additive migrations (new columns/tables) before deprecating old ones.
+
+## Environment Configuration
+Use environment-specific `.env` values.
+
+### Development
+- `APP_ENV=local`
+- `APP_DEBUG=true`
+- Non-production credentials
+- Local database instance
+
+### Staging
+- `APP_ENV=staging`
+- `APP_DEBUG=false`
+- Staging-only credentials
+- Production-like data volume for load tests
+
+### Production
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- Least-privilege DB user (never app runtime as root)
+- Strong password rotation policy
+- TLS-enabled DB transport where supported
+
+## Local Setup and Bootstrap
+1. Install dependencies.
+2. Configure `.env` for local database.
+3. Run migrations.
+4. Run seeders.
+5. Execute tests.
+
+Typical commands:
+- `php artisan migrate`
+- `php artisan db:seed`
+- `php artisan test`
+
+## Migration Workflow
+### Rules
+- One logical change per migration.
+- Name migrations clearly by intent.
+- Always implement both `up()` and `down()`.
+- Avoid writing high-risk data transformations without backups.
+- Validate migration order on a clean database before merge.
+
+### Pull Request Expectations
+- Include migration rationale.
+- Include rollback behavior.
+- Include query/index impact notes for large tables.
+- Include test updates if business rules changed.
+
+## Seeding Strategy
+- Keep seeders deterministic for repeatable development setup.
+- Separate reference seeders (statuses/types) from sample/test data.
+- Ensure seeders can run multiple times safely when possible.
+
+## Data Integrity Policy
+- Inventory-affecting writes must be transactional.
+- Posting operations must be idempotent to prevent duplicate stock effects.
+- Every stock movement should have an audit trail.
+- Soft deletes should not break stock and cost history references.
+- Status transitions must follow an explicit lifecycle matrix.
+
+## Performance and Scaling Guidelines
+- Monitor and tune top read/write queries first.
+- Add composite indexes based on query patterns, not guesswork.
+- Use pagination on high-volume list endpoints.
+- Run explain plans for slow queries before schema updates.
+- Reassess index strategy after major feature additions.
+
+## Observability and Monitoring
+Track at minimum:
+- Query latency (P50/P95/P99)
+- Slow query count and offenders
+- Active connections and saturation
+- Lock waits and deadlocks
+- Error rates for transaction posting paths
+
+Set alerts for:
+- Failed backups
+- Long-running migrations
+- Deadlock spikes
+- Connection pool exhaustion
+
+## Backup and Recovery
+### Policy
+- Scheduled full backups
+- Incremental/binlog backups if supported
+- Retention policy by compliance and recovery needs
+
+### Validation
+- Perform regular restore drills into a clean environment.
+- Measure and document:
+  - RPO (data loss tolerance)
+  - RTO (recovery time target)
+
+### Minimum Runbook
+- Who triggers restore
+- Which backup source to use
+- Verification steps post-restore
+- Communication protocol for incidents
+
+## Release and Change Management
+- Apply migrations first in staging, then production.
+- Take pre-release backup snapshot.
+- Use maintenance/cutover window for high-risk migrations.
+- Validate critical business flows immediately after deployment:
+  - PO receiving
+  - SO posting
+  - stock movement reports
+  - cost layer updates
+
+## Security Controls
+- Never commit secrets in repository files.
+- Restrict DB account permissions to required schema actions.
+- Rotate credentials on schedule and after incidents.
+- Review access logs and privilege grants periodically.
+
+## Testing Strategy
+- CI must run migrations from scratch and execute feature tests.
+- Add regression tests for each inventory bug fix.
+- Include concurrency tests for stock posting and consumption.
+- Include data integrity tests for invariant checks.
+
+## Production Readiness Checklist
+- [ ] `APP_ENV` and debug settings are production-safe.
+- [ ] Application uses non-root least-privilege DB credentials.
+- [ ] All migrations pass on a clean staging clone.
+- [ ] Backup and restore drill completed successfully.
+- [ ] Slow query and deadlock alerts are active.
+- [ ] Core inventory lifecycle tests pass in CI and staging.
+- [ ] Rollback and incident runbooks are documented and rehearsed.
+
+## Ownership and Maintenance
+- Engineering owns schema evolution and migration quality.
+- QA owns integration and regression verification.
+- Operations owns backup, restore, monitoring, and alerts.
+- Review this document at least once per quarter or after major schema changes.
 # Inventory System: Database Architecture Documentation
 
 ## 1. Overview
