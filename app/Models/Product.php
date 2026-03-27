@@ -50,6 +50,22 @@ class Product extends Model
     }
 
     /**
+     * Get the category for this product.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the unit of measure for this product.
+     */
+    public function uom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'uom_id');
+    }
+
+    /**
      * Get the current inventory levels for this product.
      */
     public function inventories(): HasMany
