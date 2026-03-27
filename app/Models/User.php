@@ -69,4 +69,20 @@ class User extends Authenticatable
     {
         return $this->role->permissions()->where('slug', $permissionSlug)->exists();
     }
+
+    /**
+     * Get the audit logs for the user.
+     */
+    public function auditLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    /**
+     * Get the activity logs for the user.
+     */
+    public function activityLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 }
