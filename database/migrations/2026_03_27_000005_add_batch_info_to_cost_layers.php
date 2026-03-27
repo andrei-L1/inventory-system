@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('inventory_cost_layers', function (Blueprint $table) {
             $table->string('batch_number', 50)->nullable()->after('transaction_line_id');
             $table->date('expiry_date')->nullable()->after('batch_number');
-            
+
             $table->index(['product_id', 'batch_number']);
         });
     }
