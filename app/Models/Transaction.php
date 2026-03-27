@@ -18,6 +18,7 @@ class Transaction extends Model
         'reference_number',
         'transaction_type_id',
         'vendor_id',
+        'customer_id',
         'transaction_status_id',
         'from_location_id',
         'to_location_id',
@@ -25,6 +26,7 @@ class Transaction extends Model
         'notes',
         'reference_doc',
         'purchase_order_id',
+        'sales_order_id',
         'created_by',
         'posted_by',
         'posted_at',
@@ -44,6 +46,22 @@ class Transaction extends Model
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class);
+    }
+
+    /**
+     * Get the sales order that generated this movement.
+     */
+    public function salesOrder(): BelongsTo
+    {
+        return $this->belongsTo(SalesOrder::class);
+    }
+
+    /**
+     * Get the customer for this transaction.
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     /**
