@@ -19,8 +19,14 @@ class Customer extends Model
         'shipping_address',
         'tax_number',
         'credit_limit',
+        'price_list_id',
         'is_active',
     ];
+
+    public function priceList()
+    {
+        return $this->belongsTo(PriceList::class);
+    }
 
     public function salesOrders()
     {
