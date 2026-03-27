@@ -49,7 +49,7 @@ class ActivityLog extends Model
 
         // Automatically set created_at on creation since $timestamps = false
         static::creating(function ($model) {
-            if (!$model->created_at) {
+            if (! $model->created_at) {
                 $model->created_at = $model->freshTimestamp();
             }
         });

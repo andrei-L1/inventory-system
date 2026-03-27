@@ -70,7 +70,7 @@ class AuditModelTest extends TestCase
     public function test_user_relationships_return_logs()
     {
         $user = User::factory()->create();
-        
+
         AuditLog::create([
             'user_id' => $user->id,
             'event' => 'test',

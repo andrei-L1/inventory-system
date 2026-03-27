@@ -17,7 +17,7 @@ class TransactionValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new TransactionValidator();
+        $this->validator = new TransactionValidator;
 
         // Seed basic types
         TransactionType::create(['name' => 'receipt', 'code' => 'RCPT']);
@@ -36,7 +36,7 @@ class TransactionValidatorTest extends TestCase
             'header' => [
                 'transaction_type_id' => $type->id,
                 'vendor_id' => null,
-            ]
+            ],
         ]);
     }
 
@@ -51,7 +51,7 @@ class TransactionValidatorTest extends TestCase
             'header' => [
                 'transaction_type_id' => $type->id,
                 'vendor_id' => 99,
-            ]
+            ],
         ]);
     }
 
@@ -67,7 +67,7 @@ class TransactionValidatorTest extends TestCase
                 'transaction_type_id' => $type->id,
                 'from_location_id' => 1,
                 'to_location_id' => null,
-            ]
+            ],
         ]);
     }
 
@@ -79,7 +79,7 @@ class TransactionValidatorTest extends TestCase
             'header' => [
                 'transaction_type_id' => $type->id,
                 'vendor_id' => 1,
-            ]
+            ],
         ]);
 
         $this->assertTrue(true); // Should not throw exception
