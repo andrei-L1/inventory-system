@@ -61,7 +61,9 @@ return new class extends Migration
         });
 
         // DB-level guard: prevent zero or negative quantities on transaction lines
-        DB::statement('ALTER TABLE transaction_lines ADD CONSTRAINT chk_txn_line_qty_positive CHECK (quantity > 0)');
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE transaction_lines ADD CONSTRAINT chk_txn_line_qty_positive CHECK (quantity > 0)');
+        }
 
         // ─── Add FK to cost layers now that transaction_lines exists ─────────
         Schema::table('inventory_cost_layers', function (Blueprint $table) {
