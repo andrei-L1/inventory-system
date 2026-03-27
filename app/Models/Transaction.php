@@ -74,18 +74,6 @@ class Transaction extends Model
     }
 
     /**
-     * Boot the model.
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::saving(function ($transaction) {
-            $transaction->validateIntegrity();
-        });
-    }
-
-    /**
      * Get the type of this transaction.
      */
     public function type(): BelongsTo
@@ -99,37 +87,6 @@ class Transaction extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(TransactionStatus::class, 'transaction_status_id');
-    }
-
-    /**
-     * Validates transaction business logic rules.
-     */
-    public function validateIntegrity()
-    {
-        // For performance, we check the type code if the relation is missing or already loaded
-        $type = $this->type;
-
-        if ($type) {
-            if ($type->matchesCode('TRFR')) {
-                if (! $this->from_location_id || ! $this->to_location_id) {
-                    throw ValidationException::withMessages([
-                        'to_location_id' => 'A transfer transaction must specify both origin and destination.',
-                    ]);
-                }
-            }
-
-            if ($type->matchesCode('RCPT') && ! $this->vendor_id) {
-                throw ValidationException::withMessages([
-                    'vendor_id' => 'A receipt transaction must specify a vendor.',
-                ]);
-            }
-
-            if ($type->matchesCode('ISSU') && $this->vendor_id) {
-                throw ValidationException::withMessages([
-                    'vendor_id' => 'An issue transaction must NOT have a vendor.',
-                ]);
-            }
-        }
     }
 
     /**
