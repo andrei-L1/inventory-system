@@ -105,6 +105,46 @@ class Transaction extends Model
     }
 
     /**
+     * Get the source location (for transfers/issues).
+     */
+    public function fromLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'from_location_id');
+    }
+
+    /**
+     * Get the destination location (for transfers/receipts).
+     */
+    public function toLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'to_location_id');
+    }
+
+    /**
+     * Get the user who created the transaction.
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the user who posted the transaction.
+     */
+    public function postedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'posted_by');
+    }
+
+    /**
+     * Get the user who cancelled the transaction.
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    /**
      * Get the transaction lines.
      */
     public function lines(): HasMany

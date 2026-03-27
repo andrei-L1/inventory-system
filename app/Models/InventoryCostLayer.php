@@ -20,7 +20,6 @@ class InventoryCostLayer extends Model
         'expiry_date',
         'received_qty',
         'issued_qty',
-        'remaining_qty',
         'unit_cost',
         'receipt_date',
         'is_exhausted',
