@@ -16,6 +16,8 @@ class InventoryCostLayer extends Model
         'product_id',
         'location_id',
         'transaction_line_id',
+        'batch_number',
+        'expiry_date',
         'received_qty',
         'issued_qty',
         'remaining_qty',

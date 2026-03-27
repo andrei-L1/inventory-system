@@ -50,4 +50,12 @@ class TransactionLine extends Model
     {
         return $this->belongsTo(Location::class)->withTrashed();
     }
+
+    /**
+     * Get the serial numbers associated with this transaction line.
+     */
+    public function serials()
+    {
+        return $this->belongsToMany(ProductSerial::class, 'transaction_line_serials');
+    }
 }
