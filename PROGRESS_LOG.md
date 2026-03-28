@@ -7,6 +7,8 @@ This document records the detailed history of the project's development, technic
 ## 🏆 Project Milestone: Foundation Solidified (2026-03-27)
 **Status**: COMPLETE
 **Summary**: The entire 48-table database schema and 39-model architecture have been audited and verified for ERP-grade production.
+- **Validation Expansion**: Created `InsufficientStockException` and integrated it into the `StockService` to handle out-of-stock scenarios gracefully.
+- **Phase 0.1 Completion**: All core engine optimizations and safety guards are now active.
 
 ---
 
@@ -21,6 +23,17 @@ This document records the detailed history of the project's development, technic
     - **Weighted Average Costing**: Added a recalculation formula that updates the average cost of products and inventories on every receipt.
     - **Atomic Transfers**: Created a `recordTransfer()` method using double-sided transactions and pessimistic locking for zero-loss movement.
     - **Refactoring Migration Audit**: Verified the successful migration from ENUM types to highly performant Lookup Tables.
+    - **Lint Warning Resolution**: Resolved `$layer->save()` lint warning by adding a type check:
+        ```php
+            // Mark as exhausted if remaining is effectively zero
+            if (($layer->received_qty - $layer->issued_qty) <= 0.00001) {
+                $layer->is_exhausted = true;
+            }
+
+            if ($layer instanceof \Illuminate\Database\Eloquent\Model) {
+                $layer->save();
+            }
+        ```
 
 ### 🔍 Technical Audit Results:
 - **Migrations**: 31 Files | **Status**: PASS
