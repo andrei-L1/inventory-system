@@ -22,7 +22,15 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     // The Master Data Catalog Interface
-    Route::get('/catalog', function () {
+    Route::get('/catalog', function () {    
         return Inertia::render('Catalog');
     })->name('catalog');
+
+    Route::get('/inventory-center', function () {
+        return Inertia::render('InventoryCenter');
+    })->name('inventory-center');
+
+    Route::get('/vendor-center', function () {
+        return Inertia::render('VendorCenter');
+    })->name('vendor-center');
 });

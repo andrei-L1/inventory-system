@@ -1,38 +1,66 @@
 <script setup>
 import { usePage, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
+import Button from 'primevue/button';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+
+const collapsed = ref(false);
+
+const toggleSidebar = () => {
+    collapsed.value = !collapsed.value;
+    localStorage.setItem('sidebar-collapsed', collapsed.value);
+};
+
+onMounted(() => {
+    collapsed.value = localStorage.getItem('sidebar-collapsed') === 'true';
+});
 </script>
 
 <template>
-    <div class="app-layout">
+    <div class="app-layout" :class="{ 'sidebar-collapsed': collapsed }">
         <Toast />
         <ConfirmDialog />
+        
         <!-- Sidebar -->
         <aside class="app-sidebar sharp-panel">
             <div class="sidebar-header">
-                <i class="pi pi-server brand-accent" style="font-size: 1.5rem;"></i>
-                <span class="brand-title" style="font-size: 1.1rem; margin: 0; padding-left: 0.5rem; letter-spacing: 0.1em;">CMD_CTR</span>
+                <div class="brand-group">
+                    <i class="pi pi-server brand-accent" style="font-size: 1.5rem;"></i>
+                    <span v-if="!collapsed" class="brand-title" style="font-size: 1.1rem; margin: 0; padding-left: 0.5rem; letter-spacing: 0.1em;">CMD_CTR</span>
+                </div>
             </div>
+            
             <nav class="sidebar-nav">
-                <Link href="/dashboard" class="nav-item">
-                    <i class="pi pi-home"></i> <span>Dashboard</span>
+                <Link href="/dashboard" class="nav-item" title="Dashboard">
+                    <i class="pi pi-home"></i> <span v-if="!collapsed">Dashboard</span>
                 </Link>
-                <Link href="/catalog" class="nav-item">
-                    <i class="pi pi-box"></i> <span>Catalog</span>
+                <Link href="/catalog" class="nav-item" title="Catalog">
+                    <i class="pi pi-box"></i> <span v-if="!collapsed">Catalog</span>
+                </Link>
+                <Link href="/inventory-center" class="nav-item" title="Inventory Center">
+                    <i class="pi pi-database"></i> <span v-if="!collapsed">Inventory Center</span>
+                </Link>
+                <Link href="/vendor-center" class="nav-item" title="Vendor Center">
+                    <i class="pi pi-users"></i> <span v-if="!collapsed">Vendor Center</span>
                 </Link>
                 <!-- Placeholders for Future Phases -->
-                <a href="#" class="nav-item disabled">
-                    <i class="pi pi-arrow-right-arrow-left"></i> <span>Transfers</span>
+                <a href="#" class="nav-item disabled" title="Transfers">
+                    <i class="pi pi-arrow-right-arrow-left"></i> <span v-if="!collapsed">Transfers</span>
                 </a>
-                <a href="#" class="nav-item disabled">
-                    <i class="pi pi-chart-bar"></i> <span>Reports</span>
+                <a href="#" class="nav-item disabled" title="Reports">
+                    <i class="pi pi-chart-bar"></i> <span v-if="!collapsed">Reports</span>
                 </a>
             </nav>
+
+            <div class="sidebar-footer">
+                 <button @click="toggleSidebar" class="collapse-toggle">
+                    <i :class="collapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
+                </button>
+            </div>
         </aside>
 
         <!-- Main Content -->
@@ -77,20 +105,36 @@ const user = computed(() => page.props.auth.user);
     display: flex;
     flex-direction: column;
     z-index: 10;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-collapsed .app-sidebar {
+    width: 80px;
+    padding: 1.5rem 0.75rem;
 }
 
 .sidebar-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding-bottom: 2rem;
     border-bottom: 1px solid var(--bg-panel-border);
     margin-bottom: 2rem;
+}
+
+.brand-group {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    flex: 1;
 }
 
 .nav-item {
@@ -107,10 +151,21 @@ const user = computed(() => page.props.auth.user);
     border-radius: 2px;
     transition: all 0.15s ease-in-out;
     border-left: 2px solid transparent;
+    white-space: nowrap;
+}
+
+.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding: 0.85rem 0;
+    gap: 0;
+}
+
+.sidebar-collapsed .nav-item i {
+    font-size: 1.1rem;
 }
 
 .nav-item:hover:not(.disabled) {
-    background-color: rgba(59, 130, 246, 0.05); /* very subtle blue */
+    background-color: rgba(59, 130, 246, 0.05);
     color: var(--text-primary);
     border-left: 2px solid var(--accent-primary);
 }
@@ -118,6 +173,27 @@ const user = computed(() => page.props.auth.user);
 .nav-item.disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.sidebar-footer {
+    padding-top: 1rem;
+    border-top: 1px solid var(--bg-panel-border);
+    display: flex;
+    justify-content: center;
+}
+
+.collapse-toggle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.5rem;
+    transition: color 0.2s;
+}
+
+.collapse-toggle:hover {
+    color: var(--accent-primary);
 }
 
 .app-content-wrapper {
@@ -132,13 +208,13 @@ const user = computed(() => page.props.auth.user);
     border-radius: 0;
     border-top: none;
     border-right: none;
-    border-left: none; /* Already defined by sidebar */
+    border-left: none;
     padding: 0 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     z-index: 5;
-    box-shadow: none; /* Flatten it out */
+    box-shadow: none;
 }
 
 .topbar-right {
@@ -161,7 +237,7 @@ const user = computed(() => page.props.auth.user);
 }
 
 .logout-btn:hover {
-    color: #ef4444; /* Sharp Red Alert */
+    color: #ef4444;
 }
 
 .app-main {
