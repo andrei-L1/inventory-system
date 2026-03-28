@@ -1,6 +1,8 @@
-# Inventory System Progress Log
-
-This document records the detailed history of the project's development, technical milestones, and architectural decisions.
+## 🏗️ Development Methodology: "Engine-First & API-First"
+This project follows an **"Architecture-Lead"** strategy to ensure absolute data integrity.
+- **Engine-First Logic**: We prioritized the most complex math (Costing layers and Atomic movements) over UI development to guarantee a "Foundation of Truth."
+- **Service-Oriented Design**: All business rules live in the `Services` layer, making the system 100% future-proof for Mobile Apps or external integrations.
+- **Test-Driven Verification**: Every logic enhancement is validated by an automated test suite before progressing to the next phase.
 
 ---
 
