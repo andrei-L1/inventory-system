@@ -249,7 +249,7 @@ const formatCurrency = (val) => {
 }
 
 .gh-count {
-    background: #161b22;
+    background: var(--bg-panel);
     padding: 2px 6px;
     border-radius: 20px;
     font-size: 12px;
@@ -358,7 +358,7 @@ const formatCurrency = (val) => {
 
 .doc-cell code {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    background: #161b22;
+    background: var(--bg-panel);
     padding: 2px 4px;
     border-radius: 4px;
     color: var(--accent-primary);
@@ -380,7 +380,7 @@ const formatCurrency = (val) => {
 
 .ledger-header {
     padding: 12px 16px;
-    background: #161b22;
+    background: var(--bg-panel);
     border-bottom: 1px solid var(--bg-panel-border);
     border-radius: 6px 6px 0 0;
 }
@@ -394,7 +394,7 @@ const formatCurrency = (val) => {
 }
 
 ::v-deep(.p-datatable-thead > tr > th) {
-    background: #22272e !important;
+    background: var(--bg-panel-hover) !important;
     border-bottom: 1px solid var(--bg-panel-border) !important;
     padding: 12px 16px !important;
     color: var(--text-secondary) !important;
@@ -407,7 +407,7 @@ const formatCurrency = (val) => {
 }
 
 ::v-deep(.p-datatable-tbody > tr:hover) {
-    background: #161b22 !important;
+    background: var(--bg-panel) !important;
 }
 
 .gh-code {
@@ -425,7 +425,7 @@ const formatCurrency = (val) => {
     font-weight: 600;
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 }
-.ledger-qty.receipt { color: #57ab5a; } /* GitHub Green */
+.ledger-qty.receipt { color: var(--accent-primary); } /* GitHub Green */
 .ledger-qty.issue { color: #f47067; } /* GitHub Red */
 
 .gh-link {
@@ -465,13 +465,13 @@ const formatCurrency = (val) => {
 
 .gh-tag-success {
     background: rgba(87, 171, 90, 0.1) !important;
-    color: #57ab5a !important;
+    color: var(--accent-primary) !important;
     font-size: 10px;
     border: 1px solid rgba(87, 171, 90, 0.2);
 }
 
 .gh-tag-secondary {
-    background: #161b22 !important;
+    background: var(--bg-panel) !important;
     color: var(--text-secondary) !important;
     font-size: 10px;
     border: 1px solid var(--bg-panel-border);
@@ -485,7 +485,7 @@ const formatCurrency = (val) => {
 }
 
 ::v-deep(.p-listbox-item.p-highlight) {
-    background: #2d333b !important;
+    background: var(--bg-panel-hover) !important;
     color: var(--text-primary) !important;
 }
 </style>

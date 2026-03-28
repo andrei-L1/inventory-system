@@ -242,47 +242,49 @@ const deleteVendor = () => {
             </div>
             
             <Dialog v-model:visible="dialogVisible" :header="vendorForm.id ? 'UPDATE REGISTRY' : 'INITIALIZE PROVIDER'" :modal="true" :style="{ width: '800px' }" class="premium-dialog">
-                <div class="grid formgrid p-fluid">
-                    <div class="field col-12 md:col-8">
+                <div class="grid grid-cols-12 gap-x-6 gap-y-5">
+                    <div class="col-span-12 md:col-span-8 flex flex-col gap-1.5">
                         <label class="form-label">Entity Designation (Name) *</label>
                         <InputText v-model="vendorForm.name" required autofocus :class="{'p-invalid': submitted && !vendorForm.name}" />
                         <small class="p-error" v-if="submitted && !vendorForm.name">Designation is required.</small>
                     </div>
-                    <div class="field col-12 md:col-4">
+                    <div class="col-span-12 md:col-span-4 flex flex-col gap-1.5">
                         <label class="form-label">Identifier Code</label>
-                        <InputText v-model="vendorForm.vendor_code" style="font-family: monospace;" />
+                        <InputText v-model="vendorForm.vendor_code" class="font-mono text-sm" />
                     </div>
 
-                    <div class="field col-12 md:col-6">
+                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
                         <label class="form-label">Communication Link (Email)</label>
                         <InputText v-model="vendorForm.email" />
                     </div>
-                    <div class="field col-12 md:col-6">
+                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
                         <label class="form-label">Telemetry (Phone)</label>
                         <InputText v-model="vendorForm.phone" />
                     </div>
 
-                    <div class="field col-12">
+                    <div class="col-span-12 flex flex-col gap-1.5">
                         <label class="form-label">Physical Interface (Address)</label>
                         <InputText v-model="vendorForm.address" />
                     </div>
 
-                    <div class="field col-12 md:col-6">
+                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
                         <label class="form-label">Primary Liaison</label>
                         <InputText v-model="vendorForm.contact_person" />
                     </div>
 
-                    <div class="field col-12 flex align-items-center gap-3 mt-2">
+                    <div class="col-span-12 flex items-center gap-4 bg-slate-900/40 p-4 rounded-lg border border-white/5 mt-2">
                         <ToggleSwitch v-model="vendorForm.is_active" />
-                        <span :style="{ fontWeight: '600', letterSpacing: '0.05em', color: vendorForm.is_active ? '#38bdf8' : '#94a3b8' }">
+                        <span :class="vendorForm.is_active ? 'text-sky-400 font-bold' : 'text-slate-500 font-medium'" class="text-[11px] tracking-widest uppercase">
                             {{ vendorForm.is_active ? 'SOURCE ACTIVE' : 'SOURCE OFFLINE' }}
                         </span>
                     </div>
                 </div>
 
                 <template #footer>
-                    <Button label="Abort Config" icon="pi pi-times" @click="dialogVisible = false" class="p-button-secondary" />
-                    <Button label="Apply Parameters" icon="pi pi-check" @click="saveVendor" class="p-button-primary" />
+                    <div class="flex items-center justify-end gap-3 w-full">
+                        <Button label="Abort Config" icon="pi pi-times" @click="dialogVisible = false" class="p-button-text !text-slate-400 hover:!text-white transition-colors" />
+                        <Button label="Apply Parameters" icon="pi pi-check" @click="saveVendor" class="p-button-primary shadow-lg shadow-sky-500/20" />
+                    </div>
                 </template>
             </Dialog>
         </div>
@@ -318,7 +320,7 @@ const deleteVendor = () => {
 .pane-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-primary);
+    color: #f8fafc;
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
@@ -326,11 +328,11 @@ const deleteVendor = () => {
 }
 
 .gh-count {
-    background: #161b22;
+    background: var(--bg-panel);
     padding: 2px 6px;
     border-radius: 20px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #94a3b8;
 }
 
 .search-container {
@@ -344,7 +346,7 @@ const deleteVendor = () => {
     top: 50%;
     transform: translateY(-50%);
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #94a3b8;
     z-index: 1;
 }
 
@@ -377,7 +379,7 @@ const deleteVendor = () => {
 .provider-slug {
     font-size: 11px;
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    color: var(--accent-primary);
+    color: #38bdf8;
 }
 
 /* Specs Section */
@@ -387,7 +389,7 @@ const deleteVendor = () => {
 
 .specs-header {
     padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--bg-panel-border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     margin-bottom: 1.25rem;
 }
 
@@ -401,10 +403,11 @@ const deleteVendor = () => {
 .specs-title {
     font-size: 20px;
     margin: 0;
+    color: #f8fafc;
 }
 
 .specs-desc {
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 14px;
     margin: 0;
 }
@@ -428,21 +431,22 @@ const deleteVendor = () => {
 .doc-cell label {
     font-size: 11px;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: #94a3b8;
     text-transform: uppercase;
 }
 
 .doc-cell span, .doc-cell code {
     font-size: 14px;
     font-weight: 500;
+    color: #f8fafc;
 }
 
 .doc-cell code {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    background: #161b22;
+    background: var(--bg-panel);
     padding: 2px 4px;
     border-radius: 4px;
-    color: var(--accent-primary);
+    color: #38bdf8;
     width: fit-content;
 }
 
@@ -457,8 +461,8 @@ const deleteVendor = () => {
 
 .ledger-header {
     padding: 12px 16px;
-    background: #161b22;
-    border-bottom: 1px solid var(--bg-panel-border);
+    background: var(--bg-panel);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 6px 6px 0 0;
 }
 
@@ -471,20 +475,20 @@ const deleteVendor = () => {
 }
 
 ::v-deep(.p-datatable-thead > tr > th) {
-    background: #0d1117 !important;
-    border-bottom: 1px solid var(--bg-panel-border) !important;
+    background: var(--bg-deep) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     padding: 12px 16px !important;
-    color: var(--text-secondary) !important;
+    color: #94a3b8 !important;
     font-weight: 600 !important;
 }
 
 ::v-deep(.p-datatable-tbody > tr) {
     background: transparent !important;
-    border-bottom: 1px solid var(--bg-panel-border) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 ::v-deep(.p-datatable-tbody > tr:hover) {
-    background: #161b22 !important;
+    background: var(--bg-panel) !important;
 }
 
 .gh-code {
@@ -502,21 +506,21 @@ const deleteVendor = () => {
     font-size: 12px;
     font-weight: 600;
 }
-.gh-status-indicator.posted { color: var(--accent-primary); }
-.gh-status-indicator.draft { color: var(--text-secondary); }
+.gh-status-indicator.posted { color: #38bdf8; }
+.gh-status-indicator.draft { color: #94a3b8; }
 
 .gh-tag-success {
     background: rgba(87, 171, 90, 0.1) !important;
-    color: #57ab5a !important;
+    color: var(--accent-primary) !important;
     font-size: 10px;
     border: 1px solid rgba(87, 171, 90, 0.2);
 }
 
 .gh-tag-secondary {
-    background: #161b22 !important;
-    color: var(--text-secondary) !important;
+    background: var(--bg-panel) !important;
+    color: #94a3b8 !important;
     font-size: 10px;
-    border: 1px solid var(--bg-panel-border);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .empty-placeholder, .empty-ledger {
@@ -525,7 +529,7 @@ const deleteVendor = () => {
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: var(--text-secondary);
+    color: #94a3b8;
     font-size: 14px;
     text-align: center;
 }
@@ -538,41 +542,34 @@ const deleteVendor = () => {
 }
 
 ::v-deep(.p-listbox-item.p-highlight) {
-    background: #161b22 !important;
-    color: var(--text-primary) !important;
+    background: var(--bg-panel) !important;
+    color: #f8fafc !important;
 }
 
-/* Premium Form Elements */
+/* Form Label & Field Styles */
 .form-label {
     display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.65rem;
+    font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-    transition: color 0.3s ease;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.25rem;
 }
 
-.field:focus-within .form-label {
-    color: #38bdf8;
-}
-
-/* Premium Dialog Design */
+/* Premium Dialog Design Overrides */
 ::v-deep(.p-dialog) {
     background: rgba(13, 17, 23, 0.95) !important;
-    backdrop-filter: blur(24px) !important;
+    backdrop-filter: blur(28px) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 16px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05) !important;
-    overflow: hidden !important;
-    transform-origin: center !important;
+    box-shadow: 0 40px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.05) !important;
     animation: dialogFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 @keyframes dialogFadeIn {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 ::v-deep(.p-dialog .p-dialog-header) {
@@ -591,19 +588,19 @@ const deleteVendor = () => {
 }
 
 ::v-deep(.p-dialog .p-dialog-title) {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em !important;
+    background: linear-gradient(135deg, #f8fafc, #94a3b8);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    color: transparent;
-    letter-spacing: 0.02em !important;
+    text-transform: uppercase;
 }
 
 ::v-deep(.p-dialog .p-dialog-content) {
     background: transparent !important;
-    padding: 2rem !important;
+    padding: 2.5rem 2rem !important;
 }
 
 ::v-deep(.p-dialog .p-dialog-footer) {
@@ -612,9 +609,8 @@ const deleteVendor = () => {
     padding: 1.25rem 2rem !important;
 }
 
-/* Premium Inputs */
+/* Premium Input Overrides */
 ::v-deep(.p-inputtext), 
-::v-deep(.p-inputnumber-input), 
 ::v-deep(.p-textarea), 
 ::v-deep(.p-select) {
     background: rgba(15, 23, 42, 0.6) !important;
@@ -622,67 +618,19 @@ const deleteVendor = () => {
     color: #f8fafc !important;
     border-radius: 8px !important;
     padding: 0.75rem 1rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) inset !important;
-    font-size: 0.9rem !important;
-}
-
-::v-deep(.p-inputtext:enabled:hover),
-::v-deep(.p-inputnumber-input:enabled:hover),
-::v-deep(.p-textarea:enabled:hover) {
-    border-color: rgba(56, 189, 248, 0.4) !important;
-    background: rgba(15, 23, 42, 0.8) !important;
+    font-size: 0.85rem !important;
+    transition: all 0.2s ease !important;
 }
 
 ::v-deep(.p-inputtext:enabled:focus),
-::v-deep(.p-inputnumber-input:enabled:focus),
 ::v-deep(.p-textarea:enabled:focus) {
     border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15), 0 2px 4px rgba(0,0,0,0.1) inset !important;
-    background: rgba(15, 23, 42, 0.95) !important;
-    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15) !important;
+    background: rgba(15, 23, 42, 0.8) !important;
 }
 
 ::v-deep(.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider) {
     background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5) !important;
-}
-
-::v-deep(.p-toggleswitch .p-toggleswitch-slider) {
-    background: rgba(15, 23, 42, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    transition: all 0.3s ease !important;
-}
-
-/* Dialog Footer Buttons */
-::v-deep(.p-dialog-footer .p-button-secondary) {
-    background: transparent !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #94a3b8 !important;
-    border-radius: 8px !important;
-    transition: all 0.2s ease !important;
-}
-
-::v-deep(.p-dialog-footer .p-button-secondary:hover) {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: #f8fafc !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-::v-deep(.p-dialog-footer .p-button-primary) {
-    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
-    border: none !important;
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 0.75rem 1.5rem !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    font-weight: 600 !important;
-}
-
-::v-deep(.p-dialog-footer .p-button-primary:hover) {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6) !important;
-    background: linear-gradient(135deg, #38bdf8, #3b82f6) !important;
 }
 </style>
++
