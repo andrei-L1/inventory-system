@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'uom' => new UnitOfMeasureResource($this->whenLoaded('uom')),
             'preferred_vendor' => new VendorResource($this->whenLoaded('preferredVendor')),
             'costing_method' => $this->costingMethod->name ?? 'unknown',
+            'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/'.$this->attachmentsIn('main_image')->first()->file_path) : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

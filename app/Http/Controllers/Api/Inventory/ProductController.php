@@ -53,7 +53,15 @@ class ProductController extends Controller
      */
     public function update(ProductUpdateRequest $request, Product $product): ProductResource
     {
-        $product->update($request->validated());
+        $data = $request->validated();
+        $image = $data['image'] ?? null;
+        unset($data['image']);
+
+        $product->update($data);
+
+        if ($image) {
+            $this->productService->handleAttachment($product, $image, 'main_image');
+        }
 
         return new ProductResource($product->refresh()->load(['category', 'uom', 'costingMethod']));
     }

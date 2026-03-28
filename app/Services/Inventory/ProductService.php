@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\Models\Attachment;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\Product;
@@ -41,10 +42,22 @@ class ProductService
     public function createProduct(array $data): Product
     {
         return DB::transaction(function () use ($data) {
+            $image = $data['image'] ?? null;
+            unset($data['image']);
+
             // 1. Create the Product
+            if (! isset($data['created_by']) && auth()->check()) {
+                $data['created_by'] = auth()->id();
+            }
+            
             $product = Product::create($data);
 
-            // 2. Initialize Inventory records for all active locations
+            // 2. Handle Image Attachment if provided
+            if ($image) {
+                $this->handleAttachment($product, $image, 'main_image');
+            }
+
+            // 3. Initialize Inventory records for all active locations
             // This ensures every product is "Ready to Receive" everywhere.
             $locations = Location::where('is_active', true)->get();
 
@@ -59,5 +72,24 @@ class ProductService
 
             return $product;
         });
+    }
+
+    /**
+     * Handle file attachment for a model.
+     */
+    public function handleAttachment(Product $product, $file, string $collection = 'attachments'): Attachment
+    {
+        $path = $file->store('products/attachments', 'public');
+        
+        return Attachment::create([
+            'attachable_id' => $product->id,
+            'attachable_type' => Product::class,
+            'file_path' => $path,
+            'file_name' => $file->getClientOriginalName(),
+            'file_type' => $file->getClientMimeType(),
+            'file_size' => $file->getSize(),
+            'collection_name' => $collection,
+            'uploader_id' => auth()->id(),
+        ]);
     }
 }
