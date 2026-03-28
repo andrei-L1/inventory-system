@@ -20,7 +20,7 @@ class ProductService
             ->with(['category', 'uom', 'preferredVendor', 'costingMethod']);
 
         if (! empty($filters['query'])) {
-            $keyword = '%' . $filters['query'] . '%';
+            $keyword = '%'.$filters['query'].'%';
             $query->where(function (Builder $q) use ($keyword) {
                 $q->where('name', 'like', $keyword)
                     ->orWhere('sku', 'like', $keyword)

@@ -23,8 +23,10 @@ class ProductUpdateRequest extends FormRequest
     public function rules(): array
     {
         $id = $this->route('product'); // assuming standard resource routes
-        if (is_object($id)) $id = $id->id;
-        
+        if (is_object($id)) {
+            $id = $id->id;
+        }
+
         return [
             'product_code' => "required|string|max:100|unique:products,product_code,{$id}",
             'name' => 'required|string|max:255',

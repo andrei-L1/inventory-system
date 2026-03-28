@@ -20,6 +20,7 @@ class UnitOfMeasureController extends Controller
             'name' => 'required|string|max:100|unique:units_of_measure,name',
             'abbreviation' => 'required|string|max:10|unique:units_of_measure,abbreviation',
         ]);
+
         return new UnitOfMeasureResource(UnitOfMeasure::create($validated));
     }
 
@@ -31,16 +32,18 @@ class UnitOfMeasureController extends Controller
     public function update(Request $request, UnitOfMeasure $uom)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:units_of_measure,name,' . $uom->id,
-            'abbreviation' => 'required|string|max:10|unique:units_of_measure,abbreviation,' . $uom->id,
+            'name' => 'required|string|max:100|unique:units_of_measure,name,'.$uom->id,
+            'abbreviation' => 'required|string|max:10|unique:units_of_measure,abbreviation,'.$uom->id,
         ]);
         $uom->update($validated);
+
         return new UnitOfMeasureResource($uom);
     }
 
     public function destroy(UnitOfMeasure $uom)
     {
         $uom->delete();
+
         return response()->json(['message' => 'UOM deleted']);
     }
 }

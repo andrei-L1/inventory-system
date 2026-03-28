@@ -26,6 +26,7 @@ class ProductController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $products = $this->productService->search($request->all());
+
         return ProductResource::collection($products);
     }
 
@@ -35,6 +36,7 @@ class ProductController extends Controller
     public function store(ProductStoreRequest $request): ProductResource
     {
         $product = $this->productService->createProduct($request->validated());
+
         return new ProductResource($product->load(['category', 'uom', 'costingMethod']));
     }
 
@@ -52,6 +54,7 @@ class ProductController extends Controller
     public function update(ProductUpdateRequest $request, Product $product): ProductResource
     {
         $product->update($request->validated());
+
         return new ProductResource($product->refresh()->load(['category', 'uom', 'costingMethod']));
     }
 
@@ -61,6 +64,7 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
+
         return response()->json(['message' => 'Product deleted successfully']);
     }
 }
