@@ -1,11 +1,123 @@
-@import 'tailwindcss';
+@layer primevue;
+@layer custom;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+@layer custom {
+    :root, .app-dark {
+        --bg-deep: #09090b; /* Zinc 950 - Absolute solid darkness */
+        --bg-panel: #18181b; /* Zinc 900 - Solid panel */
+        --bg-panel-border: #27272a; /* Zinc 800 - Crisp border */
+        --accent-primary: #3b82f6; /* Technical Blue */
+        --accent-hover: #2563eb;
+        --text-primary: #fafafa;
+        --text-secondary: #a1a1aa;
+    }
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Base Body Styling */
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-deep);
+        color: var(--text-primary);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-image: none; /* Removed all gradients */
+    }
+
+    /* High-End Typography */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 500;
+        margin-top: 0;
+        letter-spacing: -0.02em;
+    }
+
+    /* Sharp, High-Contrast Panel Component */
+    .sharp-panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--bg-panel-border);
+        border-radius: 4px; /* Sharp edges */
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+        padding: 3rem;
+        box-sizing: border-box;
+    }
+
+    /* Layout Utilities */
+    .layout-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        width: 100%;
+        padding: 1.5rem;
+        box-sizing: border-box;
+    }
+
+    .flex-col { display: flex; flex-direction: column; }
+    .gap-4 { gap: 1rem; }
+    .gap-2 { gap: 0.5rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .text-center { text-align: center; }
+    .w-full { width: 100%; }
+
+    .text-muted {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .brand-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .brand-accent {
+        color: var(--accent-primary);
+    }
+
+    /* Interactive Elements: Flat & Sharp */
+    .p-button-primary {
+        background: var(--accent-primary) !important;
+        border: 1px solid var(--accent-primary) !important;
+        color: #fff !important;
+        font-weight: 500 !important;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border-radius: 2px !important; /* Extremely sharp button */
+        transition: background 0.15s ease !important;
+    }
+
+    .p-button-primary:enabled:first-child:hover {
+        background: var(--accent-hover) !important;
+        border-color: var(--accent-hover) !important;
+        transform: translateY(0); /* Remove jump animation */
+        box-shadow: none; /* Remove glow */
+    }
+
+    /* Overriding PrimeVue Inputs for Sharp Aesthetic */
+    .p-inputtext, .p-password input {
+        background: #09090b !important; /* Match deep background */
+        border-color: var(--bg-panel-border) !important;
+        color: var(--text-primary) !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 2px !important; /* Sharp inputs */
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.95rem !important;
+    }
+
+    .p-inputtext:enabled:focus, .p-password input:enabled:focus {
+        border-color: var(--accent-primary) !important;
+        box-shadow: none !important; /* Remove fuzzy focus rings */
+        outline: 1px solid var(--accent-primary);
+    }
+
+    .p-password input {
+        width: 100%;
+    }
 }

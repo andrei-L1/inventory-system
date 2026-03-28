@@ -1,21 +1,36 @@
-import './bootstrap';
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+
+import 'primeicons/primeicons.css';
+import '../css/app.css';
 
 createInertiaApp({
-    title: (title) => `${title} - Inventory System`,
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob('./Pages/**/*.vue'),
-        ),
+    resolve: name => {
+        const pages = import.meta.glob('./Pages/**/*.vue', { eager: true });
+        return pages[`./Pages/${name}.vue`];
+    },
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .mount(el);
+        const app = createApp({ render: () => h(App, props) });
+        
+        app.use(plugin)
+           .use(PrimeVue, {
+               ripple: true,
+               theme: {
+                   preset: Aura,
+                   options: {
+                       darkModeSelector: '.app-dark',
+                       cssLayer: {
+                           name: 'primevue',
+                           order: 'custom, primevue'
+                       }
+                   }
+               }
+           })
+           .mount(el);
     },
     progress: {
-        color: '#4B5563',
+        color: '#10b981', // Emerald glow
     },
 });
