@@ -10,6 +10,12 @@ This document records the detailed history of the project's development, technic
 - **Validation Expansion**: Created `InsufficientStockException` and integrated it into the `StockService` to handle out-of-stock scenarios gracefully.
 - **Phase 0.1 Completion**: All core engine optimizations and safety guards are now active.
 
+### 🎯 Milestone: Phase 0.2 Complete (Automated Testing)
+**Summary**: All core math and movement logic is now covered by 100% passing automated feature tests.
+- **Costing Verification**: Confirmed FIFO/LIFO/Average costing accuracy.
+- **Atomicity Discovery**: Fixed a unique reference number collision in transfers identified during testing.
+- **Validation Proof**: Throws `InsufficientStockException` on all out-of-stock attempts.
+
 ---
 
 ## 🗓️ 2026-03-27 (Sprint: Standardization)

@@ -144,6 +144,7 @@ class StockService
             // For now, we simulate an Issue from Origin and a Receipt to Destination
             $originData = [
                 'header' => array_merge($data['header'], [
+                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp) . '-OUT',
                     'to_location_id' => $data['to_location_id'], // reference dest
                     'notes' => 'Transfer Out: ' . ($data['header']['notes'] ?? ''),
                 ]),
@@ -157,6 +158,7 @@ class StockService
 
             $destData = [
                 'header' => array_merge($data['header'], [
+                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp) . '-IN',
                     'from_location_id' => $data['from_location_id'], // reference source
                     'notes' => 'Transfer In: ' . ($data['header']['notes'] ?? ''),
                 ]),
