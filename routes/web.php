@@ -30,6 +30,10 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('InventoryCenter');
     })->name('inventory-center');
 
+    Route::get('/location-center', function () {
+        return Inertia::render('LocationCenter');
+    })->name('location-center');
+
     Route::get('/vendor-center', function () {
         return Inertia::render('VendorCenter');
     })->name('vendor-center');

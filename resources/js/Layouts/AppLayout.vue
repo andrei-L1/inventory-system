@@ -47,6 +47,9 @@ onMounted(() => {
                 <Link href="/vendor-center" class="nav-item" title="Vendor Center">
                     <i class="pi pi-users"></i> <span v-if="!collapsed">Vendor Center</span>
                 </Link>
+                <Link href="/location-center" class="nav-item" title="Location Center">
+                    <i class="pi pi-map-marker"></i> <span v-if="!collapsed">Location Center</span>
+                </Link>
                 <!-- Placeholders for Future Phases -->
                 <a href="#" class="nav-item disabled" title="Transfers">
                     <i class="pi pi-arrow-right-arrow-left"></i> <span v-if="!collapsed">Transfers</span>
