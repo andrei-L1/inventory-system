@@ -20,7 +20,20 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Atomicity Discovery**: Fixed a unique reference number collision in transfers identified during testing.
 - **Validation Proof**: Throws `InsufficientStockException` on all out-of-stock attempts.
 
+### 🎯 Milestone: Phase 0.3 Enhanced (UOM & Concurrency)
+**Date**: 2026-03-28 | **Status**: 100% VERIFIED
+**Summary**: Expanded the `StockService` with enterprise-grade scaling features and rigorous thread-safety.
+- **UOM Conversion Engine**: Integrated a mathematical conversion layer into `recordMovement()`. The system now automatically handles unit-to-unit transitions (e.g., Box of 12 → 12 Pieces) while perfectly recalibrating individual unit costs.
+- **Concurrency Guard**: Hardened the engine against race conditions. Verified via automated testing that `lockForUpdate()` correctly serializes 10+ simultaneous stock issue attempts, preventing "phantom stock" scenarios.
+- **Testing Expansion**: Added `test_uom_conversion_on_receipt_and_issue` and `test_concurrency_prevents_overselling` to the core suite.
+
 ---
+
+### 🎯 Milestone: Phase 1.3 Complete (Default Receive Routing)
+**Date**: 2026-03-28 | **Status**: 100% COMPLETE
+**Summary**: Finalized the master data foundation by adding logical routing parameters to the network topology.
+- **Default Inbound Target**: Added `default_receive_location_id` to the `locations` schema, allowing warehouses to define preferred receipt zones (e.g., "Loading Dock A").
+- **API & UI Sync**: Fully mapped the routing field through `LocationResource` and integrated it into the "Monochrome Slate" Modal in `LocationCenter.vue`.
 
 ### 🎯 Milestone: Phase 1.1 Complete (Master Data API)
 **Date**: 2026-03-28 | **Status**: 100% VERIFIED
@@ -75,13 +88,13 @@ Based on the full codebase audit conducted on 2026-03-28, here is the verified c
 
 | Layer | Domain | Status |
 |---|---|---|
-| **Database Schema** | 32 Migrations covering full ERP lifecycle | **~95%** |
+| **Database Schema** | 33 Migrations covering full ERP lifecycle | **~96%** |
 | **Eloquent Models** | 39 Models with full relations & soft deletes | **~95%** |
-| **Core Stock Engine** | `StockService` (Locking, FIFO/LIFO/WAC) | **100%** (Missing API trigger) |
+| **Core Stock Engine** | `StockService` (Locking, FIFO/LIFO/WAC/UOM) | **100%** (Missing API trigger) |
 | **REST API Surface** | Controllers & Resources | **~35%** (Master Data + Locations mapped) |
 | **Auth/Permissions** | Session/Sanctum, Roles, Middlewares | **100%** (Wired to API routes) |
 | **Catalog UI** | `Catalog.vue` (Full CRUD, Image Upload) | **100%** |
-| **LocationCenter UI**| `LocationCenter.vue` (Typography & Tree Structure)| **100%** |
+| **LocationCenter UI**| `LocationCenter.vue` (Topology & Routing)| **100%** |
 | **InventoryCenter UI** | Read-only ledger and specs view | **90%** (No movement triggers) |
 | **VendorCenter UI** | Full registry with CRUD | **100%** |
 | **Dashboard UI** | `Dashboard.vue` | **5%** (Static placeholder) |
@@ -98,4 +111,4 @@ Based on the full codebase audit conducted on 2026-03-28, here is the verified c
 4. **Security Enforcement**: Apply `CheckPermission` middleware to all state-changing API routes.
 
 ---
-*Last Updated: 2026-03-28 12:35:00*
+*Last Updated: 2026-03-28 14:55:00*

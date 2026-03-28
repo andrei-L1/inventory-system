@@ -113,7 +113,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] `UnitOfMeasureController` — Full CRUD
 - [ ] **UOM Management Page** — or panel within Settings (currently no frontend UI)
 - [ ] `UomConversionController` — CRUD for conversion factors (e.g., 1 Box = 12 pcs)
-- [ ] UOM Conversion logic integrated into `StockService`
+- [x] UOM Conversion logic integrated into `StockService`
 
 ### 1.6 Seeders (Reference Data)
 - [x] `TransactionTypeSeeder` — Receipt, Issue, Transfer, Adjustment
