@@ -8,8 +8,11 @@ import InputText from 'primevue/inputtext';
 import Listbox from 'primevue/listbox';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 
+const toast = useToast();
 const products = ref([]);
 const selectedProduct = ref(null);
 const history = ref([]);
@@ -51,6 +54,15 @@ watch(selectedProduct, () => {
     loadHistory();
 });
 
+const handleLinkClick = (type, num) => {
+    toast.add({ 
+        severity: 'info', 
+        summary: 'Navigating to Order', 
+        detail: `Redirecting to ${type}: ${num}`, 
+        life: 3000 
+    });
+};
+
 const getTransactionSeverity = (type) => {
     switch (type.toLowerCase()) {
         case 'receipt': return 'success';
@@ -69,6 +81,7 @@ const formatCurrency = (val) => {
 <template>
     <AppLayout>
         <Head title="Inventory Center" />
+        <Toast />
 
         <div class="center-container">
             <!-- Left Pane: Item Selector -->
@@ -135,20 +148,50 @@ const formatCurrency = (val) => {
                         <template #empty>
                             <div class="empty-log">NO MOVEMENT HISTORY RECORDED FOR THIS ASSET</div>
                         </template>
-                        <Column field="transaction_date" header="DATE" style="width: 120px"></Column>
-                        <Column field="reference_number" header="REFERENCE" style="width: 150px">
+                        <Column field="transaction_date" header="DATE" style="width: 100px"></Column>
+                        <Column field="reference_number" header="REFERENCE" style="width: 130px">
                             <template #body="{ data }">
                                 <span class="ref-num">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="type" header="OPERATION" style="width: 130px">
+                        <Column field="type" header="OPERATION" style="width: 110px">
                             <template #body="{ data }">
                                 <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="type-tag" />
                             </template>
                         </Column>
+                        <Column field="quantity" header="QTY" style="width: 70px">
+                            <template #body="{ data }">
+                                <span class="qty-val" :class="data.type.toLowerCase()">
+                                    {{ data.type.toLowerCase() === 'issue' ? '-' : '+' }}{{ data.quantity }}
+                                </span>
+                            </template>
+                        </Column>
+                        <Column header="ENTITY" style="width: 180px">
+                            <template #body="{ data }">
+                                <div class="entity-info">
+                                    <span v-if="data.vendor_name" class="entity-name"><i class="pi pi-building mr-1"></i>{{ data.vendor_name }}</span>
+                                    <span v-else-if="data.customer_name" class="entity-name"><i class="pi pi-user mr-1"></i>{{ data.customer_name }}</span>
+                                    <span v-else class="text-xs text-muted">Internal Movement</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="LINKED ORDER" style="width: 140px">
+                            <template #body="{ data }">
+                                <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
+                                    @click="handleLinkClick('PO', data.po_number || data.reference_doc)" class="order-link">
+                                    <i class="pi pi-receipt mr-1"></i>{{ data.po_number || data.reference_doc }}
+                                </div>
+                                <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
+                                    @click="handleLinkClick('SO', data.so_number || data.reference_doc)" class="order-link">
+                                    <i class="pi pi-send mr-1"></i>{{ data.so_number || data.reference_doc }}
+                                </div>
+                                <span v-else-if="data.reference_doc" class="text-xs text-muted">{{ data.reference_doc }}</span>
+                                <span v-else>-</span>
+                            </template>
+                        </Column>
                         <Column field="from_location" header="ORIGIN"></Column>
-                        <Column field="to_location" header="DESTINATION"></Column>
-                        <Column field="status" header="STATUS" style="width: 100px">
+                        <Column field="to_location" header="DEST"></Column>
+                        <Column field="status" header="STATUS" style="width: 90px">
                              <template #body="{ data }">
                                 <span class="status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
                             </template>
@@ -306,12 +349,45 @@ const formatCurrency = (val) => {
     border-radius: 2px;
 }
 
+.qty-val {
+    font-weight: 700;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+.qty-val.receipt { color: #10b981; }
+.qty-val.issue { color: #ef4444; }
+
+.entity-info {
+    display: flex;
+    flex-direction: column;
+}
+.entity-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.order-link {
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.1s;
+}
+.order-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
 .status-indicator {
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
 }
-
 .status-indicator.posted { color: var(--accent-primary); }
 .status-indicator.draft { color: var(--text-secondary); }
 

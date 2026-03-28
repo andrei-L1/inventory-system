@@ -4,9 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\CostingMethod;
+use App\Models\Customer;
 use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\SalesOrder;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
 use App\Models\UnitOfMeasure;
@@ -44,6 +47,12 @@ class SampleDataSeeder extends Seeder
             $transferTypeId = DB::table('transaction_types')->where('name', 'transfer')->value('id');
             $issueTypeId = DB::table('transaction_types')->where('name', 'issue')->value('id');
 
+            // 1.5. Order Statuses
+            $poStatusId = DB::table('purchase_order_statuses')->where('name', 'Approved')->value('id')
+                ?? DB::table('purchase_order_statuses')->insertGetId(['name' => 'Approved', 'is_editable' => false]);
+            $soStatusId = DB::table('sales_order_statuses')->where('name', 'Confirmed')->value('id')
+                ?? DB::table('sales_order_statuses')->insertGetId(['name' => 'Confirmed', 'is_editable' => false]);
+
             // 2. Sample Locations
             $mainWh = Location::updateOrCreate(
                 ['code' => 'WH-H01'],
@@ -64,6 +73,12 @@ class SampleDataSeeder extends Seeder
             $stark = Vendor::updateOrCreate(
                 ['code' => 'VEND-002'],
                 ['name' => 'Stark Industries', 'email' => 'orders@stark.com', 'phone' => '123-IRON', 'is_active' => true]
+            );
+
+            // 3.5. Sample Customers
+            $shield = Customer::updateOrCreate(
+                ['customer_code' => 'CUST-SHLD-01'],
+                ['name' => 'S.H.I.E.L.D HQ', 'email' => 'fury@shield.gov', 'phone' => '000-0000', 'is_active' => true]
             );
 
             // 4. Sample Products
@@ -97,7 +112,18 @@ class SampleDataSeeder extends Seeder
                 ]
             );
 
-            // 5. Sample Transactions
+            // 5. Sample Transactions & Orders
+            $po1 = PurchaseOrder::updateOrCreate(
+                ['po_number' => 'PO-CDB-9422'],
+                [
+                    'vendor_id' => $cyberdyne->id,
+                    'status_id' => $poStatusId,
+                    'order_date' => now()->subDays(12),
+                    'total_amount' => 90000.00,
+                    'created_by' => 1,
+                ]
+            );
+
             $this->createSampleTransaction([
                 'reference_number' => 'REC-2026-001',
                 'transaction_type_id' => $receiptTypeId,
@@ -106,6 +132,8 @@ class SampleDataSeeder extends Seeder
                 'to_location_id' => $mainWh->id,
                 'transaction_date' => now()->subDays(10),
                 'notes' => 'Inbound procurement from Cyberdyne.',
+                'reference_doc' => 'PO-CDB-9422',
+                'purchase_order_id' => $po1->id,
                 'posted_at' => now()->subDays(10),
                 'created_by' => 1,
             ], $gpu->id, $mainWh->id, 50, 1800.00);
@@ -118,9 +146,21 @@ class SampleDataSeeder extends Seeder
                 'to_location_id' => $frontZone->id,
                 'transaction_date' => now()->subDays(5),
                 'notes' => 'Stock replenishment.',
+                'reference_doc' => 'XFER-INT-01',
                 'posted_at' => now()->subDays(5),
                 'created_by' => 1,
             ], $gpu->id, $frontZone->id, 10, 1800.00);
+
+            $so1 = SalesOrder::updateOrCreate(
+                ['so_number' => 'SO-SHIELD-098'],
+                [
+                    'customer_id' => $shield->id,
+                    'status_id' => $soStatusId,
+                    'order_date' => now()->subDays(3),
+                    'total_amount' => 4998.00,
+                    'created_by' => 1,
+                ]
+            );
 
             $this->createSampleTransaction([
                 'reference_number' => 'ISSUE-2026-001',
@@ -129,9 +169,22 @@ class SampleDataSeeder extends Seeder
                 'from_location_id' => $frontZone->id,
                 'transaction_date' => now()->subDays(2),
                 'notes' => 'Direct consumer procurement.',
+                'reference_doc' => 'SO-SHIELD-098',
+                'sales_order_id' => $so1->id,
                 'posted_at' => now()->subDays(2),
                 'created_by' => 1,
             ], $gpu->id, $frontZone->id, 2, 1800.00);
+
+            $po2 = PurchaseOrder::updateOrCreate(
+                ['po_number' => 'PO-STARK-771'],
+                [
+                    'vendor_id' => $stark->id,
+                    'status_id' => $poStatusId,
+                    'order_date' => now()->subDays(31),
+                    'total_amount' => 120000.00,
+                    'created_by' => 1,
+                ]
+            );
 
             $this->createSampleTransaction([
                 'reference_number' => 'REC-2026-002',
@@ -141,6 +194,8 @@ class SampleDataSeeder extends Seeder
                 'to_location_id' => $mainWh->id,
                 'transaction_date' => now()->subDays(30),
                 'notes' => 'New tech arrival from Stark Ind.',
+                'reference_doc' => 'PO-STARK-771',
+                'purchase_order_id' => $po2->id,
                 'posted_at' => now()->subDays(30),
                 'created_by' => 1,
             ], $reactor->id, $mainWh->id, 1, 120000.00);
