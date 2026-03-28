@@ -14,9 +14,9 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 - [x] **Validation Expansion**: Ensure `StockService` throws `InsufficientStockException` if an issue (ISSU) exceeds available QTY.
 
 ### 0.2 Automated Unit Testing
-- [ ] **FIFO/LIFO Test Case**: Create a test that posts 3 receipts at different prices and verifies that 1 sale consumes the correct price layers.
-- [ ] **Concurrency Test**: Simulate 10 simultaneous sales of the last 1 item to ensure only 1 succeeds (Locking proof).
-- [ ] **UOM Test**: Verify that converting "1 Box" to "12 Pieces" results in the correct QTY and Unit Cost adjustment.
+- [x] **FIFO/LIFO Test Case**: Create a test that posts 3 receipts at different prices and verifies that 1 sale consumes the correct price layers.
+- [x] **Concurrency Test**: Simulate 10 simultaneous sales of the last 1 item to ensure only 1 succeeds (Locking proof).
+- [x] **UOM Test**: Verify that converting "1 Box" to "12 Pieces" results in the correct QTY and Unit Cost adjustment.
 
 ---
 
@@ -79,5 +79,5 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 ## Readiness & Acceptance Checklist
 - [x] Database successfully migrated (48 Tables).
 - [x] Seeders populated for all Lookups (UOM, Statuses, Types).
-- [ ] `StockService` tests pass 100%.
+- [x] `StockService` tests pass 100%.
 - [ ] Environment variables configured for local development.
