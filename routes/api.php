@@ -2,13 +2,13 @@
 
 use App\Http\Controllers\Api\Inventory\CategoryController;
 use App\Http\Controllers\Api\Inventory\CostingMethodController;
+use App\Http\Controllers\Api\Inventory\DashboardController;
 use App\Http\Controllers\Api\Inventory\LocationController;
 use App\Http\Controllers\Api\Inventory\LocationTypeController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\VendorController;
-use App\Http\Controllers\Api\Inventory\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

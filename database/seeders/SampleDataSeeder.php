@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class SampleDataSeeder extends Seeder
 {
@@ -53,7 +53,7 @@ class SampleDataSeeder extends Seeder
                     'selling_price' => 150000.00,
                     'average_cost' => 120000.00,
                     'reorder_point' => 2,
-                ]
+                ],
             ];
 
             foreach ($products as $p) {
@@ -100,7 +100,7 @@ class SampleDataSeeder extends Seeder
                     'vendor_id' => $vendorId,
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
-                ]
+                ],
             ]);
             $txId = DB::table('transactions')->where('reference_number', 'DEMO-REC-01')->value('id');
 

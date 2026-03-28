@@ -163,7 +163,7 @@ class StockService
                 'header' => array_merge($data['header'], [
                     'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp).'-OUT',
                     'from_location_id' => $data['from_location_id'],
-                    'to_location_id' => $data['to_location_id'], 
+                    'to_location_id' => $data['to_location_id'],
                     'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
