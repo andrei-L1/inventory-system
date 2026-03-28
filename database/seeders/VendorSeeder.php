@@ -12,8 +12,7 @@ class VendorSeeder extends Seeder
      */
     public function run(): void
     {
-        Vendor::create([
-            'code' => 'VEND-001',
+        Vendor::updateOrCreate(['code' => 'VEND-001'], [
             'name' => 'Global Supplies Inc.',
             'contact_person' => 'John Doe',
             'email' => 'sales@globalsupplies.com',
@@ -24,8 +23,7 @@ class VendorSeeder extends Seeder
             'tax_id' => '12-3456789',
         ]);
 
-        Vendor::create([
-            'code' => 'VEND-002',
+        Vendor::updateOrCreate(['code' => 'VEND-002'], [
             'name' => 'Tech Solutions Group',
             'contact_person' => 'Jane Smith',
             'email' => 'partnerships@techsolutions.com',

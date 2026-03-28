@@ -18,10 +18,12 @@ class TransactionTypeSeeder extends Seeder
         ];
 
         foreach ($types as $type) {
-            DB::table('transaction_types')->updateOrInsert(
-                ['name' => $type['name']],
-                [...$type, 'created_at' => now(), 'updated_at' => now()]
-            );
+            $existing = DB::table('transaction_types')->where('code', $type['code'])->first();
+            if ($existing) {
+                DB::table('transaction_types')->where('id', $existing->id)->update([...$type, 'updated_at' => now()]);
+            } else {
+                DB::table('transaction_types')->insert([...$type, 'created_at' => now(), 'updated_at' => now()]);
+            }
         }
     }
 }
