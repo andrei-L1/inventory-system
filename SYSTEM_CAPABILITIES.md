@@ -1,93 +1,105 @@
 # 📦 Inventory System: Enterprise-Grade Capability Map
 
-This document serves as a specialized feature guide, detailing the advanced business logic and technical safeguards currently active in the **Phase 0 Inventory Engine**.
+This document serves as the **Complete System Capability Map**, detailing all features, workflows, and technical safeguards designed into the platform—including core engine features currently live, and planned capabilities that complete the full ERP lifecycle.
 
 ---
 
-## 🏗️ 1. Multi-Dimensional Inventory Tracking
-*Focus: Full visibility across a distributed warehouse network.*
+## 🏗️ 1. Multi-Warehouse & Location Management
+*Focus: Full topological visibility across a distributed logistics network.*
 
-- **Hierarchical Location Logic**:
-  - **What it is**: The ability to organize stock into a parent-child structure: `Warehouse` > `Zone` > `Bin/Aisle`.
-  - **The Benefit**: You don't just know you have "10 Pencils"—you know you have **"10 Pencils in Warehouse A, Zone 1, Aisle 4."**
-- **Real-Time On-Hand Intelligence**:
-  - **The Rule**: The `inventories` table acts as a high-speed cache for the current balance, while the `transactions` table stores the non-editable proof.
-  - **The Math**: `On-Hand = Σ(Receipts) - Σ(Issues)`.
+- **Infinite Tier Hierarchies**: Define limitless location depth (e.g., `Region` > `Warehouse` > `Zone` > `Aisle` > `Bay` > `Bin`).
+- **Location Typology**: Classify nodes by type (`Warehouse`, `Retail Store`, `Transit Vehicle`, `Virtual/Quarantine`).
+- **Granular Stock Visibility**: Real-time querying of "Exactly how many units of SKU-A are in Bin B?" vs. "How many in the whole region?".
+- **Atomic Transfers**: Move stock between any two locations with cryptographic-level certainty. The system locks both locations; if the transfer fails mid-flight, the database completely rolls back. Zero lost stock.
 
 ---
 
-## 💰 2. Advanced Costing Engine (FIFO / LIFO / Average)
-*Focus: Professional-grade financial inventory valuation.*
+## 💰 2. Advanced Costing Engine (Financial Integrity)
+*Focus: Professional-grade inventory valuation and margin analysis.*
 
-The system supports the three major accounting methods, selectable at the **Product Level**.
-
-### A. FIFO (First-In, First-Out)
-- **The Behavior**: The system identifies the oldest "Layer" of stock and exhausts it first.
-- **Example Scenario**:
-  - *Day 1*: Receive 10 units at **$10**.
-  - *Day 2*: Receive 10 units at **$15**.
-  - *Sale*: You sell 12 units.
-  - **System Result**: It deducts **10 at $10** and **2 at $15**. Your remaining stock value is accurately $120.
-
-### B. LIFO (Last-In, First-Out)
-- **The Behavior**: The system consumes the most recently received stock first.
-- **Why it matters**: Crucial for specific industries where newer inventory is more accessible or expensive (e.g., coal or specific chemicals).
-
-### C. Weighted Average Cost (WAC)
-- **The Behavior**: Every new receipt triggers an automatic recalculation of the SKU's moving average cost.
-- **The Formula**: `(Value_on_Hand + New_Inbound_Value) / Total_Quantity`.
-- **The Benefit**: Provides a stable, smoothed-out cost basis for margin reporting.
+- **Triple-Method Costing**: Set valuation algorithms at the **Product Level**.
+  - **FIFO (First-In, First-Out)**: Consumes the oldest cost layers first. Perfect for standard retail.
+  - **LIFO (Last-In, First-Out)**: Consumes the newest cost layers first. Useful in specialized commodities.
+  - **Weighted Average Cost (WAC)**: Creates a smoothed, moving average on every single inbound receipt.
+- **Physical Cost Layers**: The system doesn't just calculate costs dynamically; it physically persists `InventoryCostLayers` in the database. You can drill down into a product and see exactly what receipts make up your current on-hand value.
+- **Cost of Goods Sold (COGS) Tracing**: Every outbound sale links directly back to the specific cost layer it consumed, guaranteeing 100% accurate profit margins.
 
 ---
 
-## 🛡️ 3. "Zero-Loss" Transaction Integrity
-*Focus: Preventing data errors before they happen.*
+## 🛡️ 3. Transactional Safety & "Zero-Loss" Engine
+*Focus: Mathematical certainty and concurrency protection.*
 
-- **Atomic Multi-Location Transfers**:
-  - **The Safety Rule**: A transfer is a "Single Point of Failure" operation. The system locks **both** the source and destination locations simultaneously.
-  - **The Result**: If the server crashes MID-TRANSFER, the database rolls back everything. You will **never** have stock that "disappeared in transit."
-- **Pessimistic Row Locking**:
-  - **The Guard**: During a sale or issue, the system places a "Hardware Lock" on the specific stock record.
-  - **The Benefit**: If 10 people try to buy the last unit at the same time, only the FIRST person succeeds. No "Ghost Stock" or over-selling.
-- **Out-of-Stock Protection**:
-  - **The Policy**: Throws an `InsufficientStockException` if a user attempts to issue stock that doesn't have an associated cost layer. This prevents "Negative Inventory" which is the #1 cause of accounting failures.
+- **Pessimistic Row Locking**: During an issue, the system places a hardware-level lock (`lockForUpdate`) on the specific inventory row. If 500 users try to buy the last unit simultaneously, exactly 1 will succeed. No "Ghost Stock".
+- **Strict Over-Issue Prevention**: Throws an `InsufficientStockException` if out-of-stock. The system physically prevents Negative Inventory, eliminating the #1 cause of ERP database corruption.
+- **Immutable Ledger**: The `transactions` and `transaction_lines` tables act as an append-only ledger. You cannot edit a stock movement once posted—you can only issue a reversing transaction.
 
 ---
 
-## 🕵️ 4. Traceability & Product Compliance
-*Focus: Specialized item management for high-value or regulated goods.*
+## 📦 4. Procurement & Inbound Operations (Purchase Orders)
+*Focus: Streamlining vendor relations and stock receiving.*
 
-- **Level 1: Serial Number Tracking (Cradle-to-Grave)**:
-  - Tracks individual items by a unique identifier (e.g., iPhone IMEI).
-  - You can track **exactly** which specific unit was sold to which customer.
-- **Level 2: Batch & Lot Management**:
-  - Grouping stock by production batch or expiration date.
-  - Allows for "Recall" operations (finding all units from a specific bad batch).
-- **Level 3: Units of Measure (UOM) Intelligence**:
-  - Supports multiple units per SKU via precision conversion factors.
-  - **Example**: Receive stock in **Pallets**, store in **Cases**, and sell in individual **Pieces**. The math is handled automatically (8 decimal place precision).
+- **Full PO Lifecycle**: `Draft` ➔ `Approved` ➔ `Sent` ➔ `Partially Received` ➔ `Closed`.
+- **Intelligent Replenishment**: The system automatically generates PO suggestions based on `reorder_point` and `reorder_rules`.
+- **Integrated Goods Receipt (GRN)**: Clicking "Receive" on a PO automatically triggers the `StockService` to increase inventory, create a receipt transaction, update cost layers, and advance the PO status.
+- **Vendor Scorecarding**: Track average lead times and historical pricing per vendor.
 
 ---
 
-## 🌩️ 5. Master Data & API Gateway (Product Catalog)
-*Focus: Secure, high-performance data access for the frontend.*
+## 🛍️ 5. Sales & Outbound Fulfillment (Sales Orders)
+*Focus: Quote-to-cash workflows and order picking.*
 
-- **RESTful Master Data CRUD**:
-  - Complete API lifecycle management for **Products**, **Categories**, **Vendors**, and **Units of Measure**.
-  - Standardized JSON responses via **Laravel API Resources**, ensuring the frontend always receives clean, structured data.
-- **Smart Catalog Filtering**:
-  - High-performance search allowing users to filter by **SKU**, **Name**, **Product Code**, and **Category ID**.
-  - Optimized pagination to handle catalogs with thousands of SKUs without performance degradation.
-- **Automatic Inventory "Auto-Sync"**:
-  - **The Safety Rule**: On product creation, the system automatically initializes zero-stock `Inventory` rows for all active locations (**Warehouse A**, **Zone 1**, etc.).
-  - **The Result**: A new SKU is ready to receive stock at every warehouse the millisecond it is born, preventing "Ghost SKU" errors in the stock engine.
+- **Full SO Lifecycle**: `Quotation` ➔ `Confirmed` ➔ `Picked` ➔ `Shipped` ➔ `Invoiced` ➔ `Closed`.
+- **Real-Time Stock Allocation**: Visually exposes available stock during quotation creation to prevent promising out-of-stock items.
+- **Integrated Fulfillment**: Marking an order "Shipped" automatically triggers the `StockService` to issue stock, consume cost layers, and lock the margin.
 
 ---
 
-## 📊 6. Audit & Compliance Baseline
-- **Immutable Transaction History**: Physical stock movements are permanent records. Deleting a SKU does not remove its history.
-- **Soft Deleting**: Master data (Vendors, Customers, Products) are "soft-deleted"—they are archived but can be restored instantly, preserving all historical links.
-- **Role-Based Security Layer**: Pre-built permission groups (Admin, Staff, User) ensure only authorized people can approve receipts or perform transfers.
+## 🕵️ 6. Traceability & Product Intelligence
+*Focus: Specialized item management for complex goods.*
+
+- **Serial Number Tracking (Cradle-to-Grave)**: 
+  - Trace specific, unique units (e.g., IMEI numbers or MAC addresses) from vendor receipt, through the warehouse, out to the specific customer.
+- **Batch & Expiration Tracking**: 
+  - Group stock by production lot. Enable rapid product recalls and implement FEFO (First-Expired, First-Out) picking strategies.
+- **UOM (Unit of Measure) Conversions**: 
+  - Buy in `Pallets`, store in `Cases`, sell in `Pieces`. The system handles the multi-tiered fractional math seamlessly under the hood without losing a cent of cost precision.
 
 ---
-*Last Updated: 2026-03-28 08:38:00*
+
+## 🏷️ 7. Dynamic Pricing & Discounting
+*Focus: B2B/B2C flexible financial models.*
+
+- **Customer Price Lists**: Assign specialized pricing matrices to specific customers or wholesale groups overriding default MSRPs.
+- **Volume & Tiered Discounting**: Construct automated rules ("Buy 10, get 5% off").
+- **Real-Time Profit Gates**: Prevent sales reps from offering discounts that dip below the current FIFO cost basis.
+
+---
+
+## 🚚 8. Logistics & Shipping
+*Focus: Getting the product to the destination.*
+
+- **Multi-Shipment Orders**: Fulfill a single large Sales Order via multiple staggered shipments.
+- **Carrier Management**: Track waybills, tracking numbers, and integrated carrier APIs.
+
+---
+
+## 📊 9. Reporting & Analytics (Business Intelligence)
+*Focus: Extracting actionable data from the ledger.*
+
+- **Live Inventory Valuation**: Exact dollar value of your warehouse based on remaining unexhausted cost layers.
+- **Theoretical vs. Physical Variance**: Worksheets for cycle counts and stock-takes.
+- **Gross Margin Analysis**: Real-time ROI per order, product, or customer.
+- **Aging & Dead Stock Reports**: Identify capital tied up in slow-moving items to trigger liquidation sales.
+
+---
+
+## 🔐 10. Security, Audit & Multi-Tenancy
+*Focus: Enterprise-grade compliance and access control.*
+
+- **Granular Role-Based Access Control (RBAC)**: Fine-grained permissions (e.g., `can('approve-po')`, `can('adjust-stock')`) dynamically applied via middleware.
+- **Complete Audit Trail**: Every insert, update, or soft-delete is logged against a User ID and Timestamp. `Activity logs` provide an airtight history of configuration changes.
+- **Soft Deletions**: Deleting a product, vendor, or customer only hides it. It remains fully intact in the database forever so historical transaction reports never break.
+- **Stateless API Architecture**: Built around Laravel Sanctum tokens, allowing for easy expansion into mobile apps, barcode scanners, or third-party EDI integrations.
+
+---
+*Last Updated: 2026-03-28. Covers complete designed feature set.*
