@@ -62,7 +62,7 @@ return new class extends Migration
 
         // DB-level guard: prevent zero or negative quantities on transaction lines
         if (DB::getDriverName() !== 'sqlite') {
-            DB::statement('ALTER TABLE transaction_lines ADD CONSTRAINT chk_txn_line_qty_positive CHECK (quantity > 0)');
+            DB::statement('ALTER TABLE transaction_lines ADD CONSTRAINT chk_txn_line_qty_not_zero CHECK (quantity != 0)');
         }
 
         // ─── Add FK to cost layers now that transaction_lines exists ─────────
