@@ -49,7 +49,7 @@ class ProductService
             if (! isset($data['created_by']) && auth()->check()) {
                 $data['created_by'] = auth()->id();
             }
-            
+
             $product = Product::create($data);
 
             // 2. Handle Image Attachment if provided
@@ -80,7 +80,7 @@ class ProductService
     public function handleAttachment(Product $product, $file, string $collection = 'attachments'): Attachment
     {
         $path = $file->store('products/attachments', 'public');
-        
+
         return Attachment::create([
             'attachable_id' => $product->id,
             'attachable_type' => Product::class,

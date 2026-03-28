@@ -11,13 +11,13 @@ class CheckPermission
     /**
      * Handle an incoming request. Ensure operator has specific capabilities.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated terminal access.');
         }
 
@@ -27,7 +27,7 @@ class CheckPermission
         }
 
         // 2. Strict Role Verification
-        if (!$user->hasPermission($permission)) {
+        if (! $user->hasPermission($permission)) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthorized operation. Clearance denied.'], 403);
             }

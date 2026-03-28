@@ -15,7 +15,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
-    
+
     // The Stock Command Center Placeholder
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
