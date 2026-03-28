@@ -83,121 +83,126 @@ const formatCurrency = (val) => {
         <Head title="Inventory Center" />
         <Toast />
 
-        <div class="center-container">
-            <!-- Left Pane: Item Selector -->
-            <div class="left-pane sharp-panel">
+        <div class="inventory-grid">
+            <!-- Asset Sidebar -->
+            <div class="asset-pane sharp-panel">
                 <div class="pane-header">
-                    <span class="pane-title">Item Catalog</span>
-                    <InputText v-model="search" placeholder="Filter items..." @input="loadProducts" class="p-inputtext-sm w-full" />
+                    <h3 class="pane-title">Asset Catalog</h3>
+                    <div class="search-container">
+                        <i class="pi pi-search search-icon"></i>
+                        <InputText v-model="search" placeholder="Filter assets..." @input="loadProducts" class="gh-search-input" />
+                    </div>
                 </div>
-                <div class="list-wrapper">
-                    <Listbox v-model="selectedProduct" :options="products" optionLabel="name" scrollHeight="calc(100vh - 280px)" class="sharp-listbox">
+                <div class="asset-list-container">
+                    <Listbox v-model="selectedProduct" :options="products" optionLabel="name" class="gh-listbox">
                         <template #option="{ option }">
-                            <div class="product-item">
-                                <span class="sku-hint">{{ option.sku }}</span>
-                                <span class="product-name">{{ option.name }}</span>
+                            <div class="asset-item">
+                                <span class="asset-slug">{{ option.sku }}</span>
+                                <span class="asset-name">{{ option.name }}</span>
                             </div>
                         </template>
                     </Listbox>
                 </div>
             </div>
 
-            <!-- Right Content Area -->
-            <div class="right-pane">
-                <!-- Top Right: Item Details -->
-                <div class="details-section sharp-panel">
+            <!-- Main Documentation Area -->
+            <div class="main-pane">
+                <!-- Top Section: Technical Specifications -->
+                <div class="specs-section sharp-panel">
                     <template v-if="selectedProduct">
-                        <div class="details-grid">
-                            <div class="details-main">
-                                <div class="badge-row">
-                                    <Tag :value="selectedProduct.category?.name || 'GENERIC'" severity="secondary" />
-                                    <Tag :value="selectedProduct.is_active ? 'ACTIVE' : 'INACTIVE'" :severity="selectedProduct.is_active ? 'success' : 'danger'" />
+                        <div class="specs-header">
+                            <div class="title-workflow">
+                                <h1 class="specs-title">{{ selectedProduct.name }}</h1>
+                                <div class="specs-badges">
+                                    <Tag :value="selectedProduct.category?.name || 'ASSET'" class="gh-tag-secondary" />
+                                    <Tag :value="selectedProduct.is_active ? 'Active' : 'Archived'" :severity="selectedProduct.is_active ? 'success' : 'danger'" class="gh-status-tag" />
                                 </div>
-                                <h2 class="product-display-name">{{ selectedProduct.name }}</h2>
-                                <p class="product-description">{{ selectedProduct.description || 'No additional technical specifications provided for this asset.' }}</p>
                             </div>
-                            <div class="details-stats">
-                                <div class="stat-box">
-                                    <span class="stat-label">Stock Keeping Unit</span>
-                                    <span class="stat-value highlight">{{ selectedProduct.sku }}</span>
-                                </div>
-                                <div class="stat-box">
-                                    <span class="stat-label">Market Value</span>
-                                    <span class="stat-value">{{ formatCurrency(selectedProduct.selling_price) }}</span>
-                                </div>
-                                <div class="stat-box">
-                                    <span class="stat-label">UOM</span>
-                                    <span class="stat-value">{{ selectedProduct.uom?.name || 'Unit' }}</span>
-                                </div>
-                                <div class="stat-box">
-                                    <span class="stat-label">Costing Logic</span>
-                                    <span class="stat-value uppercase">{{ selectedProduct.costing_method }}</span>
-                                </div>
+                            <p class="specs-desc">{{ selectedProduct.description || 'No system documentation provided for this inventory asset.' }}</p>
+                        </div>
+                        
+                        <div class="specs-dashboard-grid">
+                            <div class="doc-cell">
+                                <label>SERIAL REGISTRY (SKU)</label>
+                                <code>{{ selectedProduct.sku }}</code>
+                            </div>
+                            <div class="doc-cell">
+                                <label>MARKET VALUATION</label>
+                                <span>{{ formatCurrency(selectedProduct.selling_price) }}</span>
+                            </div>
+                            <div class="doc-cell">
+                                <label>QUANTUM UNIT (UOM)</label>
+                                <span>{{ selectedProduct.uom?.name || 'Unit' }}</span>
+                            </div>
+                            <div class="doc-cell">
+                                <label>COSTING ALGORITHM</label>
+                                <span class="costing-text">{{ selectedProduct.costing_method }}</span>
                             </div>
                         </div>
                     </template>
-                    <div v-else class="empty-state">SELECT AN ASSET TO VIEW PARAMETERS</div>
+                    <div v-else class="empty-placeholder">
+                        <i class="pi pi-box mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p>SELECT AN ASSET TO INITIALIZE PARAMETERS</p>
+                    </div>
                 </div>
 
-                <!-- Bottom Right: Transactions -->
-                <div class="history-section sharp-panel">
-                    <div class="pane-header">
-                        <span class="pane-title">Movement Log / transaction History</span>
+                <!-- Bottom Section: Ledger / Transactions -->
+                <div class="ledger-section sharp-panel">
+                    <div class="ledger-header">
+                        <h3 class="pane-title">Transaction Ledger <span class="gh-count">{{ history.length }}</span></h3>
                     </div>
-                    <DataTable :value="history" :loading="loadingHistory" scrollable scrollHeight="flex" class="p-datatable-sm sharp-table">
+                    <DataTable :value="history" :loading="loadingHistory" scrollable scrollHeight="flex" class="gh-table">
                         <template #empty>
-                            <div class="empty-log">NO MOVEMENT HISTORY RECORDED FOR THIS ASSET</div>
+                            <div class="empty-ledger">NO TRANSACTIONAL ARTIFACTS DETECTED</div>
                         </template>
-                        <Column field="transaction_date" header="DATE" style="width: 100px"></Column>
-                        <Column field="reference_number" header="REFERENCE" style="width: 130px">
+                        <Column field="transaction_date" header="Timestamp" style="width: 120px"></Column>
+                        <Column field="reference_number" header="Reference" style="width: 150px">
                             <template #body="{ data }">
-                                <span class="ref-num">{{ data.reference_number }}</span>
+                                <span class="gh-code">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="type" header="OPERATION" style="width: 110px">
+                        <Column field="type" header="Operation" style="width: 130px">
                             <template #body="{ data }">
-                                <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="type-tag" />
+                                <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="gh-type-tag" />
                             </template>
                         </Column>
-                        <Column field="quantity" header="QTY" style="width: 70px">
+                        <Column field="quantity" header="Δ Qty" style="width: 80px">
                             <template #body="{ data }">
-                                <span class="qty-val" :class="data.type.toLowerCase()">
+                                <span class="ledger-qty" :class="data.type.toLowerCase()">
                                     {{ data.type.toLowerCase() === 'issue' || (data.type.toLowerCase() === 'adjustment' && data.quantity < 0) ? '-' : '+' }}{{ Math.abs(data.quantity) }}
                                 </span>
                             </template>
                         </Column>
-                        <Column header="ENTITY" style="width: 180px">
+                        <Column header="Associated Entity" style="width: 220px">
                             <template #body="{ data }">
-                                <div class="entity-info">
-                                    <span v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name)" class="entity-link">
+                                <div class="entity-link-wrapper">
+                                    <span v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name)" class="gh-link">
                                         <i class="pi pi-building mr-1"></i>{{ data.vendor_name }}
                                     </span>
-                                    <span v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name)" class="entity-link">
+                                    <span v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name)" class="gh-link">
                                         <i class="pi pi-user mr-1"></i>{{ data.customer_name }}
                                     </span>
-                                    <span v-else class="text-xs text-muted">Internal Movement</span>
+                                    <span v-else class="text-xs color-muted">System Internal</span>
                                 </div>
                             </template>
                         </Column>
-                        <Column header="LINKED ORDER" style="width: 140px">
+                        <Column header="Relational Order" style="width: 160px">
                             <template #body="{ data }">
                                 <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
-                                    @click="handleLinkClick('PO', data.po_number || data.reference_doc)" class="order-link">
+                                    @click="handleLinkClick('PO', data.po_number || data.reference_doc)" class="gh-link">
                                     <i class="pi pi-receipt mr-1"></i>{{ data.po_number || data.reference_doc }}
                                 </div>
                                 <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
-                                    @click="handleLinkClick('SO', data.so_number || data.reference_doc)" class="order-link">
+                                    @click="handleLinkClick('SO', data.so_number || data.reference_doc)" class="gh-link">
                                     <i class="pi pi-send mr-1"></i>{{ data.so_number || data.reference_doc }}
                                 </div>
-                                <span v-else-if="data.reference_doc" class="text-xs text-muted">{{ data.reference_doc }}</span>
+                                <span v-else-if="data.reference_doc" class="color-muted">{{ data.reference_doc }}</span>
                                 <span v-else>-</span>
                             </template>
                         </Column>
-                        <Column field="from_location" header="ORIGIN"></Column>
-                        <Column field="to_location" header="DEST"></Column>
-                        <Column field="status" header="STATUS" style="width: 90px">
+                        <Column field="status" header="Node Status" style="width: 100px">
                              <template #body="{ data }">
-                                <span class="status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
+                                <span class="gh-status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
                             </template>
                         </Column>
                     </DataTable>
@@ -208,20 +213,20 @@ const formatCurrency = (val) => {
 </template>
 
 <style scoped>
-.center-container {
+.inventory-grid {
     display: flex;
     gap: 1.5rem;
     height: calc(100vh - 120px);
 }
 
-.left-pane {
-    width: 350px;
+.asset-pane {
+    width: 320px;
     display: flex;
     flex-direction: column;
-    padding: 1.5rem !important;
+    padding: 1rem !important;
 }
 
-.right-pane {
+.main-pane {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -230,208 +235,243 @@ const formatCurrency = (val) => {
 }
 
 .pane-header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .pane-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gh-count {
+    background: #2d333b;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-size: 12px;
     color: var(--text-secondary);
 }
 
-.list-wrapper {
+.search-container {
+    position: relative;
+    width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--text-secondary);
+    z-index: 1;
+}
+
+.gh-search-input {
+    width: 100% !important;
+    padding-left: 30px !important;
+}
+
+.asset-list-container {
     flex: 1;
     overflow: hidden;
 }
 
-.sharp-listbox {
+.gh-listbox {
     border: none !important;
     background: transparent !important;
 }
 
-.product-item {
+.asset-item {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.25rem 0;
+    padding: 4px 0;
 }
 
-.product-name {
-    font-size: 0.9rem;
+.asset-name {
+    font-size: 14px;
     font-weight: 500;
 }
 
-.sku-hint {
-    font-size: 0.65rem;
-    font-family: monospace;
+.asset-slug {
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
     color: var(--accent-primary);
-    font-weight: 600;
 }
 
-/* Details Section */
-.details-section {
-    padding: 2rem !important;
+/* Specs Section */
+.specs-section {
+    padding: 1.5rem !important;
 }
 
-.details-grid {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 3rem;
+.specs-header {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--bg-panel-border);
+    margin-bottom: 1.25rem;
 }
 
-.badge-row {
+.title-workflow {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.product-display-name {
-    font-size: 1.75rem;
-    margin: 0 0 1rem 0;
-}
-
-.product-description {
-    color: var(--text-secondary);
-    line-height: 1.6;
-    font-size: 0.9rem;
-}
-
-.details-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    align-items: center;
     gap: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-.stat-box {
-    background: var(--bg-deep);
-    padding: 1rem;
-    border: 1px solid var(--bg-panel-border);
+.specs-title {
+    font-size: 20px;
+    margin: 0;
+}
+
+.specs-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
+}
+
+.specs-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.doc-cell {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-.stat-label {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--text-secondary);
-}
-
-.stat-value {
-    font-size: 0.9rem;
+.doc-cell label {
+    font-size: 11px;
     font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
 }
 
-.stat-value.highlight {
+.doc-cell span, .doc-cell code {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.doc-cell code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    background: #2d333b;
+    padding: 2px 4px;
+    border-radius: 4px;
     color: var(--accent-primary);
-    font-family: monospace;
+    width: fit-content;
 }
 
-/* History Section */
-.history-section {
+.costing-text {
+    text-transform: uppercase;
+}
+
+/* Ledger Section */
+.ledger-section {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 1.5rem !important;
+    padding: 0 !important; /* Table occupies header + edge-to-edge content */
     overflow: hidden;
 }
 
-.ref-num {
-    font-family: monospace;
+.ledger-header {
+    padding: 12px 16px;
+    background: #2d333b;
+    border-bottom: 1px solid var(--bg-panel-border);
+    border-radius: 6px 6px 0 0;
+}
+
+.gh-table {
+    font-size: 13px;
+}
+
+::v-deep(.p-datatable-header) {
+    display: none;
+}
+
+::v-deep(.p-datatable-thead > tr > th) {
+    background: #22272e !important;
+    border-bottom: 1px solid var(--bg-panel-border) !important;
+    padding: 12px 16px !important;
+    color: var(--text-secondary) !important;
+    font-weight: 600 !important;
+}
+
+::v-deep(.p-datatable-tbody > tr) {
+    background: transparent !important;
+    border-bottom: 1px solid var(--bg-panel-border) !important;
+}
+
+::v-deep(.p-datatable-tbody > tr:hover) {
+    background: #2d333b !important;
+}
+
+.gh-code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    font-size: 12px;
+}
+
+.gh-type-tag {
+    font-size: 11px;
+    border-radius: 12px;
+    padding: 2px 10px;
+}
+
+.ledger-qty {
     font-weight: 600;
-    font-size: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+.ledger-qty.receipt { color: #57ab5a; } /* GitHub Green */
+.ledger-qty.issue { color: #f47067; } /* GitHub Red */
+
+.gh-link {
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
 }
 
-.type-tag {
-    font-size: 0.65rem;
-    border-radius: 2px;
+.gh-link:hover {
+    text-decoration: underline;
 }
 
-.qty-val {
-    font-weight: 700;
-    font-family: monospace;
-    font-size: 0.8rem;
+.gh-status-indicator {
+    font-size: 12px;
+    font-weight: 600;
 }
-.qty-val.receipt { color: #10b981; }
-.qty-val.issue { color: #ef4444; }
+.gh-status-indicator.posted { color: var(--accent-primary); }
+.gh-status-indicator.draft { color: var(--text-secondary); }
 
-.entity-info {
+.color-muted {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.empty-placeholder, .empty-ledger {
     display: flex;
     flex-direction: column;
-}
-
-.entity-link {
-    font-size: 0.75rem;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--accent-primary);
-    cursor: pointer;
-    transition: color 0.1s;
-}
-
-.entity-link:hover {
-    color: #60a5fa;
-    text-decoration: underline;
-}
-
-.order-link {
-    color: var(--accent-primary);
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    transition: color 0.1s;
-}
-.order-link:hover {
-    color: #60a5fa;
-    text-decoration: underline;
-}
-
-.status-indicator {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-.status-indicator.posted { color: var(--accent-primary); }
-.status-indicator.draft { color: var(--text-secondary); }
-
-.empty-state, .empty-log {
-    display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
     color: var(--text-secondary);
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
+    font-size: 14px;
     text-align: center;
 }
 
-.uppercase { text-transform: uppercase; }
-
-/* Custom Listbox Overrides */
-::v-deep(.p-listbox-list) {
-    padding: 0 !important;
-}
-
+/* Listbox Selection Fix */
 ::v-deep(.p-listbox-item) {
-    border-radius: 2px !important;
-    padding: 0.75rem 1rem !important;
-    border-left: 3px solid transparent;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
     margin-bottom: 2px;
 }
 
 ::v-deep(.p-listbox-item.p-highlight) {
-    background: rgba(59, 130, 246, 0.1) !important;
+    background: #2d333b !important;
     color: var(--text-primary) !important;
-    border-left-color: var(--accent-primary);
 }
 </style>

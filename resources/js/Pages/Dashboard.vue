@@ -7,36 +7,111 @@ import AppLayout from '@/Layouts/AppLayout.vue';
     <AppLayout>
         <Head title="Terminal Dashboard" />
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--bg-panel-border); padding-bottom: 1rem; margin-bottom: 2rem;">
+        <div class="dashboard-header">
             <div>
-                <h2 class="brand-title" style="margin: 0; font-size: 1.25rem;">Command Overview</h2>
-                <div style="color: var(--text-secondary); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;">
+                <h2 class="dashboard-title">Command Overview</h2>
+                <div class="dashboard-subtitle">
                     Real-time network status
                 </div>
             </div>
         </div>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <div class="dashboard-grid">
             <!-- Status Card -->
-            <div class="sharp-panel" style="padding: 1.5rem;">
-                <div style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Network Status</div>
-                <div style="color: var(--accent-primary); font-size: 1.75rem; font-weight: 600; line-height: 1;">ONLINE</div>
-                <div style="color: #a1a1aa; font-size: 0.75rem; margin-top: 1rem;">All datacenters connected.</div>
+            <div class="gh-card sharp-panel">
+                <div class="card-label">Network Status</div>
+                <div class="card-value status-online">ONLINE</div>
+                <div class="card-footer">All datacenters connected.</div>
             </div>
 
             <!-- Active Modules Card -->
-            <div class="sharp-panel" style="padding: 1.5rem;">
-                <div style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Active Systems</div>
-                <div style="color: var(--text-primary); font-size: 1.2rem; font-weight: 500; font-family: 'Outfit', sans-serif;">CATALOG_API</div>
-                <div style="color: var(--text-primary); font-size: 1.2rem; font-weight: 500; font-family: 'Outfit', sans-serif; margin-top: 5px;">STOCK_ENGINE</div>
+            <div class="gh-card sharp-panel">
+                <div class="card-label">Active Systems</div>
+                <div class="card-item gh-code">CATALOG_API</div>
+                <div class="card-item gh-code mt-2">STOCK_ENGINE</div>
             </div>
             
             <!-- Global Inventory Card -->
-            <div class="sharp-panel" style="padding: 1.5rem;">
-                <div style="color: var(--text-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;">Transaction Queue</div>
-                <div style="color: #fb923c; font-size: 1.75rem; font-weight: 600; line-height: 1;">EMPTY</div>
-                <div style="color: #a1a1aa; font-size: 0.75rem; margin-top: 1rem;">Awaiting stock movements.</div>
+            <div class="gh-card sharp-panel">
+                <div class="card-label">Transaction Queue</div>
+                <div class="card-value status-empty">EMPTY</div>
+                <div class="card-footer">Awaiting stock movements.</div>
             </div>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--bg-panel-border);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-title {
+    margin: 0;
+    font-size: 20px;
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.gh-card {
+    padding: 1rem;
+}
+
+.card-label {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.card-value {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.card-value.status-online {
+    color: #57ab5a;
+}
+
+.card-value.status-empty {
+    color: var(--text-secondary);
+}
+
+.card-item {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.gh-code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    background: #2d333b;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--accent-primary);
+    width: fit-content;
+}
+
+.card-footer {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 1rem;
+}
+
+.mt-2 { margin-top: 0.5rem; }
+</style>

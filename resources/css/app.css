@@ -3,43 +3,43 @@
 
 @layer custom {
     :root, .app-dark {
-        --bg-deep: #09090b; /* Zinc 950 - Absolute solid darkness */
-        --bg-panel: #18181b; /* Zinc 900 - Solid panel */
-        --bg-panel-border: #27272a; /* Zinc 800 - Crisp border */
-        --accent-primary: #3b82f6; /* Technical Blue */
-        --accent-hover: #2563eb;
-        --text-primary: #fafafa;
-        --text-secondary: #a1a1aa;
+        --bg-deep: #1c2128; /* GitHub Inset/Deepest Background */
+        --bg-panel: #22272e; /* GitHub Canvas Default */
+        --bg-panel-border: #444c56; /* GitHub Standard Border */
+        --accent-primary: #539bf5; /* GitHub Primary Blue */
+        --accent-hover: #71adff;
+        --text-primary: #adbac7; /* GitHub Dimmed Text */
+        --text-secondary: #768390; /* GitHub Muted Text */
     }
 
     /* Base Body Styling */
     body {
         margin: 0;
         padding: 0;
-        font-family: 'Inter', sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
         background-color: var(--bg-deep);
         color: var(--text-primary);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-image: none; /* Removed all gradients */
+        font-size: 14px;
+        line-height: 1.5;
     }
 
-    /* High-End Typography */
+    /* GitHub-Grade Typography */
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Outfit', sans-serif;
-        font-weight: 500;
+        font-family: inherit;
+        font-weight: 600;
         margin-top: 0;
-        letter-spacing: -0.02em;
+        color: #cdd9e5; /* Slightly brighter heading */
     }
 
-    /* Sharp, High-Contrast Panel Component */
+    /* Sharp, GitHub-Style Panel */
     .sharp-panel {
         background: var(--bg-panel);
         border: 1px solid var(--bg-panel-border);
-        border-radius: 4px; /* Sharp edges */
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-        padding: 3rem;
+        border-radius: 6px; /* GitHub's standard radius */
+        box-shadow: none; /* GitHub style is flat/border-driven */
         box-sizing: border-box;
     }
 
@@ -69,52 +69,62 @@
     }
 
     .brand-title {
-        font-size: 1.75rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        color: #cdd9e5;
+        letter-spacing: -0.01em;
     }
 
     .brand-accent {
         color: var(--accent-primary);
     }
 
-    /* Interactive Elements: Flat & Sharp */
+    /* GitHub Style Buttons */
     .p-button-primary {
-        background: var(--accent-primary) !important;
-        border: 1px solid var(--accent-primary) !important;
-        color: #fff !important;
-        font-weight: 500 !important;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        border-radius: 2px !important; /* Extremely sharp button */
-        transition: background 0.15s ease !important;
+        background: #347d39 !important; /* GitHub Green for primary actions */
+        border: 1px solid rgba(205, 217, 229, 0.1) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        padding: 5px 16px !important;
+        font-size: 14px !important;
+        transition: background 0.2s cubic-bezier(0.3, 0, 0.5, 1) !important;
     }
 
     .p-button-primary:enabled:first-child:hover {
-        background: var(--accent-hover) !important;
-        border-color: var(--accent-hover) !important;
-        transform: translateY(0); /* Remove jump animation */
-        box-shadow: none; /* Remove glow */
+        background: #46954a !important;
+        border-color: rgba(205, 217, 229, 0.1) !important;
+        box-shadow: none;
     }
 
-    /* Overriding PrimeVue Inputs for Sharp Aesthetic */
+    /* GitHub Style Secondary/Outline Buttons */
+    .p-button-secondary {
+        background: #373e47 !important;
+        border: 1px solid var(--bg-panel-border) !important;
+        color: #adbac7 !important;
+        border-radius: 6px !important;
+    }
+
+    .p-button-secondary:enabled:hover {
+        background: #444c56 !important;
+        border-color: #768390 !important;
+    }
+
+    /* PrimeVue Inputs - GitHub Style */
     .p-inputtext, .p-password input {
-        background: #09090b !important; /* Match deep background */
-        border-color: var(--bg-panel-border) !important;
-        color: var(--text-primary) !important;
-        padding: 0.75rem 1rem !important;
-        border-radius: 2px !important; /* Sharp inputs */
-        font-family: 'Inter', sans-serif !important;
-        font-size: 0.95rem !important;
+        background: var(--bg-deep) !important; 
+        border: 1px solid var(--bg-panel-border) !important;
+        color: #adbac7 !important;
+        padding: 5px 12px !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        box-shadow: inset 0 1px 0 rgba(0,0,0,0.1) !important;
     }
 
     .p-inputtext:enabled:focus, .p-password input:enabled:focus {
         border-color: var(--accent-primary) !important;
-        box-shadow: none !important; /* Remove fuzzy focus rings */
-        outline: 1px solid var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(83, 155, 245, 0.3) !important;
+        outline: none !important;
     }
 
     .p-password input {

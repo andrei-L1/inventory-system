@@ -68,7 +68,7 @@ onMounted(() => {
             <!-- Topbar -->
             <header class="app-topbar sharp-panel">
                 <div class="topbar-left">
-                    <span class="text-muted" style="letter-spacing: 0.1em; font-size: 0.75rem; font-weight: 600;">SYS_STATUS: <span style="color: var(--accent-primary);">OPTIMAL</span></span>
+                    <span class="status-badge" style="letter-spacing: 0.1em; font-size: 0.65rem; font-weight: 600;">SYS_STATUS: <span style="color: var(--accent-primary);">OPTIMAL</span></span>
                 </div>
                 <div class="topbar-right">
                     <span v-if="user" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding-right: 1rem; border-right: 1px solid var(--bg-panel-border); color: var(--text-secondary); letter-spacing: 0.1em;">
@@ -140,34 +140,28 @@ onMounted(() => {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.85rem 1rem;
-    color: var(--text-secondary);
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    color: var(--text-primary);
     text-decoration: none;
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border-radius: 2px;
+    font-size: 14px;
+    border-radius: 6px;
     transition: all 0.15s ease-in-out;
-    border-left: 2px solid transparent;
-    white-space: nowrap;
+    margin-bottom: 0.15rem;
 }
 
-.sidebar-collapsed .nav-item {
-    justify-content: center;
-    padding: 0.85rem 0;
-    gap: 0;
-}
-
-.sidebar-collapsed .nav-item i {
-    font-size: 1.1rem;
+.nav-item i {
+    font-size: 1rem;
+    color: var(--text-secondary);
 }
 
 .nav-item:hover:not(.disabled) {
-    background-color: rgba(59, 130, 246, 0.05);
-    color: var(--text-primary);
-    border-left: 2px solid var(--accent-primary);
+    background-color: #2d333b; /* Canvas Subtle */
+}
+
+.nav-item.active {
+    background-color: #2d333b;
+    font-weight: 600;
 }
 
 .nav-item.disabled {
@@ -242,7 +236,15 @@ onMounted(() => {
 
 .app-main {
     flex: 1;
-    padding: 2.5rem;
+    padding: 2rem;
     overflow-y: auto;
+    background-color: var(--bg-deep);
+}
+.status-badge {
+    padding: 4px 8px;
+    background: #2d333b;
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 20px;
+    color: var(--text-secondary);
 }
 </style>
