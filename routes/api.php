@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Inventory\CategoryController;
+use App\Http\Controllers\Api\Inventory\CostingMethodController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\VendorController;
@@ -15,6 +16,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('products', ProductController::class);
     Route::apiResource('vendors', VendorController::class);
     Route::apiResource('uom', UnitOfMeasureController::class);
+    Route::apiResource('costing-methods', CostingMethodController::class)->only(['index', 'show']);
 });
 
 Route::get('/user', function (Request $request) {

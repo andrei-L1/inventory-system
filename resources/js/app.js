@@ -8,6 +8,11 @@ import '../css/app.css';
 
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
+import axios from 'axios';
+
+window.axios = axios;
+window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+window.axios.defaults.withCredentials = true;
 
 createInertiaApp({
     resolve: name => {

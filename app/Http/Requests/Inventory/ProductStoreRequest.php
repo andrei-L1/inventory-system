@@ -31,10 +31,13 @@ class ProductStoreRequest extends FormRequest
             'category_id' => 'required|exists:categories,id',
             'uom_id' => 'required|exists:units_of_measure,id',
             'costing_method_id' => 'required|exists:costing_methods,id',
+            'preferred_vendor_id' => 'nullable|exists:vendors,id',
+            'brand' => 'nullable|string|max:100',
             'selling_price' => 'nullable|numeric|min:0',
             'reorder_point' => 'nullable|numeric|min:0',
             'reorder_quantity' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'image' => 'nullable|image|max:2048', // 2MB max
         ];
     }
 }
