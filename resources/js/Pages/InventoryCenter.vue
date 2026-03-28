@@ -20,15 +20,6 @@ const loadingProducts = ref(false);
 const loadingHistory = ref(false);
 const search = ref('');
 
-const handleLinkClick = (type, num) => {
-    toast.add({ 
-        severity: 'info', 
-        summary: 'Navigating to Order', 
-        detail: `Redirecting to ${type}: ${num}`, 
-        life: 3000 
-    });
-};
-
 const loadProducts = async () => {
     loadingProducts.value = true;
     try {
@@ -62,6 +53,15 @@ onMounted(loadProducts);
 watch(selectedProduct, () => {
     loadHistory();
 });
+
+const handleLinkClick = (type, num) => {
+    toast.add({ 
+        severity: 'info', 
+        summary: 'Navigating to Order', 
+        detail: `Redirecting to ${type}: ${num}`, 
+        life: 3000 
+    });
+};
 
 const getTransactionSeverity = (type) => {
     switch (type.toLowerCase()) {
@@ -148,25 +148,38 @@ const formatCurrency = (val) => {
                         <template #empty>
                             <div class="empty-log">NO MOVEMENT HISTORY RECORDED FOR THIS ASSET</div>
                         </template>
-                        <Column field="transaction_date" header="DATE" style="width: 110px"></Column>
-                        <Column field="reference_number" header="REFERENCE" style="width: 140px">
+                        <Column field="transaction_date" header="DATE" style="width: 100px"></Column>
+                        <Column field="reference_number" header="REFERENCE" style="width: 130px">
                             <template #body="{ data }">
                                 <span class="ref-num">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="type" header="OPERATION" style="width: 120px">
+                        <Column field="type" header="OPERATION" style="width: 110px">
                             <template #body="{ data }">
                                 <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="type-tag" />
                             </template>
                         </Column>
-                        <Column field="quantity" header="QTY" style="width: 80px">
+                        <Column field="quantity" header="QTY" style="width: 70px">
                             <template #body="{ data }">
                                 <span class="qty-val" :class="data.type.toLowerCase()">
-                                    {{ data.type.toLowerCase() === 'issue' || data.type.toLowerCase() === 'adjustment' && data.quantity < 0 ? '-' : '+' }}{{ data.quantity }}
+                                    {{ data.type.toLowerCase() === 'issue' || (data.type.toLowerCase() === 'adjustment' && data.quantity < 0) ? '-' : '+' }}{{ Math.abs(data.quantity) }}
                                 </span>
                             </template>
                         </Column>
-                        <Column header="LINKED ORDER" style="width: 150px">
+                        <Column header="ENTITY" style="width: 180px">
+                            <template #body="{ data }">
+                                <div class="entity-info">
+                                    <span v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name)" class="entity-link">
+                                        <i class="pi pi-building mr-1"></i>{{ data.vendor_name }}
+                                    </span>
+                                    <span v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name)" class="entity-link">
+                                        <i class="pi pi-user mr-1"></i>{{ data.customer_name }}
+                                    </span>
+                                    <span v-else class="text-xs text-muted">Internal Movement</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="LINKED ORDER" style="width: 140px">
                             <template #body="{ data }">
                                 <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
                                     @click="handleLinkClick('PO', data.po_number || data.reference_doc)" class="order-link">
@@ -181,8 +194,8 @@ const formatCurrency = (val) => {
                             </template>
                         </Column>
                         <Column field="from_location" header="ORIGIN"></Column>
-                        <Column field="to_location" header="DESTINATION"></Column>
-                        <Column field="status" header="STATUS" style="width: 100px">
+                        <Column field="to_location" header="DEST"></Column>
+                        <Column field="status" header="STATUS" style="width: 90px">
                              <template #body="{ data }">
                                 <span class="status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
                             </template>
@@ -340,14 +353,34 @@ const formatCurrency = (val) => {
     border-radius: 2px;
 }
 
-.status-indicator {
-    font-size: 0.7rem;
+.qty-val {
     font-weight: 700;
-    text-transform: uppercase;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+.qty-val.receipt { color: #10b981; }
+.qty-val.issue { color: #ef4444; }
+
+.entity-info {
+    display: flex;
+    flex-direction: column;
 }
 
-.status-indicator.posted { color: var(--accent-primary); }
-.status-indicator.draft { color: var(--text-secondary); }
+.entity-link {
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--accent-primary);
+    cursor: pointer;
+    transition: color 0.1s;
+}
+
+.entity-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
 
 .order-link {
     color: var(--accent-primary);
@@ -356,21 +389,20 @@ const formatCurrency = (val) => {
     font-size: 0.75rem;
     display: flex;
     align-items: center;
-    transition: color 0.2s;
+    transition: color 0.1s;
 }
-
 .order-link:hover {
     color: #60a5fa;
     text-decoration: underline;
 }
 
-.qty-val {
+.status-indicator {
+    font-size: 0.7rem;
     font-weight: 700;
-    font-family: monospace;
+    text-transform: uppercase;
 }
-
-.qty-val.receipt { color: #10b981; }
-.qty-val.issue { color: #ef4444; }
+.status-indicator.posted { color: var(--accent-primary); }
+.status-indicator.draft { color: var(--text-secondary); }
 
 .empty-state, .empty-log {
     display: flex;

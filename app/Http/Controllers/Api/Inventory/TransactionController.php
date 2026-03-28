@@ -18,7 +18,7 @@ class TransactionController extends Controller
         $transactions = Transaction::whereHas('lines', function ($q) use ($product) {
             $q->where('product_id', $product->id);
         })
-            ->with(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'purchaseOrder', 'salesOrder', 'lines' => function ($q) use ($product) {
+            ->with(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer', 'purchaseOrder', 'salesOrder', 'lines' => function ($q) use ($product) {
                 $q->where('product_id', $product->id);
             }])
             ->orderBy('transaction_date', 'desc')
