@@ -7,7 +7,18 @@ import Column from 'primevue/column';
 import InputText from 'primevue/inputtext';
 import Listbox from 'primevue/listbox';
 import Tag from 'primevue/tag';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import Textarea from 'primevue/textarea';
+import ToggleSwitch from 'primevue/toggleswitch';
+import { usePermissions } from '@/Composables/usePermissions';
+import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 import axios from 'axios';
+
+const { can } = usePermissions();
+const toast = useToast();
+const confirm = useConfirm();
 
 const vendors = ref([]);
 const selectedVendor = ref(null);
@@ -15,6 +26,20 @@ const history = ref([]);
 const loadingVendors = ref(false);
 const loadingHistory = ref(false);
 const search = ref('');
+
+const dialogVisible = ref(false);
+const submitted = ref(false);
+
+const vendorForm = ref({
+    id: null,
+    vendor_code: '',
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    contact_person: '',
+    is_active: true
+});
 
 const loadVendors = async () => {
     loadingVendors.value = true;
@@ -59,6 +84,56 @@ const getTransactionSeverity = (type) => {
         default: return 'secondary';
     }
 };
+
+const openNew = () => {
+    vendorForm.value = { id: null, vendor_code: '', name: '', email: '', phone: '', address: '', contact_person: '', is_active: true };
+    submitted.value = false;
+    dialogVisible.value = true;
+};
+
+const editVendor = () => {
+    vendorForm.value = { ...selectedVendor.value };
+    submitted.value = false;
+    dialogVisible.value = true;
+};
+
+const saveVendor = async () => {
+    submitted.value = true;
+    if (!vendorForm.value.name) return;
+
+    try {
+        if (vendorForm.value.id) {
+            await axios.put(`/api/vendors/${vendorForm.value.id}`, vendorForm.value);
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Entity properties adjusted.', life: 3000 });
+        } else {
+            await axios.post('/api/vendors', vendorForm.value);
+            toast.add({ severity: 'success', summary: 'Registered', detail: 'New provider initialized.', life: 3000 });
+        }
+        dialogVisible.value = false;
+        loadVendors();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply parameters.', life: 3000 });
+    }
+};
+
+const deleteVendor = () => {
+    confirm.require({
+        message: 'Are you sure you want to permanently decommission this provider?',
+        header: 'Confirm Decommission',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger',
+        accept: async () => {
+            try {
+                await axios.delete(`/api/vendors/${selectedVendor.value.id}`);
+                selectedVendor.value = null;
+                toast.add({ severity: 'success', summary: 'Decommissioned', detail: 'Provider registry offline.', life: 3000 });
+                loadVendors();
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Dependency collision. Cannot decommission active entity.', life: 4000 });
+            }
+        }
+    });
+};
 </script>
 
 <template>
@@ -69,7 +144,10 @@ const getTransactionSeverity = (type) => {
             <!-- Provider Sidebar -->
             <div class="provider-pane sharp-panel">
                 <div class="pane-header">
-                    <h3 class="pane-title">Provider Registry</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                        <h3 class="pane-title" style="margin: 0;">Provider Registry</h3>
+                        <Button v-if="can('manage-products')" icon="pi pi-plus" class="p-button-primary p-button-sm p-0 m-0" style="width: 24px; height: 24px;" @click="openNew" />
+                    </div>
                     <div class="search-container">
                         <i class="pi pi-search search-icon"></i>
                         <InputText v-model="search" placeholder="Filter providers..." @input="loadVendors" class="gh-search-input" />
@@ -93,11 +171,17 @@ const getTransactionSeverity = (type) => {
                 <div class="specs-section sharp-panel">
                     <template v-if="selectedVendor">
                         <div class="specs-header">
-                            <div class="title-workflow">
-                                <h1 class="specs-title">{{ selectedVendor.name }}</h1>
-                                <div class="specs-badges">
-                                    <Tag value="RELIABLE_SOURCE" class="gh-tag-success" />
-                                    <Tag value="EXTERNAL_ENTITY" class="gh-tag-secondary" />
+                            <div class="title-workflow" style="width: 100%; display: flex; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <h1 class="specs-title">{{ selectedVendor.name }}</h1>
+                                    <div class="specs-badges">
+                                        <Tag value="RELIABLE_SOURCE" class="gh-tag-success" />
+                                        <Tag value="EXTERNAL_ENTITY" class="gh-tag-secondary" />
+                                    </div>
+                                </div>
+                                <div v-if="can('manage-products')" style="display: flex; gap: 0.5rem;">
+                                    <Button icon="pi pi-pencil" class="p-button-secondary p-button-sm p-button-outlined" @click="editVendor" />
+                                    <Button icon="pi pi-trash" class="p-button-danger p-button-sm p-button-outlined" @click="deleteVendor" />
                                 </div>
                             </div>
                             <p class="specs-desc">
@@ -156,6 +240,51 @@ const getTransactionSeverity = (type) => {
                     </DataTable>
                 </div>
             </div>
+            
+            <Dialog v-model:visible="dialogVisible" :header="vendorForm.id ? 'UPDATE REGISTRY' : 'INITIALIZE PROVIDER'" :modal="true" :style="{ width: '800px' }" class="premium-dialog">
+                <div class="grid formgrid p-fluid">
+                    <div class="field col-12 md:col-8">
+                        <label class="form-label">Entity Designation (Name) *</label>
+                        <InputText v-model="vendorForm.name" required autofocus :class="{'p-invalid': submitted && !vendorForm.name}" />
+                        <small class="p-error" v-if="submitted && !vendorForm.name">Designation is required.</small>
+                    </div>
+                    <div class="field col-12 md:col-4">
+                        <label class="form-label">Identifier Code</label>
+                        <InputText v-model="vendorForm.vendor_code" style="font-family: monospace;" />
+                    </div>
+
+                    <div class="field col-12 md:col-6">
+                        <label class="form-label">Communication Link (Email)</label>
+                        <InputText v-model="vendorForm.email" />
+                    </div>
+                    <div class="field col-12 md:col-6">
+                        <label class="form-label">Telemetry (Phone)</label>
+                        <InputText v-model="vendorForm.phone" />
+                    </div>
+
+                    <div class="field col-12">
+                        <label class="form-label">Physical Interface (Address)</label>
+                        <InputText v-model="vendorForm.address" />
+                    </div>
+
+                    <div class="field col-12 md:col-6">
+                        <label class="form-label">Primary Liaison</label>
+                        <InputText v-model="vendorForm.contact_person" />
+                    </div>
+
+                    <div class="field col-12 flex align-items-center gap-3 mt-2">
+                        <ToggleSwitch v-model="vendorForm.is_active" />
+                        <span :style="{ fontWeight: '600', letterSpacing: '0.05em', color: vendorForm.is_active ? '#38bdf8' : '#94a3b8' }">
+                            {{ vendorForm.is_active ? 'SOURCE ACTIVE' : 'SOURCE OFFLINE' }}
+                        </span>
+                    </div>
+                </div>
+
+                <template #footer>
+                    <Button label="Abort Config" icon="pi pi-times" @click="dialogVisible = false" class="p-button-secondary" />
+                    <Button label="Apply Parameters" icon="pi pi-check" @click="saveVendor" class="p-button-primary" />
+                </template>
+            </Dialog>
         </div>
     </AppLayout>
 </template>
@@ -411,5 +540,149 @@ const getTransactionSeverity = (type) => {
 ::v-deep(.p-listbox-item.p-highlight) {
     background: #161b22 !important;
     color: var(--text-primary) !important;
+}
+
+/* Premium Form Elements */
+.form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.field:focus-within .form-label {
+    color: #38bdf8;
+}
+
+/* Premium Dialog Design */
+::v-deep(.p-dialog) {
+    background: rgba(13, 17, 23, 0.95) !important;
+    backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05) !important;
+    overflow: hidden !important;
+    transform-origin: center !important;
+    animation: dialogFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes dialogFadeIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+::v-deep(.p-dialog .p-dialog-header) {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 1.5rem 2rem !important;
+    position: relative !important;
+}
+
+::v-deep(.p-dialog .p-dialog-header::before) {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
+    opacity: 0.8;
+}
+
+::v-deep(.p-dialog .p-dialog-title) {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    letter-spacing: 0.02em !important;
+}
+
+::v-deep(.p-dialog .p-dialog-content) {
+    background: transparent !important;
+    padding: 2rem !important;
+}
+
+::v-deep(.p-dialog .p-dialog-footer) {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 1.25rem 2rem !important;
+}
+
+/* Premium Inputs */
+::v-deep(.p-inputtext), 
+::v-deep(.p-inputnumber-input), 
+::v-deep(.p-textarea), 
+::v-deep(.p-select) {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #f8fafc !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) inset !important;
+    font-size: 0.9rem !important;
+}
+
+::v-deep(.p-inputtext:enabled:hover),
+::v-deep(.p-inputnumber-input:enabled:hover),
+::v-deep(.p-textarea:enabled:hover) {
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    background: rgba(15, 23, 42, 0.8) !important;
+}
+
+::v-deep(.p-inputtext:enabled:focus),
+::v-deep(.p-inputnumber-input:enabled:focus),
+::v-deep(.p-textarea:enabled:focus) {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15), 0 2px 4px rgba(0,0,0,0.1) inset !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    outline: none !important;
+}
+
+::v-deep(.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider) {
+    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5) !important;
+}
+
+::v-deep(.p-toggleswitch .p-toggleswitch-slider) {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Dialog Footer Buttons */
+::v-deep(.p-dialog-footer .p-button-secondary) {
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8 !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+::v-deep(.p-dialog-footer .p-button-secondary:hover) {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+::v-deep(.p-dialog-footer .p-button-primary) {
+    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1.5rem !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-weight: 600 !important;
+}
+
+::v-deep(.p-dialog-footer .p-button-primary:hover) {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6) !important;
+    background: linear-gradient(135deg, #38bdf8, #3b82f6) !important;
 }
 </style>
