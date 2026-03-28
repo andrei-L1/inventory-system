@@ -3,13 +3,13 @@
 
 @layer custom {
     :root, .app-dark {
-        --bg-deep: #1c2128; /* GitHub Inset/Deepest Background */
-        --bg-panel: #22272e; /* GitHub Canvas Default */
-        --bg-panel-border: #444c56; /* GitHub Standard Border */
-        --accent-primary: #539bf5; /* GitHub Primary Blue */
-        --accent-hover: #71adff;
-        --text-primary: #adbac7; /* GitHub Dimmed Text */
-        --text-secondary: #768390; /* GitHub Muted Text */
+        --bg-deep: #010409; /* GitHub Dark Default Background */
+        --bg-panel: #0d1117; /* GitHub Dark Default Canvas */
+        --bg-panel-border: #30363d; /* GitHub Dark Border */
+        --accent-primary: #2f81f7; /* GitHub Primary Blue (Dark Mode) */
+        --accent-hover: #58a6ff;
+        --text-primary: #c9d1d9; /* GitHub Primary Text */
+        --text-secondary: #8b949e; /* GitHub Muted Text */
     }
 
     /* Base Body Styling */

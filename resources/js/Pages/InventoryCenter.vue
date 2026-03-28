@@ -115,7 +115,7 @@ const formatCurrency = (val) => {
                                 <h1 class="specs-title">{{ selectedProduct.name }}</h1>
                                 <div class="specs-badges">
                                     <Tag :value="selectedProduct.category?.name || 'ASSET'" class="gh-tag-secondary" />
-                                    <Tag :value="selectedProduct.is_active ? 'Active' : 'Archived'" :severity="selectedProduct.is_active ? 'success' : 'danger'" class="gh-status-tag" />
+                                    <Tag :value="selectedProduct.is_active ? 'Active' : 'Archived'" class="gh-tag-success" />
                                 </div>
                             </div>
                             <p class="specs-desc">{{ selectedProduct.description || 'No system documentation provided for this inventory asset.' }}</p>
@@ -249,7 +249,7 @@ const formatCurrency = (val) => {
 }
 
 .gh-count {
-    background: #2d333b;
+    background: #161b22;
     padding: 2px 6px;
     border-radius: 20px;
     font-size: 12px;
@@ -358,7 +358,7 @@ const formatCurrency = (val) => {
 
 .doc-cell code {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    background: #2d333b;
+    background: #161b22;
     padding: 2px 4px;
     border-radius: 4px;
     color: var(--accent-primary);
@@ -380,7 +380,7 @@ const formatCurrency = (val) => {
 
 .ledger-header {
     padding: 12px 16px;
-    background: #2d333b;
+    background: #161b22;
     border-bottom: 1px solid var(--bg-panel-border);
     border-radius: 6px 6px 0 0;
 }
@@ -407,7 +407,7 @@ const formatCurrency = (val) => {
 }
 
 ::v-deep(.p-datatable-tbody > tr:hover) {
-    background: #2d333b !important;
+    background: #161b22 !important;
 }
 
 .gh-code {
@@ -461,6 +461,20 @@ const formatCurrency = (val) => {
     color: var(--text-secondary);
     font-size: 14px;
     text-align: center;
+}
+
+.gh-tag-success {
+    background: rgba(87, 171, 90, 0.1) !important;
+    color: #57ab5a !important;
+    font-size: 10px;
+    border: 1px solid rgba(87, 171, 90, 0.2);
+}
+
+.gh-tag-secondary {
+    background: #161b22 !important;
+    color: var(--text-secondary) !important;
+    font-size: 10px;
+    border: 1px solid var(--bg-panel-border);
 }
 
 /* Listbox Selection Fix */
