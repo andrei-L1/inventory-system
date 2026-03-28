@@ -620,26 +620,6 @@ const stats = computed(() => ({
     align-items: center;
 }
 
-.search-wrapper {
-    position: relative;
-    width: 300px;
-}
-
-.search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: var(--text-secondary);
-    z-index: 1;
-}
-
-.search-input {
-    width: 100%;
-    padding-left: 30px !important;
-}
-
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

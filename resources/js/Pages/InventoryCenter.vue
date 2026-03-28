@@ -88,9 +88,9 @@ const formatCurrency = (val) => {
             <div class="asset-pane sharp-panel">
                 <div class="pane-header">
                     <h3 class="pane-title">Asset Catalog</h3>
-                    <div class="search-container">
+                    <div class="search-wrapper">
                         <i class="pi pi-search search-icon"></i>
-                        <InputText v-model="search" placeholder="Filter assets..." @input="loadProducts" class="gh-search-input" />
+                        <InputText v-model="search" placeholder="Filter assets..." @input="loadProducts" class="search-input" />
                     </div>
                 </div>
                 <div class="asset-list-container">
@@ -256,25 +256,6 @@ const formatCurrency = (val) => {
     color: var(--text-secondary);
 }
 
-.search-container {
-    position: relative;
-    width: 100%;
-}
-
-.search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: var(--text-secondary);
-    z-index: 1;
-}
-
-.gh-search-input {
-    width: 100% !important;
-    padding-left: 30px !important;
-}
 
 .asset-list-container {
     flex: 1;
