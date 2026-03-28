@@ -12,6 +12,16 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Validation Expansion**: Created `InsufficientStockException` and integrated it into the `StockService` to handle out-of-stock scenarios gracefully.
 - **Phase 0.1 Completion**: All core engine optimizations and safety guards are now active.
 
+### 🎯 Milestone: Phase 1.1 Complete (Master Data API)
+**Date**: 2026-03-28 | **Status**: 100% VERIFIED
+**Summary**: Successfully transformed the database catalog into a live RESTful API. The system now supports full Product, Category, Vendor, and UOM management.
+- **Auto-Inventory Sync**: Implemented a `ProductService` that "initializes" stock rows for all locations the moment a product is born.
+- **RESTful Gateway**: Created controllers for all master data, protected by Laravel Sanctuim-ready routes.
+- **Seeding Expanded**: Added a `CategorySeeder` to establish the core product hierarchy.
+- **Verification Proof**: 100% pass on all `ProductApiTest` cases (2/2 passing; 6 assertions).
+
+---
+
 ### 🎯 Milestone: Phase 0.2 Complete (Automated Testing)
 **Summary**: All core math and movement logic is now covered by 100% passing automated feature tests.
 - **Costing Verification**: Confirmed FIFO/LIFO/Average costing accuracy.

@@ -23,10 +23,11 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 ## Phase 1: Master Data & API (The Inventory Foundation)
 *Focus: Expose the database catalog to the frontend.*
 
-### 1.1 RESTful API Controllers
-- [ ] **Product Catalog**: `Api/ProductController` (Create, Update, Search, Filter).
-- [ ] **Location Hierarchy**: `Api/LocationController` (Tree-view support for Warehouse > Zone > Bin).
-- [ ] **Resource Layers**: Implement `ProductResource`, `CategoryResource`, and `UomResource` for clean front-end consumption.
+### 1.1 Master Data API & Products Catalog
+- [x] **API Resource Blueprint**: Create Laravel API Resources for `Product`, `Category`, `Vendor`, and `UOM`.
+- [x] **Catalog Search Service**: Implement a high-performance filtering service for products (Search by Name, SKU, Category).
+- [x] **Product Controller**: Complete the RESTful CRUD for Master Data.
+- [x] **Logic Integration**: Ensure adding a product successfully creates a corresponding `Inventory` row in each active location.
 
 ### 1.2 Frontend Bootstrap (Vue.js + Inertia)
 - [ ] **Global State**: Set up user authentication state (Roles/Permissions).
