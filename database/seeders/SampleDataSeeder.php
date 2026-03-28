@@ -2,216 +2,111 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
-use App\Models\CostingMethod;
-use App\Models\Customer;
-use App\Models\Location;
-use App\Models\LocationType;
-use App\Models\Product;
-use App\Models\PurchaseOrder;
-use App\Models\SalesOrder;
-use App\Models\Transaction;
-use App\Models\TransactionLine;
-use App\Models\UnitOfMeasure;
-use App\Models\Vendor;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
-/**
- * ⚠️ SAMPLE DATA SEEDER ⚠️
- * Use this ONLY for populating the system with demonstration data.
- * This seeder initializes high-fidelity products and movement history.
- */
 class SampleDataSeeder extends Seeder
 {
-    /**
-     * Seed the application with high-fidelity sample inventory data.
-     */
     public function run(): void
     {
         DB::transaction(function () {
-            // 1. Fetch Core Metadata
-            $whType = LocationType::where('name', 'warehouse')->first();
-            $zoneType = LocationType::where('name', 'zone')->first();
+            // 1. Fetch needed IDs
+            $catId = DB::table('categories')->where('name', 'Electronics')->value('id') ?? DB::table('categories')->first()->id;
+            $uomId = DB::table('units_of_measure')->where('abbreviation', 'pcs')->value('id');
+            $costMethodId = DB::table('costing_methods')->where('name', 'average')->value('id');
+            $whTypeId = DB::table('location_types')->where('name', 'warehouse')->value('id');
+            $zoneTypeId = DB::table('location_types')->where('name', 'zone')->value('id');
 
-            $avgCost = CostingMethod::where('name', 'average')->first()
-                ?? CostingMethod::create(['name' => 'average', 'label' => 'Average Cost', 'is_active' => true]);
+            // 2. Vendors
+            $vendorId = DB::table('vendors')->updateOrInsert(['code' => 'DEMO-VEND'], [
+                'name' => 'Apex Components',
+                'email' => 'sales@apex.example',
+                'is_active' => true,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+            $vendorId = DB::table('vendors')->where('code', 'DEMO-VEND')->value('id');
 
-            $pcs = UnitOfMeasure::where('name', 'Piece')->first();
-            $category = Category::where('name', 'Electronics')->first() ?? Category::first();
-
-            // Note: In some versions we use models, in others just enums
-            // But Transaction model has transaction_type_id and transaction_status_id if using lookup tables
-            $postedStatusId = DB::table('transaction_statuses')->where('name', 'posted')->value('id');
-            $receiptTypeId = DB::table('transaction_types')->where('name', 'receipt')->value('id');
-            $transferTypeId = DB::table('transaction_types')->where('name', 'transfer')->value('id');
-            $issueTypeId = DB::table('transaction_types')->where('name', 'issue')->value('id');
-
-            // 1.5. Order Statuses
-            $poStatusId = DB::table('purchase_order_statuses')->where('name', 'Approved')->value('id')
-                ?? DB::table('purchase_order_statuses')->insertGetId(['name' => 'Approved', 'is_editable' => false]);
-            $soStatusId = DB::table('sales_order_statuses')->where('name', 'Confirmed')->value('id')
-                ?? DB::table('sales_order_statuses')->insertGetId(['name' => 'Confirmed', 'is_editable' => false]);
-
-            // 2. Sample Locations
-            $mainWh = Location::updateOrCreate(
-                ['code' => 'WH-H01'],
-                ['name' => 'Primary Distribution Hub', 'location_type_id' => $whType->id, 'is_active' => true]
-            );
-
-            $frontZone = Location::updateOrCreate(
-                ['code' => 'ZON-A01'],
-                ['name' => 'Display Zone ALPHA', 'location_type_id' => $zoneType->id, 'is_active' => true, 'parent_id' => $mainWh->id]
-            );
-
-            // 3. Sample Vendors
-            $cyberdyne = Vendor::updateOrCreate(
-                ['code' => 'VEND-001'],
-                ['name' => 'Cyberdyne Systems', 'email' => 'contact@cyberdyne.tech', 'phone' => '555-0199', 'is_active' => true]
-            );
-
-            $stark = Vendor::updateOrCreate(
-                ['code' => 'VEND-002'],
-                ['name' => 'Stark Industries', 'email' => 'orders@stark.com', 'phone' => '123-IRON', 'is_active' => true]
-            );
-
-            // 3.5. Sample Customers
-            $shield = Customer::updateOrCreate(
-                ['customer_code' => 'CUST-SHLD-01'],
-                ['name' => 'S.H.I.E.L.D HQ', 'email' => 'fury@shield.gov', 'phone' => '000-0000', 'is_active' => true]
-            );
-
-            // 4. Sample Products
-            $gpu = Product::updateOrCreate(
-                ['sku' => 'SKU-NV-5090'],
+            // 3. Products
+            $products = [
                 [
-                    'name' => 'Neural Tensor Processor G5',
-                    'product_code' => 'NTP-5090',
-                    'description' => 'Military-grade GPU optimized for parallel neural computation.',
-                    'category_id' => $category->id,
-                    'uom_id' => $pcs->id,
-                    'costing_method_id' => $avgCost->id,
-                    'preferred_vendor_id' => $cyberdyne->id,
+                    'sku' => 'GPU-NV-5090',
+                    'name' => 'Thermal GPU G5',
+                    'product_code' => 'NV-5090',
+                    'category_id' => $catId,
+                    'uom_id' => $uomId,
+                    'costing_method_id' => $costMethodId,
+                    'preferred_vendor_id' => $vendorId,
                     'selling_price' => 2499.00,
-                    'is_active' => true,
-                ]
-            );
-
-            $reactor = Product::updateOrCreate(
-                ['sku' => 'SKU-ST-ARC-01'],
+                    'average_cost' => 1800.00,
+                    'reorder_point' => 10,
+                ],
                 [
-                    'name' => 'Mark II Arc Reactor',
-                    'product_code' => 'ARC-II',
-                    'description' => 'Zero-point clean energy source.',
-                    'category_id' => $category->id,
-                    'uom_id' => $pcs->id,
-                    'costing_method_id' => $avgCost->id,
-                    'preferred_vendor_id' => $stark->id,
+                    'sku' => 'ARC-RE-02',
+                    'name' => 'Compact Arc Reactor',
+                    'product_code' => 'ARC-02',
+                    'category_id' => $catId,
+                    'uom_id' => $uomId,
+                    'costing_method_id' => $costMethodId,
+                    'preferred_vendor_id' => $vendorId,
                     'selling_price' => 150000.00,
-                    'is_active' => true,
+                    'average_cost' => 120000.00,
+                    'reorder_point' => 2,
                 ]
-            );
+            ];
 
-            // 5. Sample Transactions & Orders
-            $po1 = PurchaseOrder::updateOrCreate(
-                ['po_number' => 'PO-CDB-9422'],
+            foreach ($products as $p) {
+                DB::table('products')->updateOrInsert(['sku' => $p['sku']], $p + ['created_at' => Carbon::now(), 'updated_at' => Carbon::now()]);
+            }
+
+            $gpuId = DB::table('products')->where('sku', 'GPU-NV-5090')->value('id');
+            $reactorId = DB::table('products')->where('sku', 'ARC-RE-02')->value('id');
+
+            // 4. Locations
+            DB::table('locations')->updateOrInsert(['code' => 'DEMO-WH'], [
+                'name' => 'Demo Warehouse',
+                'location_type_id' => $whTypeId,
+                'is_active' => true,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+            $whId = DB::table('locations')->where('code', 'DEMO-WH')->value('id');
+
+            // 5. Inventories
+            $inventories = [
+                ['product_id' => $gpuId, 'location_id' => $whId, 'quantity_on_hand' => 120, 'average_cost' => 1800.00],
+                ['product_id' => $reactorId, 'location_id' => $whId, 'quantity_on_hand' => 5, 'average_cost' => 120000.00],
+            ];
+
+            foreach ($inventories as $inv) {
+                DB::table('inventories')->updateOrInsert(
+                    ['product_id' => $inv['product_id'], 'location_id' => $inv['location_id']],
+                    $inv + ['created_at' => Carbon::now(), 'updated_at' => Carbon::now()]
+                );
+            }
+
+            // 6. Recent Transaction Logs
+            $receiptTypeId = DB::table('transaction_types')->where('name', 'receipt')->value('id');
+            $postedStatusId = DB::table('transaction_statuses')->where('name', 'posted')->value('id');
+
+            DB::table('transactions')->insert([
                 [
-                    'vendor_id' => $cyberdyne->id,
-                    'status_id' => $poStatusId,
-                    'order_date' => now()->subDays(12),
-                    'total_amount' => 90000.00,
-                    'created_by' => 1,
+                    'reference_number' => 'DEMO-REC-01',
+                    'transaction_type_id' => $receiptTypeId,
+                    'transaction_status_id' => $postedStatusId,
+                    'transaction_date' => Carbon::now()->subDays(5),
+                    'to_location_id' => $whId,
+                    'vendor_id' => $vendorId,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
                 ]
-            );
+            ]);
+            $txId = DB::table('transactions')->where('reference_number', 'DEMO-REC-01')->value('id');
 
-            $this->createSampleTransaction([
-                'reference_number' => 'REC-2026-001',
-                'transaction_type_id' => $receiptTypeId,
-                'vendor_id' => $cyberdyne->id,
-                'transaction_status_id' => $postedStatusId,
-                'to_location_id' => $mainWh->id,
-                'transaction_date' => now()->subDays(10),
-                'notes' => 'Inbound procurement from Cyberdyne.',
-                'reference_doc' => 'PO-CDB-9422',
-                'purchase_order_id' => $po1->id,
-                'posted_at' => now()->subDays(10),
-                'created_by' => 1,
-            ], $gpu->id, $mainWh->id, 50, 1800.00);
-
-            $this->createSampleTransaction([
-                'reference_number' => 'XFER-2026-001',
-                'transaction_type_id' => $transferTypeId,
-                'transaction_status_id' => $postedStatusId,
-                'from_location_id' => $mainWh->id,
-                'to_location_id' => $frontZone->id,
-                'transaction_date' => now()->subDays(5),
-                'notes' => 'Stock replenishment.',
-                'reference_doc' => 'XFER-INT-01',
-                'posted_at' => now()->subDays(5),
-                'created_by' => 1,
-            ], $gpu->id, $frontZone->id, 10, 1800.00);
-
-            $so1 = SalesOrder::updateOrCreate(
-                ['so_number' => 'SO-SHIELD-098'],
-                [
-                    'customer_id' => $shield->id,
-                    'status_id' => $soStatusId,
-                    'order_date' => now()->subDays(3),
-                    'total_amount' => 4998.00,
-                    'created_by' => 1,
-                ]
-            );
-
-            $this->createSampleTransaction([
-                'reference_number' => 'ISSUE-2026-001',
-                'transaction_type_id' => $issueTypeId,
-                'transaction_status_id' => $postedStatusId,
-                'from_location_id' => $frontZone->id,
-                'transaction_date' => now()->subDays(2),
-                'notes' => 'Direct consumer procurement.',
-                'reference_doc' => 'SO-SHIELD-098',
-                'sales_order_id' => $so1->id,
-                'posted_at' => now()->subDays(2),
-                'created_by' => 1,
-            ], $gpu->id, $frontZone->id, 2, 1800.00);
-
-            $po2 = PurchaseOrder::updateOrCreate(
-                ['po_number' => 'PO-STARK-771'],
-                [
-                    'vendor_id' => $stark->id,
-                    'status_id' => $poStatusId,
-                    'order_date' => now()->subDays(31),
-                    'total_amount' => 120000.00,
-                    'created_by' => 1,
-                ]
-            );
-
-            $this->createSampleTransaction([
-                'reference_number' => 'REC-2026-002',
-                'transaction_type_id' => $receiptTypeId,
-                'vendor_id' => $stark->id,
-                'transaction_status_id' => $postedStatusId,
-                'to_location_id' => $mainWh->id,
-                'transaction_date' => now()->subDays(30),
-                'notes' => 'New tech arrival from Stark Ind.',
-                'reference_doc' => 'PO-STARK-771',
-                'purchase_order_id' => $po2->id,
-                'posted_at' => now()->subDays(30),
-                'created_by' => 1,
-            ], $reactor->id, $mainWh->id, 1, 120000.00);
+            DB::table('transaction_lines')->insert([
+                ['transaction_id' => $txId, 'product_id' => $gpuId, 'location_id' => $whId, 'quantity' => 120, 'unit_cost' => 1800.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ]);
         });
-    }
-
-    private function createSampleTransaction(array $data, int $productId, int $locationId, float $qty, float $cost): void
-    {
-        $transaction = Transaction::updateOrCreate(
-            ['reference_number' => $data['reference_number']],
-            $data
-        );
-
-        TransactionLine::updateOrCreate(
-            ['transaction_id' => $transaction->id, 'product_id' => $productId],
-            ['quantity' => $qty, 'unit_cost' => $cost, 'location_id' => $locationId]
-        );
     }
 }
