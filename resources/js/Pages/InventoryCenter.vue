@@ -162,7 +162,7 @@ const formatCurrency = (val) => {
                         <Column field="quantity" header="QTY" style="width: 70px">
                             <template #body="{ data }">
                                 <span class="qty-val" :class="data.type.toLowerCase()">
-                                    {{ data.type.toLowerCase() === 'issue' ? '-' : '+' }}{{ data.quantity }}
+                                    {{ data.type.toLowerCase() === 'issue' || (data.type.toLowerCase() === 'adjustment' && data.quantity < 0) ? '-' : '+' }}{{ Math.abs(data.quantity) }}
                                 </span>
                             </template>
                         </Column>
