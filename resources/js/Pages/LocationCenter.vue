@@ -35,6 +35,7 @@ const locationForm = ref({
     name: '',
     location_type_id: null,
     parent_id: null,
+    default_receive_location_id: null,
     description: '',
     address: '',
     city: '',
@@ -79,6 +80,7 @@ const openNew = () => {
         name: '',
         location_type_id: null,
         parent_id: null,
+        default_receive_location_id: null,
         description: '',
         address: '',
         city: '',
@@ -90,7 +92,10 @@ const openNew = () => {
 };
 
 const editLocation = (loc) => {
-    locationForm.value = { ...loc };
+    locationForm.value = { 
+        ...loc,
+        location_type_id: loc.location_type_id || (loc.location_type ? loc.location_type.id : null)
+    };
     dialogVisible.value = true;
 };
 
@@ -236,6 +241,11 @@ const getSeverity = (typeName) => {
                             <div class="p-field col-span-2">
                                 <label>Parent Topology Node</label>
                                 <Select v-model="locationForm.parent_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Top-Level Node (Root)" showClear />
+                            </div>
+
+                            <div class="p-field col-span-2">
+                                <label>Default Receive Location</label>
+                                <Select v-model="locationForm.default_receive_location_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Standard Inbound Target" showClear />
                             </div>
                             
                             <div class="p-field col-span-2">

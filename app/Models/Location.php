@@ -17,6 +17,7 @@ class Location extends Model
         'name',
         'location_type_id',
         'parent_id',
+        'default_receive_location_id',
         'address',
         'city',
         'country',
@@ -46,5 +47,13 @@ class Location extends Model
     public function children(): HasMany
     {
         return $this->hasMany(Location::class, 'parent_id');
+    }
+
+    /**
+     * Get the default receive location for this location.
+     */
+    public function defaultReceiveLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'default_receive_location_id');
     }
 }

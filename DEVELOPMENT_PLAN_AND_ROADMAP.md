@@ -85,7 +85,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] `LocationStoreRequest` + `LocationResource` (API response transformer)
 - [x] **Location Center** — UI to construct network topology (warehouses, stores, bins, transit)
 - [x] Mark locations as active/inactive (`is_active` toggle)
-- [ ] Set a "default receive location" per warehouse
+- [x] Set a "default receive location" per warehouse
 
 ### 1.3 Product Catalog (Master Data)
 - [x] `ProductController` — Full CRUD (`/api/products`) via `ProductService`

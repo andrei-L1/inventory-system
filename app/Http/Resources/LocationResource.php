@@ -29,6 +29,13 @@ class LocationResource extends JsonResource
                     'name' => $this->parent->name,
                 ];
             }),
+            'default_receive_location_id' => $this->default_receive_location_id,
+            'default_receive_location' => $this->whenLoaded('defaultReceiveLocation', function () {
+                return [
+                    'id' => $this->defaultReceiveLocation->id,
+                    'name' => $this->defaultReceiveLocation->name,
+                ];
+            }),
             'address' => $this->address,
             'city' => $this->city,
             'country' => $this->country,
