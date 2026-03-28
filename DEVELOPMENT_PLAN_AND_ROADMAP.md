@@ -30,8 +30,8 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 - [x] **Logic Integration**: Ensure adding a product successfully creates a corresponding `Inventory` row in each active location.
 
 ### 1.2 Frontend Bootstrap (Vue.js + Inertia)
-- [ ] **Global State**: Set up user authentication state (Roles/Permissions).
-- [ ] **UI Component Library**: Install and configure PrimeVue (or similar) for advanced data tables.
+- [x] **Global State**: Set up user authentication state (Roles/Permissions).
+- [x] **UI Component Library**: Install and configure PrimeVue (or similar) for advanced data tables.
 - [ ] **Product Management Screen**: Full CRUD with image/attachment support via the `HasAttachments` trait.
 
 ---
