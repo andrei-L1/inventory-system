@@ -20,4 +20,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    // The Master Data Catalog Interface
+    Route::get('/catalog', function () {
+        return Inertia::render('Catalog');
+    })->name('catalog');
 });
