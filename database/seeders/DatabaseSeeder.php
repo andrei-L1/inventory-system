@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             TransactionTypeSeeder::class,     // transaction_types
             TransactionStatusSeeder::class,   // transaction_statuses
             PurchaseOrderStatusSeeder::class, // purchase_order_statuses
+            CategorySeeder::class,            // categories
         ]);
 
         // ────────────────────────────────────────────────────────────────────
