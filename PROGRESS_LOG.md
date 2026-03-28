@@ -12,14 +12,6 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Validation Expansion**: Created `InsufficientStockException` and integrated it into the `StockService` to handle out-of-stock scenarios gracefully.
 - **Phase 0.1 Completion**: All core engine optimizations and safety guards are now active.
 
-### 🎯 Milestone: Phase 1.1 Complete (Master Data API)
-**Date**: 2026-03-28 | **Status**: 100% VERIFIED
-**Summary**: Successfully transformed the database catalog into a live RESTful API. The system now supports full Product, Category, Vendor, and UOM management.
-- **Auto-Inventory Sync**: Implemented a `ProductService` that "initializes" stock rows for all locations the moment a product is born.
-- **RESTful Gateway**: Created controllers for all master data, protected by Laravel Sanctuim-ready routes.
-- **Seeding Expanded**: Added a `CategorySeeder` to establish the core product hierarchy.
-- **Verification Proof**: 100% pass on all `ProductApiTest` cases (2/2 passing; 6 assertions).
-
 ---
 
 ### 🎯 Milestone: Phase 0.2 Complete (Automated Testing)
@@ -29,6 +21,22 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Validation Proof**: Throws `InsufficientStockException` on all out-of-stock attempts.
 
 ---
+
+### 🎯 Milestone: Phase 1.1 Complete (Master Data API)
+**Date**: 2026-03-28 | **Status**: 100% VERIFIED
+**Summary**: Successfully transformed the database catalog into a live RESTful API. The system now supports full Product, Category, Vendor, and UOM management.
+- **Auto-Inventory Sync**: Implemented a `ProductService` that "initializes" stock rows for all locations the moment a product is born.
+- **RESTful Gateway**: Created controllers for all master data, protected by Laravel Sanctuim-ready routes.
+- **Seeding Expanded**: Added a `CategorySeeder` to establish the core product hierarchy.
+- **Verification Proof**: 100% pass on all `ProductApiTest` cases (2/2 passing; 6 assertions).
+
+### 🎯 Milestone: Phase 1.2 Complete (Frontend Bootstrap & Catalog UX)
+**Date**: 2026-03-28 | **Status**: 100% COMPLETE
+**Summary**: Successfully launched the Vue.js + Inertia.js frontend. The system now features a high-fidelity "Command Center" UI.
+- **Master Data UI**: Transformed the Product Catalog into a live management interface with full CRUD and PrimeVue/Aura theming.
+- **Media Support**: Integrated `HasAttachments` allowing for product image uploads and real-time previews.
+- **Dynamic Linking**: Created `CostingMethodController` to populate frontend selectors dynamically.
+- **Global Auth Integration**: Implemented `usePermissions` hook to restrict UI actions (Create/Edit/Delete) based on user roles and permissions.
 
 ## 🗓️ 2026-03-27 (Sprint: Standardization)
 
