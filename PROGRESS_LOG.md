@@ -37,6 +37,7 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Media Support**: Integrated `HasAttachments` allowing for product image uploads and real-time previews.
 - **Dynamic Linking**: Created `CostingMethodController` to populate frontend selectors dynamically.
 - **Global Auth Integration**: Implemented `usePermissions` hook to restrict UI actions (Create/Edit/Delete) based on user roles and permissions.
+- **UI Architecture Refactor**: Introduced "Inventory Center" and "Vendor Center" with a production-ready three-pane layout (Selection Pane, Information Pane, and Transaction Log Pane).
 
 ## 🗓️ 2026-03-27 (Sprint: Standardization)
 

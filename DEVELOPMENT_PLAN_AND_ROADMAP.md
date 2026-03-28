@@ -33,6 +33,7 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 - [x] **Global State**: Set up user authentication state (Roles/Permissions).
 - [x] **UI Component Library**: Install and configure PrimeVue (or similar) for advanced data tables.
 - [x] **Product Management Screen**: Full CRUD with image/attachment support via the `HasAttachments` trait.
+- [x] **Inventory & Vendor Centers**: Implementation of specialized "Centers" using a high-fidelity three-pane layout (List, Details, History).
 
 ---
 
