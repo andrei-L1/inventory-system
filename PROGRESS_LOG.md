@@ -78,11 +78,12 @@ Based on the full codebase audit conducted on 2026-03-28, here is the verified c
 | **Database Schema** | 32 Migrations covering full ERP lifecycle | **~95%** |
 | **Eloquent Models** | 39 Models with full relations & soft deletes | **~95%** |
 | **Core Stock Engine** | `StockService` (Locking, FIFO/LIFO/WAC) | **100%** (Missing API trigger) |
-| **REST API Surface** | Controllers & Resources | **~25%** (Master data only) |
-| **Auth/Permissions** | Session/Sanctum, Roles, Middlewares | **~80%** (Missing route wiring) |
+| **REST API Surface** | Controllers & Resources | **~35%** (Master Data + Locations mapped) |
+| **Auth/Permissions** | Session/Sanctum, Roles, Middlewares | **100%** (Wired to API routes) |
 | **Catalog UI** | `Catalog.vue` (Full CRUD, Image Upload) | **100%** |
+| **LocationCenter UI**| `LocationCenter.vue` (Typography & Tree Structure)| **100%** |
 | **InventoryCenter UI** | Read-only ledger and specs view | **90%** (No movement triggers) |
-| **VendorCenter UI** | Read-only registry and activity view | **80%** (No CRUD) |
+| **VendorCenter UI** | Full registry with CRUD | **100%** |
 | **Dashboard UI** | `Dashboard.vue` | **5%** (Static placeholder) |
 | **Purchase/Sales Orders** | Procurement and Outbound workflows | **0%** |
 | **Transfers/Adjustments** | Manual stock movements | **0%** |

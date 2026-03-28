@@ -76,16 +76,15 @@ Each phase below corresponds to one stage of that chain.
 - [x] Role-Permission system: `roles`, `permissions`, `role_permission` pivot (slug-based)
 - [x] `PermissionSeeder` — seeds default roles (Admin, Warehouse, Sales, Viewer) and all permission slugs
 - [x] `usePermissions.js` composable — `can(slug)` helper for permission-gating UI elements
-- [x] `CheckPermission` middleware — exists, functional
-- [ ] `CheckPermission` **not yet applied to any route group** — currently not enforced server-side on writes
+- [x] `CheckPermission` middleware — tied to API routes enforcing server-side security for writes
 
 ### 1.2 Location & Warehouse Configuration
 - [x] `locations` and `location_types` tables — migrated and seeded
 - [x] `Location` Eloquent model with relationships
-- [ ] `LocationController` — CRUD API (`/api/locations`)
-- [ ] `LocationStoreRequest` + `LocationResource` (API response transformer)
-- [ ] **Locations Page** — UI to create warehouses, stores, bins, transit, virtual locations
-- [ ] Mark locations as active/inactive
+- [x] `LocationController` — Full CRUD API (`/api/locations`)
+- [x] `LocationStoreRequest` + `LocationResource` (API response transformer)
+- [x] **Location Center** — UI to construct network topology (warehouses, stores, bins, transit)
+- [x] Mark locations as active/inactive (`is_active` toggle)
 - [ ] Set a "default receive location" per warehouse
 
 ### 1.3 Product Catalog (Master Data)
@@ -107,11 +106,8 @@ Each phase below corresponds to one stage of that chain.
 ### 1.4 Vendor Master
 - [x] `VendorController` — Full CRUD (`/api/vendors`)
 - [x] `VendorResource` — API response transformer
-- [x] **VendorCenter.vue** — Read-only view (vendor details + transaction history)
-- [ ] **Vendor Create/Edit Dialog** — `VendorCenter.vue` currently has no create/edit form
-  - Fields: vendor_code, name, email, phone, address, contact_person, payment_terms
-  - Mirrors Catalog.vue pattern (dialog with form)
-- [ ] `VendorStoreRequest` + `VendorUpdateRequest` form requests
+- [x] **VendorCenter.vue** — Full CRUD view (vendor details, transaction history, and creation/editing parameters)
+- [x] **Vendor Create/Edit Dialog** — Interactive premium form integrated into Vendor Center
 
 ### 1.5 UOM & Costing Configuration
 - [x] `UnitOfMeasureController` — Full CRUD
@@ -472,7 +468,7 @@ Customer Inquiry
 | Phase | Domain | Status |
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete |
-| 1 | System Setup: Master Data & Auth | ✅ ~85% Complete |
+| 1 | System Setup: Master Data & Auth | ✅ 100% Complete |
 | 2 | Warehouse Operations (Stock Movements) | 🚧 ~15% — API missing |
 | 3 | Dashboard & KPIs | 🚧 ~5% — placeholder only |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema only |
@@ -490,8 +486,5 @@ Customer Inquiry
 1. **`POST /api/transactions`** — Expose `StockService` via HTTP (Phase 2.1) — **single most critical missing piece**
 2. **Stock Movement UI** — Receipt, Issue, Transfer, Adjustment forms (Phase 2.4)
 3. **Dashboard real data** — Replace static cards with live API stats (Phase 3)
-4. **`CheckPermission` wired to routes** — Enforce server-side permissions (Phase 9.2)
-5. **Vendor Create/Edit UI** — VendorCenter is read-only (Phase 1.4)
-6. **Locations API + UI** — Needed for multi-location movement forms (Phase 1.2)
-7. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
-8. **Sales Orders lifecycle** — Full outbound flow (Phase 5)
+4. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
+5. **Sales Orders lifecycle** — Full outbound flow (Phase 5)
