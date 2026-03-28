@@ -65,84 +65,92 @@ const getTransactionSeverity = (type) => {
     <AppLayout>
         <Head title="Vendor Center" />
 
-        <div class="center-container">
-            <!-- Left Pane: Vendor Selector -->
-            <div class="left-pane sharp-panel">
+        <div class="vendor-grid">
+            <!-- Provider Sidebar -->
+            <div class="provider-pane sharp-panel">
                 <div class="pane-header">
-                    <span class="pane-title">Provider Registry</span>
-                    <InputText v-model="search" placeholder="Filter vendors..." @input="loadVendors" class="p-inputtext-sm w-full" />
+                    <h3 class="pane-title">Provider Registry</h3>
+                    <div class="search-container">
+                        <i class="pi pi-search search-icon"></i>
+                        <InputText v-model="search" placeholder="Filter providers..." @input="loadVendors" class="gh-search-input" />
+                    </div>
                 </div>
-                <div class="list-wrapper">
-                    <Listbox v-model="selectedVendor" :options="vendors" optionLabel="name" scrollHeight="calc(100vh - 280px)" class="sharp-listbox">
+                <div class="provider-list-container">
+                    <Listbox v-model="selectedVendor" :options="vendors" optionLabel="name" class="gh-listbox">
                         <template #option="{ option }">
-                            <div class="vendor-item">
-                                <span class="vcode-hint">{{ option.vendor_code }}</span>
-                                <span class="vendor-name">{{ option.name }}</span>
+                            <div class="provider-item">
+                                <span class="provider-slug">{{ option.vendor_code }}</span>
+                                <span class="provider-name">{{ option.name }}</span>
                             </div>
                         </template>
                     </Listbox>
                 </div>
             </div>
 
-            <!-- Right Content Area -->
-            <div class="right-pane">
-                <!-- Top Right: Vendor Details -->
-                <div class="details-section sharp-panel">
+            <!-- Main Documentation Area -->
+            <div class="main-pane">
+                <!-- Top Section: Provider Specifications -->
+                <div class="specs-section sharp-panel">
                     <template v-if="selectedVendor">
-                        <div class="details-grid">
-                            <div class="details-main">
-                                <div class="badge-row">
-                                    <Tag value="RELIABLE_SOURCE" severity="success" />
-                                    <Tag value="EXTERNAL_ENTITY" severity="secondary" />
+                        <div class="specs-header">
+                            <div class="title-workflow">
+                                <h1 class="specs-title">{{ selectedVendor.name }}</h1>
+                                <div class="specs-badges">
+                                    <Tag value="RELIABLE_SOURCE" class="gh-tag-success" />
+                                    <Tag value="EXTERNAL_ENTITY" class="gh-tag-secondary" />
                                 </div>
-                                <h2 class="vendor-display-name">{{ selectedVendor.name }}</h2>
-                                <p class="vendor-meta">
-                                    <i class="pi pi-at mr-2"></i> {{ selectedVendor.email || 'NO_EMAIL_REGISTERED' }}
-                                </p>
                             </div>
-                            <div class="details-stats">
-                                <div class="stat-box">
-                                    <span class="stat-label">Vendor Entity Code</span>
-                                    <span class="stat-value highlight">{{ selectedVendor.vendor_code }}</span>
-                                </div>
-                                <div class="stat-box">
-                                    <span class="stat-label">Communication Channel</span>
-                                    <span class="stat-value">{{ selectedVendor.phone || 'NONE' }}</span>
-                                </div>
-                                <div class="stat-box col-span-2">
-                                    <span class="stat-label">Contact Person</span>
-                                    <span class="stat-value">{{ selectedVendor.contact_person || 'UNSPECIFIED' }}</span>
-                                </div>
+                            <p class="specs-desc">
+                                <i class="pi pi-at mr-1" style="font-size: 12px;"></i>
+                                {{ selectedVendor.email || 'No registry email provided for this entity.' }}
+                            </p>
+                        </div>
+                        
+                        <div class="specs-dashboard-grid">
+                            <div class="doc-cell">
+                                <label>ENTITY IDENTIFIER</label>
+                                <code>{{ selectedVendor.vendor_code }}</code>
+                            </div>
+                            <div class="doc-cell">
+                                <label>COMMUNICATION LINK</label>
+                                <span>{{ selectedVendor.phone || 'N/A' }}</span>
+                            </div>
+                            <div class="doc-cell col-span-2">
+                                <label>PRIMARY CONTACT LIAISON</label>
+                                <span>{{ selectedVendor.contact_person || 'No representative assigned.' }}</span>
                             </div>
                         </div>
                     </template>
-                    <div v-else class="empty-state">SELECT A VENDOR TO VIEW PARAMETERS</div>
+                    <div v-else class="empty-placeholder">
+                        <i class="pi pi-users mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p>SELECT A PROVIDER TO INITIALIZE PARAMETERS</p>
+                    </div>
                 </div>
 
-                <!-- Bottom Right: Transactions -->
-                <div class="history-section sharp-panel">
-                    <div class="pane-header">
-                        <span class="pane-title">Activity Feed / history Log</span>
+                <!-- Bottom Section: Supply Chain Ledger -->
+                <div class="ledger-section sharp-panel">
+                    <div class="ledger-header">
+                        <h3 class="pane-title">Activity Feed / History Log <span class="gh-count">{{ history.length }}</span></h3>
                     </div>
-                    <DataTable :value="history" :loading="loadingHistory" scrollable scrollHeight="flex" class="p-datatable-sm sharp-table">
+                    <DataTable :value="history" :loading="loadingHistory" scrollable scrollHeight="flex" class="gh-table">
                         <template #empty>
-                            <div class="empty-log">NO RECENT ACTIVITY RECORDED FOR THIS VENDOR</div>
+                            <div class="empty-ledger">NO RECENT TRANSACTIONAL ARTIFACTS DETECTED</div>
                         </template>
-                        <Column field="transaction_date" header="DATE" style="width: 120px"></Column>
-                        <Column field="reference_number" header="REFERENCE" style="width: 150px">
+                        <Column field="transaction_date" header="Timestamp" style="width: 130px"></Column>
+                        <Column field="reference_number" header="Reference" style="width: 180px">
                             <template #body="{ data }">
-                                <span class="ref-num">{{ data.reference_number }}</span>
+                                <span class="gh-code">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="type" header="OPERATION" style="width: 130px">
+                        <Column field="type" header="Operation" style="width: 140px">
                             <template #body="{ data }">
-                                <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="type-tag" />
+                                <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="gh-type-tag" />
                             </template>
                         </Column>
-                        <Column field="to_location" header="DESTINATION FACILITY"></Column>
-                        <Column field="status" header="STATUS" style="width: 100px">
+                        <Column field="to_location" header="Destination Facility"></Column>
+                        <Column field="status" header="Node Status" style="width: 120px">
                              <template #body="{ data }">
-                                <span class="status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
+                                <span class="gh-status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
                             </template>
                         </Column>
                     </DataTable>
@@ -153,20 +161,20 @@ const getTransactionSeverity = (type) => {
 </template>
 
 <style scoped>
-.center-container {
+.vendor-grid {
     display: flex;
     gap: 1.5rem;
     height: calc(100vh - 120px);
 }
 
-.left-pane {
-    width: 350px;
+.provider-pane {
+    width: 320px;
     display: flex;
     flex-direction: column;
-    padding: 1.5rem !important;
+    padding: 1rem !important;
 }
 
-.right-pane {
+.main-pane {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -175,147 +183,233 @@ const getTransactionSeverity = (type) => {
 }
 
 .pane-header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .pane-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gh-count {
+    background: #161b22;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-size: 12px;
     color: var(--text-secondary);
 }
 
-.list-wrapper {
+.search-container {
+    position: relative;
+    width: 100%;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--text-secondary);
+    z-index: 1;
+}
+
+.gh-search-input {
+    width: 100% !important;
+    padding-left: 30px !important;
+}
+
+.provider-list-container {
     flex: 1;
     overflow: hidden;
 }
 
-.sharp-listbox {
+.gh-listbox {
     border: none !important;
     background: transparent !important;
 }
 
-.vendor-item {
+.provider-item {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.25rem 0;
+    padding: 4px 0;
 }
 
-.vendor-name {
-    font-size: 0.9rem;
+.provider-name {
+    font-size: 14px;
     font-weight: 500;
 }
 
-.vcode-hint {
-    font-size: 0.65rem;
-    font-family: monospace;
+.provider-slug {
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
     color: var(--accent-primary);
-    font-weight: 600;
 }
 
-/* Details Section */
-.details-section {
-    padding: 2rem !important;
+/* Specs Section */
+.specs-section {
+    padding: 1.5rem !important;
 }
 
-.details-grid {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 3rem;
+.specs-header {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--bg-panel-border);
+    margin-bottom: 1.25rem;
 }
 
-.badge-row {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.vendor-display-name {
-    font-size: 1.75rem;
-    margin: 0 0 1rem 0;
-}
-
-.vendor-meta {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+.title-workflow {
     display: flex;
     align-items: center;
-}
-
-.details-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-.stat-box {
-    background: var(--bg-deep);
-    padding: 1rem;
-    border: 1px solid var(--bg-panel-border);
-    display: flex; flex-direction: column; gap: 0.25rem;
+.specs-title {
+    font-size: 20px;
+    margin: 0;
 }
 
-.stat-box.col-span-2 { grid-column: span 2; }
-
-.stat-label {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+.specs-desc {
     color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
 }
 
-.stat-value {
-    font-size: 0.9rem;
+.specs-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.doc-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.doc-cell.col-span-2 {
+    grid-column: span 2;
+}
+
+.doc-cell label {
+    font-size: 11px;
     font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
 }
 
-.stat-value.highlight {
+.doc-cell span, .doc-cell code {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.doc-cell code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    background: #161b22;
+    padding: 2px 4px;
+    border-radius: 4px;
     color: var(--accent-primary);
-    font-family: monospace;
+    width: fit-content;
 }
 
-/* History Section */
-.history-section {
+/* Ledger Section */
+.ledger-section {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 1.5rem !important;
+    padding: 0 !important;
     overflow: hidden;
 }
 
-.ref-num {
-    font-family: monospace;
+.ledger-header {
+    padding: 12px 16px;
+    background: #161b22;
+    border-bottom: 1px solid var(--bg-panel-border);
+    border-radius: 6px 6px 0 0;
+}
+
+.gh-table {
+    font-size: 13px;
+}
+
+::v-deep(.p-datatable-header) {
+    display: none;
+}
+
+::v-deep(.p-datatable-thead > tr > th) {
+    background: #0d1117 !important;
+    border-bottom: 1px solid var(--bg-panel-border) !important;
+    padding: 12px 16px !important;
+    color: var(--text-secondary) !important;
+    font-weight: 600 !important;
+}
+
+::v-deep(.p-datatable-tbody > tr) {
+    background: transparent !important;
+    border-bottom: 1px solid var(--bg-panel-border) !important;
+}
+
+::v-deep(.p-datatable-tbody > tr:hover) {
+    background: #161b22 !important;
+}
+
+.gh-code {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    font-size: 12px;
+}
+
+.gh-type-tag {
+    font-size: 11px;
+    border-radius: 12px;
+    padding: 2px 10px;
+}
+
+.gh-status-indicator {
+    font-size: 12px;
     font-weight: 600;
-    font-size: 0.8rem;
+}
+.gh-status-indicator.posted { color: var(--accent-primary); }
+.gh-status-indicator.draft { color: var(--text-secondary); }
+
+.gh-tag-success {
+    background: rgba(87, 171, 90, 0.1) !important;
+    color: #57ab5a !important;
+    font-size: 10px;
+    border: 1px solid rgba(87, 171, 90, 0.2);
 }
 
-.type-tag { font-size: 0.65rem; border-radius: 2px; }
-
-.status-indicator { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.status-indicator.posted { color: var(--accent-primary); }
-.status-indicator.draft { color: var(--text-secondary); }
-
-.empty-state, .empty-log {
-    display: flex; align-items: center; justify-content: center; height: 100%;
-    color: var(--text-secondary); font-size: 0.75rem; letter-spacing: 0.1em;
+.gh-tag-secondary {
+    background: #161b22 !important;
+    color: var(--text-secondary) !important;
+    font-size: 10px;
+    border: 1px solid var(--bg-panel-border);
 }
 
-/* Listbox Overrides */
-::v-deep(.p-listbox-list) { padding: 0 !important; }
+.empty-placeholder, .empty-ledger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Listbox Selection Fix */
 ::v-deep(.p-listbox-item) {
-    border-radius: 2px !important;
-    padding: 0.75rem 1rem !important;
-    border-left: 3px solid transparent;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
     margin-bottom: 2px;
 }
+
 ::v-deep(.p-listbox-item.p-highlight) {
-    background: rgba(59, 130, 246, 0.1) !important;
+    background: #161b22 !important;
     color: var(--text-primary) !important;
-    border-left-color: var(--accent-primary);
 }
 </style>

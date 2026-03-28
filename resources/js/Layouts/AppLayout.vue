@@ -242,7 +242,7 @@ onMounted(() => {
 }
 .status-badge {
     padding: 4px 8px;
-    background: #2d333b;
+    background: #010409;
     border: 1px solid var(--bg-panel-border);
     border-radius: 20px;
     color: var(--text-secondary);
