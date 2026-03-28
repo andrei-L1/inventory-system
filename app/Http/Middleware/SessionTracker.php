@@ -21,7 +21,7 @@ class SessionTracker
         // Only track if we have a session ID and it's a database session
         if ($request->hasSession() && config('session.driver') === 'database') {
             $sessionId = $request->session()->getId();
-            
+
             // Production Optimization: Only resolve and update if metadata is missing
             $sessionData = DB::table(config('session.table', 'sessions'))
                 ->where('id', $sessionId)
@@ -31,7 +31,7 @@ class SessionTracker
                 $userAgent = $request->userAgent();
                 $ip = $request->ip();
 
-                $agent = new Agent();
+                $agent = new Agent;
                 $agent->setUserAgent($userAgent);
 
                 $deviceType = $this->getDeviceType($agent);
@@ -39,7 +39,7 @@ class SessionTracker
                 $browserVersion = $agent->version($browser);
                 $platform = $agent->platform();
                 $platformVersion = $agent->version($platform);
-                
+
                 $deviceName = $agent->device();
                 if ($deviceType === 'desktop' && (empty($deviceName) || in_array($deviceName, ['WebKit', 'Gecko']))) {
                     $deviceName = 'Personal Computer';
@@ -65,8 +65,8 @@ class SessionTracker
                     ->update([
                         'device_type' => $deviceType,
                         'device_name' => $deviceName,
-                        'browser' => $browser . ($browserVersion ? " $browserVersion" : ''),
-                        'platform' => $platform . ($platformVersion ? " $platformVersion" : ''),
+                        'browser' => $browser.($browserVersion ? " $browserVersion" : ''),
+                        'platform' => $platform.($platformVersion ? " $platformVersion" : ''),
                         'country' => $country,
                         'city' => $city,
                         'ip_address' => $request->ip(), // Record the actual IP, not the resolved one
@@ -89,6 +89,7 @@ class SessionTracker
         if ($agent->isRobot()) {
             return 'robot';
         }
+
         return 'desktop';
     }
 }
