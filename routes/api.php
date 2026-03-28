@@ -10,10 +10,12 @@ use Illuminate\Support\Facades\Route;
 /**
  * Master Data API
  */
-Route::apiResource('categories', CategoryController::class);
-Route::apiResource('products', ProductController::class);
-Route::apiResource('vendors', VendorController::class);
-Route::apiResource('uom', UnitOfMeasureController::class);
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::apiResource('vendors', VendorController::class);
+    Route::apiResource('uom', UnitOfMeasureController::class);
+});
 
 Route::get('/user', function (Request $request) {
     return $request->user();

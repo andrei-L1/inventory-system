@@ -7,8 +7,10 @@ use App\Models\CostingMethod;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\UnitOfMeasure;
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProductApiTest extends TestCase
@@ -23,6 +25,8 @@ class ProductApiTest extends TestCase
 
     public function test_it_can_create_product_and_initializes_inventory()
     {
+        Sanctum::actingAs(User::where('username', 'admin')->firstOrFail(), ['*']);
+
         $category = Category::first();
         $uom = UnitOfMeasure::first();
         $costing = CostingMethod::first();
@@ -52,6 +56,8 @@ class ProductApiTest extends TestCase
 
     public function test_it_can_list_products_with_filters()
     {
+        Sanctum::actingAs(User::where('username', 'admin')->firstOrFail(), ['*']);
+
         // Seeder already creates some products? Let's check or create one.
         $this->getJson('/api/products')
             ->assertStatus(200)
