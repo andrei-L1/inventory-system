@@ -59,8 +59,8 @@ Each phase below corresponds to one stage of that chain.
 - [x] FIFO layer test: 3 receipts at different unit costs → verify correct layer consumed on issue
 - [x] LIFO layer test: same as above but in reverse order
 - [x] Concurrency test: 10 simultaneous issues of last 1 unit → only 1 succeeds, 9 throw exception
-- [ ] UOM Conversion test: receive 1 Box → verify `quantity_on_hand` increases by 12 (pieces)
-- [ ] Average cost test: verify WAC formula recalculates correctly across multiple receipts
+- [x] UOM Conversion test: receive 1 Box → verify `quantity_on_hand` increases by 12 (pieces)
+- [x] Average cost test: verify WAC formula recalculates correctly across multiple receipts
 
 ---
 
