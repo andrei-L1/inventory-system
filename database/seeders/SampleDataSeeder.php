@@ -112,7 +112,6 @@ class SampleDataSeeder extends Seeder
                 ]
             );
 
-<<<<<<< HEAD
             // 5. Sample Transactions & Orders
             $po1 = PurchaseOrder::updateOrCreate(
                 ['po_number' => 'PO-CDB-9422'],
@@ -125,8 +124,6 @@ class SampleDataSeeder extends Seeder
                 ]
             );
 
-=======
->>>>>>> origin/main
             $this->createSampleTransaction([
                 'reference_number' => 'REC-2026-001',
                 'transaction_type_id' => $receiptTypeId,
@@ -136,10 +133,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(10),
                 'notes' => 'Inbound procurement from Cyberdyne.',
                 'reference_doc' => 'PO-CDB-9422',
-<<<<<<< HEAD
                 'purchase_order_id' => $po1->id,
-=======
->>>>>>> origin/main
                 'posted_at' => now()->subDays(10),
                 'created_by' => 1,
             ], $gpu->id, $mainWh->id, 50, 1800.00);
@@ -175,12 +169,8 @@ class SampleDataSeeder extends Seeder
                 'from_location_id' => $frontZone->id,
                 'transaction_date' => now()->subDays(2),
                 'notes' => 'Direct consumer procurement.',
-<<<<<<< HEAD
                 'reference_doc' => 'SO-SHIELD-098',
                 'sales_order_id' => $so1->id,
-=======
-                'reference_doc' => 'SO-CLIENT-098',
->>>>>>> origin/main
                 'posted_at' => now()->subDays(2),
                 'created_by' => 1,
             ], $gpu->id, $frontZone->id, 2, 1800.00);
@@ -205,10 +195,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(30),
                 'notes' => 'New tech arrival from Stark Ind.',
                 'reference_doc' => 'PO-STARK-771',
-<<<<<<< HEAD
                 'purchase_order_id' => $po2->id,
-=======
->>>>>>> origin/main
                 'posted_at' => now()->subDays(30),
                 'created_by' => 1,
             ], $reactor->id, $mainWh->id, 1, 120000.00);
