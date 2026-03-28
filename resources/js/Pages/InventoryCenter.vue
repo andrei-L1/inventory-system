@@ -8,14 +8,26 @@ import InputText from 'primevue/inputtext';
 import Listbox from 'primevue/listbox';
 import Card from 'primevue/card';
 import Tag from 'primevue/tag';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 
+const toast = useToast();
 const products = ref([]);
 const selectedProduct = ref(null);
 const history = ref([]);
 const loadingProducts = ref(false);
 const loadingHistory = ref(false);
 const search = ref('');
+
+const handleLinkClick = (type, num) => {
+    toast.add({ 
+        severity: 'info', 
+        summary: 'Navigating to Order', 
+        detail: `Redirecting to ${type}: ${num}`, 
+        life: 3000 
+    });
+};
 
 const loadProducts = async () => {
     loadingProducts.value = true;
@@ -69,6 +81,7 @@ const formatCurrency = (val) => {
 <template>
     <AppLayout>
         <Head title="Inventory Center" />
+        <Toast />
 
         <div class="center-container">
             <!-- Left Pane: Item Selector -->
@@ -135,15 +148,36 @@ const formatCurrency = (val) => {
                         <template #empty>
                             <div class="empty-log">NO MOVEMENT HISTORY RECORDED FOR THIS ASSET</div>
                         </template>
-                        <Column field="transaction_date" header="DATE" style="width: 120px"></Column>
-                        <Column field="reference_number" header="REFERENCE" style="width: 150px">
+                        <Column field="transaction_date" header="DATE" style="width: 110px"></Column>
+                        <Column field="reference_number" header="REFERENCE" style="width: 140px">
                             <template #body="{ data }">
                                 <span class="ref-num">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="type" header="OPERATION" style="width: 130px">
+                        <Column field="type" header="OPERATION" style="width: 120px">
                             <template #body="{ data }">
                                 <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="type-tag" />
+                            </template>
+                        </Column>
+                        <Column field="quantity" header="QTY" style="width: 80px">
+                            <template #body="{ data }">
+                                <span class="qty-val" :class="data.type.toLowerCase()">
+                                    {{ data.type.toLowerCase() === 'issue' || data.type.toLowerCase() === 'adjustment' && data.quantity < 0 ? '-' : '+' }}{{ data.quantity }}
+                                </span>
+                            </template>
+                        </Column>
+                        <Column header="LINKED ORDER" style="width: 150px">
+                            <template #body="{ data }">
+                                <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
+                                    @click="handleLinkClick('PO', data.po_number || data.reference_doc)" class="order-link">
+                                    <i class="pi pi-receipt mr-1"></i>{{ data.po_number || data.reference_doc }}
+                                </div>
+                                <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
+                                    @click="handleLinkClick('SO', data.so_number || data.reference_doc)" class="order-link">
+                                    <i class="pi pi-send mr-1"></i>{{ data.so_number || data.reference_doc }}
+                                </div>
+                                <span v-else-if="data.reference_doc" class="text-xs text-muted">{{ data.reference_doc }}</span>
+                                <span v-else>-</span>
                             </template>
                         </Column>
                         <Column field="from_location" header="ORIGIN"></Column>
@@ -314,6 +348,29 @@ const formatCurrency = (val) => {
 
 .status-indicator.posted { color: var(--accent-primary); }
 .status-indicator.draft { color: var(--text-secondary); }
+
+.order-link {
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.order-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+.qty-val {
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.qty-val.receipt { color: #10b981; }
+.qty-val.issue { color: #ef4444; }
 
 .empty-state, .empty-log {
     display: flex;
