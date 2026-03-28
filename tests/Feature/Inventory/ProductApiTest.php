@@ -47,7 +47,7 @@ class ProductApiTest extends TestCase
 
         // Verify Inventory Initialization
         $inventoryCount = Inventory::where('product_id', $productId)->count();
-        $this->assertEquals($activeLocationsCount, $inventoryCount, "Inventory rows were not initialized for all locations.");
+        $this->assertEquals($activeLocationsCount, $inventoryCount, 'Inventory rows were not initialized for all locations.');
     }
 
     public function test_it_can_list_products_with_filters()

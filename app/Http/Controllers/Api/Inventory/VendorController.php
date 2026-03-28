@@ -23,6 +23,7 @@ class VendorController extends Controller
             'phone' => 'nullable|string',
             'contact_person' => 'nullable|string',
         ]);
+
         return new VendorResource(Vendor::create($validated));
     }
 
@@ -34,19 +35,21 @@ class VendorController extends Controller
     public function update(Request $request, Vendor $vendor)
     {
         $validated = $request->validate([
-            'vendor_code' => 'required|string|unique:vendors,vendor_code,' . $vendor->id,
+            'vendor_code' => 'required|string|unique:vendors,vendor_code,'.$vendor->id,
             'name' => 'required|string',
-            'email' => 'nullable|email|unique:vendors,email,' . $vendor->id,
+            'email' => 'nullable|email|unique:vendors,email,'.$vendor->id,
             'phone' => 'nullable|string',
             'contact_person' => 'nullable|string',
         ]);
         $vendor->update($validated);
+
         return new VendorResource($vendor);
     }
 
     public function destroy(Vendor $vendor)
     {
         $vendor->delete();
+
         return response()->json(['message' => 'Vendor deleted']);
     }
 }
