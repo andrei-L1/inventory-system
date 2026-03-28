@@ -1,45 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @layer primevue;
 @layer custom;
 
 @layer custom {
     :root, .app-dark {
-        --bg-deep: #010409; /* GitHub Dark Default Background */
-        --bg-panel: #0d1117; /* GitHub Dark Default Canvas */
-        --bg-panel-border: #30363d; /* GitHub Dark Border */
-        --accent-primary: #2f81f7; /* GitHub Primary Blue (Dark Mode) */
-        --accent-hover: #58a6ff;
-        --text-primary: #c9d1d9; /* GitHub Primary Text */
-        --text-secondary: #8b949e; /* GitHub Muted Text */
+        /* Theme: Monochrome Slate (Minimalist Technical) */
+        --bg-deep: #09090b; /* Zinc 950 - Absolute deep background */
+        --bg-panel: #141415; /* Custom dark slate for panels */
+        --bg-panel-border: #27272a; /* Zinc 800 - Crisp subtle borders */
+        --bg-panel-hover: #1f1f22; /* Slightly lighter for hover states */
+        
+        --accent-primary: #fafafa; /* Pure stark white for primary accents */
+        --accent-hover: #d4d4d8; /* Zinc 300 */
+        --accent-subtle: #bae6fd; /* Glacier blue for tiny focal points */
+        
+        --text-primary: #f4f4f5; /* Zinc 100 */
+        --text-secondary: #a1a1aa; /* Zinc 400 */
+        --text-muted: #52525b; /* Zinc 600 */
     }
 
     /* Base Body Styling */
     body {
         margin: 0;
         padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--bg-deep);
         color: var(--text-primary);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.6;
+        letter-spacing: -0.01em;
     }
 
-    /* GitHub-Grade Typography */
+    /* Premium Technical Typography */
     h1, h2, h3, h4, h5, h6 {
         font-family: inherit;
         font-weight: 600;
         margin-top: 0;
-        color: #cdd9e5; /* Slightly brighter heading */
+        color: #ffffff; 
+        letter-spacing: -0.02em;
     }
 
-    /* Sharp, GitHub-Style Panel */
+    /* Surgical Precision Panel */
     .sharp-panel {
         background: var(--bg-panel);
         border: 1px solid var(--bg-panel-border);
-        border-radius: 6px; /* GitHub's standard radius */
-        box-shadow: none; /* GitHub style is flat/border-driven */
+        border-radius: 4px; /* Slightly sharper radius for a technical feel */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); /* Subtle deep shadow for layering */
         box-sizing: border-box;
     }
 
@@ -64,66 +74,73 @@
     .w-full { width: 100%; }
 
     .text-muted {
-        color: var(--text-secondary);
+        color: var(--text-muted);
         font-size: 0.85rem;
     }
 
     .brand-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #cdd9e5;
-        letter-spacing: -0.01em;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
 
     .brand-accent {
         color: var(--accent-primary);
     }
 
-    /* GitHub Style Buttons */
+    /* Primary Action Button (Monochrome High Contrast) */
     .p-button-primary {
-        background: #347d39 !important; /* GitHub Green for primary actions */
-        border: 1px solid rgba(205, 217, 229, 0.1) !important;
-        color: #ffffff !important;
+        background: var(--accent-primary) !important; 
+        border: 1px solid var(--accent-primary) !important;
+        color: #000000 !important; /* Inverted text for stark contrast */
         font-weight: 600 !important;
-        border-radius: 6px !important;
-        padding: 5px 16px !important;
-        font-size: 14px !important;
-        transition: background 0.2s cubic-bezier(0.3, 0, 0.5, 1) !important;
+        border-radius: 4px !important;
+        padding: 6px 18px !important;
+        font-size: 13px !important;
+        letter-spacing: 0.02em !important;
+        text-transform: uppercase !important;
+        transition: all 0.2s ease !important;
     }
 
     .p-button-primary:enabled:first-child:hover {
-        background: #46954a !important;
-        border-color: rgba(205, 217, 229, 0.1) !important;
-        box-shadow: none;
+        background: var(--accent-hover) !important;
+        border-color: var(--accent-hover) !important;
+        box-shadow: 0 0 10px rgba(250, 250, 250, 0.2);
     }
 
-    /* GitHub Style Secondary/Outline Buttons */
+    /* Secondary/Outline Buttons */
     .p-button-secondary {
-        background: #373e47 !important;
-        border: 1px solid var(--bg-panel-border) !important;
-        color: #adbac7 !important;
-        border-radius: 6px !important;
+        background: transparent !important;
+        border: 1px solid var(--text-muted) !important;
+        color: var(--text-primary) !important;
+        border-radius: 4px !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
     }
 
     .p-button-secondary:enabled:hover {
-        background: #444c56 !important;
-        border-color: #768390 !important;
+        background: var(--bg-panel-hover) !important;
+        border-color: var(--text-secondary) !important;
+        color: #ffffff !important;
     }
 
-    /* PrimeVue Inputs - GitHub Style */
+    /* Form Inputs - Technical Aesthetic */
     .p-inputtext, .p-password input {
-        background: var(--bg-deep) !important; 
+        background: #000000 !important; /* Pitch black inputs for depth */
         border: 1px solid var(--bg-panel-border) !important;
-        color: #adbac7 !important;
-        padding: 5px 12px !important;
-        border-radius: 6px !important;
+        color: var(--text-primary) !important;
+        padding: 8px 12px !important;
+        border-radius: 4px !important;
         font-size: 14px !important;
-        box-shadow: inset 0 1px 0 rgba(0,0,0,0.1) !important;
+        font-family: inherit !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
 
     .p-inputtext:enabled:focus, .p-password input:enabled:focus {
         border-color: var(--accent-primary) !important;
-        box-shadow: 0 0 0 3px rgba(83, 155, 245, 0.3) !important;
+        box-shadow: 0 0 0 1px var(--accent-primary) !important; /* Sharp pure white focus ring */
         outline: none !important;
     }
 

@@ -164,278 +164,438 @@ const getSeverity = (typeName) => {
                 </div>
             </div>
 
-            <DataTable :value="locations" :loading="loading" responsiveLayout="scroll" :paginator="true" :rows="20"
-                       class="p-datatable-sm sharp-table">
-                
-                <template #empty>
-                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary); letter-spacing: 0.05em;">
-                        NO NETWORK NODES FOUND
+            <!-- Grid of Clickable Cards -->
+            <div v-if="loading" class="loading-state">
+                <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--accent-primary);"></i>
+            </div>
+            <div v-else-if="locations.length === 0" class="empty-state">
+                 NO NETWORK NODES FOUND
+            </div>
+            <div v-else class="slate-card-grid">
+                <div v-for="loc in locations" :key="loc.id" class="slate-card" @click="can('manage-inventory') ? editLocation(loc) : null">
+                    <div class="card-header">
+                        <span class="node-id">{{ loc.code }}</span>
+                        <div class="status-indicator">
+                            <span class="dot" :class="loc.is_active ? 'active' : 'inactive'"></span>
+                        </div>
                     </div>
-                </template>
-
-                <Column field="code" header="NODE ID" style="min-width: 120px">
-                    <template #body="{ data }">
-                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--accent-primary);">{{ data.code }}</span>
-                    </template>
-                </Column>
-
-                <Column field="name" header="DESIGNATION" style="min-width: 200px; font-weight: 600;"></Column>
-                
-                <Column field="location_type" header="CLASSIFICATION" style="min-width: 150px">
-                    <template #body="{ data }">
-                        <Tag :value="data.location_type || 'Unknown'" :severity="getSeverity(data.location_type)" style="border-radius: 2px; text-transform: uppercase; font-size: 0.65rem;" />
-                    </template>
-                </Column>
-
-                <Column field="parent.name" header="PARENT NODE" style="min-width: 150px">
-                    <template #body="{ data }">
-                        <span v-if="data.parent" style="color: var(--text-secondary); font-size: 0.85rem;">{{ data.parent.name }}</span>
-                        <span v-else style="color: #4b5563; font-style: italic; font-size: 0.8rem;">Root Node</span>
-                    </template>
-                </Column>
-
-                <Column header="STATUS" style="width: 120px;">
-                    <template #body="{ data }">
-                        <span :style="{ color: data.is_active ? '#4ade80' : '#f87171', fontSize: '0.8rem', fontWeight: 'bold' }">
-                            <i class="pi pi-circle-fill" style="font-size: 0.5rem; margin-right: 4px; vertical-align: middle;"></i>
-                            {{ data.is_active ? 'ONLINE' : 'OFFLINE' }}
-                        </span>
-                    </template>
-                </Column>
-                
-                <Column header="ACTIONS" style="width: 120px;" v-if="can('manage-inventory')">
-                    <template #body="{ data }">
-                        <Button icon="pi pi-pencil" class="p-button-text p-button-sm p-button-secondary" @click="editLocation(data)" />
-                        <Button icon="pi pi-power-off" class="p-button-text p-button-sm p-button-danger" @click="deleteLocation(data)" />
-                    </template>
-                </Column>
-            </DataTable>
-            
-            <Dialog v-model:visible="dialogVisible" :header="locationForm.id ? 'CONFIGURE NODE' : 'INITIALIZE NETWORK NODE'" :modal="true" :style="{ width: '800px' }" class="premium-dialog">
-                <div class="grid formgrid p-fluid">
-                    <!-- Identity Section -->
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">Node Designation *</label>
-                        <InputText v-model="locationForm.name" required autofocus :class="{'p-invalid': submitted && !locationForm.name}" />
-                        <small class="p-error" v-if="submitted && !locationForm.name">Name is required.</small>
+                    <div class="card-body">
+                        <h3 class="node-name">{{ loc.name }}</h3>
+                        <span class="node-type">{{ loc.location_type?.name || loc.location_type || 'Unclassified' }}</span>
+                        
+                        <div class="node-meta">
+                            <div class="meta-row">
+                                <i class="pi pi-sitemap"></i>
+                                <span>{{ loc.parent ? loc.parent.name : 'Root Node' }}</span>
+                            </div>
+                            <div class="meta-row" v-if="loc.city || loc.country">
+                                <i class="pi pi-map-marker"></i>
+                                <span>{{ [loc.city, loc.country].filter(Boolean).join(', ') }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">Node ID (Code) *</label>
-                        <InputText v-model="locationForm.code" required :class="{'p-invalid': submitted && !locationForm.code}" style="font-family: monospace;" />
-                    </div>
-
-                    <!-- Classifications -->
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">Classification *</label>
-                        <Select v-model="locationForm.location_type_id" :options="locationTypes" optionLabel="name" optionValue="id" placeholder="Select Type" :class="{'p-invalid': submitted && !locationForm.location_type_id}" />
-                    </div>
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">Parent Node</label>
-                        <Select v-model="locationForm.parent_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Top-Level Node (Root)" showClear />
-                    </div>
-
-                    <!-- Geography -->
-                    <div class="field col-12">
-                        <label class="form-label">Physical Address</label>
-                        <InputText v-model="locationForm.address" />
-                    </div>
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">City / Sector</label>
-                        <InputText v-model="locationForm.city" />
-                    </div>
-                    <div class="field col-12 md:col-6">
-                        <label class="form-label">Region / Country</label>
-                        <InputText v-model="locationForm.country" />
-                    </div>
-
-                    <!-- Description -->
-                    <div class="field col-12">
-                        <label class="form-label">Technical Notes</label>
-                        <Textarea v-model="locationForm.description" rows="2" />
-                    </div>
-
-                    <!-- Status -->
-                    <div class="field col-12 flex align-items-center gap-3 mt-2">
-                        <ToggleSwitch v-model="locationForm.is_active" />
-                        <span :style="{ fontWeight: '600', letterSpacing: '0.05em', color: locationForm.is_active ? '#38bdf8' : '#94a3b8' }">
-                            {{ locationForm.is_active ? 'NODE ACTIVE' : 'NODE OFFLINE' }}
-                        </span>
+                    <div class="card-footer" v-if="can('manage-inventory')">
+                        <Button icon="pi pi-pencil" class="p-button-text action-btn" @click.stop="editLocation(loc)" />
+                        <Button icon="pi pi-power-off" class="p-button-text action-btn delete-btn" @click.stop="deleteLocation(loc)" />
                     </div>
                 </div>
+            </div>
+            
+            <!-- Monochrome Slate Modal -->
+            <Dialog 
+                v-model:visible="dialogVisible" 
+                :modal="true" 
+                :style="{ width: '750px', margin: '0 1rem' }" 
+                class="slate-modal"
+                :closable="!submitted"
+                :showHeader="false"
+            >
+                <div class="slate-modal-inner">
+                    <div class="slate-modal-header">
+                        <div class="header-left">
+                            <div class="slate-badge">{{ locationForm.id ? 'NODE.UPDATE' : 'NODE.INIT' }}</div>
+                            <h2>{{ locationForm.id ? 'Configure Node' : 'Initialize Network Node' }}</h2>
+                        </div>
+                        <Button icon="pi pi-times" class="p-button-text close-trigger" @click="dialogVisible = false" />
+                    </div>
 
-                <template #footer>
-                    <Button label="Abort Config" icon="pi pi-times" @click="dialogVisible = false" class="p-button-secondary" />
-                    <Button label="Execute Commitment" icon="pi pi-check" @click="saveLocation" class="p-button-primary" />
-                </template>
+                    <div class="slate-modal-body">
+                        <div class="slate-form-grid">
+                            <div class="p-field col-span-2">
+                                <label>Node Designation *</label>
+                                <InputText v-model="locationForm.name" required autofocus :class="{'p-invalid': submitted && !locationForm.name}" placeholder="E.g. Primary Alpha Hub" />
+                            </div>
+                            <div class="p-field">
+                                <label>Node ID (Code) *</label>
+                                <InputText v-model="locationForm.code" required :class="{'p-invalid': submitted && !locationForm.code}" placeholder="N-0001" style="font-family: 'JetBrains Mono', monospace;" />
+                            </div>
+                            <div class="p-field">
+                                <label>Classification *</label>
+                                <Select v-model="locationForm.location_type_id" :options="locationTypes" optionLabel="name" optionValue="id" placeholder="Select Type" :class="{'p-invalid': submitted && !locationForm.location_type_id}" />
+                            </div>
+                            <div class="p-field col-span-2">
+                                <label>Parent Topology Node</label>
+                                <Select v-model="locationForm.parent_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Top-Level Node (Root)" showClear />
+                            </div>
+                            
+                            <div class="p-field col-span-2">
+                                <label>Physical Coordinates / Address</label>
+                                <InputText v-model="locationForm.address" placeholder="Sector line..." />
+                            </div>
+                            <div class="p-field">
+                                <label>Region / City</label>
+                                <InputText v-model="locationForm.city" placeholder="Optional" />
+                            </div>
+                            <div class="p-field">
+                                <label>Country ID</label>
+                                <InputText v-model="locationForm.country" placeholder="Optional" />
+                            </div>
+
+                            <div class="p-field col-span-2">
+                                <label>Technical Notes</label>
+                                <Textarea v-model="locationForm.description" rows="2" class="resize-none" placeholder="Add operational parameters..." />
+                            </div>
+                            
+                            <div class="p-field col-span-2 status-control">
+                                <div class="control-info">
+                                    <h4>Operational Status</h4>
+                                    <p>Toggle system availability for this network node.</p>
+                                </div>
+                                <ToggleSwitch v-model="locationForm.is_active" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="slate-modal-footer">
+                        <div class="sys-id">UID // {{ locationForm.id || 'PENDING' }}</div>
+                        <div class="action-buttons-group">
+                            <Button label="Abort" class="p-button-secondary" @click="dialogVisible = false" />
+                            <Button :label="locationForm.id ? 'COMMIT UPDATE' : 'EXECUTE INIT'" class="p-button-primary execute-btn" @click="saveLocation" />
+                        </div>
+                    </div>
+                </div>
             </Dialog>
         </div>
     </AppLayout>
 </template>
 
 <style scoped>
-/* Exact Premium Styles from Catalog.vue applied to ensure consistent design language */
+/* Core Page Layout Override */
+.sharp-panel {
+    background: var(--bg-deep);
+    min-height: 100vh;
+    padding: 1.5rem;
+}
 
-.form-label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.brand-title {
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+/* Card Grid Layout */
+.slate-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.slate-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.slate-card:hover {
+    border-color: var(--text-secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 0.5rem;
-    transition: color 0.3s ease;
 }
 
-.field:focus-within .form-label {
-    color: #38bdf8;
+.node-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--bg-deep);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 4px;
+    letter-spacing: 0.05em;
 }
 
-/* Premium Dialog Design */
-::v-deep(.p-dialog) {
-    background: rgba(13, 17, 23, 0.95) !important;
-    backdrop-filter: blur(24px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05) !important;
-    overflow: hidden !important;
-    transform-origin: center !important;
-    animation: dialogFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+.status-indicator .dot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.status-indicator .dot.active { background: var(--accent-primary); box-shadow: 0 0 8px rgba(250,250,250,0.4); }
+.status-indicator .dot.inactive { background: var(--text-secondary); opacity: 0.5; }
+
+.card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-@keyframes dialogFadeIn {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+.card-body h3.node-name {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
-::v-deep(.p-dialog .p-dialog-header) {
+.node-type {
+    display: inline-block;
+    margin-top: 0.25rem;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.node-meta {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.meta-row i {
+    color: var(--text-muted);
+}
+
+.card-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bg-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    color: var(--text-secondary) !important;
+    padding: 0.4rem !important;
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.action-btn:hover {
+    color: var(--text-primary) !important;
+    background: var(--bg-panel-hover) !important;
+}
+
+.delete-btn:hover {
+    color: var(--text-primary) !important;
+    background: var(--bg-panel-hover) !important;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    border: 1px dashed var(--bg-panel-border);
+    border-radius: 6px;
+    margin-top: 2rem;
+}
+
+.loading-state {
+    display: flex;
+    justify-content: center;
+    padding: 4rem;
+}
+
+/* --- Slate Modal Redesign (Mirrored from Catalog.vue) --- */
+::v-deep(.slate-modal) {
     background: transparent !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    padding: 1.5rem 2rem !important;
-    position: relative !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
-::v-deep(.p-dialog .p-dialog-header::before) {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
-    opacity: 0.8;
-}
-
-::v-deep(.p-dialog .p-dialog-title) {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #ffffff, #94a3b8);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    letter-spacing: 0.02em !important;
-}
-
-::v-deep(.p-dialog .p-dialog-content) {
-    background: transparent !important;
-    padding: 2rem !important;
-}
-
-::v-deep(.p-dialog .p-dialog-footer) {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-    padding: 1.25rem 2rem !important;
-}
-
-/* Premium Inputs */
-::v-deep(.p-inputtext), 
-::v-deep(.p-inputnumber-input), 
-::v-deep(.p-textarea), 
-::v-deep(.p-select) {
-    background: rgba(15, 23, 42, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: #f8fafc !important;
-    border-radius: 8px !important;
-    padding: 0.75rem 1rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1) inset !important;
-    font-size: 0.9rem !important;
-}
-
-::v-deep(.p-inputtext:enabled:hover),
-::v-deep(.p-inputnumber-input:enabled:hover),
-::v-deep(.p-textarea:enabled:hover),
-::v-deep(.p-select:not(.p-disabled):hover) {
-    border-color: rgba(56, 189, 248, 0.4) !important;
-    background: rgba(15, 23, 42, 0.8) !important;
-}
-
-::v-deep(.p-inputtext:enabled:focus),
-::v-deep(.p-inputnumber-input:enabled:focus),
-::v-deep(.p-textarea:enabled:focus),
-::v-deep(.p-select.p-focus) {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15), 0 2px 4px rgba(0,0,0,0.1) inset !important;
-    background: rgba(15, 23, 42, 0.95) !important;
-    outline: none !important;
-}
-
-::v-deep(.p-select-label) {
+::v-deep(.p-dialog-content) {
     padding: 0 !important;
-}
-
-::v-deep(.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider) {
-    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5) !important;
-}
-
-::v-deep(.p-toggleswitch .p-toggleswitch-slider) {
-    background: rgba(15, 23, 42, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    transition: all 0.3s ease !important;
-}
-
-/* Dialog Footer Buttons */
-::v-deep(.p-dialog-footer .p-button-secondary) {
     background: transparent !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #94a3b8 !important;
-    border-radius: 8px !important;
+    outline: none !important;
+    border: none !important;
+}
+
+.slate-modal-inner {
+    background: var(--bg-deep); /* Absolute black */
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 8px; /* Slightly softer for a modern look */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    overflow: hidden;
+}
+
+/* Header */
+.slate-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: 1px solid var(--bg-panel-border);
+    background: var(--bg-panel);
+}
+
+.header-left .slate-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-subtle);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.header-left h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.close-trigger {
+    color: var(--text-secondary) !important;
+    width: 32px !important;
+    height: 32px !important;
+}
+
+/* Modal Body */
+.slate-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2.5rem;
+    background: var(--bg-deep);
+}
+
+.slate-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 2rem;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+.p-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.p-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Clean Form Inputs */
+::v-deep(.p-inputtext), ::v-deep(.p-select), ::v-deep(.p-inputnumber-input), ::v-deep(.p-textarea) {
+    background: var(--bg-panel) !important;
+    border: 1px solid var(--bg-panel-border) !important;
+    color: var(--text-primary) !important;
+    border-radius: 4px !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    box-shadow: none !important;
     transition: all 0.2s ease !important;
 }
 
-::v-deep(.p-dialog-footer .p-button-secondary:hover) {
-    background: rgba(255, 255, 255, 0.05) !important;
-    color: #f8fafc !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+::v-deep(.p-inputtext:focus), ::v-deep(.p-select:focus), ::v-deep(.p-inputnumber-input:focus), ::v-deep(.p-textarea:focus) {
+    border-color: var(--accent-primary) !important;
+    outline: 0 !important;
 }
 
-::v-deep(.p-dialog-footer .p-button-primary) {
-    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
+/* Status Control Box */
+.status-control {
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.control-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.control-info p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Footer */
+.slate-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2.5rem;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--bg-panel-border);
+}
+
+.sys-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.action-buttons-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.execute-btn {
+    background: var(--bg-panel-hover) !important;
     border: none !important;
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 0.75rem 1.5rem !important;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    padding: 10px 24px !important;
     font-weight: 600 !important;
+    letter-spacing: 0.02em;
 }
 
-::v-deep(.p-dialog-footer .p-button-primary:hover) {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6) !important;
-    background: linear-gradient(135deg, #38bdf8, #3b82f6) !important;
+@media (max-width: 768px) {
+    .slate-card-grid { grid-template-columns: 1fr; }
+    ::v-deep(.slate-modal) { width: 95vw !important; margin: 0 !important; }
+    .slate-form-grid { grid-template-columns: 1fr; }
+    .col-span-2 { grid-column: span 1; }
+    .slate-modal-header, .slate-modal-body, .slate-modal-footer { padding: 1.5rem; }
 }
-
-/* Sharp Table overrides */
-::v-deep(.sharp-table.p-datatable .p-datatable-header) { background: transparent; border: none; }
-::v-deep(.sharp-table.p-datatable .p-datatable-thead > tr > th) {
-    background-color: transparent !important;
-    color: var(--text-secondary) !important;
-    border-bottom: 2px solid var(--bg-panel-border) !important;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-::v-deep(.sharp-table.p-datatable .p-datatable-tbody > tr) { background: transparent !important; color: var(--text-primary) !important; }
-::v-deep(.sharp-table.p-datatable .p-datatable-tbody > tr:hover) { background: rgba(255, 255, 255, 0.03) !important; }
-::v-deep(.sharp-table.p-datatable .p-datatable-tbody > tr > td) { border-bottom: 1px solid var(--bg-panel-border) !important; padding: 1rem !important; }
 </style>

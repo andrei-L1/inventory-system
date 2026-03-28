@@ -159,11 +159,11 @@ onMounted(() => {
 }
 
 .nav-item:hover:not(.disabled) {
-    background-color: #2d333b; /* Canvas Subtle */
+    background-color: var(--bg-panel-hover);
 }
 
 .nav-item.active {
-    background-color: #2d333b;
+    background-color: var(--bg-panel-hover);
     font-weight: 600;
 }
 
@@ -244,10 +244,11 @@ onMounted(() => {
     background-color: var(--bg-deep);
 }
 .status-badge {
-    padding: 4px 8px;
-    background: #010409;
+    padding: 6px 12px;
+    background: #000000;
     border: 1px solid var(--bg-panel-border);
-    border-radius: 20px;
+    border-radius: 4px;
     color: var(--text-secondary);
+    font-family: 'Inter', monospace;
 }
 </style>

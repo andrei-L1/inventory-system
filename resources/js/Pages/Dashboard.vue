@@ -86,7 +86,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 }
 
 .card-value.status-online {
-    color: #57ab5a;
+    color: var(--accent-primary);
 }
 
 .card-value.status-empty {
@@ -100,7 +100,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 .gh-code {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    background: #2d333b;
+    background: var(--bg-panel-hover);
     padding: 4px 8px;
     border-radius: 4px;
     color: var(--accent-primary);
