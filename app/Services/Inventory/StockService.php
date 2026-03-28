@@ -5,7 +5,9 @@ namespace App\Services\Inventory;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
+use App\Models\Product;
 use App\Models\Transaction;
+use App\Models\UomConversion;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +37,22 @@ class StockService
             $transaction = Transaction::create($data['header']);
 
             foreach ($data['lines'] as $lineData) {
+                $product = Product::findOrFail($lineData['product_id']);
+
+                // Handle UOM Conversion if a specific UOM was provided that differs from base UOM
+                if (isset($lineData['uom_id']) && $product->uom_id && $lineData['uom_id'] != $product->uom_id) {
+                    $conversion = UomConversion::where('from_uom_id', $lineData['uom_id'])
+                        ->where('to_uom_id', $product->uom_id)
+                        ->first();
+
+                    if ($conversion) {
+                        $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
+                        if (isset($lineData['unit_cost'])) {
+                            $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
+                        }
+                    }
+                }
+
                 // 2. Lock the Inventory row (Pessimistic Locking)
                 // This prevents race conditions during concurrent stock updates.
                 $inventory = Inventory::where('product_id', $lineData['product_id'])
