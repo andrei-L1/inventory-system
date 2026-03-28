@@ -169,8 +169,12 @@ const formatCurrency = (val) => {
                         <Column header="ENTITY" style="width: 180px">
                             <template #body="{ data }">
                                 <div class="entity-info">
-                                    <span v-if="data.vendor_name" class="entity-name"><i class="pi pi-building mr-1"></i>{{ data.vendor_name }}</span>
-                                    <span v-else-if="data.customer_name" class="entity-name"><i class="pi pi-user mr-1"></i>{{ data.customer_name }}</span>
+                                    <span v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name)" class="entity-link">
+                                        <i class="pi pi-building mr-1"></i>{{ data.vendor_name }}
+                                    </span>
+                                    <span v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name)" class="entity-link">
+                                        <i class="pi pi-user mr-1"></i>{{ data.customer_name }}
+                                    </span>
                                     <span v-else class="text-xs text-muted">Internal Movement</span>
                                 </div>
                             </template>
@@ -361,12 +365,21 @@ const formatCurrency = (val) => {
     display: flex;
     flex-direction: column;
 }
-.entity-name {
+
+.entity-link {
     font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--accent-primary);
+    cursor: pointer;
+    transition: color 0.1s;
+}
+
+.entity-link:hover {
+    color: #60a5fa;
+    text-decoration: underline;
 }
 
 .order-link {

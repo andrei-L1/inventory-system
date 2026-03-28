@@ -20,7 +20,9 @@ class TransactionResource extends JsonResource
             'to_location' => $this->toLocation->name ?? 'N/A',
             'transaction_date' => $this->transaction_date->format('Y-m-d'),
             'vendor_name' => $this->vendor->name ?? null,
+            'vendor_id' => $this->vendor->id ?? null,
             'customer_name' => $this->customer->name ?? null,
+            'customer_id' => $this->customer->id ?? null,
             'notes' => $this->notes,
             'reference_doc' => $this->reference_doc,
 
