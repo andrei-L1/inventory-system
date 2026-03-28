@@ -28,6 +28,7 @@ class LocationUpdateRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'location_type_id' => ['sometimes', 'required', 'exists:location_types,id'],
             'parent_id' => ['nullable', 'exists:locations,id'],
+            'default_receive_location_id' => ['nullable', 'exists:locations,id'],
             'address' => ['nullable', 'string'],
             'city' => ['nullable', 'string', 'max:100'],
             'country' => ['nullable', 'string', 'max:100'],
