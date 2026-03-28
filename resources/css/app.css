@@ -147,4 +147,26 @@
     .p-password input {
         width: 100%;
     }
+
+    /* Standardized Search Input (Technical Aesthetic) */
+    .search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 13px;
+        color: var(--text-muted);
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .search-input, .p-inputtext.search-input {
+        padding-left: 36px !important;
+        width: 100%;
+    }
 }

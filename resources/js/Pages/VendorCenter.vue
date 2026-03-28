@@ -148,9 +148,9 @@ const deleteVendor = () => {
                         <h3 class="pane-title" style="margin: 0;">Provider Registry</h3>
                         <Button v-if="can('manage-products')" icon="pi pi-plus" class="p-button-primary p-button-sm p-0 m-0" style="width: 24px; height: 24px;" @click="openNew" />
                     </div>
-                    <div class="search-container">
+                    <div class="search-wrapper">
                         <i class="pi pi-search search-icon"></i>
-                        <InputText v-model="search" placeholder="Filter providers..." @input="loadVendors" class="gh-search-input" />
+                        <InputText v-model="search" placeholder="Filter providers..." @input="loadVendors" class="search-input" />
                     </div>
                 </div>
                 <div class="provider-list-container">
@@ -335,25 +335,6 @@ const deleteVendor = () => {
     color: #94a3b8;
 }
 
-.search-container {
-    position: relative;
-    width: 100%;
-}
-
-.search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 12px;
-    color: #94a3b8;
-    z-index: 1;
-}
-
-.gh-search-input {
-    width: 100% !important;
-    padding-left: 30px !important;
-}
 
 .provider-list-container {
     flex: 1;

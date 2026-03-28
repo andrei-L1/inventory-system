@@ -163,7 +163,10 @@ const getSeverity = (typeName) => {
                 </div>
                 
                 <div style="display: flex; gap: 1rem;">
-                    <InputText v-model="search" placeholder="Filter node ID or name..." @input="loadLocations" style="width: 300px;" />
+                    <div class="search-wrapper" style="width: 300px;">
+                        <i class="pi pi-search search-icon"></i>
+                        <InputText v-model="search" placeholder="Filter node ID or name..." @input="loadLocations" class="search-input" />
+                    </div>
                     <!-- Use manage-inventory instead of manage-products for locations -->
                     <Button v-if="can('manage-inventory')" label="Initialize Node" icon="pi pi-plus" class="p-button-primary" @click="openNew" />
                 </div>
