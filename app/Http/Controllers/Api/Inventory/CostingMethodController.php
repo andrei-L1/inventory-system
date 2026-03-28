@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Inventory;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\CostingMethodResource;
 use App\Models\CostingMethod;
-use Illuminate\Http\Request;
 
 class CostingMethodController extends Controller
 {

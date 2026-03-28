@@ -29,7 +29,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            
+
             // Redirect to the internal Stock Command Center
             return redirect()->intended('/dashboard');
         }
