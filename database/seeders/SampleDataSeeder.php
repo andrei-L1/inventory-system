@@ -9,8 +9,6 @@ use App\Models\LocationType;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
-use App\Models\TransactionStatus;
-use App\Models\TransactionType;
 use App\Models\UnitOfMeasure;
 use App\Models\Vendor;
 use Illuminate\Database\Seeder;
@@ -32,13 +30,13 @@ class SampleDataSeeder extends Seeder
             // 1. Fetch Core Metadata
             $whType = LocationType::where('name', 'warehouse')->first();
             $zoneType = LocationType::where('name', 'zone')->first();
-            
-            $avgCost = CostingMethod::where('name', 'average')->first() 
+
+            $avgCost = CostingMethod::where('name', 'average')->first()
                 ?? CostingMethod::create(['name' => 'average', 'label' => 'Average Cost', 'is_active' => true]);
-            
+
             $pcs = UnitOfMeasure::where('name', 'Piece')->first();
             $category = Category::where('name', 'Electronics')->first() ?? Category::first();
-            
+
             // Note: In some versions we use models, in others just enums
             // But Transaction model has transaction_type_id and transaction_status_id if using lookup tables
             $postedStatusId = DB::table('transaction_statuses')->where('name', 'posted')->value('id');
@@ -80,7 +78,7 @@ class SampleDataSeeder extends Seeder
                     'costing_method_id' => $avgCost->id,
                     'preferred_vendor_id' => $cyberdyne->id,
                     'selling_price' => 2499.00,
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
 
@@ -95,7 +93,7 @@ class SampleDataSeeder extends Seeder
                     'costing_method_id' => $avgCost->id,
                     'preferred_vendor_id' => $stark->id,
                     'selling_price' => 150000.00,
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
 
@@ -109,7 +107,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(10),
                 'notes' => 'Inbound procurement from Cyberdyne.',
                 'posted_at' => now()->subDays(10),
-                'created_by' => 1
+                'created_by' => 1,
             ], $gpu->id, $mainWh->id, 50, 1800.00);
 
             $this->createSampleTransaction([
@@ -121,7 +119,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(5),
                 'notes' => 'Stock replenishment.',
                 'posted_at' => now()->subDays(5),
-                'created_by' => 1
+                'created_by' => 1,
             ], $gpu->id, $frontZone->id, 10, 1800.00);
 
             $this->createSampleTransaction([
@@ -132,7 +130,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(2),
                 'notes' => 'Direct consumer procurement.',
                 'posted_at' => now()->subDays(2),
-                'created_by' => 1
+                'created_by' => 1,
             ], $gpu->id, $frontZone->id, 2, 1800.00);
 
             $this->createSampleTransaction([
@@ -144,7 +142,7 @@ class SampleDataSeeder extends Seeder
                 'transaction_date' => now()->subDays(30),
                 'notes' => 'New tech arrival from Stark Ind.',
                 'posted_at' => now()->subDays(30),
-                'created_by' => 1
+                'created_by' => 1,
             ], $reactor->id, $mainWh->id, 1, 120000.00);
         });
     }
