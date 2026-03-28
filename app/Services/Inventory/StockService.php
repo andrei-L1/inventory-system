@@ -2,6 +2,7 @@
 
 namespace App\Services\Inventory;
 
+use App\Exceptions\InsufficientStockException;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Transaction;
@@ -116,16 +117,20 @@ class StockService
             $layer->issued_qty += $consumeAmount;
             $remainingToConsume -= $consumeAmount;
 
-            // Mark as exhausted if remaining is effectively zero (handling float precision)
+            // Mark as exhausted if remaining is effectively zero
             if (($layer->received_qty - $layer->issued_qty) <= 0.00001) {
                 $layer->is_exhausted = true;
             }
 
-            $layer->save();
+            if ($layer instanceof \Illuminate\Database\Eloquent\Model) {
+                $layer->save();
+            }
         }
 
         if ($remainingToConsume > 0.00001) {
-            throw new Exception("Insufficient cost layers to consume {$quantity} for product ID: {$inventory->product_id} at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}");
+            throw new InsufficientStockException(
+                "Insufficient stock to consume {$quantity} for product ID: {$inventory->product_id} at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
+            );
         }
     }
 

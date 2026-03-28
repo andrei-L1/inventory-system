@@ -11,7 +11,7 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 ### 0.1 StockService Optimization
 - [x] **Weighted Average Task**: Implement logic to update `average_cost` in `products` and `inventories` tables upon every Receipt (RCPT).
 - [x] **Transfer Atomicity**: Add `recordTransfer` method to handle simultaneous deduction from origin and addition to destination.
-- [ ] **Validation Expansion**: Ensure `StockService` throws `InsufficientStockException` if an issue (ISSU) exceeds available QTY.
+- [x] **Validation Expansion**: Ensure `StockService` throws `InsufficientStockException` if an issue (ISSU) exceeds available QTY.
 
 ### 0.2 Automated Unit Testing
 - [ ] **FIFO/LIFO Test Case**: Create a test that posts 3 receipts at different prices and verifies that 1 sale consumes the correct price layers.
