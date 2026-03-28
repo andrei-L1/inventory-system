@@ -6,7 +6,7 @@ This document records the detailed history of the project's development, technic
 
 ## 🏆 Project Milestone: Foundation Solidified (2026-03-27)
 **Status**: COMPLETE
-**Summary**: The entire 48-table database schema and 39-model architecture have been audited and verified for ERP-grade production.
+**Summary**: The entire 50-table database schema (40 Project Domain + 10 Framework Meta) and 39-model architecture have been audited and verified for ERP-grade production.
 - **Validation Expansion**: Created `InsufficientStockException` and integrated it into the `StockService` to handle out-of-stock scenarios gracefully.
 - **Phase 0.1 Completion**: All core engine optimizations and safety guards are now active.
 
