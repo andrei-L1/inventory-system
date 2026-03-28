@@ -24,6 +24,7 @@ class ProductResource extends JsonResource
             'brand' => $this->brand,
             'selling_price' => (float) $this->selling_price,
             'average_cost' => (float) $this->average_cost,
+            'total_qoh' => (float) ($this->inventories_sum_quantity_on_hand ?? $this->inventories()->sum('quantity_on_hand')),
             'reorder_point' => (float) $this->reorder_point,
             'is_active' => (bool) $this->is_active,
             'category' => new CategoryResource($this->whenLoaded('category')),

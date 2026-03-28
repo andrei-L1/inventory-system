@@ -11,10 +11,19 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
-        \DB::table('categories')->insert([
-            ['name' => 'Electronics', 'description' => 'Gadgets and hardware', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Office Supplies', 'description' => 'Stationery and consumables', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Furniture', 'description' => 'Tables, chairs, and office decor', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $categories = [
+            ['name' => 'Electronics', 'description' => 'Gadgets and hardware', 'is_active' => true],
+            ['name' => 'Office Supplies', 'description' => 'Stationery and consumables', 'is_active' => true],
+            ['name' => 'Furniture', 'description' => 'Tables, chairs, and office decor', 'is_active' => true],
+        ];
+
+        foreach ($categories as $cat) {
+            $existing = \DB::table('categories')->where('name', $cat['name'])->first();
+            if ($existing) {
+                \DB::table('categories')->where('id', $existing->id)->update($cat + ['updated_at' => now()]);
+            } else {
+                \DB::table('categories')->insert($cat + ['created_at' => now(), 'updated_at' => now()]);
+            }
+        }
     }
 }

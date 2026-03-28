@@ -17,10 +17,12 @@ class LocationTypeSeeder extends Seeder
         ];
 
         foreach ($types as $type) {
-            DB::table('location_types')->updateOrInsert(
-                ['name' => $type['name']],
-                [...$type, 'created_at' => now(), 'updated_at' => now()]
-            );
+            $existing = DB::table('location_types')->where('name', $type['name'])->first();
+            if ($existing) {
+                DB::table('location_types')->where('id', $existing->id)->update([...$type, 'updated_at' => now()]);
+            } else {
+                DB::table('location_types')->insert([...$type, 'created_at' => now(), 'updated_at' => now()]);
+            }
         }
     }
 }

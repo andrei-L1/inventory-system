@@ -17,10 +17,12 @@ class TransactionStatusSeeder extends Seeder
         ];
 
         foreach ($statuses as $status) {
-            DB::table('transaction_statuses')->updateOrInsert(
-                ['name' => $status['name']],
-                [...$status, 'created_at' => now(), 'updated_at' => now()]
-            );
+            $existing = DB::table('transaction_statuses')->where('name', $status['name'])->first();
+            if ($existing) {
+                DB::table('transaction_statuses')->where('id', $existing->id)->update([...$status, 'updated_at' => now()]);
+            } else {
+                DB::table('transaction_statuses')->insert([...$status, 'created_at' => now(), 'updated_at' => now()]);
+            }
         }
     }
 }

@@ -126,6 +126,7 @@ const resetForm = () => {
         selling_price: 0,
         reorder_point: 0,
         reorder_quantity: 0,
+        average_cost: 0,
         is_active: true,
         image: null
     };
@@ -421,6 +422,12 @@ const stats = computed(() => ({
                         </template>
                     </Column>
 
+                    <Column field="average_cost" header="Avg Cost" style="width: 120px">
+                        <template #body="{ data }">
+                            <span class="product-price">{{ formatCurrency(data.average_cost) }}</span>
+                        </template>
+                    </Column>
+
                     <Column header="Status" style="width: 120px">
                         <template #body="{ data }">
                             <div class="status-pill" :class="data.is_active ? 'status-active' : 'status-inactive'">
@@ -529,6 +536,14 @@ const stats = computed(() => ({
                                 <div class="p-field">
                                     <label>Valuation Model</label>
                                     <Select v-model="product.costing_method_id" :options="costingMethods" optionLabel="label" optionValue="id" />
+                                </div>
+                                <div class="p-field">
+                                    <label>Preferred Provider</label>
+                                    <Select v-model="product.preferred_vendor_id" :options="vendors" optionLabel="name" optionValue="id" placeholder="Select Entity" />
+                                </div>
+                                <div class="p-field">
+                                    <label>Live Valuation (Avg Cost)</label>
+                                    <InputNumber v-model="product.average_cost" mode="currency" currency="USD" locale="en-US" :disabled="true" />
                                 </div>
                                 <div class="p-field col-span-2 status-control">
                                     <div class="control-info">

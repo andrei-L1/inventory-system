@@ -76,6 +76,18 @@ const getTransactionSeverity = (type) => {
 const formatCurrency = (val) => {
     return '$' + parseFloat(val).toFixed(2);
 };
+
+const getStockStatusClass = (p) => {
+    if (p.total_qoh === 0) return 'status-danger';
+    if (p.total_qoh < p.reorder_point) return 'status-warning';
+    return 'status-success';
+};
+
+const getStockStatusLabel = (p) => {
+    if (p.total_qoh === 0) return 'CRITICAL: ZERO STOCK';
+    if (p.total_qoh < p.reorder_point) return 'LOW STOCK: REPLENISH';
+    return 'STOCK BALANCED';
+};
 </script>
 
 <template>
@@ -97,7 +109,10 @@ const formatCurrency = (val) => {
                     <Listbox v-model="selectedProduct" :options="products" optionLabel="name" class="gh-listbox">
                         <template #option="{ option }">
                             <div class="asset-item">
-                                <span class="asset-slug">{{ option.sku }}</span>
+                                <div class="item-header">
+                                    <span class="asset-slug">{{ option.sku }}</span>
+                                    <span class="asset-qoh" :class="getStockStatusClass(option)">{{ option.total_qoh }}</span>
+                                </div>
                                 <span class="asset-name">{{ option.name }}</span>
                             </div>
                         </template>
@@ -137,6 +152,11 @@ const formatCurrency = (val) => {
                             <div class="doc-cell">
                                 <label>COSTING ALGORITHM</label>
                                 <span class="costing-text">{{ selectedProduct.costing_method }}</span>
+                            </div>
+                            <div class="doc-cell highlight-cell" :class="getStockStatusClass(selectedProduct)">
+                                <label>STOCK ON HAND</label>
+                                <span class="qoh-value">{{ selectedProduct.total_qoh }} {{ selectedProduct.uom?.abbreviation || 'pcs' }}</span>
+                                <small class="status-indicator">{{ getStockStatusLabel(selectedProduct) }}</small>
                             </div>
                         </div>
                     </template>
@@ -468,5 +488,46 @@ const formatCurrency = (val) => {
 ::v-deep(.p-listbox-item.p-highlight) {
     background: var(--bg-panel-hover) !important;
     color: var(--text-primary) !important;
+}
+
+/* Custom Inventory Center Additions */
+.highlight-cell {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--bg-panel-border);
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+}
+
+.qoh-value {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.status-indicator {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.status-success .qoh-value, .status-success .status-indicator, .status-success.asset-qoh { color: var(--accent-primary); }
+.status-warning .qoh-value, .status-warning .status-indicator, .status-warning.asset-qoh { color: #e3b341; }
+.status-danger .qoh-value, .status-danger .status-indicator, .status-danger.asset-qoh { color: #f47067; }
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.asset-qoh {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    background: rgba(0,0,0,0.2);
+    padding: 1px 6px;
+    border-radius: 4px;
 }
 </style>

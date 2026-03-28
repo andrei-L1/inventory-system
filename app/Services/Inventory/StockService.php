@@ -55,15 +55,14 @@ class StockService
 
                 // 2. Lock the Inventory row (Pessimistic Locking)
                 // This prevents race conditions during concurrent stock updates.
-                $inventory = Inventory::where('product_id', $lineData['product_id'])
-                    ->where('location_id', $lineData['location_id'])
-                    ->lockForUpdate()
-                    ->firstOrCreate([
-                        'product_id' => $lineData['product_id'],
-                        'location_id' => $lineData['location_id'],
-                    ], [
-                        'quantity_on_hand' => 0,
-                    ]);
+                $inventory = Inventory::firstOrCreate([
+                    'product_id' => $lineData['product_id'],
+                    'location_id' => $lineData['location_id'],
+                ], [
+                    'quantity_on_hand' => 0,
+                ]);
+
+                $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
 
                 // 3. Create Transaction Line
                 $line = $transaction->lines()->create(array_merge($lineData, [
@@ -88,7 +87,6 @@ class StockService
                         'location_id' => $lineData['location_id'],
                         'transaction_line_id' => $line->id,
                         'received_qty' => $lineData['quantity'],
-                        'remaining_qty' => $lineData['quantity'],
                         'unit_cost' => $lineData['unit_cost'],
                         'receipt_date' => now(),
                     ]);
@@ -164,7 +162,8 @@ class StockService
             $originData = [
                 'header' => array_merge($data['header'], [
                     'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp).'-OUT',
-                    'to_location_id' => $data['to_location_id'], // reference dest
+                    'from_location_id' => $data['from_location_id'],
+                    'to_location_id' => $data['to_location_id'],
                     'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
@@ -178,7 +177,8 @@ class StockService
             $destData = [
                 'header' => array_merge($data['header'], [
                     'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp).'-IN',
-                    'from_location_id' => $data['from_location_id'], // reference source
+                    'from_location_id' => $data['from_location_id'],
+                    'to_location_id' => $data['to_location_id'],
                     'notes' => 'Transfer In: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {

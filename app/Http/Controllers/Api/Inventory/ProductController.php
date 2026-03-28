@@ -37,7 +37,7 @@ class ProductController extends Controller
     {
         $product = $this->productService->createProduct($request->validated());
 
-        return new ProductResource($product->load(['category', 'uom', 'costingMethod']));
+        return new ProductResource($product->load(['category', 'uom', 'costingMethod', 'preferredVendor']));
     }
 
     /**
@@ -63,7 +63,7 @@ class ProductController extends Controller
             $this->productService->handleAttachment($product, $image, 'main_image');
         }
 
-        return new ProductResource($product->refresh()->load(['category', 'uom', 'costingMethod']));
+        return new ProductResource($product->refresh()->load(['category', 'uom', 'costingMethod', 'preferredVendor']));
     }
 
     /**
