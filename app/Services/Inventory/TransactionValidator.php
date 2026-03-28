@@ -25,7 +25,7 @@ class TransactionValidator
         }
 
         $type = TransactionType::find($typeId);
-        
+
         if (! $type) {
             return;
         }

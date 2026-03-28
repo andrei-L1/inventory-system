@@ -20,6 +20,7 @@ class StockEngineTest extends TestCase
     use RefreshDatabase;
 
     protected StockService $service;
+
     protected Vendor $vendor;
 
     protected function setUp(): void
@@ -143,13 +144,13 @@ class StockEngineTest extends TestCase
         // 1. Receive 100 @ $1.00 at Location A
         $this->service->recordMovement([
             'header' => [
-                'reference_number' => 'R-A', 
-                'transaction_type_id' => TransactionType::where('code', 'RCPT')->first()->id, 
-                'transaction_status_id' => $statusId, 
+                'reference_number' => 'R-A',
+                'transaction_type_id' => TransactionType::where('code', 'RCPT')->first()->id,
+                'transaction_status_id' => $statusId,
                 'transaction_date' => now(),
                 'vendor_id' => $this->vendor->id,
             ],
-            'lines' => [['product_id' => $product->id, 'location_id' => $locA->id, 'quantity' => 100, 'unit_cost' => 1.00]]
+            'lines' => [['product_id' => $product->id, 'location_id' => $locA->id, 'quantity' => 100, 'unit_cost' => 1.00]],
         ]);
 
         // 2. Transfer 40 from Location A to Location B
