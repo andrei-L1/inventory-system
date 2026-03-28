@@ -20,7 +20,7 @@ class LocationController extends Controller
         $locations = Location::with(['locationType', 'parent'])
             ->when(request('query'), function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             })
             ->when(request('location_type_id'), function ($query, $typeId) {
                 $query->where('location_type_id', $typeId);
@@ -37,8 +37,9 @@ class LocationController extends Controller
     public function store(LocationStoreRequest $request): LocationResource
     {
         $location = Location::create($request->validated());
-        
+
         $location->load(['locationType', 'parent']);
+
         return new LocationResource($location);
     }
 
@@ -48,6 +49,7 @@ class LocationController extends Controller
     public function show(Location $location): LocationResource
     {
         $location->load(['locationType', 'parent']);
+
         return new LocationResource($location);
     }
 
@@ -57,8 +59,9 @@ class LocationController extends Controller
     public function update(LocationUpdateRequest $request, Location $location): LocationResource
     {
         $location->update($request->validated());
-        
+
         $location->load(['locationType', 'parent']);
+
         return new LocationResource($location);
     }
 
@@ -68,7 +71,7 @@ class LocationController extends Controller
     public function destroy(Location $location): Response
     {
         $location->delete();
-        
+
         return response()->noContent();
     }
 }

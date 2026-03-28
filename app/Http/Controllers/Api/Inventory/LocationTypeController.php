@@ -14,6 +14,7 @@ class LocationTypeController extends Controller
     public function index(): JsonResponse
     {
         $types = LocationType::orderBy('name')->get();
+
         return response()->json(['data' => $types]);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Inventory;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class LocationStoreRequest extends FormRequest
 {
@@ -18,7 +18,7 @@ class LocationStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -31,7 +31,7 @@ class LocationStoreRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'country' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'is_active' => ['boolean']
+            'is_active' => ['boolean'],
         ];
     }
 }
