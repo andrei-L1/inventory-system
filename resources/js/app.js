@@ -6,6 +6,9 @@ import Aura from '@primevue/themes/aura';
 import 'primeicons/primeicons.css';
 import '../css/app.css';
 
+import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
+
 createInertiaApp({
     resolve: name => {
         const pages = import.meta.glob('./Pages/**/*.vue', { eager: true });
@@ -15,6 +18,8 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) });
         
         app.use(plugin)
+           .use(ToastService)
+           .use(ConfirmationService)
            .use(PrimeVue, {
                ripple: true,
                theme: {
