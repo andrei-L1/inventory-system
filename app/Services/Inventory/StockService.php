@@ -7,6 +7,7 @@ use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Transaction;
 use Exception;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class StockService
@@ -53,7 +54,7 @@ class StockService
 
                 // 4. Update Inventory Cache & Weighted Average Cost
                 $isReceipt = $lineData['quantity'] > 0;
-                
+
                 if ($isReceipt) {
                     $this->updateAverageCost($inventory, $lineData['quantity'], $lineData['unit_cost']);
                 }
@@ -122,7 +123,7 @@ class StockService
                 $layer->is_exhausted = true;
             }
 
-            if ($layer instanceof \Illuminate\Database\Eloquent\Model) {
+            if ($layer instanceof Model) {
                 $layer->save();
             }
         }
@@ -144,9 +145,9 @@ class StockService
             // For now, we simulate an Issue from Origin and a Receipt to Destination
             $originData = [
                 'header' => array_merge($data['header'], [
-                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp) . '-OUT',
+                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp).'-OUT',
                     'to_location_id' => $data['to_location_id'], // reference dest
-                    'notes' => 'Transfer Out: ' . ($data['header']['notes'] ?? ''),
+                    'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
                     return array_merge($line, [
@@ -158,9 +159,9 @@ class StockService
 
             $destData = [
                 'header' => array_merge($data['header'], [
-                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp) . '-IN',
+                    'reference_number' => ($data['header']['reference_number'] ?? now()->timestamp).'-IN',
                     'from_location_id' => $data['from_location_id'], // reference source
-                    'notes' => 'Transfer In: ' . ($data['header']['notes'] ?? ''),
+                    'notes' => 'Transfer In: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
                     return array_merge($line, [
@@ -175,7 +176,7 @@ class StockService
 
             return [
                 'outgoing_transaction' => $outgoing,
-                'incoming_transaction' => $incoming
+                'incoming_transaction' => $incoming,
             ];
         });
     }
@@ -197,10 +198,10 @@ class StockService
         if ($totalQtyAfter > 0) {
             $newAvgCost = ($totalValueBefore + $newValueInbound) / $totalQtyAfter;
             $inventory->average_cost = $newAvgCost;
-            
+
             // Also update the master product's global average cost
             $product = $inventory->product;
-            if ($product && $product instanceof \Illuminate\Database\Eloquent\Model) {
+            if ($product && $product instanceof Model) {
                 $product->average_cost = $newAvgCost;
                 $product->save();
             }
