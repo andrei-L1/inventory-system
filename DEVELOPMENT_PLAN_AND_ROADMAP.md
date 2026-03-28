@@ -9,8 +9,8 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 *Focus: Finalize the "Math" of the system before building any UI.*
 
 ### 0.1 StockService Optimization
-- [ ] **Weighted Average Task**: Implement logic to update `average_cost` in `products` and `inventories` tables upon every Receipt (RCPT).
-- [ ] **Transfer Atomicity**: Add `recordTransfer` method to handle simultaneous deduction from origin and addition to destination.
+- [x] **Weighted Average Task**: Implement logic to update `average_cost` in `products` and `inventories` tables upon every Receipt (RCPT).
+- [x] **Transfer Atomicity**: Add `recordTransfer` method to handle simultaneous deduction from origin and addition to destination.
 - [ ] **Validation Expansion**: Ensure `StockService` throws `InsufficientStockException` if an issue (ISSU) exceeds available QTY.
 
 ### 0.2 Automated Unit Testing
@@ -35,13 +35,17 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 
 ---
 
-## Phase 2: Transactional Workflows (Inbound/Outbound)
-*Focus: Actual stock movements.*
+## Phase 2: Transactional Workflows & UI (Weeks 3-5)
+*Focus: Bringing the engine to life with a functional dashboard.*
 
-### 2.1 The Posting Interface
-- [ ] **Direct Receipt Form**: Screen to receive stock from a vendor without a PO (Stock Adjustment / Opening Balance).
-- [ ] **Direct Issue Form**: Screen to deduct stock for internal use or damage.
-- [ ] **The "Stock Card" View**: A searchable history showing every transaction line for a specific SKU.
+### 2.1 UI Start Point: The "Stock Command Center"
+**When to Start**: Immediately after the API endpoints for Products and Locations are stable (End of Week 2).
+
+**First UI Deliverables**:
+- [ ] **Global Inventory Grid**: A read-only PrimeVue DataTable showing real-time stock levels with a "Stock Movement" quick-action button.
+- [ ] **The "Inbound/Outbound Posting" Form**: A structured form that sends data to `StockService`.
+- [ ] **Cost Layer Inspector**: A drill-down view for each product to see their current FIFO/LIFO layers.
+- [ ] **Transfer Wizard**: A drag-and-drop or location-select form for moving stock between BINs or Warehouses.
 
 ### 2.2 Dashboard & Visualization
 - [ ] **Warehouse Heatmap**: Bar chart showing stock value/quantity distributed by location.
@@ -73,7 +77,7 @@ Deliver a production-ready ERP system where the inventory balance is mathematica
 ---
 
 ## Readiness & Acceptance Checklist
-- [ ] Database successfully migrated (48 Tables).
-- [ ] Seeders populated for all Lookups (UOM, Statuses, Types).
+- [x] Database successfully migrated (48 Tables).
+- [x] Seeders populated for all Lookups (UOM, Statuses, Types).
 - [ ] `StockService` tests pass 100%.
 - [ ] Environment variables configured for local development.
