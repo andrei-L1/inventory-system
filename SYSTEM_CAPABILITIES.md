@@ -69,7 +69,22 @@ The system supports the three major accounting methods, selectable at the **Prod
 
 ---
 
-## 📊 5. Audit & Compliance Baseline
+## 🌩️ 5. Master Data & API Gateway (Product Catalog)
+*Focus: Secure, high-performance data access for the frontend.*
+
+- **RESTful Master Data CRUD**:
+  - Complete API lifecycle management for **Products**, **Categories**, **Vendors**, and **Units of Measure**.
+  - Standardized JSON responses via **Laravel API Resources**, ensuring the frontend always receives clean, structured data.
+- **Smart Catalog Filtering**:
+  - High-performance search allowing users to filter by **SKU**, **Name**, **Product Code**, and **Category ID**.
+  - Optimized pagination to handle catalogs with thousands of SKUs without performance degradation.
+- **Automatic Inventory "Auto-Sync"**:
+  - **The Safety Rule**: On product creation, the system automatically initializes zero-stock `Inventory` rows for all active locations (**Warehouse A**, **Zone 1**, etc.).
+  - **The Result**: A new SKU is ready to receive stock at every warehouse the millisecond it is born, preventing "Ghost SKU" errors in the stock engine.
+
+---
+
+## 📊 6. Audit & Compliance Baseline
 - **Immutable Transaction History**: Physical stock movements are permanent records. Deleting a SKU does not remove its history.
 - **Soft Deleting**: Master data (Vendors, Customers, Products) are "soft-deleted"—they are archived but can be restored instantly, preserving all historical links.
 - **Role-Based Security Layer**: Pre-built permission groups (Admin, Staff, User) ensure only authorized people can approve receipts or perform transfers.
