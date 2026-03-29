@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -312,6 +312,11 @@ const formatCurrency = (value) => {
 const getStatusSeverity = (isActive) => isActive ? 'success' : 'secondary';
 const getStatusLabel = (isActive) => isActive ? 'Active' : 'Inactive';
 
+// Navigate to Inventory Center pre-selecting this product
+const goToInventory = (product) => {
+    router.visit(`/inventory-center?product_id=${product.id}`);
+};
+
 // Quick stats
 const stats = computed(() => ({
     total: products.value.length,
@@ -403,12 +408,13 @@ const stats = computed(() => ({
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageSelect"
                     currentPageReportTemplate="{first} to {last} of {totalRecords}"
                     class="gh-table"
+                    @row-click="(e) => goToInventory(e.data)"
                     :pt="{
                         column: {
                             headercell: { class: '!bg-zinc-900/90 !border-zinc-800 !text-zinc-300 !text-[11px] !uppercase !font-bold !tracking-[0.1em] !py-4 !px-6' },
                             bodycell: { class: '!border-zinc-800/40 !py-4 !px-6 !text-[13px] !text-zinc-300' }
                         },
-                        bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' },
+                        bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200 cursor-pointer' },
                         paginator: {
                             root: { class: '!bg-zinc-900/80 !border-t !border-zinc-800 !py-3' },
                             pagelink: ({ props, state, context }) => ({
@@ -480,7 +486,7 @@ const stats = computed(() => ({
                     
                     <Column header="Actions" style="width: 100px" v-if="can('manage-products')">
                         <template #body="{ data }">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" @click.stop>
                                 <Button icon="pi pi-pencil" class="!text-zinc-500 hover:!text-sky-400 hover:!bg-sky-500/10 !w-9 !h-9 !p-0 !rounded-lg !border-none transition-all" @click="editProduct(data)" />
                                 <Button icon="pi pi-trash" class="!text-zinc-500 hover:!text-red-400 hover:!bg-red-500/10 !w-9 !h-9 !p-0 !rounded-lg !border-none transition-all" @click="deleteProduct(data)" />
                             </div>

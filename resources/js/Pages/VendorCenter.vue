@@ -48,7 +48,13 @@ const loadVendors = async () => {
         const res = await axios.get('/api/vendors', { params: { query: search.value } });
         vendors.value = res.data.data;
         if (vendors.value.length > 0 && !selectedVendor.value) {
-            selectedVendor.value = vendors.value[0];
+            const urlParams = new URLSearchParams(window.location.search);
+            const vendorId = urlParams.get('vendor_id');
+            if (vendorId) {
+                selectedVendor.value = vendors.value.find(v => v.id == vendorId) || vendors.value[0];
+            } else {
+                selectedVendor.value = vendors.value[0];
+            }
         }
     } catch (e) {
         console.error(e);
