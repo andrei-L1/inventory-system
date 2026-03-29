@@ -181,10 +181,11 @@ class TransactionController extends Controller
     public function forVendor(Vendor $vendor): AnonymousResourceCollection
     {
         $transactions = Transaction::where('vendor_id', $vendor->id)
-            ->with(['type', 'status', 'fromLocation', 'toLocation'])
+            ->with(['type', 'status', 'fromLocation', 'toLocation', 'purchaseOrder', 'lines.product'])
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();
+        // ... (omitted)
 
         return TransactionResource::collection($transactions);
     }

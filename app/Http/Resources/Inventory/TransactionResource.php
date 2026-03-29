@@ -15,28 +15,37 @@ class TransactionResource extends JsonResource
         // If we filtered lines in the controller for a specific product
         $line = $this->lines->first();
 
+        // Enhanced type name for better ledger distinction
+        $typeName = $this->type->name ?? 'unknown';
+        if ($this->purchase_order_id && strtolower($typeName) === 'receipt') {
+            $typeName = 'good_receipt'; // Consistent identifier for frontend mapping
+        }
+
         return [
             'id' => $this->id,
             'reference_number' => $this->reference_number,
-            'type' => $this->type->name ?? 'unknown',
+            'type' => $typeName,
+            'display_type' => $this->purchase_order_id ? 'GOODS RECEIPT' : strtoupper($this->type->name ?? 'unknown'),
             'status' => $this->status->name ?? 'unknown',
             'from_location' => $this->fromLocation->name ?? 'N/A',
-            'to_location' => $this->toLocation->name ?? 'N/A',
+            'to_location' => $this->toLocation->name ?? $line->location->name ?? 'N/A',
             'transaction_date' => $this->transaction_date->format('Y-m-d'),
             'vendor_name' => $this->vendor->name ?? null,
-            'vendor_id' => $this->vendor->id ?? null,
+            'vendor_id' => $this->vendor_id,
             'customer_name' => $this->customer->name ?? null,
-            'customer_id' => $this->customer->id ?? null,
+            'customer_id' => $this->customer_id,
             'notes' => $this->notes,
             'reference_doc' => $this->reference_doc,
 
             // Linkable documents (Relational)
             'po_number' => $this->purchaseOrder->po_number ?? null,
-            'po_id' => $this->purchaseOrder->id ?? null,
+            'po_id' => $this->purchase_order_id,
             'so_number' => $this->salesOrder->so_number ?? null,
-            'so_id' => $this->salesOrder->id ?? null,
+            'so_id' => $this->sales_order_id,
 
             // Line specific data (for Inventory Center history)
+            'product_id' => $line->product_id ?? null,
+            'product_name' => $line->product->name ?? null,
             'quantity' => $line->quantity ?? null,
             'unit_cost' => $line->unit_cost ?? 0,
             'unit_price' => $line->unit_price ?? 0,
