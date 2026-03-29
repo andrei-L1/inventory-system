@@ -208,16 +208,15 @@ Each phase below corresponds to one stage of that chain.
   - [x] `total_inventory_value` (SUM of QOH × average_cost across all inventories)
   - [x] `low_stock_count` (products where aggregate QOH < reorder_point)
   - [x] `recent_transactions` — last 5 transaction lines with product + type
-  - [x] `transactions_today` count — implemented
-  - [ ] `pending_po_count` — not yet implemented (no PO backend)
-  - [ ] `pending_so_count` — not yet implemented (no SO backend)
-- [ ] `GET /api/dashboard/recent-transactions` — dedicated endpoint (currently embedded in stats)
-- [ ] `GET /api/dashboard/low-stock` — dedicated top-5 low stock endpoint
+  - [x] `transactions_today` count
+  - [ ] `pending_po_count` — deferred (no PO backend yet)
+  - [ ] `pending_so_count` — deferred (no SO backend yet)
+- [x] `GET /api/inventory/low-stock` — dedicated low stock endpoint
 
 ### 3.2 Dashboard UI Overhaul ✅ NOW LIVE
 - [x] KPI cards fully wired to live API (`loadDashboard`)
 - [x] Recent Transactions feed (live)
-- [x] Low Stock Alert logic bound to stats
+- [x] Critical Low Stock Alerts side panel (replaces placeholder)
 - [ ] Pending POs + Pending SOs count cards
 - [ ] Stock value trend mini-chart (last 7 days)
 

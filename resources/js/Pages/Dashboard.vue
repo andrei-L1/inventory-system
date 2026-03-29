@@ -12,16 +12,21 @@ const stats = ref({
     transactions_today: 0
 });
 const recentTransactions = ref([]);
+const lowStockItems = ref([]);
 const systemStatus = ref('FETCHING...');
 const loading = ref(true);
 
 const loadDashboard = async () => {
     loading.value = true;
     try {
-        const res = await axios.get('/api/dashboard/stats');
+        const [res, lowStockRes] = await Promise.all([
+            axios.get('/api/dashboard/stats'),
+            axios.get('/api/inventory/low-stock')
+        ]);
         stats.value = res.data.stats;
         recentTransactions.value = res.data.recent_transactions;
         systemStatus.value = res.data.system_status;
+        lowStockItems.value = lowStockRes.data.data.slice(0, 5); // top 5 critical
     } catch (e) {
         console.error("Dashboard error", e);
         systemStatus.value = 'ERROR';
@@ -184,22 +189,32 @@ onMounted(loadDashboard);
                  </div>
             </div>
 
-            <!-- Side Intelligence Panel (Placeholder) -->
+            <!-- Side Intelligence Panel: Low Stock Alerts -->
             <div class="col-span-12 lg:col-span-4 flex flex-col gap-8">
                  <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex-1 shadow-xl">
-                      <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono mb-6 block border-b border-zinc-800/50 pb-4">Warehouse Status</span>
-                      <div class="space-y-6">
-                           <div v-for="i in 3" :key="i" class="flex items-center gap-4 opacity-40">
-                                <div class="w-2 h-2 rounded-full bg-emerald-500/50"></div>
-                                <div class="flex-1 flex flex-col gap-1">
-                                     <div class="h-1.5 w-3/4 bg-zinc-800 rounded"></div>
-                                     <div class="h-1 w-1/2 bg-zinc-900 rounded"></div>
+                      <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-800/50">
+                          <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Critical Low Stock Alerts</span>
+                          <span class="bg-red-500/10 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded border border-red-500/20 font-mono">{{ lowStockItems.length }} ITEMS</span>
+                      </div>
+                      <div class="space-y-4" v-if="lowStockItems.length > 0">
+                           <div v-for="item in lowStockItems" :key="item.id" class="flex flex-col gap-2 p-4 bg-zinc-950/50 rounded-xl border border-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer" @click="$inertia.visit('/inventory-center?product_id=' + item.id)">
+                                <div class="flex justify-between items-start">
+                                     <div class="flex flex-col">
+                                         <span class="text-xs font-bold text-white tracking-tight line-clamp-1">{{ item.name }}</span>
+                                         <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase mt-1">Shortage: {{ item.shortage }} {{ item.uom }}</span>
+                                     </div>
+                                     <div class="flex flex-col items-end">
+                                         <span class="text-[10px] font-bold text-red-400 font-mono tracking-tighter">{{ item.quantity_on_hand }} / {{ item.reorder_point }}</span>
+                                     </div>
+                                </div>
+                                <div class="w-full bg-zinc-800 rounded-full h-1 mt-1 overflow-hidden">
+                                     <div class="bg-red-500 h-full rounded-full" :style="{ width: Math.max(5, (item.quantity_on_hand / item.reorder_point) * 100) + '%' }"></div>
                                 </div>
                            </div>
                       </div>
-                      <div class="mt-8 pt-6 border-t border-zinc-800/50 flex flex-col items-center justify-center py-4">
-                           <i class="pi pi-cog text-zinc-800 text-2xl animate-spin-slow mb-4"></i>
-                           <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-[0.4em] font-mono">Updating statistics...</span>
+                      <div v-else class="py-12 flex flex-col items-center justify-center border border-dashed border-emerald-500/20 rounded-xl bg-emerald-500/5">
+                           <i class="pi pi-check-circle text-emerald-500 text-3xl mb-4 shadow-[0_0_15px_rgba(16,185,129,0.3)] rounded-full"></i>
+                           <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-[0.2em] font-mono">Stock levels nominal</span>
                       </div>
                  </div>
             </div>

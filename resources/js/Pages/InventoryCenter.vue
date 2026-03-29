@@ -30,7 +30,13 @@ const loadProducts = async () => {
         const res = await axios.get('/api/products', { params: { query: search.value } });
         products.value = res.data.data;
         if (products.value.length > 0 && !selectedProduct.value) {
-            selectedProduct.value = products.value[0];
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('product_id');
+            if (productId) {
+                selectedProduct.value = products.value.find(p => p.id == productId) || products.value[0];
+            } else {
+                selectedProduct.value = products.value[0];
+            }
         }
     } catch (e) {
         console.error(e);
@@ -104,11 +110,17 @@ watch(selectedProduct, () => {
     loadIntelligenceData();
 });
 
-const handleLinkClick = (type, num) => {
+const handleLinkClick = (type, name, id) => {
+    if (type === 'Vendor' && id) {
+        router.visit(`/vendor-center?vendor_id=${id}`);
+        return;
+    }
+    
+    // Fallback for types that don't have their own page yet (Customer, PO, SO)
     toast.add({ 
         severity: 'info', 
-        summary: 'Navigating to Order', 
-        detail: `Redirecting to ${type}: ${num}`, 
+        summary: `Navigating to ${type}`, 
+        detail: `Pending feature: Redirecting to ${type} ${name}`, 
         life: 3000 
     });
 };
@@ -487,10 +499,10 @@ const tablePt = {
                                 <Column header="Entity / Vendor">
                                     <template #body="{ data }">
                                         <div class="flex items-center gap-3">
-                                            <div v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
+                                            <div v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name, data.vendor_id)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-building text-[10px]"></i> {{ data.vendor_name }}
                                             </div>
-                                            <div v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
+                                            <div v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name, data.customer_id)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-user text-[10px]"></i> {{ data.customer_name }}
                                             </div>
                                             <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal movement</span>
@@ -501,12 +513,12 @@ const tablePt = {
                                 <Column header="Linked Document" style="width: 200px">
                                     <template #body="{ data }">
                                         <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
-                                            @click="handleLinkClick('PO', data.po_number || data.reference_doc)" 
+                                            @click="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)" 
                                             class="text-emerald-400/80 hover:text-emerald-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-paperclip text-[10px]"></i> {{ data.po_number || data.reference_doc }}
                                         </div>
                                         <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
-                                            @click="handleLinkClick('SO', data.so_number || data.reference_doc)" 
+                                            @click="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)" 
                                             class="text-amber-400/80 hover:text-amber-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-send text-[10px]"></i> {{ data.so_number || data.reference_doc }}
                                         </div>
