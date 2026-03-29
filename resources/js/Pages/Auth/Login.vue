@@ -1,5 +1,5 @@
 <template>
-    <Head title="System Access // Secure Gateway" />
+    <Head title="Inventory Login" />
 
     <div class="min-h-screen flex items-center justify-center bg-[#09090b] p-6 relative font-sans overflow-hidden">
         <!-- Technical Grid Underlay -->
@@ -10,11 +10,11 @@
             <!-- Header Group -->
             <div class="mb-8 border-l-2 border-sky-500 pl-6">
                 <div class="flex items-center gap-3 mb-2">
-                    <span class="text-[10px] font-bold text-sky-500 tracking-[0.3em] font-mono">SYSTEM_STABLE // v2.2.0</span>
+                    <span class="text-[10px] font-bold text-sky-500 tracking-[0.3em] font-mono">System Online // v2.2.0</span>
                     <div class="h-[1px] flex-1 bg-zinc-800"></div>
                 </div>
                 <h1 class="text-white text-3xl font-bold tracking-tight uppercase leading-none mb-2" style="text-shadow: none !important;">Inventory System</h1>
-                <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-widest font-mono">Authentication Gateway // Secure Protocol</p>
+                <p class="text-zinc-500 text-[11px] font-bold uppercase tracking-widest font-mono">Secure Access</p>
             </div>
 
             <!-- Login Manifest Card -->
@@ -23,10 +23,10 @@
                 <div class="bg-zinc-800/50 px-6 py-2 border-b border-zinc-800 flex justify-between items-center">
                     <span class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        System: Operational
+                        System: Online
                     </span>
                     <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">
-                        SSL: Encrypted
+                        SSL: Secured
                     </span>
                 </div>
 
@@ -92,7 +92,7 @@
                     <!-- Secondary Options -->
                     <div class="relative my-10 flex items-center opacity-40">
                         <div class="flex-1 border-t border-zinc-800"></div>
-                        <span class="px-3 text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono whitespace-nowrap">External Uplink</span>
+                        <span class="px-3 text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono whitespace-nowrap">Other Options</span>
                         <div class="flex-1 border-t border-zinc-800"></div>
                     </div>
 
@@ -108,8 +108,8 @@
 
             <!-- Global Footer -->
             <div class="mt-8 flex justify-between items-center opacity-30 px-2">
-                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">&copy; 2026 INVENTORY_CORE</span>
-                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">NODE_STATUS: STABLE</span>
+                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">&copy; 2026 Inventory System</span>
+                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Status: Healthy</span>
             </div>
         </div>
     </div>

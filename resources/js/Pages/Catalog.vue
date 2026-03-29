@@ -148,10 +148,10 @@ const editProduct = (p) => {
     isEditing.value = true;
     product.value = { 
         ...p, 
-        category_id: p.category?.id, 
-        uom_id: p.uom?.id,
-        preferred_vendor_id: p.preferred_vendor?.id,
-        costing_method_id: costingMethods.value.find(m => m.name === p.costing_method)?.id || p.costing_method_id
+        category_id: p.category_id, 
+        uom_id: p.uom_id,
+        costing_method_id: p.costing_method_id,
+        preferred_vendor_id: p.preferred_vendor_id
     };
     imagePreview.value = p.main_image_url;
     dialogVisible.value = true;
@@ -193,14 +193,18 @@ const removeImage = () => {
 const validateForm = () => {
     const newErrors = {};
     
-    if (!product.value.name?.trim()) newErrors.name = 'Product name is required';
-    if (!product.value.product_code?.trim()) newErrors.product_code = 'Product code is required';
-    if (!product.value.sku?.trim()) newErrors.sku = 'SKU is required';
-    if (!product.value.category_id) newErrors.category_id = 'Category is required';
-    if (!product.value.uom_id) newErrors.uom_id = 'Unit of measure is required';
-    if (!product.value.costing_method_id) newErrors.costing_method_id = 'Costing method is required';
-    if (product.value.selling_price < 0) newErrors.selling_price = 'Price cannot be negative';
-    if (product.value.reorder_point < 0) newErrors.reorder_point = 'Reorder point cannot be negative';
+    if (!product.value.name?.trim()) newErrors.name = 'Product name is mandatory.';
+    
+    // Only require these if not in a "new product" context where they auto-generate
+    // But for simplicity, we allow them to be blank in frontend if user wants auto-gen
+    // and let the backend handle the final validation or generation.
+    // However, if the user explicitly enters something invalid, we catch it here.
+    
+    if (!product.value.category_id) newErrors.category_id = 'A product category must be selected.';
+    if (!product.value.uom_id) newErrors.uom_id = 'Unit of measure is required.';
+    if (!product.value.costing_method_id) newErrors.costing_method_id = 'Costing method must be defined.';
+    if (product.value.selling_price < 0) newErrors.selling_price = 'Price cannot be negative.';
+    if (product.value.reorder_point < 0) newErrors.reorder_point = 'Reorder point cannot be negative.';
     
     errors.value = newErrors;
     return Object.keys(newErrors).length === 0;
@@ -223,9 +227,14 @@ const saveProduct = async () => {
 
     const formData = new FormData();
     Object.keys(product.value).forEach(key => {
-        if (product.value[key] !== null && key !== 'image') {
-            formData.append(key, product.value[key]);
+        if (key === 'image' || key === 'main_image_url') return;
+        
+        let val = product.value[key];
+        // Handle boolean values for Laravel's boolean validation
+        if (typeof val === 'boolean') {
+            val = val ? '1' : '0';
         }
+        formData.append(key, val === null || val === undefined ? '' : val);
     });
     
     if (imageFile.value) {
@@ -257,7 +266,19 @@ const saveProduct = async () => {
         
         if (fieldErrors) {
             errors.value = fieldErrors;
-            toast.add({ severity: 'error', summary: 'Validation Error', detail: 'Please check the form for errors', life: 3000 });
+            const firstErrField = Object.keys(fieldErrors)[0];
+            const firstErrMsg = fieldErrors[firstErrField][0];
+            toast.add({ severity: 'error', summary: 'Validation Error', detail: `${firstErrMsg}`, life: 5000 });
+            
+            // Auto-switch tab if error is in another one
+            const inventoryFields = ['selling_price', 'reorder_point', 'reorder_quantity', 'costing_method_id'];
+            if (inventoryFields.includes(firstErrField)) {
+                activeTab.value = 'inventory';
+            } else if (firstErrField === 'image') {
+                activeTab.value = 'media';
+            } else {
+                activeTab.value = 'basic';
+            }
         } else {
             toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 3000 });
         }
@@ -285,7 +306,7 @@ const deleteProduct = (p) => {
 };
 
 const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value || 0);
 };
 
 const getStatusSeverity = (isActive) => isActive ? 'success' : 'secondary';
@@ -349,7 +370,7 @@ const stats = computed(() => ({
                     </div>
                     <div class="flex flex-col">
                         <span class="text-2xl font-bold text-white tracking-tight leading-none">{{ stats.active }}</span>
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 font-mono">Active Products</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 font-mono">Available Items</span>
                     </div>
                 </div>
                 <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 flex items-center gap-5 group hover:border-amber-500/20 transition-all duration-500 shadow-sm hover:shadow-amber-500/5">
@@ -368,7 +389,7 @@ const stats = computed(() => ({
                 <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80">
                     <div class="flex items-center gap-3">
                         <div class="w-2 h-2 rounded-full bg-sky-500"></div>
-                        <span class="text-[11px] font-bold text-zinc-300 tracking-[0.15em] uppercase">Product Catalog Fleet</span>
+                        <span class="text-[11px] font-bold text-zinc-300 tracking-[0.15em] uppercase">All Registered Items</span>
                     </div>
                     <span class="bg-zinc-800/50 text-zinc-400 px-3 py-1 rounded-md text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ products.length }} PRODUCTS</span>
                 </div>
@@ -379,7 +400,7 @@ const stats = computed(() => ({
                     responsiveLayout="scroll" 
                     :paginator="true" 
                     :rows="10"
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageSelect"
                     currentPageReportTemplate="{first} to {last} of {totalRecords}"
                     class="gh-table"
                     :pt="{
@@ -399,7 +420,7 @@ const stats = computed(() => ({
                     <template #empty>
                         <div class="py-24 text-center flex flex-col items-center justify-center opacity-30">
                             <i class="pi pi-database text-5xl mb-6"></i>
-                            <p class="font-mono text-xs tracking-[0.2em] uppercase">System Error: No records found in specified sector</p>
+                            <p class="font-mono text-xs tracking-[0.2em] uppercase">No product records found in the system</p>
                         </div>
                     </template>
 
@@ -457,7 +478,7 @@ const stats = computed(() => ({
                         </template>
                     </Column>
                     
-                    <Column header="Ops" style="width: 100px" v-if="can('manage-products')">
+                    <Column header="Actions" style="width: 100px" v-if="can('manage-products')">
                         <template #body="{ data }">
                             <div class="flex items-center gap-2">
                                 <Button icon="pi pi-pencil" class="!text-zinc-500 hover:!text-sky-400 hover:!bg-sky-500/10 !w-9 !h-9 !p-0 !rounded-lg !border-none transition-all" @click="editProduct(data)" />
@@ -484,7 +505,7 @@ const stats = computed(() => ({
                     <!-- Sidebar Navigation -->
                     <aside class="w-full md:w-64 bg-zinc-900/50 border-r border-zinc-800 flex flex-col pt-10 px-6 gap-8">
                         <div class="flex flex-col gap-1 px-2">
-                            <div class="text-[9px] font-bold text-sky-500 tracking-[0.3em] font-mono leading-none mb-1">PRODUCT_DATA</div>
+                            <div class="text-[9px] font-bold text-sky-500 tracking-[0.3em] font-mono leading-none mb-1">RECORD_DETAILS</div>
                             <h3 class="text-white text-lg font-bold tracking-tighter m-0 whitespace-nowrap">Product Details</h3>
                         </div>
 
@@ -494,21 +515,21 @@ const stats = computed(() => ({
                                     :class="activeTab === 'basic' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors" 
                                       :class="activeTab === 'basic' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">01</span>
-                                BASIC INFO
+                                01. BASIC INFO
                             </button>
                             <button @click="activeTab = 'inventory'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
                                     :class="activeTab === 'inventory' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
                                       :class="activeTab === 'inventory' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">02</span>
-                                INVENTORY INFO
+                                02. PRICING & LEVELS
                             </button>
                             <button @click="activeTab = 'media'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
                                     :class="activeTab === 'media' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
                                       :class="activeTab === 'media' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">03</span>
-                                PRODUCT IMAGE
+                                03. PRODUCT PHOTO
                             </button>
                         </nav>
 
@@ -528,7 +549,7 @@ const stats = computed(() => ({
                             <!-- System Status Banner -->
                             <div class="flex justify-between items-center mb-10 pb-6 border-b border-zinc-900">
                                 <div class="flex flex-col">
-                                    <div class="text-[9px] font-bold text-zinc-600 font-mono uppercase tracking-[0.2em] mb-1">Product Data Persistence</div>
+                                    <div class="text-[9px] font-bold text-zinc-600 font-mono uppercase tracking-[0.2em] mb-1">Product Information</div>
                                     <h2 class="text-white text-2xl font-bold tracking-tight m-0">{{ isEditing ? 'Edit Product' : 'New Product' }}</h2>
                                 </div>
                                 <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" :disabled="saving" />
@@ -540,29 +561,49 @@ const stats = computed(() => ({
                                     <div class="flex flex-col gap-3 md:col-span-2">
                                         <div class="flex justify-between items-center">
                                             <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Name</label>
-                                            <span v-if="errors.name" class="text-red-400 text-[10px] font-bold uppercase tracking-widest font-mono">!! ERROR // REQUIRED</span>
+                                            <span v-if="errors.name" class="text-red-400 text-[10px] font-bold uppercase tracking-widest font-mono">!! {{ errors.name }}</span>
                                         </div>
                                         <InputText v-model="product.name" placeholder="E.g. Wireless Mouse X10" 
                                                    class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-14 !text-lg !font-bold focus:!border-sky-500/40 transition-all !px-5"
                                                    :class="{'!border-red-500/50': errors.name}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Code</label>
-                                        <InputText v-model="product.product_code" placeholder="PRT-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono !px-4 focus:!border-sky-500/30" />
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Code</label>
+                                            <span v-if="errors.product_code" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.product_code }}</span>
+                                            <span v-else-if="!isEditing && !product.product_code" class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
+                                        </div>
+                                        <InputText v-model="product.product_code" placeholder="PRT-000" 
+                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono !px-4 focus:!border-sky-500/30"
+                                                  :class="{'!border-red-500/50': errors.product_code}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">SKU</label>
-                                        <InputText v-model="product.sku" placeholder="SKU-000" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30" />
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">SKU</label>
+                                            <span v-if="errors.sku" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.sku }}</span>
+                                            <span v-else-if="!isEditing && !product.sku" class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
+                                        </div>
+                                        <InputText v-model="product.sku" placeholder="SKU-000" 
+                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30"
+                                                  :class="{'!border-red-500/50': errors.sku}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Category</label>
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Category</label>
+                                            <span v-if="errors.category_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
+                                        </div>
                                         <Select v-model="product.category_id" :options="categories" optionLabel="name" optionValue="id" 
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
+                                                :class="{'!border-red-500/50': errors.category_id}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit of Measure</label>
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit of Measure</label>
+                                            <span v-if="errors.uom_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
+                                        </div>
                                         <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
+                                                :class="{'!border-red-500/50': errors.uom_id}" />
                                     </div>
                                     <div class="flex flex-col gap-3 md:col-span-2">
                                         <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Description</label>
@@ -575,28 +616,40 @@ const stats = computed(() => ({
                             <div v-show="activeTab === 'inventory'" class="animate-in slide-in-from-right-4 duration-500">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Selling Price (USD)</label>
-                                        <InputNumber v-model="product.selling_price" mode="currency" currency="USD" locale="en-US" 
-                                                    inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Selling Price (PHP)</label>
+                                            <span v-if="errors.selling_price" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.selling_price }}</span>
+                                        </div>
+                                        <InputNumber v-model="product.selling_price" mode="currency" currency="PHP" locale="en-PH" 
+                                                    inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold"
+                                                    :class="{'!border-red-500/50': errors.selling_price}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Reorder Point</label>
-                                        <InputNumber v-model="product.reorder_point" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Minimum Stock Level</label>
+                                            <span v-if="errors.reorder_point" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.reorder_point }}</span>
+                                        </div>
+                                        <InputNumber v-model="product.reorder_point" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold"
+                                                    :class="{'!border-red-500/50': errors.reorder_point}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Reorder Quantity</label>
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Restock Amount</label>
                                         <InputNumber v-model="product.reorder_quantity" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
                                     </div>
                                     <div class="flex flex-col gap-3">
-                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Costing Method</label>
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Valuation Method</label>
+                                            <span v-if="errors.costing_method_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
+                                        </div>
                                         <Select v-model="product.costing_method_id" :options="costingMethods" optionLabel="label" optionValue="id" 
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
+                                                :class="{'!border-red-500/50': errors.costing_method_id}" />
                                     </div>
                                     <div class="col-span-12 md:col-span-2 p-8 bg-zinc-900/30 border border-zinc-800/60 rounded-xl relative overflow-hidden group">
                                         <div class="flex justify-between items-center relative z-10">
                                             <div class="flex flex-col gap-1">
-                                                <h4 class="text-white font-bold text-sm m-0 uppercase tracking-tight">Product Active Status</h4>
-                                                <p class="text-zinc-500 text-[11px] font-mono tracking-tighter uppercase leading-none mt-1">Status // is_active_toggle</p>
+                                                <h4 class="text-white font-bold text-sm m-0 uppercase tracking-tight">Active Availability</h4>
+                                                <p class="text-zinc-500 text-[11px] font-mono tracking-tighter uppercase leading-none mt-1">Status: {{ product.is_active ? 'Active' : 'Inactive' }}</p>
                                             </div>
                                             <ToggleSwitch v-model="product.is_active" 
                                                          :pt="{

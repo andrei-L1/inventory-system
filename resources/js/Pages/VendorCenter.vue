@@ -101,39 +101,39 @@ const editVendor = () => {
 const saveVendor = async () => {
     submitted.value = true;
     if (!vendorForm.value.name || !vendorForm.value.vendor_code) {
-        toast.add({ severity: 'warn', summary: 'Incomplete Data', detail: 'Vendor Name and Code are mandatory parameters.', life: 4000 });
+        toast.add({ severity: 'warn', summary: 'Missing Information', detail: 'Vendor Name and Code are required.', life: 4000 });
         return;
     }
 
     try {
         if (vendorForm.value.id) {
             await axios.put(`/api/vendors/${vendorForm.value.id}`, vendorForm.value);
-            toast.add({ severity: 'success', summary: 'Updated', detail: 'Entity properties adjusted.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Vendor updated successfully.', life: 3000 });
         } else {
             await axios.post('/api/vendors', vendorForm.value);
-            toast.add({ severity: 'success', summary: 'Registered', detail: 'New provider initialized.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Registered', detail: 'New vendor added.', life: 3000 });
         }
         dialogVisible.value = false;
         loadVendors();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply parameters.', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save vendor.', life: 3000 });
     }
 };
 
 const deleteVendor = () => {
     confirm.require({
-        message: 'Are you sure you want to permanently decommission this provider?',
-        header: 'Confirm Decommission',
+        message: 'Are you sure you want to remove this vendor permanently?',
+        header: 'Confirm Removal',
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: async () => {
             try {
                 await axios.delete(`/api/vendors/${selectedVendor.value.id}`);
                 selectedVendor.value = null;
-                toast.add({ severity: 'success', summary: 'Decommissioned', detail: 'Provider registry offline.', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Removed', detail: 'Vendor removed.', life: 3000 });
                 loadVendors();
             } catch (e) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Dependency collision. Cannot decommission active entity.', life: 4000 });
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Cannot remove vendor with active transactions.', life: 4000 });
             }
         }
     });
@@ -149,9 +149,9 @@ const deleteVendor = () => {
             <!-- Header Section -->
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Procurement & Supply Chain Management</span>
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Manage Suppliers & Vendors</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Vendor Center</h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Manage your network of external suppliers, procurement history, and contact information in one central hub.</p>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Manage your suppliers, procurement history, and contact information in one central hub.</p>
                 </div>
                 <div v-if="can('manage-products')">
                     <Button label="ADD VENDOR" icon="pi pi-plus-circle" 
@@ -163,7 +163,7 @@ const deleteVendor = () => {
             <!-- Primary Workspace Grid -->
             <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 flex-1 min-h-0">
                 
-                <!-- Left Sector: Provider Registry Sidebar -->
+                <!-- Left Sector: Vendor List Sidebar -->
                 <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
                     <div class="p-6 border-b border-zinc-800 bg-zinc-900/60">
                         <div class="flex items-center gap-3 mb-5">
@@ -209,10 +209,10 @@ const deleteVendor = () => {
                     </div>
                 </aside>
 
-                <!-- Right Sector: Intelligence & Activity Area -->
+                <!-- Right Sector: Activity & Details Area -->
                 <main class="col-span-12 lg:col-span-9 flex flex-col gap-8 min-h-0">
                     
-                    <!-- Top Section: Provider Manifest -->
+                    <!-- Top Section: Vendor Information -->
                     <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
                         <!-- Background Accent -->
                         <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 blur-[100px] -mr-32 -mt-32 rounded-full transition-opacity group-hover:opacity-100 opacity-50"></div>
@@ -270,16 +270,16 @@ const deleteVendor = () => {
                         </template>
                         <div v-else class="h-64 flex flex-col items-center justify-center opacity-20 grayscale">
                             <i class="pi pi-users text-6xl mb-6"></i>
-                            <p class="font-mono text-xs tracking-[0.3em] uppercase">Ready for entity initialization...</p>
+                            <p class="font-mono text-xs tracking-[0.3em] uppercase">Select a vendor to view details...</p>
                         </div>
                     </section>
 
-                    <!-- Bottom Section: History / Supply Chain Stream -->
+                    <!-- Bottom Section: Recent Transactions -->
                     <section class="flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm">
                         <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <div class="w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History Feed</span>
+                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Recent Transactions</span>
                             </div>
                             <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ history.length }} RECORDS FOUND</span>
                         </div>
@@ -303,7 +303,7 @@ const deleteVendor = () => {
                                 <template #empty>
                                     <div class="py-32 text-center opacity-20 flex flex-col items-center grayscale">
                                         <i class="pi pi-history text-5xl mb-6"></i>
-                                        <p class="font-mono text-xs tracking-[0.2em] uppercase">No supply chain artifacts detected in history registry</p>
+                                        <p class="font-mono text-xs tracking-[0.2em] uppercase">No history found for this vendor</p>
                                     </div>
                                 </template>
                                 
@@ -368,7 +368,7 @@ const deleteVendor = () => {
                     <!-- Header -->
                     <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
                         <div class="flex flex-col">
-                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">VENDOR_DATA</div>
+                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">VENDOR_DETAILS</div>
                             <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ vendorForm.id ? 'Edit Vendor Details' : 'New Vendor Registration' }}</h2>
                         </div>
                         <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" />
