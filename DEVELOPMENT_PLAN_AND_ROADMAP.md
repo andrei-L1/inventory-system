@@ -140,7 +140,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] All 5 active routes wired: Dashboard, Catalog, Inventory Center, Vendor Center, Location Center
 - [x] Topbar: username, role badge, logout button
 - [x] Active nav link highlighting — `page.url.startsWith(item.href)` active state applied to all nav items
-- [ ] Notification bell (future — for low stock alerts, pending approvals)
+- [x] Notification bell (future — for low stock alerts, pending approvals)
 
 ---
 
