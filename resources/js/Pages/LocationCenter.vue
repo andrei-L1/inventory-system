@@ -120,6 +120,7 @@ const saveLocation = async () => {
     submitted.value = true;
     
     if (!locationForm.value.name || !locationForm.value.code || !locationForm.value.location_type_id) {
+        toast.add({ severity: 'warn', summary: 'Incomplete Topology', detail: 'Node Name, Code, and Type are mandatory parameters.', life: 4000 });
         return;
     }
 

@@ -100,7 +100,10 @@ const editVendor = () => {
 
 const saveVendor = async () => {
     submitted.value = true;
-    if (!vendorForm.value.name) return;
+    if (!vendorForm.value.name || !vendorForm.value.vendor_code) {
+        toast.add({ severity: 'warn', summary: 'Incomplete Data', detail: 'Vendor Name and Code are mandatory parameters.', life: 4000 });
+        return;
+    }
 
     try {
         if (vendorForm.value.id) {
