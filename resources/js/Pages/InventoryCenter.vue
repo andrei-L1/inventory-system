@@ -140,7 +140,8 @@ const getStockStatusLabel = (p) => {
 };
 
 const listboxPt = {
-    root: { class: '!p-2' },
+    root: { class: '!p-2 h-full flex flex-col' },
+    listContainer: { class: '!max-h-none flex-1 overflow-y-auto custom-scrollbar' },
     item: (options) => ({
         class: [
             '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
@@ -163,7 +164,7 @@ const tablePt = {
         <Head title="Inventory Center" />
         <Toast />
 
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Header Section -->
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
@@ -187,9 +188,9 @@ const tablePt = {
             </div>
 
             <!-- Primary Workspace Grid -->
-            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 flex-1 min-h-0">
+            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 items-start flex-1 min-h-0">
                 
-                <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-[140px] lg:h-[calc(100vh-160px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
                     <div class="p-6 border-b border-zinc-800 bg-zinc-900/60">
                         <div class="flex items-center gap-3 mb-5">
                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
@@ -206,12 +207,12 @@ const tablePt = {
                         </div>
                     </div>
                     
-                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                    <div class="flex-1 min-h-0 flex flex-col">
                         <Listbox 
                             v-model="selectedProduct" 
                             :options="products" 
                             optionLabel="name" 
-                            class="!border-none !bg-transparent"
+                            class="!border-none !bg-transparent flex-1"
                             :pt="listboxPt"
                         >
                             <template #option="{ option }">

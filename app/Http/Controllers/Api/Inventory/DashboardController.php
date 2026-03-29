@@ -33,6 +33,9 @@ class DashboardController extends Controller
             ->get()
             ->count();
 
+        // Count transactions posted today
+        $transactionsToday = Transaction::whereDate('transaction_date', today())->count();
+
         // Activity Feed is actually a list of recent transaction lines
         $recentTransactions = DB::table('transaction_lines')
             ->join('transactions', 'transaction_lines.transaction_id', '=', 'transactions.id')
@@ -55,6 +58,7 @@ class DashboardController extends Controller
                 'total_vendors' => $totalVendors,
                 'inventory_value' => (float) ($valuation->total_value ?? 0),
                 'low_stock_count' => $lowStockCount,
+                'transactions_today' => $transactionsToday,
             ],
             'recent_transactions' => $recentTransactions,
             'system_status' => 'ONLINE',

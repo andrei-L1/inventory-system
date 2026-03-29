@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\TransactionStatus;
+use App\Models\TransactionType;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -51,6 +53,11 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            // Lookup tables shared globally so frontend forms don't need to hardcode integer IDs.
+            'transactionMeta' => fn () => $request->user() ? [
+                'types' => TransactionType::pluck('id', 'name')->all(),
+                'statuses' => TransactionStatus::pluck('id', 'name')->all(),
+            ] : null,
         ];
     }
 }

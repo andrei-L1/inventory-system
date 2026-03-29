@@ -130,8 +130,8 @@
             </div>
 
             <!-- Core App Slot -->
-            <main class="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950 p-10">
-                <div class="max-w-[1700px] mx-auto h-full">
+            <main class="flex-1 bg-zinc-950 p-10">
+                <div class="max-w-[1700px] mx-auto min-h-full">
                     <slot />
                 </div>
             </main>

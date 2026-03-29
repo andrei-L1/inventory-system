@@ -8,7 +8,8 @@ const stats = ref({
     total_products: 0,
     total_vendors: 0,
     inventory_value: 0,
-    low_stock_count: 0
+    low_stock_count: 0,
+    transactions_today: 0
 });
 const recentTransactions = ref([]);
 const systemStatus = ref('FETCHING...');
@@ -122,19 +123,21 @@ onMounted(loadDashboard);
                 </div>
             </div>
             
-            <!-- Network Integrity -->
-            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
-                <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
+            <!-- Today's Activity -->
+            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+                <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-colors"></div>
                 <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                            <i class="pi pi-wifi text-zinc-500 group-hover:text-sky-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-emerald-500/30 transition-colors">
+                            <i class="pi pi-calendar-clock text-zinc-500 group-hover:text-emerald-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">System Status</span>
+                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Today</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">System Integrity</div>
-                    <div class="text-3xl font-bold leading-none text-sky-400 tracking-tighter">{{ systemStatus }}</div>
-                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Overall system health status.</div>
+                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Transactions Today</div>
+                    <div class="text-3xl font-bold leading-none tracking-tighter" :class="stats.transactions_today > 0 ? 'text-emerald-400' : 'text-zinc-600'">
+                        {{ stats.transactions_today }}
+                    </div>
+                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Stock movements posted so far today.</div>
                 </div>
             </div>
         </div>

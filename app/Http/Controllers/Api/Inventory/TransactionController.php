@@ -32,7 +32,20 @@ class TransactionController extends Controller
     public function store(TransactionStoreRequest $request): JsonResponse
     {
         try {
-            $transaction = $this->stockService->recordMovement($request->validated());
+            $validated = $request->validated();
+            $header = $validated['header'];
+
+            // Map user input to reference_doc (physical paperwork)
+            $header['reference_doc'] = $header['reference_number'] ?? null;
+
+            // Auto-generate a guaranteed unique system reference_number
+            $typeMap = [1 => 'RCV', 2 => 'ISS', 3 => 'TRF', 4 => 'ADJ'];
+            $prefix = $typeMap[$header['transaction_type_id'] ?? 0] ?? 'TRX';
+            $header['reference_number'] = $prefix.'-'.now()->format('YmdHis').'-'.mt_rand(100, 999);
+
+            $validated['header'] = $header;
+
+            $transaction = $this->stockService->recordMovement($validated);
 
             return response()->json(
                 new TransactionResource($transaction->load(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'lines'])),
@@ -53,7 +66,18 @@ class TransactionController extends Controller
     public function storeTransfer(TransferStoreRequest $request): JsonResponse
     {
         try {
-            $result = $this->stockService->recordTransfer($request->validated());
+            $validated = $request->validated();
+            $header = $validated['header'];
+
+            // Map user input to reference_doc (physical paperwork)
+            $header['reference_doc'] = $header['reference_number'] ?? null;
+
+            // Auto-generate a guaranteed unique system reference_number for the overall transfer
+            $header['reference_number'] = 'TRF-'.now()->format('YmdHis').'-'.mt_rand(100, 999);
+
+            $validated['header'] = $header;
+
+            $result = $this->stockService->recordTransfer($validated);
 
             return response()->json([
                 'transfer_id' => $result['transfer']->id,

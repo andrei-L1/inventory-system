@@ -1,6 +1,7 @@
 <template>
     <AppLayout>
         <Head title="Inventory Transfer" />
+        <Toast />
         
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
@@ -16,8 +17,8 @@
                     <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button class="!bg-violet-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-violet-500/10 hover:!bg-violet-400 active:scale-95 transition-all rounded-xl">
-                        TRANSFER ITEMS
+                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-violet-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-violet-500/10 hover:!bg-violet-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isSubmitting ? 'PROCESSING...' : 'TRANSFER ITEMS' }}
                     </button>
                 </div>
             </div>
@@ -94,12 +95,17 @@
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference #</label>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference # <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <InputText 
                                       v-model="form.reference_number" 
-                                      placeholder="TRF-001" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-[10px] !font-mono text-white"
+                                      placeholder="Leave blank to auto-generate" 
+                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-[10px] !font-mono text-white placeholder:!text-zinc-800"
                                  />
+                             </div>
+
+                             <div class="flex flex-col gap-3">
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Notes <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional transfer notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-24 resize-none outline-none focus:border-violet-500/30 transition-all"></textarea>
                              </div>
 
                              <div class="p-5 bg-violet-500/5 border border-violet-500/10 rounded-xl">
@@ -155,12 +161,12 @@
                                         <div class="flex items-center justify-end gap-8 font-mono">
                                             <div class="flex flex-col items-end gap-1">
                                                 <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Before</span>
-                                                <span class="text-xs font-bold font-mono text-zinc-500">250.00</span>
+                                                <span class="text-xs font-bold font-mono text-zinc-500">{{ form.lines[index].product?.total_qoh || 0 }}</span>
                                             </div>
                                             <i class="pi pi-arrow-right text-[10px] text-zinc-800" />
                                             <div class="flex flex-col items-end gap-1">
                                                 <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">After</span>
-                                                <span class="text-xs font-black font-mono text-violet-400">{{ (250 - (form.lines[index].quantity || 0)).toFixed(2) }}</span>
+                                                <span class="text-xs font-black font-mono text-violet-400">{{ ((form.lines[index].product?.total_qoh || 0) - (form.lines[index].quantity || 0)).toFixed(2) }}</span>
                                             </div>
                                             <button @click="removeLine(index)" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20 ml-2">
                                                 <i class="pi pi-trash text-[10px]" />
@@ -185,36 +191,118 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 
-const locations = ref([
-    { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
-    { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
-]);
-const products = ref([
-    { id: 1, sku: 'NODE-800', name: 'Standard Processor T-800', uom: { abbreviation: 'pcs' } },
-    { id: 2, sku: 'PWR-CORE', name: 'Power Module v2', uom: { abbreviation: 'unit' } }
-]);
+const toast = useToast();
+const { props } = usePage();
 
-const form = ref({
+const locations = ref([]);
+const products = ref([]);
+const loadingData = ref(false);
+
+const loadData = async () => {
+    loadingData.value = true;
+    try {
+        const [prodRes, locRes] = await Promise.all([
+            axios.get('/api/products'),
+            axios.get('/api/locations')
+        ]);
+        
+        products.value = prodRes.data.data;
+        locations.value = locRes.data.data;
+        
+        const { url } = usePage();
+        const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
+        const productId = searchParams.get('product_id');
+        
+        if (productId && products.value.length > 0) {
+            const preselected = products.value.find(p => p.id == productId);
+            if (preselected) {
+                if (form.lines.length === 0) {
+                    form.lines.push({ product: preselected, quantity: 1 });
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load data', e);
+    } finally {
+        loadingData.value = false;
+    }
+};
+
+onMounted(() => {
+    loadData();
+});
+
+const form = useForm({
     from_location: null,
     to_location: null,
     reference_number: '',
     lines: []
 });
 
+const isSubmitting = ref(false);
+
+const submitForm = async () => {
+    isSubmitting.value = true;
+    
+    // Frontend validation for real-time stock checks
+    for (const line of form.lines) {
+        if (!line.product) continue;
+        const requestedQty = parseFloat(line.quantity) || 0;
+        const availableQty = line.product.total_qoh || 0;
+        if (requestedQty > availableQty) {
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot transfer ${requestedQty} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
+            isSubmitting.value = false;
+            return;
+        }
+    }
+    
+    try {
+        const meta = props.transactionMeta;
+        const payload = {
+            header: {
+                transaction_type_id: meta.types['transfer'],
+                transaction_status_id: meta.statuses['posted'],
+                transaction_date: new Date().toISOString().split('T')[0],
+                reference_number: form.reference_number,
+                notes: form.notes || 'Internal Transfer',
+            },
+            from_location_id: form.from_location?.id,
+            to_location_id: form.to_location?.id,
+            lines: form.lines.map(line => ({
+                product_id: line.product?.id,
+                quantity: parseFloat(line.quantity),
+                unit_cost: parseFloat(line.product?.average_cost || 0)
+            }))
+        };
+        
+        await axios.post('/api/transfers', payload);
+        toast.add({ severity: 'success', summary: 'Transfer Complete', detail: 'Items moved between locations successfully.', life: 3000 });
+        setTimeout(() => router.visit('/inventory-center'), 1000);
+    } catch (e) {
+        console.error('Submission failed', e);
+        toast.add({ severity: 'error', summary: 'Transfer Failed', detail: e.response?.data?.message || 'Failed to submit transfer.', life: 5000 });
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const addLine = () => {
-    form.value.lines.push({ product: null, quantity: 0 });
+    form.lines.push({ product: null, quantity: 0 });
 };
 
 const removeLine = (index) => {
-    form.value.lines.splice(index, 1);
+    form.lines.splice(index, 1);
 };
 </script>
 

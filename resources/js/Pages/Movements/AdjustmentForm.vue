@@ -1,6 +1,7 @@
 <template>
     <AppLayout>
         <Head title="Inventory Adjustment" />
+        <Toast />
         
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
@@ -16,8 +17,8 @@
                     <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button class="!bg-amber-500 !border-none !text-zinc-950 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-amber-500/10 hover:!bg-amber-400 active:scale-95 transition-all rounded-xl" @click="postAdjustment">
-                        APPLY ADJUSTMENT
+                    <button @click="postAdjustment" :disabled="isSubmitting" class="!bg-amber-500 !border-none !text-zinc-950 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-amber-500/10 hover:!bg-amber-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isSubmitting ? 'PROCESSING...' : 'APPLY ADJUSTMENT' }}
                     </button>
                 </div>
             </div>
@@ -56,8 +57,8 @@
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks / Notes</label>
-                                 <textarea v-model="form.notes" placeholder="Notes for audit trail..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-40 resize-none outline-none focus:border-amber-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks / Notes <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional notes for audit trail..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-40 resize-none outline-none focus:border-amber-500/30 transition-all"></textarea>
                              </div>
                         </div>
                     </aside>
@@ -113,7 +114,7 @@
                                         <div class="flex items-center justify-end gap-10 font-mono">
                                              <div class="flex flex-col items-end">
                                                  <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Current</span>
-                                                 <span class="text-xs font-bold text-zinc-500">1,240.00</span>
+                                                 <span class="text-xs font-bold text-zinc-500">{{ form.lines[index].product?.total_qoh || 0 }}</span>
                                              </div>
                                              <div class="flex flex-col items-end">
                                                  <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Adjustment</span>
@@ -144,22 +145,57 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 
-const locations = ref([
-    { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
-    { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
-]);
-const products = ref([
-    { id: 1, sku: 'NODE-800', name: 'Standard Processor T-800', uom: { abbreviation: 'pcs' } },
-    { id: 2, sku: 'PWR-CORE', name: 'Power Module v2', uom: { abbreviation: 'unit' } }
-]);
+const toast = useToast();
+const { props } = usePage();
+
+const locations = ref([]);
+const products = ref([]);
+const loadingData = ref(false);
+
+const loadData = async () => {
+    loadingData.value = true;
+    try {
+        const [prodRes, locRes] = await Promise.all([
+            axios.get('/api/products'),
+            axios.get('/api/locations')
+        ]);
+        
+        products.value = prodRes.data.data;
+        locations.value = locRes.data.data;
+        
+        const { url } = usePage();
+        const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
+        const productId = searchParams.get('product_id');
+        
+        if (productId && products.value.length > 0) {
+            const preselected = products.value.find(p => p.id == productId);
+            if (preselected) {
+                if (form.lines.length === 0) {
+                    form.lines.push({ product: preselected, quantity: 0 });
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load data', e);
+    } finally {
+        loadingData.value = false;
+    }
+};
+
+onMounted(() => {
+    loadData();
+});
 const reasons = ref([
     { label: 'Physical Count Difference', value: 'disc' },
     { label: 'Damaged Items', value: 'dmg' },
@@ -167,23 +203,69 @@ const reasons = ref([
     { label: 'System Correction', value: 'err' }
 ]);
 
-const form = ref({
+const form = useForm({
     location: null,
-    reason: null,
+    reason: { label: 'Physical Count Difference', id: 1 },
     notes: '',
     lines: []
 });
 
+const isSubmitting = ref(false);
+
+const postAdjustment = async () => {
+    isSubmitting.value = true;
+    
+    // Frontend validation for real-time stock checks (if adjusting down)
+    for (const line of form.lines) {
+        if (!line.product) continue;
+        const adjustmentQty = parseFloat(line.quantity) || 0;
+        const availableQty = line.product.total_qoh || 0;
+        
+        // If we are deducting more than we have
+        if (adjustmentQty < 0 && Math.abs(adjustmentQty) > availableQty) {
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot deduct ${Math.abs(adjustmentQty)} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
+            isSubmitting.value = false;
+            return;
+        }
+    }
+    
+    try {
+        const meta = props.transactionMeta;
+        const payload = {
+            header: {
+                transaction_type_id: meta.types['adjustment'],
+                transaction_status_id: meta.statuses['posted'],
+                transaction_date: new Date().toISOString().split('T')[0],
+                adjustment_reason_id: form.reason?.id || null,
+                from_location_id: form.location?.id,
+                to_location_id: form.location?.id,
+                notes: form.notes,
+            },
+            lines: form.lines.map(line => ({
+                product_id: line.product?.id,
+                location_id: form.location?.id,
+                quantity: parseFloat(line.quantity),
+                unit_cost: parseFloat(line.product?.average_cost || 0)
+            }))
+        };
+        
+        await axios.post('/api/adjustments', payload);
+        toast.add({ severity: 'success', summary: 'Adjustment Applied', detail: 'Inventory levels updated successfully.', life: 3000 });
+        setTimeout(() => router.visit('/inventory-center'), 1000);
+    } catch (e) {
+        console.error('Submission failed', e);
+        toast.add({ severity: 'error', summary: 'Adjustment Failed', detail: e.response?.data?.message || 'Failed to submit adjustment.', life: 5000 });
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const addLine = () => {
-    form.value.lines.push({ product: null, quantity: 0 });
+    form.lines.push({ product: null, quantity: 0 });
 };
 
 const removeLine = (index) => {
-    form.value.lines.splice(index, 1);
-};
-
-const postAdjustment = () => {
-    console.log('Posting adjustment...', form.value);
+    form.lines.splice(index, 1);
 };
 </script>
 

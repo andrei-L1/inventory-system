@@ -27,10 +27,19 @@ class AdjustmentController extends Controller
     {
         try {
             $data = $request->validated();
+            $header = $data['header'];
+
+            // Map user input to reference_doc (physical paperwork)
+            $header['reference_doc'] = $header['reference_number'] ?? null;
+
+            // Auto-generate a guaranteed unique system reference_number
+            $header['reference_number'] = 'ADJ-'.now()->format('YmdHis').'-'.mt_rand(100, 999);
 
             // Force transaction type to 'adjustment'
             $adjType = TransactionType::where('code', 'ADJS')->firstOrFail();
-            $data['header']['transaction_type_id'] = $adjType->id;
+            $header['transaction_type_id'] = $adjType->id;
+
+            $data['header'] = $header;
 
             $transaction = $stockService->recordMovement($data);
 
