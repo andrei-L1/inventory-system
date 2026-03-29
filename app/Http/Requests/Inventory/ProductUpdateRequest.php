@@ -2,27 +2,18 @@
 
 namespace App\Http\Requests\Inventory;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductUpdateRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
-        $id = $this->route('product'); // assuming standard resource routes
+        $id = $this->route('product');
         if (is_object($id)) {
             $id = $id->id;
         }
@@ -43,6 +34,25 @@ class ProductUpdateRequest extends FormRequest
             'reorder_quantity' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
             'image' => 'nullable|image|max:2048',
+        ];
+    }
+
+    /**
+     * Detailed, business-friendly validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'product_code.required' => 'A unique system identifier (Product Code) is required.',
+            'product_code.unique' => 'This product code is already assigned to another record.',
+            'name.required' => 'The product name field is mandatory.',
+            'sku.required' => 'A Stock Keeping Unit (SKU) is required for inventory tracking.',
+            'sku.unique' => 'This SKU is already in use by another product.',
+            'category_id.required' => 'Please select a valid product category.',
+            'uom_id.required' => 'Unit of Measure must be defined.',
+            'costing_method_id.required' => 'Inventory costing method is a required parameter.',
+            'selling_price.numeric' => 'Selling price must be a valid numerical value.',
+            'image.max' => 'The uploaded image size cannot exceed 2MB.',
         ];
     }
 }

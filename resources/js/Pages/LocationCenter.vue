@@ -120,7 +120,7 @@ const saveLocation = async () => {
     submitted.value = true;
     
     if (!locationForm.value.name || !locationForm.value.code || !locationForm.value.location_type_id) {
-        toast.add({ severity: 'warn', summary: 'Incomplete Topology', detail: 'Node Name, Code, and Type are mandatory parameters.', life: 4000 });
+        toast.add({ severity: 'warn', summary: 'Missing Information', detail: 'Location Name, Code, and Type are required.', life: 4000 });
         return;
     }
 
@@ -131,29 +131,29 @@ const saveLocation = async () => {
             await axios.post('/api/locations', locationForm.value);
         }
         
-        toast.add({ severity: 'success', summary: 'Node Established', detail: 'Topology Updated', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Location Saved', detail: 'Successfully updated', life: 3000 });
         dialogVisible.value = false;
         loadLocations();
     } catch (e) {
-        const msg = e.response?.data?.message || 'Failed to update topology';
+        const msg = e.response?.data?.message || 'Failed to save location';
         toast.add({ severity: 'error', summary: 'Error', detail: msg, life: 3000 });
     }
 };
 
 const deleteLocation = (loc) => {
     confirm.require({
-        message: 'Are you sure you want to decommission this network node?',
-        header: 'Confirm Decommission',
+        message: 'Are you sure you want to remove this location?',
+        header: 'Confirm Removal',
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: async () => {
             try {
                 await axios.delete(`/api/locations/${loc.id}`);
-                toast.add({ severity: 'success', summary: 'Decommissioned', detail: 'Node offline.', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Removed', detail: 'Location is now inactive.', life: 3000 });
                 loadLocations();
                 viewMode.value = 'grid';
             } catch (e) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Decommission failed', life: 3000 });
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Removal failed', life: 3000 });
             }
         }
     });
@@ -162,7 +162,7 @@ const deleteLocation = (loc) => {
 
 <template>
     <AppLayout>
-        <Head title="Location Topology" />
+        <Head title="Warehouse Locations" />
         <Toast />
         <ConfirmDialog />
 
@@ -170,18 +170,18 @@ const deleteLocation = (loc) => {
             <!-- Header Section -->
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Storage Infrastructure Management</span>
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Manage Storage & Warehouses</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Location Center</h1>
                     <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
                         {{ viewMode === 'grid' 
-                            ? 'Overview of physical warehouses, logistical zones, and virtual nodes.' 
-                            : 'Deep topology navigation and nodal configuration for selected cluster.' 
+                            ? 'Overview of physical warehouses, sections, and storage zones.' 
+                            : 'Detailed view and settings for this location.' 
                         }}
                     </p>
                 </div>
                 <div class="flex items-center gap-4">
                     <Button v-if="viewMode === 'details'" 
-                            label="BACK_TO_OVERVIEW" 
+                            label="BACK_TO_LIST" 
                             icon="pi pi-th-large" 
                             class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all" 
                             @click="viewMode = 'grid'" />
@@ -239,8 +239,8 @@ const deleteLocation = (loc) => {
                             
                             <div class="pt-6 border-t border-zinc-800/50 flex justify-between items-center">
                                 <div class="flex flex-col">
-                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-1">Downstream_Nodes</span>
-                                    <span class="text-xs font-bold text-zinc-300">{{ locations.filter(l => l.parent_id === loc.id).length }} Cluster Points</span>
+                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-1">Sub-locations</span>
+                                    <span class="text-xs font-bold text-zinc-300">{{ locations.filter(l => l.parent_id === loc.id).length }} Areas</span>
                                 </div>
                                 <div class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center group-hover:bg-sky-500 group-hover:border-sky-500 transition-all">
                                     <i class="pi pi-arrow-up-right text-[10px] text-zinc-600 group-hover:text-white transition-colors"></i>
@@ -259,12 +259,12 @@ const deleteLocation = (loc) => {
                     <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <div class="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Topology_Anchor</span>
+                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Location Tree</span>
                         </div>
                     </div>
                     
                     <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                        <!-- Parent Node (Upstream) -->
+                        <!-- Parent Location -->
                         <div v-if="locationForm.parent" class="flex items-start gap-4 mb-4 group/parent">
                             <div class="flex flex-col items-center pt-1.5 min-w-[12px]">
                                 <div @click="selectLocation(locationForm.parent)" 
@@ -272,7 +272,7 @@ const deleteLocation = (loc) => {
                                 <div class="w-0.5 h-12 bg-zinc-800"></div>
                             </div>
                             <div class="flex flex-col gap-0.5 opacity-40 hover:opacity-100 transition-opacity cursor-pointer mb-6" @click="selectLocation(locationForm.parent)">
-                                <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase leading-none">UPSTREAM</span>
+                                <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase leading-none">PARENT_LOCATION</span>
                                 <span class="text-zinc-400 font-bold text-xs leading-none group-hover/parent:text-white transition-colors">{{ locationForm.parent.name }}</span>
                             </div>
                         </div>
@@ -286,12 +286,12 @@ const deleteLocation = (loc) => {
                                 <div v-if="childLocations.length > 0" class="w-0.5 h-10 bg-gradient-to-b from-sky-500 to-zinc-800"></div>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-sky-400 font-mono tracking-[0.2em] uppercase leading-none">ACTIVE_ANCHOR</span>
+                                <span class="text-[9px] font-bold text-sky-400 font-mono tracking-[0.2em] uppercase leading-none">CURRENT_VIEW</span>
                                 <span class="text-white font-bold text-base leading-none tracking-tight">{{ locationForm.name }}</span>
                             </div>
                         </div>
 
-                        <!-- Children Branches (Downstream) -->
+                        <!-- Sub-areas -->
                         <div v-if="childLocations.length > 0" class="flex flex-col">
                             <div v-for="(child, index) in childLocations" :key="child.id" class="flex items-start gap-4 group">
                                 <div class="flex flex-col items-center min-w-[20px]">
@@ -330,10 +330,10 @@ const deleteLocation = (loc) => {
                                     </div>
                                     <div class="flex items-center gap-3 text-zinc-500 text-xs font-mono uppercase tracking-widest">
                                         <i class="pi pi-info-circle text-[10px] text-sky-400"></i>
-                                        <span>Node ID // {{ locationForm.code }}</span>
+                                        <span>Location Code // {{ locationForm.code }}</span>
                                         <span class="mx-2 text-zinc-800">|</span>
                                         <i class="pi pi-map-marker text-[10px] text-emerald-400"></i>
-                                        <span>{{ locationForm.city || 'Global Sector' }}, {{ locationForm.country || 'N/A' }}</span>
+                                        <span>{{ locationForm.city || 'Global' }}, {{ locationForm.country || 'N/A' }}</span>
                                     </div>
                                 </div>
 
@@ -349,24 +349,24 @@ const deleteLocation = (loc) => {
                             
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
                                 <div class="flex flex-col gap-3">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Operations Unit</label>
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Status</label>
                                     <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
                                         <span class="text-zinc-400 text-xs block mb-1">Status</span>
                                         <div class="flex items-center gap-2">
                                             <div class="w-2 h-2 rounded-full" :class="locationForm.is_active ? 'bg-sky-500 animate-pulse' : 'bg-zinc-800'"></div>
-                                            <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.is_active ? 'ACTIVE_DEPLO' : 'OFFLINE' }}</span>
+                                            <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.is_active ? 'ACTIVE' : 'OFFLINE' }}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-3">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Inbound Logic</label>
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Receiving Settings</label>
                                     <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
-                                        <span class="text-zinc-400 text-xs block mb-1">Receiving Target</span>
-                                        <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.default_receive_location?.name || 'Self-Contained' }}</span>
+                                        <span class="text-zinc-400 text-xs block mb-1">Default Receive Area</span>
+                                        <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.default_receive_location?.name || 'Main Area' }}</span>
                                     </div>
                                 </div>
                                 <div class="flex flex-col gap-3">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Spatial Metadata</label>
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Address Details</label>
                                     <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
                                         <span class="text-zinc-400 text-xs block mb-1">Physical Address</span>
                                         <span class="text-white font-bold text-sm tracking-tight truncate">{{ locationForm.address || 'N/A' }}</span>
@@ -375,9 +375,9 @@ const deleteLocation = (loc) => {
                             </div>
 
                             <div class="p-6 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
-                                 <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono block mb-4">Technical Specifications & Notes</label>
+                                 <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono block mb-4">Notes & Descriptions</label>
                                  <p class="text-zinc-400 text-sm leading-relaxed font-mono">
-                                     {{ locationForm.description || 'No additional technical parameters defined for this nodal cluster.' }}
+                                     {{ locationForm.description || 'No additional notes defined for this location.' }}
                                  </p>
                             </div>
                         </div>
@@ -392,7 +392,7 @@ const deleteLocation = (loc) => {
                             </div>
                         </div>
                         <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 h-64 flex flex-col">
-                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono mb-4">Spatial Capacity</span>
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono mb-4">Available Space</span>
                             <div class="flex-1 flex items-center justify-center border border-dashed border-zinc-800/50 rounded-xl opacity-20">
                                 <i class="pi pi-database text-4xl"></i>
                             </div>
@@ -416,7 +416,7 @@ const deleteLocation = (loc) => {
                     <!-- Header -->
                     <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
                         <div class="flex flex-col">
-                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">LOCATION_DATA</div>
+                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">LOCATION_DETAILS</div>
                             <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ locationForm.id ? 'Edit Location Details' : 'Add New Location' }}</h2>
                         </div>
                         <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" />
@@ -433,7 +433,7 @@ const deleteLocation = (loc) => {
                             </div>
                             <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Location Code *</label>
-                                <InputText v-model="locationForm.code" placeholder="N-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono focus:!border-sky-500/30" />
+                                <InputText v-model="locationForm.code" placeholder="L-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono focus:!border-sky-500/30" />
                             </div>
 
                             <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
@@ -484,7 +484,7 @@ const deleteLocation = (loc) => {
 
                             <div class="col-span-12 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Additional Notes</label>
-                                <Textarea v-model="locationForm.description" rows="3" placeholder="Operational details, dock numbers, or access notes..." 
+                                <Textarea v-model="locationForm.description" rows="3" placeholder="Storage details, dock numbers, or access notes..." 
                                           class="!bg-zinc-900/50 !border-zinc-800 !text-white focus:!border-sky-500/30 !text-sm !font-mono" />
                             </div>
 

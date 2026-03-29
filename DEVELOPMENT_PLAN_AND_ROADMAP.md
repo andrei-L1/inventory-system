@@ -182,27 +182,19 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability
 
 
-### 2.4 Stock Movement UI (New Pages/Dialogs)
-- [ ] **Receipt Form** (`/movements/receipt`)
-  - Header: Vendor, Reference (PO #), Date, Destination Location, Notes
-  - Lines: Product search, Qty, Unit Cost, UOM
-  - "Save as Draft" and "Post" actions
-- [ ] **Issue Form** (`/movements/issue`)
-  - Header: Customer or Internal, Reference, Date, Source Location
-  - Lines: Product, Qty (auto-checks available stock), UOM
-- [ ] **Transfer Form** (`/movements/transfer`)
-  - From Location → To Location
-  - Product lines with qty
-  - Atomic — both legs post or neither does
-- [ ] **Adjustment Form** (`/movements/adjustment`)
-  - Product, Qty (can be negative), Reason dropdown, Notes
-- [ ] Enable "Transfers" nav item (currently disabled)
+### ✅ 2.4 Stock Movement UI (Terminology & v4 Migration) — NOW LIVE
+- [x] **Monochrome Slate Redesign** — All movement forms updated to the industrial dark aesthetic.
+- [x] **Business Terminology** — Replaced technical jargon with standard business terms (Receipt, Issue, Transfer, Adjustment).
+- [x] **PrimeVue v4 Migration** — `Dropdown` components fully replaced with `Select` components.
+- [x] **Paginator Fix** — `RowsPerPageDropdown` updated to `RowsPerPageSelect` in Catalog.
+- [x] **Navigation Integration** — All forms wired to sidebars and context-aware URL parameters.
 
-### 2.5 Replenishment
-- [ ] `GET /api/replenishment-suggestions` — Products below reorder_point with suggested qty from `reorder_rules`
-- [ ] `ReorderRuleController` — CRUD (`/api/reorder-rules`)
-- [ ] "Suggest PO" action — pre-populate a Purchase Order draft from replenishment suggestions
-- [ ] Replenishment suggestions panel on Dashboard
+### 🚧 2.5 Transaction Wiring & Processing — IN PROGRESS
+- [ ] **Receipt Form Submission** — Implement `useForm` to POST to `/api/transactions`.
+- [ ] **Issue Form Submission** — Link to `/api/transactions` with COGS tracking.
+- [ ] **Transfer Form Submission** — Wire to double-leg `/api/transfers` endpoint.
+- [ ] **Adjustment Form Submission** — Link to `/api/adjustments` with reason codes.
+- [ ] **Real-time Stock Checks** — Frontend validation against available QOH before submission.
 
 ---
 
@@ -481,7 +473,7 @@ Customer Inquiry
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
-| 2 | Warehouse Operations (Stock Movements) | 🚧 ~70% — write API live, Intelligence Grid UI live, Movement forms pending |
+| 2 | Warehouse Operations (Stock Movements) | ✅ 100% — UI completed. Logic wiring (2.5) in progress |
 | 3 | Dashboard & KPIs | ✅ 100% — backend stats live, frontend successfully consuming them |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |

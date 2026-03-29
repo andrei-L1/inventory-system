@@ -83,38 +83,38 @@ const editUom = (uom) => {
 const saveUom = async () => {
     uomSubmitted.value = true;
     if (!uomForm.value.name || !uomForm.value.abbreviation) {
-        toast.add({ severity: 'warn', summary: 'Incomplete Data', detail: 'Formal Descriptor and Symbol are required parameters.', life: 4000 });
+        toast.add({ severity: 'warn', summary: 'Missing Information', detail: 'Unit Name and Short Name are required.', life: 4000 });
         return;
     }
 
     try {
         if (uomForm.value.id) {
             await axios.put(`/api/uom/${uomForm.value.id}`, uomForm.value);
-            toast.add({ severity: 'success', summary: 'Updated', detail: 'UOM properties adjusted.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Unit updated successfully.', life: 3000 });
         } else {
             await axios.post('/api/uom', uomForm.value);
-            toast.add({ severity: 'success', summary: 'Registered', detail: 'New UOM initialized.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Registered', detail: 'New unit added.', life: 3000 });
         }
         uomDialogVisible.value = false;
         loadInitialData();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to apply parameters.', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to save unit.', life: 3000 });
     }
 };
 
 const deleteUom = (uom) => {
     confirm.require({
         message: `Delete the ${uom.name} unit? All associated data must be cleared first.`,
-        header: 'Confirm Decommission',
+        header: 'Confirm Removal',
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: async () => {
             try {
                 await axios.delete(`/api/uom/${uom.id}`);
-                toast.add({ severity: 'success', summary: 'Decommissioned', detail: 'UOM registry offline.', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Removed', detail: 'Unit removed.', life: 3000 });
                 loadInitialData();
             } catch (e) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Dependency collision. Cannot decommission active entity.', life: 4000 });
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Cannot remove unit with active transactions.', life: 4000 });
             }
         }
     });
@@ -130,38 +130,38 @@ const openNewConversion = (prefillFromUomId = null) => {
 const saveConversion = async () => {
     convSubmitted.value = true;
     if (!convForm.value.from_uom_id || !convForm.value.to_uom_id || !convForm.value.conversion_factor) {
-        toast.add({ severity: 'warn', summary: 'Equation Incomplete', detail: 'Source unit, target unit, and a conversion factor must be fully specified.', life: 4000 });
+        toast.add({ severity: 'warn', summary: 'Missing Information', detail: 'Please select both units and enter the amount.', life: 4000 });
         return;
     }
 
     try {
         if (convForm.value.id) {
             await axios.put(`/api/uom-conversions/${convForm.value.id}`, convForm.value);
-            toast.add({ severity: 'success', summary: 'Updated', detail: 'Conversion factor adjusted.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Conversion updated.', life: 3000 });
         } else {
             await axios.post('/api/uom-conversions', convForm.value);
-            toast.add({ severity: 'success', summary: 'Mapped', detail: 'New unit mapping created.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Mapped', detail: 'Conversion rule added.', life: 3000 });
         }
         convDialogVisible.value = false;
         loadInitialData();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to map conversion.', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to save conversion.', life: 3000 });
     }
 };
 
 const deleteConversion = (id) => {
     confirm.require({
         message: 'Delete this conversion calculation?',
-        header: 'Confirm Deletion',
+        header: 'Confirm Removal',
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: async () => {
             try {
                 await axios.delete(`/api/uom-conversions/${id}`);
-                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Conversion mapping removed.', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Conversion rule removed.', life: 3000 });
                 loadInitialData();
             } catch (e) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete conversion.', life: 3000 });
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to remove conversion.', life: 3000 });
             }
         }
     });
@@ -182,15 +182,15 @@ const getUomAbbr = (id) => {
             <!-- Header Section -->
             <div class="max-w-[1600px] w-full mx-auto mb-10 pb-8 border-b border-zinc-900 flex justify-between items-end">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold text-fuchsia-400 uppercase tracking-[0.2em] block mb-2 font-mono">Measurement Engine</span>
-                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Unit Math & Conversions</h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Define root packaging dimensions and establish their exact mathematical relationships against base units to automate stock tracking.</p>
+                    <span class="text-[10px] font-bold text-fuchsia-400 uppercase tracking-[0.2em] block mb-2 font-mono">Unit Management</span>
+                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Unit Measurements & Conversions</h1>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Set up your standard units (like pieces, boxes, or pallets) and how they convert to each other.</p>
                 </div>
                 <div v-if="can('manage-products')" class="flex gap-4">
-                    <Button label="SYSTEM MAPPING" icon="pi pi-link" 
+                    <Button label="ADD CONVERSION" icon="pi pi-link" 
                             class="!bg-zinc-900 !border-zinc-800 !text-zinc-300 !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest hover:!bg-zinc-800 hover:!text-white active:scale-95 transition-all" 
                             @click="openNewConversion(null)" />
-                    <Button label="NEW BASE UNIT" icon="pi pi-plus" 
+                    <Button label="ADD NEW UNIT" icon="pi pi-plus" 
                             class="!bg-fuchsia-500 !border-none !text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(217,70,239,0.2)] hover:!bg-fuchsia-400 active:scale-95 transition-all" 
                             @click="openNewUom" />
                 </div>
@@ -233,10 +233,10 @@ const getUomAbbr = (id) => {
                             </div>
                         </div>
 
-                        <!-- Card Body (Conversions Math) -->
+                        <!-- Card Body (Conversions) -->
                         <div class="p-6 flex-1 flex flex-col bg-zinc-950/30 relative z-10">
                             <div class="flex items-center justify-between mb-4">
-                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono">Math Engine Maps</span>
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono">Conversion Rules</span>
                                 <button v-if="can('manage-products')" @click="openNewConversion(uom.id)" class="text-[10px] bg-transparent border-none outline-none cursor-pointer font-bold text-sky-400 hover:text-sky-300 uppercase tracking-widest font-mono flex items-center gap-1 transition-colors">
                                     <i class="pi pi-plus text-[8px]"></i> Rule
                                 </button>
@@ -260,7 +260,7 @@ const getUomAbbr = (id) => {
                                 </template>
                                 <div v-else class="py-6 flex flex-col items-center justify-center opacity-40 grayscale border border-dashed border-zinc-800 rounded-xl">
                                     <i class="pi pi-calculator text-lg text-zinc-600 mb-2"></i>
-                                    <p class="text-[9px] font-mono uppercase tracking-widest text-zinc-500 m-0">No equations</p>
+                                    <p class="text-[9px] font-mono uppercase tracking-widest text-zinc-500 m-0">No conversions set</p>
                                 </div>
                             </div>
                         </div>
@@ -282,8 +282,8 @@ const getUomAbbr = (id) => {
                 <div class="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
                     <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
                         <div class="flex flex-col">
-                            <div class="text-[9px] font-bold text-fuchsia-500 font-mono tracking-[0.2em] mb-1">UNIT_SCHEMA</div>
-                            <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ uomForm.id ? 'Edit Unit Identifier' : 'Deploy New Unit' }}</h2>
+                            <div class="text-[9px] font-bold text-fuchsia-500 font-mono tracking-[0.2em] mb-1">UNIT_DETAILS</div>
+                            <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ uomForm.id ? 'Edit Unit Identifier' : 'Add New Unit' }}</h2>
                         </div>
                         <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="uomDialogVisible = false" />
                     </div>
@@ -291,21 +291,21 @@ const getUomAbbr = (id) => {
                     <div class="p-8 bg-[radial-gradient(circle_at_top_right,rgba(217,70,239,0.03),transparent_40%)]">
                         <div class="grid grid-cols-12 gap-x-6 gap-y-6">
                             <div class="col-span-12 md:col-span-8 flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Formal Descriptor *</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit Name *</label>
                                 <InputText v-model="uomForm.name" placeholder="Piece, Box, Pallet" 
                                            class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !font-bold focus:!border-fuchsia-500/40"
                                            :class="{'!border-red-500/50': uomSubmitted && !uomForm.name}" />
                             </div>
                             <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Symbol *</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Short Name / Symbol *</label>
                                 <InputText v-model="uomForm.abbreviation" placeholder="pcs" class="!bg-zinc-900/50 !border-zinc-800 !text-fuchsia-400 !h-12 !font-mono font-bold focus:!border-fuchsia-500/30 uppercase"
                                            :class="{'!border-red-500/50': uomSubmitted && !uomForm.abbreviation}" />
                             </div>
 
                             <div class="col-span-12 pt-2 flex items-center justify-between p-4 bg-zinc-900/30 rounded-xl border border-zinc-800/80">
                                 <div class="flex flex-col">
-                                    <span class="text-white font-bold text-[11px] uppercase tracking-tight">Visibility State</span>
-                                    <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Permits measurement targeting</span>
+                                    <span class="text-white font-bold text-[11px] uppercase tracking-tight">Active Status</span>
+                                    <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Turn on to allow using this unit</span>
                                 </div>
                                 <ToggleSwitch v-model="uomForm.is_active" 
                                              :pt="{ slider: ({ props }) => ({ class: props.modelValue ? '!bg-fuchsia-500' : '!bg-zinc-700' }) }" />
@@ -315,7 +315,7 @@ const getUomAbbr = (id) => {
 
                     <div class="px-8 py-6 border-t border-zinc-900 bg-zinc-900/50 flex justify-end gap-3">
                         <Button label="CANCEL" class="!bg-transparent !border-zinc-800 !text-zinc-500 hover:!text-white hover:!border-zinc-600 !px-6 !h-11 !font-bold !text-[10px] uppercase tracking-widest border transition-colors" @click="uomDialogVisible = false" />
-                        <Button label="COMMIT BLOCK" class="!bg-fuchsia-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-fuchsia-500/10 hover:!bg-fuchsia-400 active:scale-95 transition-all" @click="saveUom" />
+                        <Button label="SAVE UNIT" class="!bg-fuchsia-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-fuchsia-500/10 hover:!bg-fuchsia-400 active:scale-95 transition-all" @click="saveUom" />
                     </div>
                 </div>
             </Dialog>
@@ -334,8 +334,8 @@ const getUomAbbr = (id) => {
                 <div class="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
                     <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
                         <div class="flex flex-col">
-                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">ALGEBRA_ENGINE</div>
-                            <h2 class="text-white text-xl font-bold tracking-tight m-0">Conversion Equation</h2>
+                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">CONVERSION_RULE</div>
+                            <h2 class="text-white text-xl font-bold tracking-tight m-0">Unit Conversion Rule</h2>
                         </div>
                         <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="convDialogVisible = false" />
                     </div>
@@ -344,13 +344,13 @@ const getUomAbbr = (id) => {
                         
                         <div class="flex items-center gap-4 mb-2">
                             <div class="flex flex-col gap-2 w-32">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Fixed Qty</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Base Amount</label>
                                 <div class="h-12 bg-zinc-900/80 border border-zinc-800 rounded-xl flex items-center justify-center">
                                     <span class="text-white font-mono font-black text-lg">1</span>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-2 flex-1">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Source Unit (e.g. Box)</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">From Unit (e.g. Box)</label>
                                 <Select v-model="convForm.from_uom_id" :options="uoms" optionLabel="abbreviation" optionValue="id" placeholder="Select"
                                         class="!bg-zinc-900/50 !border-zinc-800 !text-white w-full !h-12 !font-bold"
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.from_uom_id}" />
@@ -367,13 +367,13 @@ const getUomAbbr = (id) => {
 
                         <div class="flex items-center gap-4 mt-2">
                             <div class="flex flex-col gap-2 w-32">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Multiplies To</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Amount</label>
                                 <InputText v-model="convForm.conversion_factor" type="number" step="0.001" placeholder="e.g. 12"
                                         class="!bg-zinc-900/50 !border-zinc-800 !text-fuchsia-400 !font-mono font-bold w-full !h-12 !text-lg text-center focus:!border-fuchsia-500/30"
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.conversion_factor}" />
                             </div>
                             <div class="flex flex-col gap-2 flex-1">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Target Unit (e.g. Pcs)</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">To Unit (e.g. Pcs)</label>
                                 <Select v-model="convForm.to_uom_id" :options="uoms.filter(u => u.id !== convForm.from_uom_id)" optionLabel="abbreviation" optionValue="id" placeholder="Select"
                                         class="!bg-zinc-900/50 !border-zinc-800 !text-white w-full !h-12 !font-bold"
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.to_uom_id}" />
@@ -382,7 +382,7 @@ const getUomAbbr = (id) => {
 
                         <div v-if="convForm.from_uom_id && convForm.to_uom_id && convForm.conversion_factor" 
                              class="mt-8 p-4 bg-zinc-900/30 border border-zinc-800/80 rounded-xl flex items-center justify-center gap-3">
-                            <span class="text-xs font-mono text-zinc-500">Resulting Vector:</span>
+                            <span class="text-xs font-mono text-zinc-500">Preview:</span>
                             <div class="bg-zinc-950 px-3 py-1.5 rounded border border-zinc-800 font-mono text-xs font-black tracking-tight">
                                 <span class="text-white">1 {{ getUomAbbr(convForm.from_uom_id) }}</span>
                                 <span class="text-sky-400 mx-2">=</span>
@@ -394,7 +394,7 @@ const getUomAbbr = (id) => {
 
                     <div class="px-8 py-6 border-t border-zinc-900 bg-zinc-900/50 flex justify-end gap-3">
                         <Button label="CANCEL" class="!bg-transparent !border-zinc-800 !text-zinc-500 hover:!text-white hover:!border-zinc-600 !px-6 !h-11 !font-bold !text-[10px] uppercase tracking-widest border transition-colors" @click="convDialogVisible = false" />
-                        <Button label="BIND EQUATION" class="!bg-sky-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" @click="saveConversion" />
+                        <Button label="SAVE CONVERSION" class="!bg-sky-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" @click="saveConversion" />
                     </div>
                 </div>
             </Dialog>
