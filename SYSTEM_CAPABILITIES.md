@@ -21,8 +21,9 @@ This document serves as the **Complete System Capability Map**, detailing all fe
   - **FIFO (First-In, First-Out)**: Consumes the oldest cost layers first. Perfect for standard retail.
   - **LIFO (Last-In, First-Out)**: Consumes the newest cost layers first. Useful in specialized commodities.
   - **Weighted Average Cost (WAC)**: Creates a smoothed, moving average on every single inbound receipt.
+- **Correct Multi-Location Global WAC**: The product-level average cost is computed as `SUM(location_QOH × location_avg_cost) / SUM(all_QOH)` across every warehouse simultaneously — not contaminated by a single location's last receipt.
 - **Physical Cost Layers**: The system doesn't just calculate costs dynamically; it physically persists `InventoryCostLayers` in the database. You can drill down into a product and see exactly what receipts make up your current on-hand value.
-- **Cost of Goods Sold (COGS) Tracing**: Every outbound sale links directly back to the specific cost layer it consumed, guaranteeing 100% accurate profit margins.
+- **Cost of Goods Sold (COGS) Tracing**: Every outbound issue records the true weighted-average cost of the layers it consumed directly on the `transaction_lines.unit_cost` field. Gross Margin reports in Phase 8 will have accurate COGS data with zero back-calculation needed.
 
 ---
 
@@ -31,7 +32,9 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 
 - **Pessimistic Row Locking**: During an issue, the system places a hardware-level lock (`lockForUpdate`) on the specific inventory row. If 500 users try to buy the last unit simultaneously, exactly 1 will succeed. No "Ghost Stock".
 - **Strict Over-Issue Prevention**: Throws an `InsufficientStockException` if out-of-stock. The system physically prevents Negative Inventory, eliminating the #1 cause of ERP database corruption.
-- **Immutable Ledger**: The `transactions` and `transaction_lines` tables act as an append-only ledger. You cannot edit a stock movement once posted—you can only issue a reversing transaction.
+- **Draft / Posted Enforcement**: Stock movements can be saved as a `Draft` (header + lines recorded, inventory untouched) and then promoted to `Posted` later. Inventory is ONLY updated at the moment of posting — not when a draft is created. This mirrors real-world approval workflows (save PO → approve → receive goods).
+- **Coherent Transfer Ledger**: Every two-leg stock transfer (issue from origin + receipt at destination) is linked by a `transfers` pivot record with FK constraints. You can always find the mirror leg of any transfer from either transaction — no orphan records.
+- **Immutable Ledger**: The `transactions` and `transaction_lines` tables act as an append-only ledger. You cannot edit a stock movement once posted — you can only issue a reversing transaction.
 
 ---
 
@@ -102,4 +105,4 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 - **Stateless API Architecture**: Built around Laravel Sanctum tokens, allowing for easy expansion into mobile apps, barcode scanners, or third-party EDI integrations.
 
 ---
-*Last Updated: 2026-03-28. Covers complete designed feature set.*
+*Last Updated: 2026-03-29. Covers complete designed feature set, including stock movement API (Phase 2.1 complete), draft/post enforcement, corrected multi-location WAC, and COGS tracking on issue lines.*

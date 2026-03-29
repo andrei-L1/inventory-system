@@ -35,9 +35,31 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Costing Methods (Read Only)
     Route::apiResource('costing-methods', CostingMethodController::class)->only(['index', 'show'])->middleware('permission:view-products');
 
-    // Transactions API
-    Route::get('products/{product}/transactions', [TransactionController::class, 'forProduct'])->middleware('permission:view-transactions');
-    Route::get('vendors/{vendor}/transactions', [TransactionController::class, 'forVendor'])->middleware('permission:view-transactions');
+    // -----------------------------------------------------------------------
+    // Stock Movement API (Phase 2.1)
+    // -----------------------------------------------------------------------
+
+    // Create any movement (receipt, issue, adjustment) — draft or posted.
+    Route::post('transactions', [TransactionController::class, 'store'])
+        ->middleware('permission:manage-inventory');
+
+    // Transition a draft transaction to posted (inventory is updated at this point).
+    Route::patch('transactions/{transaction}/post', [TransactionController::class, 'post'])
+        ->middleware('permission:manage-inventory');
+
+    // Cancel a draft transaction (posted transactions require reversal — not yet implemented).
+    Route::patch('transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])
+        ->middleware('permission:manage-inventory');
+
+    // Atomic two-leg internal stock transfer.
+    Route::post('transfers', [TransactionController::class, 'storeTransfer'])
+        ->middleware('permission:manage-inventory');
+
+    // Transaction history reads.
+    Route::get('products/{product}/transactions', [TransactionController::class, 'forProduct'])
+        ->middleware('permission:view-transactions');
+    Route::get('vendors/{vendor}/transactions', [TransactionController::class, 'forVendor'])
+        ->middleware('permission:view-transactions');
 
     // Dashboard Stats
     Route::get('dashboard/stats', [DashboardController::class, 'getStats'])->middleware('permission:view-products');

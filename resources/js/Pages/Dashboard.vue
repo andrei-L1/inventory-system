@@ -50,9 +50,12 @@ onMounted(loadDashboard);
                 </p>
             </div>
             <div class="flex items-center gap-4">
-                <Button @click="loadDashboard" 
-                        class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all" 
-                        icon="pi pi-refresh" :loading="loading" label="REFRESH_INTEL" />
+                <button @click="loadDashboard" 
+                        class="bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 flex items-center gap-3 shadow-lg hover:border-zinc-700"
+                >
+                    <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
+                    <span>REFRESH_INTEL</span>
+                </button>
             </div>
         </div>
         
