@@ -159,10 +159,11 @@ const menuItems = [
     { label: 'Overview', href: '/dashboard', icon: 'pi pi-compass', color: 'text-sky-400' },
     { label: 'Catalog', href: '/catalog', icon: 'pi pi-box', color: 'text-emerald-400' },
     { label: 'Inventory', href: '/inventory-center', icon: 'pi pi-database', color: 'text-amber-400' },
-    { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
-    { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
     { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
     { label: 'Transfers', href: '/movements/transfer', icon: 'pi pi-arrow-right-arrow-left', color: 'text-indigo-400' },
+    { label: 'Procurement', href: '/purchase-orders', icon: 'pi pi-shopping-bag', color: 'text-orange-400' },
+    { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
+    { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
 ];
 
 onMounted(() => {

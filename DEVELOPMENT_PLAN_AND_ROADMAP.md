@@ -241,31 +241,30 @@ Replenishment Suggestion
 ```
 
 ### 4.1 Purchase Order API
-- [ ] `PurchaseOrderController` — Full CRUD (`/api/purchase-orders`)
-- [ ] `PurchaseOrderStoreRequest` + `PurchaseOrderUpdateRequest`
-- [ ] `PurchaseOrderResource` + `PurchaseOrderLineResource`
-- [ ] PO Status lifecycle:
+- [x] `PurchaseOrderController` — Full CRUD (`/api/purchase-orders`)
+- [x] `PurchaseOrderStoreRequest` + `PurchaseOrderUpdateRequest`
+- [x] `PurchaseOrderResource` + `PurchaseOrderLineResource`
+- [x] PO Status lifecycle:
   - `Draft` → `Approved` → `Sent` → `Partially Received` → `Closed` | `Cancelled`
-- [ ] `PATCH /api/purchase-orders/{id}/approve` — Approve a PO
-- [ ] `POST /api/purchase-orders/{id}/receive` — Post a Goods Receipt Note (GRN):
-  - Creates a `Transaction` (type: Receipt) via `StockService`
-  - Links `transaction.purchase_order_id`
-  - Updates `purchase_order_lines.received_qty`
-  - Auto-transitions PO to `Partially Received` or `Closed`
+- [x] `PATCH /api/purchase-orders/{id}/approve` — Approve a PO
+- [x] `POST /api/purchase-orders/{id}/receive` — Post a Goods Receipt Note (GRN):
+  - [x] Creates a `Transaction` (type: Receipt) via `StockService`
+  - [x] Links `transaction.reference_doc` manually
+  - [x] Updates `purchase_order_lines.received_qty`
+  - [x] Auto-transitions PO to `Partially Received` or `Closed`
 
-### 4.2 Purchase Orders Frontend
-- [ ] **Purchase Orders list page** (`/purchase-orders`)
-  - DataTable: PO number, vendor, date, status, total value, actions
-  - Filters: status, vendor, date range
-- [ ] **PO Create/Edit form**
-  - Header: Vendor, expected delivery date, notes
-  - Lines: product selector, qty, agreed unit cost, UOM
-  - "Save Draft" and "Submit for Approval" buttons
-- [ ] **PO Detail / Receive page**
-  - Shows PO lines with ordered qty vs. received qty
-  - "Post Receipt" button per line or bulk
-  - GRN history (all receipts against this PO)
-- [ ] PO status badge and lifecycle action buttons
+### 4.2 Purchase Orders Frontend ✅ NOW LIVE
+- [x] **Purchase Orders list page** (`/purchase-orders`)
+  - [x] DataTable: PO number, vendor, date, status, total value, actions
+  - [x] Filters: status, vendor, search
+- [x] **PO Create/Edit form**
+  - [x] Header: Vendor, expected delivery date, notes
+  - [x] Lines: product selector, qty, agreed unit cost, UOM
+  - [x] "Save Draft" and "Discard" buttons
+- [x] **PO Detail / Receive page**
+  - [x] Shows PO metadata and lines with ordered qty vs. received qty
+  - [x] Post Goods Receipt Note logic (receives remaining pending qty)
+- [x] PO status badges and lifecycle action buttons (Approve, GRN, Delete)
 
 ---
 
