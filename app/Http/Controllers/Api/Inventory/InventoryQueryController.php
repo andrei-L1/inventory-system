@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
-use App\Http\Resources\Inventory\InventoryResource;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Inventory\InventoryResource;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Product;
@@ -57,12 +57,13 @@ class InventoryQueryController extends Controller
                     'reorder_point' => (float) $product->reorder_point,
                     'shortage' => (float) ($product->reorder_point - $product->total_qoh),
                     'preferred_vendor' => $product->preferredVendor->name ?? 'None',
-                    'status' => 'critical'
+                    'status' => 'critical',
                 ];
             });
 
         return response()->json(['data' => $products]);
     }
+
     /**
      * Get inventory locations and QOH for a specific product.
      */

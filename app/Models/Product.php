@@ -80,6 +80,7 @@ class Product extends Model
     {
         return $this->hasMany(InventoryCostLayer::class);
     }
+
     /**
      * Get the total quantity on hand across all locations.
      */
