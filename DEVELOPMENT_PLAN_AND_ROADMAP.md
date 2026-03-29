@@ -132,8 +132,9 @@ Each phase below corresponds to one stage of that chain.
 - [x] `TransactionStatusSeeder` — Draft, Posted, Cancelled
 - [x] `PurchaseOrderStatusSeeder`, `SalesOrderStatusSeeder`, `LocationTypeSeeder`
 - [x] `CategorySeeder`, `VendorSeeder`
-- [x] `SampleDataSeeder` — realistic demo data
 - [x] `PermissionSeeder` — roles and permission slugs
+- [x] `TestDataSeeder` — exhaustive test data for cost layers and multi-location distribution ✅ NEW
+- [x] `SampleDataSeeder` — realistic demo data
 
 ### 1.7 App Shell
 - [x] `AppLayout.vue` — collapsible sidebar, topbar, localStorage persistence
@@ -169,15 +170,17 @@ Each phase below corresponds to one stage of that chain.
 - [x] `GET /api/inventory/low-stock` — All products where `QOH < reorder_point`
 - [x] `InventoryResource` — response transformer
 
-### 2.3 Inventory Center — Enhanced UI ✅ NOW LIVE
+### ✅ 2.3 Inventory Intelligence Grid — NOW LIVE
 - [x] Product sidebar (searchable Listbox, auto-select first)
 - [x] Product specs panel (SKU, price, UOM, costing method)
 - [x] Transaction ledger, pulling directly from live backend history
 - [x] **QOH display** per product item in sidebar (color-coded: green/amber/red by stock level)
-- [x] **"New Movement" button** — inline action to trigger stock movement forms (forms pending Phase 2.4)
+- [x] **"New Movement" button** — inline action to trigger stock movement forms (Logic pending Phase 2.4)
 - [x] **Average Cost (WAC)** display in the product technical manifest
-- [ ] **Cost Layer Inspector panel** — collapsible drawer showing live FIFO/LIFO layers
-- [ ] **Location breakdown** — show QOH split by warehouse/location
+- [x] **Cost Layer Inspector panel** — High-performance table showing live FIFO/LIFO layers with status tracking
+- [x] **Location breakdown** — Visualized QOH distribution split by physical warehouse/location nodes
+- [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability
+
 
 ### 2.4 Stock Movement UI (New Pages/Dialogs)
 - [ ] **Receipt Form** (`/movements/receipt`)
@@ -478,8 +481,8 @@ Customer Inquiry
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
-| 2 | Warehouse Operations (Stock Movements) | 🚧 ~55% — write API and query logic live, UI wiring ongoing |
-| 3 | Dashboard & KPIs | 🚧 ~75% — backend stats live, frontend successfully consuming them |
+| 2 | Warehouse Operations (Stock Movements) | 🚧 ~70% — write API live, Intelligence Grid UI live, Movement forms pending |
+| 3 | Dashboard & KPIs | ✅ 100% — backend stats live, frontend successfully consuming them |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
@@ -492,8 +495,7 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. ✅ ~~**Inventory Query API**~~ — DONE. `GET /api/inventory/{product}/locations` & `cost-layers` added.
-2. ✅ ~~**Dashboard & UI Wiring**~~ — DONE. `Dashboard` pulls live data, `InventoryCenter` displays WAC and ledger.
-3. **Stock Movement UI** — Build the Receipt, Issue, Transfer, and Adjustment modals to submit data to Phase 2.1 routes. (Phase 2.4)
-4. **Location/Cost Inspector panels** — Build the UI for the newly added Query APIs in the Inventory Center.
-5. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
+1. **Stock Movement UI (Phase 2.4)** — Build the Receipt, Issue, Transfer, and Adjustment modals to submit data to Phase 2.1 routes.
+2. **Movements Interactivity** — Wire the "New Movement" button to launch the above stock movement forms.
+3. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
+

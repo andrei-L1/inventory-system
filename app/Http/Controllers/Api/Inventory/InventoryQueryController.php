@@ -81,7 +81,7 @@ class InventoryQueryController extends Controller
                     'location_code' => $inv->location->code ?? 'N/A',
                     'quantity_on_hand' => (float) $inv->quantity_on_hand,
                     'average_cost' => (float) $inv->average_cost,
-                    'last_movement_date' => $inv->last_count_date ?? $inv->updated_at,
+                    'last_movement_date' => $inv->updated_at,
                 ];
             });
 

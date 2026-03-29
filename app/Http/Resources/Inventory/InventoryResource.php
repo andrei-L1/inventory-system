@@ -24,9 +24,9 @@ class InventoryResource extends JsonResource
             // Relationships
             'product' => new ProductResource($this->whenLoaded('product')),
             'location' => [
-                'id' => $this->location->id ?? null,
-                'name' => $this->location->name ?? 'Unknown',
-                'code' => $this->location->code ?? 'N/A',
+                'id' => $this->location?->id ?? null,
+                'name' => $this->location?->name ?? 'Unknown',
+                'code' => $this->location?->code ?? 'N/A',
             ],
         ];
     }
