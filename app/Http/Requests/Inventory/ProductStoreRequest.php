@@ -2,24 +2,40 @@
 
 namespace App\Http\Requests\Inventory;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 class ProductStoreRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * Prepare the data for validation.
+     * Auto-generate code and SKU if missing.
      */
+    protected function prepareForValidation(): void
+    {
+        if (empty($this->product_code)) {
+            $this->merge([
+                'product_code' => 'PRD-'.strtoupper(Str::random(8)),
+            ]);
+        }
+
+        if (empty($this->sku)) {
+            // Generate SKU based on name if blank
+            $sku = Str::slug($this->name);
+            if (empty($sku)) {
+                $sku = 'SKU-'.strtoupper(Str::random(6));
+            } else {
+                $sku = strtoupper($sku).'-'.strtoupper(Str::random(4));
+            }
+            $this->merge(['sku' => $sku]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -37,7 +53,26 @@ class ProductStoreRequest extends FormRequest
             'reorder_point' => 'nullable|numeric|min:0',
             'reorder_quantity' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
-            'image' => 'nullable|image|max:2048', // 2MB max
+            'image' => 'nullable|image|max:2048',
+        ];
+    }
+
+    /**
+     * Detailed, business-friendly validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'product_code.required' => 'A unique system identifier (Product Code) is required.',
+            'product_code.unique' => 'This product code is already assigned to another record.',
+            'name.required' => 'The product name field is mandatory.',
+            'sku.required' => 'A Stock Keeping Unit (SKU) is required for inventory tracking.',
+            'sku.unique' => 'This SKU is already in use by another product.',
+            'category_id.required' => 'Please select a valid product category.',
+            'uom_id.required' => 'Unit of Measure must be defined.',
+            'costing_method_id.required' => 'Inventory costing method is a required parameter.',
+            'selling_price.numeric' => 'Selling price must be a valid numerical value.',
+            'image.max' => 'The uploaded image size cannot exceed 2MB.',
         ];
     }
 }

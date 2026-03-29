@@ -46,4 +46,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/uom-center', function () {
         return Inertia::render('UomCenter');
     })->name('uom-center');
+
+    // --- Stock Movement (Phase 2.4) ---
+    Route::get('/movements/receipt', function () {
+        return Inertia::render('Movements/ReceiptForm');
+    })->name('movements.receipt');
+
+    Route::get('/movements/issue', function () {
+        return Inertia::render('Movements/IssueForm');
+    })->name('movements.issue');
+
+    Route::get('/movements/transfer', function () {
+        return Inertia::render('Movements/TransferForm');
+    })->name('movements.transfer');
+
+    Route::get('/movements/adjustment', function () {
+        return Inertia::render('Movements/AdjustmentForm');
+    })->name('movements.adjustment');
 });
