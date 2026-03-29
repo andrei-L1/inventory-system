@@ -115,21 +115,24 @@ const getStatusColor = (statusName) => {
                 </div>
 
                 <div class="flex items-center gap-3 z-10">
-                    <div class="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 mr-4">
+                    <!-- Tab Switcher -->
+                    <div class="tab-switcher mr-4">
                         <button 
                             @click="activeTab = 'orders'"
-                            :class="[activeTab === 'orders' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300']"
-                            class="px-4 py-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase transition-all"
+                            :class="activeTab === 'orders' ? 'tab-btn--active' : 'tab-btn--inactive'"
+                            class="tab-btn"
                         >
-                            Ledger
+                            <i class="pi pi-list-check tab-btn__icon"></i>
+                            <span>Ledger</span>
                         </button>
                         <button 
                             @click="activeTab = 'suggestions'"
-                            :class="[activeTab === 'suggestions' ? 'bg-zinc-800 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300']"
-                            class="px-4 py-1.5 rounded-lg text-[10px] font-bold tracking-widest uppercase transition-all"
+                            :class="activeTab === 'suggestions' ? 'tab-btn--active' : 'tab-btn--inactive'"
+                            class="tab-btn"
                         >
-                            Suggestions
-                            <span v-if="suggestions.length > 0" class="ml-1 bg-orange-500 text-black px-1.5 py-0.5 rounded-full text-[8px]">{{ suggestions.length }}</span>
+                            <i class="pi pi-lightbulb tab-btn__icon"></i>
+                            <span>Suggestions</span>
+                            <span v-if="suggestions.length > 0" class="tab-btn__badge">{{ suggestions.length }}</span>
                         </button>
                     </div>
 
@@ -299,6 +302,79 @@ const getStatusColor = (statusName) => {
 </template>
 
 <style scoped>
+/* ─── Tab Switcher ─────────────────────────────────────────────── */
+.tab-switcher {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: #09090b; /* zinc-950 */
+    border: 1px solid rgba(39, 39, 42, 0.9); /* zinc-800 */
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.tab-btn__icon {
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.85;
+}
+
+.tab-btn--active {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(39, 39, 42, 0.9) 100%);
+    color: #fff;
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.tab-btn--active .tab-btn__icon {
+    color: #fb923c; /* orange-400 */
+    opacity: 1;
+}
+
+.tab-btn--inactive {
+    background: transparent;
+    color: #52525b; /* zinc-600 */
+}
+
+.tab-btn--inactive:hover {
+    background: rgba(39, 39, 42, 0.5);
+    color: #a1a1aa; /* zinc-400 */
+}
+
+.tab-btn__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #f97316; /* orange-500 */
+    color: #09090b;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+/* ─── DataTable ────────────────────────────────────────────────── */
 :deep(.p-datatable .p-datatable-thead > tr > th) {
     background: #18181b; /* zinc-950 */
     border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
