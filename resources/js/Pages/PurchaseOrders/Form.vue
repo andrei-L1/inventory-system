@@ -1,0 +1,260 @@
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import AppLayout from '@/Layouts/AppLayout.vue';
+import InputText from 'primevue/inputtext';
+import Dropdown from 'primevue/dropdown';
+import Textarea from 'primevue/textarea';
+import Calendar from 'primevue/calendar';
+import Button from 'primevue/button';
+import InputNumber from 'primevue/inputnumber';
+import Toast from 'primevue/toast';
+import { useToast } from "primevue/usetoast";
+import axios from 'axios';
+
+const toast = useToast();
+
+const props = defineProps({
+    purchaseOrder: { type: Object, default: null }
+});
+
+const isEdit = computed(() => !!props.purchaseOrder);
+const loading = ref(false);
+
+const vendors = ref([]);
+const products = ref([]);
+
+const form = ref({
+    vendor_id: null,
+    expected_delivery_date: null,
+    currency: 'USD',
+    notes: '',
+    lines: [
+        { product_id: null, ordered_qty: 1, unit_cost: 0.00 }
+    ]
+});
+
+const loadLookups = async () => {
+    try {
+        const [vendRes, prodRes] = await Promise.all([
+            axios.get('/api/vendors?limit=1000'),
+            axios.get('/api/products?limit=1000')
+        ]);
+        vendors.value = vendRes.data.data;
+        products.value = prodRes.data.data;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load system data', life: 3000 });
+    }
+};
+
+onMounted(async () => {
+    await loadLookups();
+    if (isEdit.value) {
+        // Hydrate form logic if doing edit
+    }
+});
+
+const addLine = () => {
+    form.value.lines.push({ product_id: null, ordered_qty: 1, unit_cost: 0.00 });
+};
+
+const removeLine = (index) => {
+    if (form.value.lines.length > 1) {
+        form.value.lines.splice(index, 1);
+    }
+};
+
+const grandTotal = computed(() => {
+    return form.value.lines.reduce((sum, line) => {
+        return sum + (line.ordered_qty * line.unit_cost);
+    }, 0);
+});
+
+const submit = async () => {
+    if(!form.value.vendor_id) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a vendor', life: 3000 });
+        return;
+    }
+
+    loading.value = true;
+    try {
+        const payload = { ...form.value };
+        const res = isEdit.value 
+            ? await axios.put(`/api/purchase-orders/${props.purchaseOrder.id}`, payload)
+            : await axios.post('/api/purchase-orders', payload);
+            
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Purchase Order drafted successfully', life: 3000 });
+        router.visit(`/purchase-orders/${res.data.id}`);
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Submission failed', life: 3000 });
+    } finally {
+        loading.value = false;
+    }
+};
+
+const cancel = () => {
+    router.visit('/purchase-orders');
+};
+</script>
+
+<template>
+    <Head :title="isEdit ? 'Edit PO' : 'Draft Purchase Order'" />
+    <AppLayout>
+        <div class="h-full max-w-5xl mx-auto flex flex-col gap-6">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[100px] pointer-events-none"></div>
+                <div class="flex items-center gap-4 z-10">
+                    <button @click="cancel" class="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors hover:border-zinc-600">
+                        <i class="pi pi-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Purchase Order' : 'Draft Purchase Order' }}</h1>
+                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Create New Procurement Requisition</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 z-10">
+                    <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-zinc-400 hover:!text-white" @click="cancel" />
+                    <Button 
+                        label="Save Draft" 
+                        icon="pi pi-save" 
+                        :loading="loading" 
+                        @click="submit"
+                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
+                    />
+                </div>
+            </div>
+
+            <!-- Form Body -->
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Header Info -->
+                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Supplier Details</span>
+                        
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Vendor (Supplier)</label>
+                            <Dropdown 
+                                v-model="form.vendor_id" 
+                                :options="vendors" 
+                                optionLabel="name" 
+                                optionValue="id" 
+                                placeholder="Select vendor" 
+                                filter
+                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Currency</label>
+                            <Dropdown 
+                                v-model="form.currency" 
+                                :options="[{label:'USD', value:'USD'}, {label:'EUR', value:'EUR'}, {label:'GBP', value:'GBP'}]" 
+                                optionLabel="label" 
+                                optionValue="value"
+                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Expected Delivery</label>
+                            <Calendar 
+                                v-model="form.expected_delivery_date" 
+                                dateFormat="yy-mm-dd" 
+                                placeholder="YYYY-MM-DD"
+                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
+                            />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Document Notes</label>
+                            <Textarea v-model="form.notes" rows="4" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50 resize-none" placeholder="Add terms or instructions..." />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lines Editor -->
+                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
+                        <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-2">
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Order Lines</span>
+                            <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded">Total: {{ form.currency }} {{ grandTotal.toFixed(2) }}</span>
+                        </div>
+                        
+                        <!-- Line Items -->
+                        <div class="flex flex-col gap-4">
+                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl flex flex-col md:flex-row gap-4 items-end relative group transition-all hover:border-zinc-700">
+                                <div class="flex flex-col gap-2 flex-1 w-full relative">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Subject Item</label>
+                                    <Dropdown 
+                                        v-model="line.product_id" 
+                                        :options="products" 
+                                        optionLabel="name" 
+                                        optionValue="id" 
+                                        placeholder="Select product" 
+                                        filter
+                                        class="w-full bg-zinc-900 border-zinc-800 focus:border-orange-500/50"
+                                    >
+                                        <template #option="slotProps">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
+                                                <span class="text-[10px] font-mono text-zinc-500">SKU: {{ slotProps.option.sku }}</span>
+                                            </div>
+                                        </template>
+                                    </Dropdown>
+                                </div>
+                                <div class="flex flex-col gap-2 w-full md:w-32">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
+                                    <InputNumber v-model="line.ordered_qty" :min="1" class="w-full bg-zinc-900 border-zinc-800 text-center" />
+                                </div>
+                                <div class="flex flex-col gap-2 w-full md:w-32">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>
+                                    <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full bg-zinc-900 border-zinc-800 text-end" />
+                                </div>
+                                <Button 
+                                    icon="pi pi-trash" 
+                                    class="p-button-rounded p-button-danger p-button-text !text-zinc-600 hover:!text-red-400 absolute md:relative top-2 right-2 md:top-0 md:right-0" 
+                                    @click="removeLine(index)"
+                                    v-if="form.lines.length > 1"
+                                />
+                            </div>
+                        </div>
+
+                        <Button 
+                            icon="pi pi-plus" 
+                            label="Add Line Item" 
+                            class="p-button-outlined p-button-sm w-full mt-2 !text-orange-400 !border-orange-500/20 hover:!bg-orange-500/10 border-dashed font-bold font-mono tracking-widest uppercase hover:!border-orange-500/50 transition-all" 
+                            @click="addLine" 
+                        />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </AppLayout>
+</template>
+
+<style scoped>
+:deep(.p-dropdown), :deep(.p-calendar), :deep(.p-inputnumber-input), :deep(.p-inputtext) {
+    background: #09090b !important;
+    border-color: #27272a;
+    color: white;
+}
+:deep(.p-dropdown-panel) {
+    background: #18181b;
+    border: 1px solid #27272a;
+}
+:deep(.p-dropdown-item) {
+    color: #a1a1aa;
+}
+:deep(.p-dropdown-item.p-highlight) {
+    background: rgba(249, 115, 22, 0.1);
+    color: #fb923c;
+}
+:deep(.p-dropdown-item:hover) {
+    background: #27272a;
+    color: white;
+}
+</style>
