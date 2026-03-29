@@ -5,6 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $transaction_id
+ * @property int $product_id
+ * @property int|null $location_id
+ * @property float $quantity
+ * @property float $unit_cost
+ * @property float $total_cost
+ * @property float $unit_price
+ * @property int|null $costing_method_id
+ * @property string|null $notes
+ * @property-read Transaction $transaction
+ * @property-read Product $product
+ * @property-read Location|null $location
+ */
 class TransactionLine extends Model
 {
     protected $fillable = [

@@ -3,12 +3,45 @@
 namespace App\Models;
 
 use App\Traits\HasAttachments;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $product_code
+ * @property string $name
+ * @property string|null $description
+ * @property int $category_id
+ * @property int $uom_id
+ * @property int|null $preferred_vendor_id
+ * @property string|null $brand
+ * @property string $sku
+ * @property string|null $barcode
+ * @property int $costing_method_id
+ * @property float $average_cost
+ * @property float $selling_price
+ * @property float $reorder_point
+ * @property float $reorder_quantity
+ * @property bool $is_active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read float $total_qoh
+ * @property-read Category $category
+ * @property-read UnitOfMeasure $uom
+ * @property-read Vendor|null $preferredVendor
+ * @property-read CostingMethod $costingMethod
+ * @property-read Collection|Inventory[] $inventories
+ * @property-read Collection|InventoryCostLayer[] $costLayers
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder|Product newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Product newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Product query()
+ */
 class Product extends Model
 {
     use HasAttachments, HasFactory, SoftDeletes;
