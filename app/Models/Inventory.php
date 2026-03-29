@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -11,11 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $location_id
  * @property float $quantity_on_hand
  * @property float $average_cost
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- * 
- * @property-read \App\Models\Product $product
- * @property-read \App\Models\Location $location
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Product $product
+ * @property-read Location $location
  */
 class Inventory extends Model
 {

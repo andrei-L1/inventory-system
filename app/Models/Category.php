@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -10,8 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $description
  * @property int|null $parent_id
  * @property bool $is_active
- * 
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Product[] $products
+ * @property-read Collection|Product[] $products
  */
 class Category extends Model
 {

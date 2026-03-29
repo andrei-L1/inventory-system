@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Traits\HasAttachments;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -18,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $transaction_status_id
  * @property int|null $from_location_id
  * @property int|null $to_location_id
- * @property \Illuminate\Support\Carbon $transaction_date
+ * @property Carbon $transaction_date
  * @property string|null $notes
  * @property string|null $reference_doc
  * @property int|null $purchase_order_id
@@ -26,19 +28,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int|null $adjustment_reason_id
  * @property int $created_by
  * @property int|null $posted_by
- * @property \Illuminate\Support\Carbon|null $posted_at
+ * @property Carbon|null $posted_at
  * @property int|null $cancelled_by
- * @property \Illuminate\Support\Carbon|null $cancelled_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
- * 
- * @property-read \App\Models\TransactionType $type
- * @property-read \App\Models\TransactionStatus $status
- * @property-read \App\Models\Location|null $fromLocation
- * @property-read \App\Models\Location|null $toLocation
- * @property-read \App\Models\Vendor|null $vendor
- * @property-read \App\Models\User $createdBy
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\TransactionLine[] $lines
+ * @property Carbon|null $cancelled_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read TransactionType $type
+ * @property-read TransactionStatus $status
+ * @property-read Location|null $fromLocation
+ * @property-read Location|null $toLocation
+ * @property-read Vendor|null $vendor
+ * @property-read User $createdBy
+ * @property-read Collection|TransactionLine[] $lines
  */
 class Transaction extends Model
 {

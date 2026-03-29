@@ -16,10 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $unit_price
  * @property int|null $costing_method_id
  * @property string|null $notes
- * 
- * @property-read \App\Models\Transaction $transaction
- * @property-read \App\Models\Product $product
- * @property-read \App\Models\Location|null $location
+ * @property-read Transaction $transaction
+ * @property-read Product $product
+ * @property-read Location|null $location
  */
 class TransactionLine extends Model
 {
