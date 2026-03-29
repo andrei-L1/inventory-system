@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Inventory\AdjustmentController;
+use App\Http\Controllers\Api\Inventory\AdjustmentReasonController;
 use App\Http\Controllers\Api\Inventory\CategoryController;
 use App\Http\Controllers\Api\Inventory\CostingMethodController;
 use App\Http\Controllers\Api\Inventory\DashboardController;
@@ -78,6 +80,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('locations', LocationController::class)->only(['index', 'show'])->middleware('permission:view-inventory');
     Route::apiResource('locations', LocationController::class)->except(['index', 'show'])->middleware('permission:manage-inventory');
     Route::get('location-types', [LocationTypeController::class, 'index'])->middleware('permission:view-inventory');
+
+    // Adjustment Reasons & Dedicated Adjustments (Phase 2.1)
+    Route::get('adjustment-reasons', [AdjustmentReasonController::class, 'index'])->middleware('permission:view-inventory');
+    Route::post('adjustments', [AdjustmentController::class, 'store'])->middleware('permission:manage-inventory');
 });
 
 Route::get('/user', function (Request $request) {
