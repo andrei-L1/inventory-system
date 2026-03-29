@@ -60,17 +60,17 @@
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference / Invoice #</label>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference / Invoice # <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <InputText 
                                       v-model="form.reference_number" 
-                                      placeholder="INV-001" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-white"
+                                      placeholder="Leave blank to auto-generate" 
+                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-white placeholder:!text-zinc-800"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Notes</label>
-                                 <textarea v-model="form.notes" placeholder="Delivery notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-32 resize-none outline-none focus:border-rose-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Notes <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional delivery notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-32 resize-none outline-none focus:border-rose-500/30 transition-all"></textarea>
                              </div>
                         </div>
                     </aside>
@@ -149,7 +149,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
@@ -157,27 +157,47 @@ import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 
-const locations = ref([
-    { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
-    { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
-]);
+const locations = ref([]);
 const products = ref([]);
+const loadingData = ref(false);
 
-const loadProducts = async () => {
+const loadData = async () => {
+    loadingData.value = true;
     try {
-        const res = await axios.get('/api/products');
-        products.value = res.data.data;
+        const [prodRes, locRes] = await Promise.all([
+            axios.get('/api/products'),
+            axios.get('/api/locations')
+        ]);
+        
+        products.value = prodRes.data.data;
+        locations.value = locRes.data.data;
+        
+        const { url } = usePage();
+        const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
+        const productId = searchParams.get('product_id');
+        
+        if (productId && products.value.length > 0) {
+            const preselected = products.value.find(p => p.id == productId);
+            if (preselected) {
+                // Remove the empty line if it exists
+                if (form.lines.length === 0) {
+                    form.lines.push({ product: preselected, quantity: 1 });
+                }
+            }
+        }
     } catch (e) {
-        console.error('Failed to load products', e);
+        console.error('Failed to load data', e);
+    } finally {
+        loadingData.value = false;
     }
 };
 
 onMounted(() => {
-    loadProducts();
+    loadData();
 });
 
 const form = useForm({
-    from_location: { id: 1, name: 'Warehouse Alpha' },
+    from_location: null,
     reference_number: '',
     notes: '',
     lines: []

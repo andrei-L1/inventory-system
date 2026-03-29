@@ -56,8 +56,8 @@
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks / Notes</label>
-                                 <textarea v-model="form.notes" placeholder="Notes for audit trail..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-40 resize-none outline-none focus:border-amber-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks / Notes <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional notes for audit trail..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-40 resize-none outline-none focus:border-amber-500/30 transition-all"></textarea>
                              </div>
                         </div>
                     </aside>
@@ -145,7 +145,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
@@ -153,23 +153,42 @@ import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 
-const locations = ref([
-    { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
-    { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
-]);
+const locations = ref([]);
 const products = ref([]);
+const loadingData = ref(false);
 
-const loadProducts = async () => {
+const loadData = async () => {
+    loadingData.value = true;
     try {
-        const res = await axios.get('/api/products');
-        products.value = res.data.data;
+        const [prodRes, locRes] = await Promise.all([
+            axios.get('/api/products'),
+            axios.get('/api/locations')
+        ]);
+        
+        products.value = prodRes.data.data;
+        locations.value = locRes.data.data;
+        
+        const { url } = usePage();
+        const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
+        const productId = searchParams.get('product_id');
+        
+        if (productId && products.value.length > 0) {
+            const preselected = products.value.find(p => p.id == productId);
+            if (preselected) {
+                if (form.lines.length === 0) {
+                    form.lines.push({ product: preselected, quantity: 0 });
+                }
+            }
+        }
     } catch (e) {
-        console.error('Failed to load products', e);
+        console.error('Failed to load data', e);
+    } finally {
+        loadingData.value = false;
     }
 };
 
 onMounted(() => {
-    loadProducts();
+    loadData();
 });
 const reasons = ref([
     { label: 'Physical Count Difference', value: 'disc' },
@@ -179,7 +198,7 @@ const reasons = ref([
 ]);
 
 const form = useForm({
-    location: { id: 1, name: 'Warehouse Alpha' },
+    location: null,
     reason: { label: 'Physical Count Difference', id: 1 },
     notes: '',
     lines: []

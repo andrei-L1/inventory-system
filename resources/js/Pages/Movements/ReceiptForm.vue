@@ -54,7 +54,7 @@
                         
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Supplier</label>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Supplier <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <Select 
                                       v-model="form.vendor" 
                                       :options="vendors" 
@@ -63,19 +63,30 @@
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                  />
                              </div>
+                             
+                             <div class="flex flex-col gap-3">
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Destination Location</label>
+                                 <Select 
+                                      v-model="form.to_location" 
+                                      :options="locations" 
+                                      optionLabel="name" 
+                                      placeholder="Select Location" 
+                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                 />
+                             </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference / PO #</label>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference / PO # <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <InputText 
                                       v-model="form.reference_number" 
-                                      placeholder="PO-XXXX" 
+                                      placeholder="Leave blank to auto-generate" 
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-white placeholder:!text-zinc-800"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks</label>
-                                 <textarea v-model="form.notes" placeholder="Remarks..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-32 resize-none outline-none focus:border-sky-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-32 resize-none outline-none focus:border-sky-500/30 transition-all"></textarea>
                              </div>
                         </div>
 
@@ -187,12 +198,9 @@ const queryParams = computed(() => {
     return Object.fromEntries(searchParams.entries());
 });
 
-const vendors = ref([
-    { id: 1, name: 'Cyberdyne Systems Research' },
-    { id: 2, name: 'Tyrell Corp Manufacturing' },
-    { id: 3, name: 'Weyland-Yutani Logistics' }
-]);
+const vendors = ref([]);
 const products = ref([]);
+const locations = ref([]);
 const loadingProducts = ref(false);
 
 const form = useForm({
@@ -248,11 +256,19 @@ const removeLine = (index) => {
 const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
 const totalValue = computed(() => form.lines.reduce((s, l) => s + ((parseFloat(l.quantity) || 0) * (parseFloat(l.unit_cost) || 0)), 0));
 
-const loadProducts = async () => {
+const loadData = async () => {
     loadingProducts.value = true;
     try {
-        const res = await axios.get('/api/products');
-        products.value = res.data.data;
+        const [prodRes, locRes, vendRes] = await Promise.all([
+            axios.get('/api/products'),
+            axios.get('/api/locations'),
+            axios.get('/api/vendors')
+        ]);
+        
+        products.value = prodRes.data.data;
+        locations.value = locRes.data.data;
+        vendors.value = vendRes.data.data;
+        
         if (queryParams.value.product_id && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == queryParams.value.product_id);
             if (preselected) {
@@ -260,14 +276,14 @@ const loadProducts = async () => {
             }
         }
     } catch (e) {
-        console.error('Failed to load products', e);
+        console.error('Failed to load data', e);
     } finally {
         loadingProducts.value = false;
     }
 };
 
 onMounted(() => {
-    loadProducts();
+    loadData();
 });
 </script>
 
