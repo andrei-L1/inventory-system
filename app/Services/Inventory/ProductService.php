@@ -33,7 +33,11 @@ class ProductService
             $query->where('category_id', $filters['category_id']);
         }
 
-        return $query->paginate($perPage);
+        if (! empty($filters['vendor_id'])) {
+            $query->where('preferred_vendor_id', $filters['vendor_id']);
+        }
+
+        return $query->paginate($filters['per_page'] ?? $perPage);
     }
 
     /**
