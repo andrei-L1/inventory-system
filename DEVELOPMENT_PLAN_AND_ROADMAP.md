@@ -121,10 +121,10 @@ Each phase below corresponds to one stage of that chain.
 - [x] **VendorCenter.vue** — Full CRUD view (vendor details, transaction history, and creation/editing parameters)
 - [x] **Vendor Create/Edit Dialog** — Interactive premium form integrated into Vendor Center
 
-### 1.5 UOM & Costing Configuration
+### 1.5 UOM & Costing Configuration ✅ NOW LIVE
 - [x] `UnitOfMeasureController` — Full CRUD
-- [ ] **UOM Management Page** — or panel within Settings (currently no frontend UI)
-- [ ] `UomConversionController` — CRUD for conversion factors (e.g., 1 Box = 12 pcs)
+- [x] **UOM Management Page** — (UOM Center added to frontend UI)
+- [x] `UomConversionController` — CRUD for conversion factors (e.g., 1 Box = 12 pcs)
 - [x] UOM Conversion logic integrated into `StockService`
 
 ### 1.6 Seeders (Reference Data)
@@ -477,7 +477,7 @@ Customer Inquiry
 | Phase | Domain | Status |
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
-| 1 | System Setup: Master Data & Auth | ✅ ~97% Complete (UOM UI + ConversionController missing) |
+| 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | 🚧 ~55% — write API and query logic live, UI wiring ongoing |
 | 3 | Dashboard & KPIs | 🚧 ~75% — backend stats live, frontend successfully consuming them |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
