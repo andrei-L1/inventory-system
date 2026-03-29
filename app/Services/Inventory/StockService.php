@@ -178,13 +178,13 @@ class StockService
     {
         return DB::transaction(function () use ($transaction) {
             $transaction->loadMissing(['lines', 'status']);
-            
+
             if ($transaction->status->name !== 'posted') {
-                throw new LogicException("Only posted transactions can be reversed.");
+                throw new LogicException('Only posted transactions can be reversed.');
             }
 
             $revStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
-            
+
             // 1. Prepare counter data
             $reverseData = [
                 'header' => [

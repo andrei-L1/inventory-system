@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\TransactionStoreRequest;
+use App\Http\Resources\Inventory\TransactionResource;
+use App\Models\TransactionType;
+use App\Services\Inventory\StockService;
 use Illuminate\Http\Request;
 
 class AdjustmentController extends Controller
@@ -18,24 +23,24 @@ class AdjustmentController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(\App\Http\Requests\Inventory\TransactionStoreRequest $request, \App\Services\Inventory\StockService $stockService)
+    public function store(TransactionStoreRequest $request, StockService $stockService)
     {
         try {
             $data = $request->validated();
-            
+
             // Force transaction type to 'adjustment'
-            $adjType = \App\Models\TransactionType::where('code', 'ADJS')->firstOrFail();
+            $adjType = TransactionType::where('code', 'ADJS')->firstOrFail();
             $data['header']['transaction_type_id'] = $adjType->id;
 
             $transaction = $stockService->recordMovement($data);
 
             return response()->json(
-                new \App\Http\Resources\Inventory\TransactionResource(
+                new TransactionResource(
                     $transaction->load(['type', 'status', 'fromLocation', 'toLocation', 'lines', 'adjustmentReason'])
                 ),
                 201
             );
-        } catch (\App\Exceptions\InsufficientStockException $e) {
+        } catch (InsufficientStockException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Adjustment failed.', 'error' => $e->getMessage()], 500);

@@ -108,13 +108,14 @@ class TransactionController extends Controller
         if ($transaction->status->name === 'posted') {
             try {
                 $reversal = $this->stockService->reverseTransaction($transaction);
+
                 return response()->json([
                     'message' => 'Transaction was posted, a reversal entry has been created to void stock.',
                     'reversal_id' => $reversal->id,
-                    'reversal' => new TransactionResource($reversal->load(['lines', 'status']))
+                    'reversal' => new TransactionResource($reversal->load(['lines', 'status'])),
                 ]);
             } catch (InsufficientStockException $e) {
-                return response()->json(['message' => 'Reversal failed: ' . $e->getMessage()], 422);
+                return response()->json(['message' => 'Reversal failed: '.$e->getMessage()], 422);
             }
         }
 

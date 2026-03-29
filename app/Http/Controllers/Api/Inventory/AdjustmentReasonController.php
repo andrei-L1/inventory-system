@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdjustmentReason;
 use Illuminate\Http\Request;
 
 class AdjustmentReasonController extends Controller
@@ -13,7 +14,7 @@ class AdjustmentReasonController extends Controller
     public function index()
     {
         return response()->json([
-            'data' => \App\Models\AdjustmentReason::where('is_active', true)->get()
+            'data' => AdjustmentReason::where('is_active', true)->get(),
         ]);
     }
 
