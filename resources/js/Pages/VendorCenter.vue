@@ -11,6 +11,7 @@ import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import Textarea from 'primevue/textarea';
 import ToggleSwitch from 'primevue/toggleswitch';
+import Toast from 'primevue/toast';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";

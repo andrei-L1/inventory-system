@@ -13,6 +13,7 @@ use App\Models\TransactionStatus;
 use App\Models\Vendor;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use LogicException;
@@ -123,7 +124,7 @@ class TransactionController extends Controller
     // GET /api/products/{product}/transactions
     // Transaction history for a specific product (Inventory Center ledger).
     // -------------------------------------------------------------------------
-    public function forProduct(Product $product): JsonResponse
+    public function forProduct(Product $product): AnonymousResourceCollection
     {
         $transactions = Transaction::whereHas('lines', function ($q) use ($product) {
             $q->where('product_id', $product->id);
@@ -139,14 +140,14 @@ class TransactionController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        return response()->json(TransactionResource::collection($transactions));
+        return TransactionResource::collection($transactions);
     }
 
     // -------------------------------------------------------------------------
     // GET /api/vendors/{vendor}/transactions
     // Transaction history for a specific vendor.
     // -------------------------------------------------------------------------
-    public function forVendor(Vendor $vendor): JsonResponse
+    public function forVendor(Vendor $vendor): AnonymousResourceCollection
     {
         $transactions = Transaction::where('vendor_id', $vendor->id)
             ->with(['type', 'status', 'fromLocation', 'toLocation'])
@@ -154,6 +155,6 @@ class TransactionController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        return response()->json(TransactionResource::collection($transactions));
+        return TransactionResource::collection($transactions);
     }
 }

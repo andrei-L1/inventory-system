@@ -97,11 +97,19 @@ const getStockStatusLabel = (p) => {
 
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <!-- Header Section -->
-            <div class="max-w-[1600px] w-full mx-auto mb-10">
+            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em] block mb-2 font-mono">Live Inventory Monitoring</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Inventory Center</h1>
                     <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Track current stock levels, movement history, and valuation across all storage locations in the system.</p>
+                </div>
+                
+                <div class="flex gap-4 items-center">
+                    <button @click="toast.add({severity:'info', summary:'Coming Soon', detail:'Movement forms are under construction', life: 3000})" 
+                            class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
+                        <i class="pi pi-plus text-sm"></i>
+                        <span>New Movement</span>
+                    </button>
                 </div>
             </div>
 
@@ -213,7 +221,7 @@ const getStockStatusLabel = (p) => {
                                     </div>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-12 gap-y-8">
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-x-12 gap-y-8">
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">SKU / Code</label>
                                         <code class="text-sky-400 font-mono text-sm tracking-tighter bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
@@ -221,6 +229,10 @@ const getStockStatusLabel = (p) => {
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
                                         <span class="text-white font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.selling_price) }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Est. Unit Cost (WAC)</label>
+                                        <span class="text-sky-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.average_cost) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Unit of Measure</label>

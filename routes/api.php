@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Inventory\CategoryController;
 use App\Http\Controllers\Api\Inventory\CostingMethodController;
 use App\Http\Controllers\Api\Inventory\DashboardController;
+use App\Http\Controllers\Api\Inventory\InventoryQueryController;
 use App\Http\Controllers\Api\Inventory\LocationController;
 use App\Http\Controllers\Api\Inventory\LocationTypeController;
 use App\Http\Controllers\Api\Inventory\ProductController;
@@ -60,6 +61,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->middleware('permission:view-transactions');
     Route::get('vendors/{vendor}/transactions', [TransactionController::class, 'forVendor'])
         ->middleware('permission:view-transactions');
+
+    // Phase 2.2: Inventory Queries
+    Route::get('inventory/{product}/locations', [InventoryQueryController::class, 'getLocations'])
+        ->middleware('permission:view-inventory');
+    Route::get('inventory/{product}/cost-layers', [InventoryQueryController::class, 'getCostLayers'])
+        ->middleware('permission:view-inventory');
 
     // Dashboard Stats
     Route::get('dashboard/stats', [DashboardController::class, 'getStats'])->middleware('permission:view-products');
