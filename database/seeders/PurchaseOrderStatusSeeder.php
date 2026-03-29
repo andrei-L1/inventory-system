@@ -12,6 +12,8 @@ class PurchaseOrderStatusSeeder extends Seeder
         $statuses = [
             ['name' => 'draft',               'is_editable' => true],
             ['name' => 'open',                'is_editable' => true],
+            ['name' => 'sent',                'is_editable' => false],
+            ['name' => 'in_transit',          'is_editable' => false],
             ['name' => 'partially_received',  'is_editable' => false],
             ['name' => 'closed',              'is_editable' => false],
             ['name' => 'cancelled',           'is_editable' => false],

@@ -460,10 +460,22 @@ const stats = computed(() => ({
                         </template>
                     </Column>
                     
-                    <Column field="category" header="Category" style="width: 180px">
+                    <Column field="category" header="Category" style="width: 140px">
                         <template #body="{ data }">
                             <span class="text-[9px] font-bold px-3 py-1 bg-sky-500/5 border border-sky-500/20 rounded-full text-sky-400/80 uppercase tracking-widest font-mono">
                                 {{ data.category?.name || 'Unclassified' }}
+                            </span>
+                        </template>
+                    </Column>
+
+                    <Column field="owner" header="Ownership" style="width: 180px">
+                        <template #body="{ data }">
+                            <div v-if="data.preferred_vendor" class="flex flex-col">
+                                <span class="text-[10px] font-bold text-zinc-200 tracking-tight">{{ data.preferred_vendor.name }}</span>
+                                <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest font-mono">{{ data.preferred_vendor.vendor_code }}</span>
+                            </div>
+                            <span v-else class="text-[9px] font-bold px-3 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded text-zinc-500 uppercase tracking-widest font-mono">
+                                INTERNAL
                             </span>
                         </template>
                     </Column>
@@ -610,6 +622,16 @@ const stats = computed(() => ({
                                         <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
                                                 class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
                                                 :class="{'!border-red-500/50': errors.uom_id}" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Preferred Vendor (Owner)</label>
+                                            <span class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest font-mono italic">Optional</span>
+                                        </div>
+                                        <Select v-model="product.preferred_vendor_id" :options="vendors" optionLabel="name" optionValue="id" 
+                                                placeholder="Link to a supplier..."
+                                                showClear
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
                                     </div>
                                     <div class="flex flex-col gap-3 md:col-span-2">
                                         <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Description</label>

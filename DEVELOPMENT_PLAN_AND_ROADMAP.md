@@ -222,8 +222,8 @@ Each phase below corresponds to one stage of that chain.
 
 ---
 
-## 📋 Phase 4 — Procurement: Purchase Order Lifecycle
-> Status: NOT STARTED — schema fully in place, zero backend/frontend code
+## ✅ Phase 4 — Procurement: Purchase Order Lifecycle
+> Status: COMPLETE — End-to-end PO lifecycle with GRN audit-trail and automated user attribution.
 
 ### Procurement Workflow
 ```
@@ -474,7 +474,7 @@ Customer Inquiry
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | 🚧 ~75% — core stats + feed live; `transactions_today` added; mini-chart + PO/SO counts pending |
-| 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
+| 4 | Procurement (Purchase Orders) | ✅ COMPLETE — End-to-end lifecycle with GRN audit trail |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |

@@ -3,9 +3,9 @@ import { ref, onMounted, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
-import Calendar from 'primevue/calendar';
+import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import Toast from 'primevue/toast';
@@ -27,7 +27,7 @@ const products = ref([]);
 const form = ref({
     vendor_id: null,
     expected_delivery_date: null,
-    currency: 'USD',
+    currency: 'PHP',
     notes: '',
     lines: [
         { product_id: null, ordered_qty: 1, unit_cost: 0.00 }
@@ -44,6 +44,19 @@ const loadLookups = async () => {
         products.value = prodRes.data.data;
     } catch (e) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load system data', life: 3000 });
+    }
+};
+
+const filteredProducts = computed(() => {
+    if (!form.value.vendor_id) return [];
+    // Only show products where no vendor is assigned (global) OR preferred vendor matches
+    return products.value.filter(p => !p.preferred_vendor_id || p.preferred_vendor_id === form.value.vendor_id);
+});
+
+const onProductSelect = (line) => {
+    const product = products.value.find(p => p.id === line.product_id);
+    if (product) {
+        line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
     }
 };
 
@@ -136,31 +149,23 @@ const cancel = () => {
                         
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Vendor (Supplier)</label>
-                            <Dropdown 
+                            <Select 
                                 v-model="form.vendor_id" 
                                 :options="vendors" 
                                 optionLabel="name" 
                                 optionValue="id" 
                                 placeholder="Select vendor" 
                                 filter
+                                @change="form.lines = [{ product_id: null, ordered_qty: 1, unit_cost: 0.00 }]"
                                 class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
                             />
                         </div>
 
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Currency</label>
-                            <Dropdown 
-                                v-model="form.currency" 
-                                :options="[{label:'USD', value:'USD'}, {label:'EUR', value:'EUR'}, {label:'GBP', value:'GBP'}]" 
-                                optionLabel="label" 
-                                optionValue="value"
-                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
-                            />
-                        </div>
+
 
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Expected Delivery</label>
-                            <Calendar 
+                            <DatePicker 
                                 v-model="form.expected_delivery_date" 
                                 dateFormat="yy-mm-dd" 
                                 placeholder="YYYY-MM-DD"
@@ -180,7 +185,7 @@ const cancel = () => {
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
                         <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-2">
                             <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Order Lines</span>
-                            <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded">Total: {{ form.currency }} {{ grandTotal.toFixed(2) }}</span>
+                            <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded">Total: ₱{{ grandTotal.toFixed(2) }}</span>
                         </div>
                         
                         <!-- Line Items -->
@@ -188,30 +193,31 @@ const cancel = () => {
                             <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl flex flex-col md:flex-row gap-4 items-end relative group transition-all hover:border-zinc-700">
                                 <div class="flex flex-col gap-2 flex-1 w-full relative">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Subject Item</label>
-                                    <Dropdown 
+                                    <Select 
                                         v-model="line.product_id" 
-                                        :options="products" 
+                                        :options="filteredProducts" 
                                         optionLabel="name" 
                                         optionValue="id" 
                                         placeholder="Select product" 
                                         filter
-                                        class="w-full bg-zinc-900 border-zinc-800 focus:border-orange-500/50"
+                                        @change="onProductSelect(line)"
+                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-orange-500/50"
                                     >
                                         <template #option="slotProps">
                                             <div class="flex flex-col">
                                                 <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
-                                                <span class="text-[10px] font-mono text-zinc-500">SKU: {{ slotProps.option.sku }}</span>
+                                                <span class="text-[10px] font-mono text-zinc-500">SKU: {{ slotProps.option.sku }} | Price: ₱{{ slotProps.option.average_cost }}</span>
                                             </div>
                                         </template>
-                                    </Dropdown>
+                                    </Select>
                                 </div>
-                                <div class="flex flex-col gap-2 w-full md:w-32">
+                                <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
-                                    <InputNumber v-model="line.ordered_qty" :min="1" class="w-full bg-zinc-900 border-zinc-800 text-center" />
+                                    <InputNumber v-model="line.ordered_qty" :min="1" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
-                                <div class="flex flex-col gap-2 w-full md:w-32">
+                                <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>
-                                    <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full bg-zinc-900 border-zinc-800 text-end" />
+                                    <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <Button 
                                     icon="pi pi-trash" 
@@ -237,23 +243,23 @@ const cancel = () => {
 </template>
 
 <style scoped>
-:deep(.p-dropdown), :deep(.p-calendar), :deep(.p-inputnumber-input), :deep(.p-inputtext) {
+:deep(.p-select), :deep(.p-datepicker), :deep(.p-inputnumber-input), :deep(.p-inputtext) {
     background: #09090b !important;
     border-color: #27272a;
     color: white;
 }
-:deep(.p-dropdown-panel) {
+:deep(.p-select-panel), :deep(.p-datepicker-panel) {
     background: #18181b;
     border: 1px solid #27272a;
 }
-:deep(.p-dropdown-item) {
+:deep(.p-select-item), :deep(.p-datepicker-day) {
     color: #a1a1aa;
 }
-:deep(.p-dropdown-item.p-highlight) {
+:deep(.p-select-item.p-highlight) {
     background: rgba(249, 115, 22, 0.1);
     color: #fb923c;
 }
-:deep(.p-dropdown-item:hover) {
+:deep(.p-select-item:hover) {
     background: #27272a;
     color: white;
 }

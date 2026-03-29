@@ -23,12 +23,30 @@ class PurchaseOrder extends Model
         'created_by',
         'approved_by',
         'approved_at',
+        'sent_at',
+        'shipped_at',
+        'carrier',
+        'tracking_number',
     ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function ($po) {
+            if (! $po->created_by && auth()->check()) {
+                $po->created_by = auth()->id();
+            }
+        });
+    }
 
     protected $casts = [
         'order_date' => 'date',
         'expected_delivery_date' => 'date',
         'approved_at' => 'datetime',
+        'sent_at' => 'datetime',
+        'shipped_at' => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 

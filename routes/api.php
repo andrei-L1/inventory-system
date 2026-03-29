@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -95,7 +96,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // -----------------------------------------------------------------------
     Route::apiResource('purchase-orders', PurchaseOrderController::class)->middleware('permission:manage-inventory');
     Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-inventory');
+    Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-inventory');
+    Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-inventory');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-inventory');
+
+    // Replenishment (Phase 4.2)
+    Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:manage-inventory');
+    Route::post('replenishment/suggestions/bulk-po', [PurchaseOrderController::class, 'bulkCreateFromSuggestions'])->middleware('permission:manage-inventory');
+
+    // Utility route for Artisan commands (Phase 4.2)
+    Route::post('run-command', function (Request $request) {
+        if (! in_array($request->command, ['stock:check-levels'])) {
+            abort(403);
+        }
+        Artisan::call($request->command);
+
+        return response()->json(['message' => 'Command executed successfully.']);
+    })->middleware('permission:manage-inventory');
 });
 
 Route::get('/user', function (Request $request) {
