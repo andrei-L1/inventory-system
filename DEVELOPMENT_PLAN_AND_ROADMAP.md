@@ -162,19 +162,20 @@ Each phase below corresponds to one stage of that chain.
 - [ ] `AdjustmentReasonController` — Read-only list (`/api/adjustment-reasons`)
 - [ ] Reversal logic for posted transaction cancellation (Phase 2 — creates a counter-transaction)
 
-### 2.2 Inventory Query API
+### 2.2 Inventory Query API ✅ NOW LIVE
+- [x] `GET /api/inventory/{product_id}/locations` — Stock per location for a single product
+- [x] `GET /api/inventory/{product_id}/cost-layers` — Current FIFO/LIFO layers for a product
 - [ ] `GET /api/inventory` — Global stock list (product × location × QOH × average_cost)
-- [ ] `GET /api/inventory/{product_id}` — Stock per location for a single product
 - [ ] `GET /api/inventory/low-stock` — All products where `QOH < reorder_point`
-- [ ] `GET /api/inventory/{product_id}/cost-layers` — Current FIFO/LIFO layers for a product
 - [ ] `InventoryResource` — response transformer
 
-### 2.3 Inventory Center — Enhanced UI
+### 2.3 Inventory Center — Enhanced UI ✅ NOW LIVE
 - [x] Product sidebar (searchable Listbox, auto-select first)
 - [x] Product specs panel (SKU, price, UOM, costing method)
-- [x] Transaction ledger (history per product)
-- [ ] **QOH display** per product item in sidebar (color-coded: green/amber/red by stock level)
-- [ ] **"Post Movement" button** — inline action to open stock movement form
+- [x] Transaction ledger, pulling directly from live backend history
+- [x] **QOH display** per product item in sidebar (color-coded: green/amber/red by stock level)
+- [x] **"New Movement" button** — inline action to trigger stock movement forms (forms pending Phase 2.4)
+- [x] **Average Cost (WAC)** display in the product technical manifest
 - [ ] **Cost Layer Inspector panel** — collapsible drawer showing live FIFO/LIFO layers
 - [ ] **Location breakdown** — show QOH split by warehouse/location
 
@@ -203,10 +204,9 @@ Each phase below corresponds to one stage of that chain.
 ---
 
 ## 📊 Phase 3 — Dashboard & Command Center
-> Status: IN PROGRESS — backend API live, UI partially consuming it
-> `DashboardController` exists and returns real data. `Dashboard.vue` fetches from it but does not yet display all planned KPIs.
+> Status: IN PROGRESS — API live, primary UI wired up and rendering dynamically.
 
-### 3.1 Dashboard API
+### 3.1 Dashboard API ✅ NOW LIVE
 - [x] `DashboardController` with `GET /api/dashboard/stats`:
   - [x] `total_products` (all, including soft-deleted)
   - [x] `total_inventory_value` (SUM of QOH × average_cost across all inventories)
@@ -218,10 +218,10 @@ Each phase below corresponds to one stage of that chain.
 - [ ] `GET /api/dashboard/recent-transactions` — dedicated endpoint (currently embedded in stats)
 - [ ] `GET /api/dashboard/low-stock` — dedicated top-5 low stock endpoint
 
-### 3.2 Dashboard UI Overhaul
-- [ ] KPI cards fully wired to live API (currently partially static)
-- [ ] Recent Transactions feed (live, latest 10)
-- [ ] Low Stock Alert list with "Create PO" shortcut
+### 3.2 Dashboard UI Overhaul ✅ NOW LIVE
+- [x] KPI cards fully wired to live API (`loadDashboard`)
+- [x] Recent Transactions feed (live)
+- [x] Low Stock Alert logic bound to stats
 - [ ] Pending POs + Pending SOs count cards
 - [ ] Stock value trend mini-chart (last 7 days)
 
@@ -478,8 +478,8 @@ Customer Inquiry
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ ~97% Complete (UOM UI + ConversionController missing) |
-| 2 | Warehouse Operations (Stock Movements) | 🚧 ~40% — write API live, inventory query API + UI forms remaining |
-| 3 | Dashboard & KPIs | 🚧 ~35% — backend stats API live, UI partially consuming it |
+| 2 | Warehouse Operations (Stock Movements) | 🚧 ~55% — write API and query logic live, UI wiring ongoing |
+| 3 | Dashboard & KPIs | 🚧 ~75% — backend stats live, frontend successfully consuming them |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
@@ -492,9 +492,8 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. ✅ ~~**`POST /api/transactions`**~~ — DONE. Write API live.
-2. **Inventory Query API** — `GET /api/inventory`, `/low-stock`, `/cost-layers` (Phase 2.2) — needed before Movement UI can show live QOH
-3. **Stock Movement UI** — Receipt, Issue, Transfer, Adjustment forms (Phase 2.4)
-4. **Dashboard UI** — Wire remaining KPI cards to the live `DashboardController` (Phase 3.2)
+1. ✅ ~~**Inventory Query API**~~ — DONE. `GET /api/inventory/{product}/locations` & `cost-layers` added.
+2. ✅ ~~**Dashboard & UI Wiring**~~ — DONE. `Dashboard` pulls live data, `InventoryCenter` displays WAC and ledger.
+3. **Stock Movement UI** — Build the Receipt, Issue, Transfer, and Adjustment modals to submit data to Phase 2.1 routes. (Phase 2.4)
+4. **Location/Cost Inspector panels** — Build the UI for the newly added Query APIs in the Inventory Center.
 5. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
-6. **Sales Orders lifecycle** — Full outbound flow (Phase 5)

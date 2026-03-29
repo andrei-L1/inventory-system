@@ -175,11 +175,22 @@ Based on the full system overhaul conducted on 2026-03-29, here is the verified 
 
 ---
 
-## ⏭️ Immediate Next Steps (Priority Order)
-1. **Inventory Query API (Phase 2.2)**: Build the `GET /api/inventory` endpoints required to serve live QOH data to the frontend.
-2. **Operations UI (Phase 2.4)**: Create the actual Vue forms (Receipt, Issue, Transfer, Adjustment) that will submit data to our newly completed `POST /api/transactions` routes.
-3. **Inventory Center Wiring**: Connect the new Query API to `InventoryCenter.vue` to show real stock status and add the "New Movement" trigger button.
-4. **Dashboard Wiring**: Connect `Dashboard.vue` KPI cards to the already-live `DashboardController`.
+### 🎯 Milestone: Dashboard & Inventory Center Wiring (Phase 2.2 & 3.2)
+**Date**: 2026-03-29 | **Status**: 100% COMPLETE
+**Summary**: Successfully wired the system's "View Layer" to the newly strengthened "Engine".
+- **Inventory Query API (Phase 2.2)**: Created `InventoryQueryController` with endpoints for product breakdown (`/locations`) and FIFO/LIFO tracking (`/cost-layers`).
+- **Inventory Center Update**: Added the "New Movement" button and live Average Cost (WAC) display into the `InventoryCenter.vue` technical manifest grid.
+- **Resource Wrapper Bugfix**: Fixed `TransactionController::forProduct` to return native `AnonymousResourceCollection`, assuring correct `data` array wrapping in Vue.
+- **Vendor Center Patch**: Resolved a PrimeVue `Toast` import crash affecting UI integrity.
+- **Dashboard Integrity**: Confirmed that `DashboardController::getStats` perfectly feeds the high-fidelity UI layout in `Dashboard.vue` with real-time `total_products`, `total_vendors`, `inventory_value`, and `low_stock_count` alerts.
 
 ---
-*Last Updated: 2026-03-29 10:15:00*
+
+## ⏭️ Immediate Next Steps (Priority Order)
+1. **Operations UI (Phase 2.4)**: Create the actual Vue forms (Receipt, Issue, Transfer, Adjustment) that will submit data to our newly completed `POST /api/transactions` routes.
+2. **Operations Interactivity**: Wire the "New Movement" button to launch the above stock movement forms.
+3. **Ledger Drilling**: Implement the Cost Layer Inspector panel inside `InventoryCenter.vue` using the new Query API.
+4. **Purchase Orders (Phase 4)**: Begin backend data schema for the procurement pipeline.
+
+---
+*Last Updated: 2026-03-29 10:30:00*
