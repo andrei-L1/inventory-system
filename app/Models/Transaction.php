@@ -66,6 +66,18 @@ class Transaction extends Model
         'cancelled_at',
     ];
 
+    /**
+     * Boot the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function ($transaction) {
+            if (! $transaction->created_by && auth()->check()) {
+                $transaction->created_by = auth()->id();
+            }
+        });
+    }
+
     protected $casts = [
         'transaction_date' => 'date',
         'posted_at' => 'datetime',
