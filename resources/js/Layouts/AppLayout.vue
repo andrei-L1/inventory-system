@@ -98,6 +98,12 @@
                 </div>
 
                 <div class="flex items-center gap-8">
+                    <!-- Notification Uplink -->
+                    <button class="relative w-11 h-11 rounded-xl bg-zinc-900/40 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20 transition-all cursor-pointer group outline-none" title="System Alerts">
+                        <i class="pi pi-bell text-sm group-hover:-rotate-12 transition-transform"></i>
+                        <span class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-amber-500 border border-zinc-950 shadow-[0_0_10px_rgba(245,158,11,0.6)] animate-pulse"></span>
+                    </button>
+
                     <!-- User Registry Profile -->
                     <div v-if="user" class="flex flex-col items-end border-r border-zinc-900 pr-8">
                         <span class="text-white font-black text-[10px] tracking-widest uppercase font-mono mb-0.5">{{ user.username }}</span>
