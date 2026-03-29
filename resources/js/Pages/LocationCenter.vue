@@ -10,6 +10,8 @@ import Textarea from 'primevue/textarea';
 import Select from 'primevue/select';
 import Dialog from 'primevue/dialog';
 import Tag from 'primevue/tag';
+import Toast from 'primevue/toast';
+import ConfirmDialog from 'primevue/confirmdialog';
 import ToggleSwitch from 'primevue/toggleswitch';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from "primevue/usetoast";
@@ -23,11 +25,13 @@ const confirm = useConfirm();
 const locations = ref([]);
 const locationTypes = ref([]);
 const parentLocations = ref([]);
+const childLocations = ref([]); // Store immediate children of selected node
 
 const loading = ref(true);
 const search = ref('');
 const dialogVisible = ref(false);
 const submitted = ref(false);
+const viewMode = ref('grid'); // 'grid' or 'details'
 
 const locationForm = ref({
     id: null,
@@ -50,13 +54,21 @@ const loadLocations = async () => {
             params: { query: search.value, per_page: 100 }
         });
         locations.value = response.data.data;
-        // Populate parent options (warehouses/regions)
         parentLocations.value = locations.value;
+        
+        // If we have a selection, refresh its children
+        if (locationForm.value.id) {
+            refreshChildNodes(locationForm.value.id);
+        }
     } catch (e) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load nodes', life: 3000 });
     } finally {
         loading.value = false;
     }
+};
+
+const refreshChildNodes = (parentId) => {
+    childLocations.value = locations.value.filter(l => l.parent_id === parentId);
 };
 
 const loadMetadata = async () => {
@@ -91,11 +103,16 @@ const openNew = () => {
     dialogVisible.value = true;
 };
 
-const editLocation = (loc) => {
+const selectLocation = (loc) => {
     locationForm.value = { 
         ...loc,
         location_type_id: loc.location_type_id || (loc.location_type ? loc.location_type.id : null)
     };
+    refreshChildNodes(loc.id);
+    viewMode.value = 'details';
+};
+
+const openEditModal = () => {
     dialogVisible.value = true;
 };
 
@@ -133,158 +150,365 @@ const deleteLocation = (loc) => {
                 await axios.delete(`/api/locations/${loc.id}`);
                 toast.add({ severity: 'success', summary: 'Decommissioned', detail: 'Node offline.', life: 3000 });
                 loadLocations();
+                viewMode.value = 'grid';
             } catch (e) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Decommission failed', life: 3000 });
             }
         }
     });
 };
-
-const getSeverity = (typeName) => {
-    if (!typeName) return 'info';
-    typeName = typeName.toLowerCase();
-    if (typeName.includes('warehouse')) return 'warn';
-    if (typeName.includes('store')) return 'success';
-    if (typeName.includes('transit')) return 'info';
-    if (typeName.includes('virtual')) return 'secondary';
-    return 'info';
-};
 </script>
 
 <template>
     <AppLayout>
         <Head title="Location Topology" />
-        
-        <div class="sharp-panel" style="display: flex; flex-direction: column; height: 100%;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <div>
-                    <h2 class="brand-title" style="margin: 0; font-size: 1.5rem;">Network Topology</h2>
-                    <div style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Warehouse & Zone Grid</div>
+        <Toast />
+        <ConfirmDialog />
+
+        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+            <!-- Header Section -->
+            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Storage Infrastructure Management</span>
+                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Location Center</h1>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                        {{ viewMode === 'grid' 
+                            ? 'Overview of physical warehouses, logistical zones, and virtual nodes.' 
+                            : 'Deep topology navigation and nodal configuration for selected cluster.' 
+                        }}
+                    </p>
                 </div>
-                
-                <div style="display: flex; gap: 1rem;">
-                    <div class="search-wrapper" style="width: 300px;">
-                        <i class="pi pi-search search-icon"></i>
-                        <InputText v-model="search" placeholder="Filter node ID or name..." @input="loadLocations" class="search-input" />
+                <div class="flex items-center gap-4">
+                    <Button v-if="viewMode === 'details'" 
+                            label="BACK_TO_OVERVIEW" 
+                            icon="pi pi-th-large" 
+                            class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all" 
+                            @click="viewMode = 'grid'" />
+                    <div v-if="can('manage-inventory')">
+                        <Button label="ADD LOCATION" icon="pi pi-plus-circle" 
+                                class="!bg-sky-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" 
+                                @click="openNew" />
                     </div>
-                    <!-- Use manage-inventory instead of manage-products for locations -->
-                    <Button v-if="can('manage-inventory')" label="Initialize Node" icon="pi pi-plus" class="p-button-primary" @click="openNew" />
                 </div>
             </div>
 
-            <!-- Grid of Clickable Cards -->
-            <div v-if="loading" class="loading-state">
-                <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: var(--accent-primary);"></i>
-            </div>
-            <div v-else-if="locations.length === 0" class="empty-state">
-                 NO NETWORK NODES FOUND
-            </div>
-            <div v-else class="slate-card-grid">
-                <div v-for="loc in locations" :key="loc.id" class="slate-card" @click="can('manage-inventory') ? editLocation(loc) : null">
-                    <div class="card-header">
-                        <span class="node-id">{{ loc.code }}</span>
-                        <div class="status-indicator">
-                            <span class="dot" :class="loc.is_active ? 'active' : 'inactive'"></span>
-                        </div>
+            <!-- View Mode: GRID OVERVIEW -->
+            <div v-if="viewMode === 'grid'" class="max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="relative w-full max-w-md">
+                        <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                        <InputText 
+                            v-model="search" 
+                            placeholder="Filter by name or code..." 
+                            @input="loadLocations" 
+                            class="!w-full !pl-11 !pr-4 !bg-zinc-900/40 !border-zinc-800 !text-white !h-12 !text-xs !rounded-xl focus:!border-sky-500/30 transition-all font-mono"
+                        />
                     </div>
-                    <div class="card-body">
-                        <h3 class="node-name">{{ loc.name }}</h3>
-                        <span class="node-type">{{ loc.location_type?.name || loc.location_type || 'Unclassified' }}</span>
+                </div>
+
+                <div v-if="loading" class="flex-1 flex items-center justify-center">
+                    <i class="pi pi-spin pi-spinner text-sky-500/20 text-5xl"></i>
+                </div>
+                
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto custom-scrollbar pr-2 pb-10">
+                    <div v-for="loc in locations" :key="loc.id" 
+                         @click="selectLocation(loc)"
+                         class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 hover:bg-zinc-800/40 cursor-pointer transition-all duration-500 overflow-hidden shadow-xl">
                         
-                        <div class="node-meta">
-                            <div class="meta-row">
-                                <i class="pi pi-sitemap"></i>
-                                <span>{{ loc.parent ? loc.parent.name : 'Root Node' }}</span>
+                        <!-- Background Accent -->
+                        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
+                                    <i :class="[
+                                        loc.location_type?.name?.toLowerCase().includes('warehouse') ? 'pi-home' : 
+                                        loc.location_type?.name?.toLowerCase().includes('store') ? 'pi-shopping-cart' : 'pi-box'
+                                    ]" class="pi text-zinc-500 group-hover:text-sky-400 text-sm transition-colors"></i>
+                                </div>
+                                <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">{{ loc.code }}</span>
                             </div>
-                            <div class="meta-row" v-if="loc.city || loc.country">
-                                <i class="pi pi-map-marker"></i>
-                                <span>{{ [loc.city, loc.country].filter(Boolean).join(', ') }}</span>
+                            
+                            <h3 class="text-white font-bold text-lg mb-1 group-hover:text-sky-400 transition-colors tracking-tight">{{ loc.name }}</h3>
+                            <div class="flex items-center gap-2 mb-8">
+                                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">{{ loc.location_type?.name }}</span>
+                                <div class="w-1 h-1 rounded-full bg-zinc-700"></div>
+                                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">{{ loc.city || 'GLOBAL' }}</span>
+                            </div>
+                            
+                            <div class="pt-6 border-t border-zinc-800/50 flex justify-between items-center">
+                                <div class="flex flex-col">
+                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-1">Downstream_Nodes</span>
+                                    <span class="text-xs font-bold text-zinc-300">{{ locations.filter(l => l.parent_id === loc.id).length }} Cluster Points</span>
+                                </div>
+                                <div class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center group-hover:bg-sky-500 group-hover:border-sky-500 transition-all">
+                                    <i class="pi pi-arrow-up-right text-[10px] text-zinc-600 group-hover:text-white transition-colors"></i>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="card-footer" v-if="can('manage-inventory')">
-                        <Button icon="pi pi-pencil" class="p-button-text action-btn" @click.stop="editLocation(loc)" />
-                        <Button icon="pi pi-power-off" class="p-button-text action-btn delete-btn" @click.stop="deleteLocation(loc)" />
                     </div>
                 </div>
             </div>
-            
+
+            <!-- View Mode: DEEP TOPOLOGY DETAILS -->
+            <div v-if="viewMode === 'details'" class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 flex-1 min-h-0">
+                
+                <!-- Left Sector: Nodal Hierarchy Path (Anchor) -->
+                <aside class="col-span-12 lg:col-span-4 xl:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
+                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Topology_Anchor</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                        <!-- Parent Node (Upstream) -->
+                        <div v-if="locationForm.parent" class="flex items-start gap-4 mb-4 group/parent">
+                            <div class="flex flex-col items-center pt-1.5 min-w-[12px]">
+                                <div @click="selectLocation(locationForm.parent)" 
+                                     class="w-3 h-3 rounded-full border-2 border-zinc-700 bg-zinc-950 hover:border-sky-500 cursor-pointer transition-all z-10 shadow-lg group-hover/parent:scale-125"></div>
+                                <div class="w-0.5 h-12 bg-zinc-800"></div>
+                            </div>
+                            <div class="flex flex-col gap-0.5 opacity-40 hover:opacity-100 transition-opacity cursor-pointer mb-6" @click="selectLocation(locationForm.parent)">
+                                <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase leading-none">UPSTREAM</span>
+                                <span class="text-zinc-400 font-bold text-xs leading-none group-hover/parent:text-white transition-colors">{{ locationForm.parent.name }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Selected Node Root (Current Context) -->
+                        <div class="flex items-start gap-4 mb-2">
+                            <div class="flex flex-col items-center pt-1 min-w-[20px]">
+                                <div class="w-5 h-5 rounded-full bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.6)] ring-4 ring-sky-500/10 z-20 flex items-center justify-center">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                                </div>
+                                <div v-if="childLocations.length > 0" class="w-0.5 h-10 bg-gradient-to-b from-sky-500 to-zinc-800"></div>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-sky-400 font-mono tracking-[0.2em] uppercase leading-none">ACTIVE_ANCHOR</span>
+                                <span class="text-white font-bold text-base leading-none tracking-tight">{{ locationForm.name }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Children Branches (Downstream) -->
+                        <div v-if="childLocations.length > 0" class="flex flex-col">
+                            <div v-for="(child, index) in childLocations" :key="child.id" class="flex items-start gap-4 group">
+                                <div class="flex flex-col items-center min-w-[20px]">
+                                    <div class="flex relative">
+                                        <div class="absolute -left-0 top-3 w-4 h-0.5 bg-zinc-800 group-hover:bg-sky-500/40 transition-colors"></div>
+                                        <div class="absolute left-4 top-[0.7rem] w-1 h-1 rounded-full bg-zinc-800 group-hover:bg-sky-500 z-10 transition-all"></div>
+                                        <div class="w-0.5 h-14 bg-zinc-800" :class="{'bg-transparent': index === childLocations.length - 1}"></div>
+                                    </div>
+                                </div>
+                                <div @click="selectLocation(child)" 
+                                     class="flex-1 mt-0.5 p-3 bg-zinc-950/50 border border-zinc-800/80 rounded-xl hover:border-sky-500/40 hover:bg-zinc-900/80 cursor-pointer transition-all duration-300 flex justify-between items-center group/card ml-2">
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="text-[10px] font-bold text-zinc-400 group-hover/card:text-white transition-colors tracking-tight">{{ child.name }}</span>
+                                        <span class="text-[8px] text-zinc-600 font-mono uppercase tracking-widest">{{ child.code }}</span>
+                                    </div>
+                                    <i class="pi pi-chevron-right text-[8px] text-zinc-700 group-hover/card:text-sky-500 transition-all transform group-hover/card:translate-x-1"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right Sector: Main Data Area -->
+                <main class="col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-8 min-h-0 overflow-y-auto custom-scrollbar pr-2">
+                    
+                    <!-- Information Manifest -->
+                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 blur-[120px] -mr-48 -mt-48 rounded-full opacity-50"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-10 border-b border-zinc-800/60">
+                                <div class="flex flex-col flex-1">
+                                    <div class="flex items-center gap-4 mb-3">
+                                        <h1 class="text-4xl font-bold text-white tracking-tighter m-0">{{ locationForm.name }}</h1>
+                                        <span class="text-[9px] font-bold px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-sky-400 uppercase tracking-widest font-mono">{{ locationForm.location_type?.name }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-zinc-500 text-xs font-mono uppercase tracking-widest">
+                                        <i class="pi pi-info-circle text-[10px] text-sky-400"></i>
+                                        <span>Node ID // {{ locationForm.code }}</span>
+                                        <span class="mx-2 text-zinc-800">|</span>
+                                        <i class="pi pi-map-marker text-[10px] text-emerald-400"></i>
+                                        <span>{{ locationForm.city || 'Global Sector' }}, {{ locationForm.country || 'N/A' }}</span>
+                                    </div>
+                                </div>
+
+                                <div v-if="can('manage-inventory')" class="flex gap-3">
+                                    <Button icon="pi pi-pencil" label="EDIT"
+                                            class="!bg-zinc-950 !border-zinc-800 !text-sky-400 hover:!text-white hover:!border-sky-500/30 !px-6 !h-12 !rounded-xl !text-[10px] !font-bold tracking-widest transition-all" 
+                                            @click="openEditModal" />
+                                    <Button icon="pi pi-trash" 
+                                            class="!bg-zinc-950 !border-zinc-800 !text-red-400 hover:!bg-red-500/10 !w-12 !h-12 !rounded-xl transition-all" 
+                                            @click="deleteLocation(locationForm)" />
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                                <div class="flex flex-col gap-3">
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Operations Unit</label>
+                                    <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
+                                        <span class="text-zinc-400 text-xs block mb-1">Status</span>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-2 h-2 rounded-full" :class="locationForm.is_active ? 'bg-sky-500 animate-pulse' : 'bg-zinc-800'"></div>
+                                            <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.is_active ? 'ACTIVE_DEPLO' : 'OFFLINE' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-3">
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Inbound Logic</label>
+                                    <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
+                                        <span class="text-zinc-400 text-xs block mb-1">Receiving Target</span>
+                                        <span class="text-white font-bold text-sm tracking-tight">{{ locationForm.default_receive_location?.name || 'Self-Contained' }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-3">
+                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Spatial Metadata</label>
+                                    <div class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
+                                        <span class="text-zinc-400 text-xs block mb-1">Physical Address</span>
+                                        <span class="text-white font-bold text-sm tracking-tight truncate">{{ locationForm.address || 'N/A' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-6 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
+                                 <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono block mb-4">Technical Specifications & Notes</label>
+                                 <p class="text-zinc-400 text-sm leading-relaxed font-mono">
+                                     {{ locationForm.description || 'No additional technical parameters defined for this nodal cluster.' }}
+                                 </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Network Load Visualization (Placeholder) -->
+                    <section class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 h-64 flex flex-col">
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono mb-4">Storage Velocity</span>
+                            <div class="flex-1 flex items-center justify-center border border-dashed border-zinc-800/50 rounded-xl opacity-20">
+                                <i class="pi pi-chart-line text-4xl"></i>
+                            </div>
+                        </div>
+                        <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 h-64 flex flex-col">
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono mb-4">Spatial Capacity</span>
+                            <div class="flex-1 flex items-center justify-center border border-dashed border-zinc-800/50 rounded-xl opacity-20">
+                                <i class="pi pi-database text-4xl"></i>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+           
             <!-- Monochrome Slate Modal -->
             <Dialog 
                 v-model:visible="dialogVisible" 
                 :modal="true" 
-                :style="{ width: '750px', margin: '0 1rem' }" 
-                class="slate-modal"
-                :closable="!submitted"
+                class="!bg-transparent !border-none !shadow-none ring-0 outline-none"
+                :pt="{
+                    root: { class: 'p-0 sm:m-4 max-w-2xl w-full' },
+                    content: { class: 'p-0 !bg-transparent' }
+                }"
                 :showHeader="false"
             >
-                <div class="slate-modal-inner">
-                    <div class="slate-modal-header">
-                        <div class="header-left">
-                            <div class="slate-badge">{{ locationForm.id ? 'NODE.UPDATE' : 'NODE.INIT' }}</div>
-                            <h2>{{ locationForm.id ? 'Configure Node' : 'Initialize Network Node' }}</h2>
+                <div class="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
+                    <!-- Header -->
+                    <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">LOCATION_DATA</div>
+                            <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ locationForm.id ? 'Edit Location Details' : 'Add New Location' }}</h2>
                         </div>
-                        <Button icon="pi pi-times" class="p-button-text close-trigger" @click="dialogVisible = false" />
+                        <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" />
                     </div>
 
-                    <div class="slate-modal-body">
-                        <div class="slate-form-grid">
-                            <div class="p-field col-span-2">
-                                <label>Node Designation *</label>
-                                <InputText v-model="locationForm.name" required autofocus :class="{'p-invalid': submitted && !locationForm.name}" placeholder="E.g. Primary Alpha Hub" />
+                    <!-- Body -->
+                    <div class="p-8 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.03),transparent_40%)] max-h-[70vh] overflow-y-auto custom-scrollbar">
+                        <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+                            <div class="col-span-12 md:col-span-8 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Location Name *</label>
+                                <InputText v-model="locationForm.name" placeholder="E.g. Main Warehouse" 
+                                           class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !font-bold focus:!border-sky-500/40"
+                                           :class="{'!border-red-500/50': submitted && !locationForm.name}" />
                             </div>
-                            <div class="p-field">
-                                <label>Node ID (Code) *</label>
-                                <InputText v-model="locationForm.code" required :class="{'p-invalid': submitted && !locationForm.code}" placeholder="N-0001" style="font-family: 'JetBrains Mono', monospace;" />
-                            </div>
-                            <div class="p-field">
-                                <label>Classification *</label>
-                                <Select v-model="locationForm.location_type_id" :options="locationTypes" optionLabel="name" optionValue="id" placeholder="Select Type" :class="{'p-invalid': submitted && !locationForm.location_type_id}" />
-                            </div>
-                            <div class="p-field col-span-2">
-                                <label>Parent Topology Node</label>
-                                <Select v-model="locationForm.parent_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Top-Level Node (Root)" showClear />
+                            <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Location Code *</label>
+                                <InputText v-model="locationForm.code" placeholder="N-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono focus:!border-sky-500/30" />
                             </div>
 
-                            <div class="p-field col-span-2">
-                                <label>Default Receive Location</label>
-                                <Select v-model="locationForm.default_receive_location_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Standard Inbound Target" showClear />
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Location Type *</label>
+                                <Select v-model="locationForm.location_type_id" :options="locationTypes" optionLabel="name" optionValue="id" placeholder="Select Type" 
+                                        class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" 
+                                        :pt="{ 
+                                            root: { class: '!bg-zinc-900/50 !border-zinc-800' },
+                                            overlay: { class: '!bg-zinc-950 !border-zinc-800 !shadow-2xl' },
+                                            item: { class: '!text-zinc-400 hover:!bg-sky-500/10 hover:!text-white !text-xs !font-bold !py-3' }
+                                        }" />
                             </div>
-                            
-                            <div class="p-field col-span-2">
-                                <label>Physical Coordinates / Address</label>
-                                <InputText v-model="locationForm.address" placeholder="Sector line..." />
-                            </div>
-                            <div class="p-field">
-                                <label>Region / City</label>
-                                <InputText v-model="locationForm.city" placeholder="Optional" />
-                            </div>
-                            <div class="p-field">
-                                <label>Country ID</label>
-                                <InputText v-model="locationForm.country" placeholder="Optional" />
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Parent Location</label>
+                                <Select v-model="locationForm.parent_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="None" showClear
+                                        class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" 
+                                        :pt="{ 
+                                            root: { class: '!bg-zinc-900/50 !border-zinc-800' },
+                                            overlay: { class: '!bg-zinc-950 !border-zinc-800 !shadow-2xl' },
+                                            item: { class: '!text-zinc-400 hover:!bg-sky-500/10 hover:!text-white !text-xs !font-bold !py-3' }
+                                        }" />
                             </div>
 
-                            <div class="p-field col-span-2">
-                                <label>Technical Notes</label>
-                                <Textarea v-model="locationForm.description" rows="2" class="resize-none" placeholder="Add operational parameters..." />
+                            <div class="col-span-12 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Default Receiving Location</label>
+                                <Select v-model="locationForm.default_receive_location_id" :options="parentLocations.filter(l => l.id !== locationForm.id)" optionLabel="name" optionValue="id" placeholder="Select default inbound location" showClear
+                                        class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" 
+                                        :pt="{ 
+                                            root: { class: '!bg-zinc-900/50 !border-zinc-800' },
+                                            overlay: { class: '!bg-zinc-950 !border-zinc-800 !shadow-2xl' },
+                                            item: { class: '!text-zinc-400 hover:!bg-sky-500/10 hover:!text-white !text-xs !font-bold !py-3' }
+                                        }" />
                             </div>
-                            
-                            <div class="p-field col-span-2 status-control">
-                                <div class="control-info">
-                                    <h4>Operational Status</h4>
-                                    <p>Toggle system availability for this network node.</p>
+
+                            <div class="col-span-12 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Street Address</label>
+                                <InputText v-model="locationForm.address" placeholder="123 Storage Way" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">City</label>
+                                <InputText v-model="locationForm.city" placeholder="City Name" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Country</label>
+                                <InputText v-model="locationForm.country" placeholder="Country Name" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+
+                            <div class="col-span-12 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Additional Notes</label>
+                                <Textarea v-model="locationForm.description" rows="3" placeholder="Operational details, dock numbers, or access notes..." 
+                                          class="!bg-zinc-900/50 !border-zinc-800 !text-white focus:!border-sky-500/30 !text-sm !font-mono" />
+                            </div>
+
+                            <div class="col-span-12 p-5 bg-zinc-900/30 border border-zinc-800/60 rounded-xl flex items-center justify-between mt-2">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-[11px] uppercase tracking-tight">Location Status</span>
+                                    <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Status // {{ locationForm.is_active ? 'active' : 'inactive' }}</span>
                                 </div>
-                                <ToggleSwitch v-model="locationForm.is_active" />
+                                <ToggleSwitch v-model="locationForm.is_active" 
+                                             :pt="{
+                                                 slider: ({ props }) => ({
+                                                     class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700'
+                                                 })
+                                             }" />
                             </div>
                         </div>
                     </div>
 
-                    <div class="slate-modal-footer">
-                        <div class="sys-id">UID // {{ locationForm.id || 'PENDING' }}</div>
-                        <div class="action-buttons-group">
-                            <Button label="Abort" class="p-button-secondary" @click="dialogVisible = false" />
-                            <Button :label="locationForm.id ? 'COMMIT UPDATE' : 'EXECUTE INIT'" class="p-button-primary execute-btn" @click="saveLocation" />
-                        </div>
+                    <!-- Footer -->
+                    <div class="px-8 py-6 border-t border-zinc-900 bg-zinc-900/50 flex justify-end gap-3 items-center">
+                        <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest mr-auto uppercase">ID // {{ locationForm.id || 'PENDING' }}</span>
+                        <Button label="CANCEL" class="!bg-transparent !border-zinc-800 !text-zinc-500 hover:!text-white hover:!border-zinc-600 !px-6 !h-11 !font-bold !text-[10px] uppercase tracking-widest border transition-colors" @click="dialogVisible = false" />
+                        <Button :label="locationForm.id ? 'SAVE CHANGES' : 'ADD LOCATION'" 
+                                class="!bg-sky-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" 
+                                @click="saveLocation" />
                     </div>
                 </div>
             </Dialog>
@@ -293,322 +517,5 @@ const getSeverity = (typeName) => {
 </template>
 
 <style scoped>
-/* Core Page Layout Override */
-.sharp-panel {
-    background: var(--bg-deep);
-    min-height: 100vh;
-    padding: 1.5rem;
-}
-
-.brand-title {
-    color: var(--text-primary);
-    letter-spacing: -0.02em;
-}
-
-/* Card Grid Layout */
-.slate-card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
-
-.slate-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 6px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.slate-card:hover {
-    border-color: var(--text-secondary);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.5rem;
-}
-
-.node-id {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    background: var(--bg-deep);
-    color: var(--text-secondary);
-    padding: 4px 8px;
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-    letter-spacing: 0.05em;
-}
-
-.status-indicator .dot {
-    display: block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-}
-.status-indicator .dot.active { background: var(--accent-primary); box-shadow: 0 0 8px rgba(250,250,250,0.4); }
-.status-indicator .dot.inactive { background: var(--text-secondary); opacity: 0.5; }
-
-.card-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.card-body h3.node-name {
-    margin: 0;
-    font-size: 18px;
-    color: var(--text-primary);
-    font-weight: 600;
-}
-
-.node-type {
-    display: inline-block;
-    margin-top: 0.25rem;
-    font-size: 10px;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-
-.node-meta {
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.meta-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.meta-row i {
-    color: var(--text-muted);
-}
-
-.card-footer {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--bg-panel-border);
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
-
-.action-btn {
-    color: var(--text-secondary) !important;
-    padding: 0.4rem !important;
-    width: 32px !important;
-    height: 32px !important;
-}
-
-.action-btn:hover {
-    color: var(--text-primary) !important;
-    background: var(--bg-panel-hover) !important;
-}
-
-.delete-btn:hover {
-    color: var(--text-primary) !important;
-    background: var(--bg-panel-hover) !important;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 4rem;
-    color: var(--text-secondary);
-    letter-spacing: 0.1em;
-    font-size: 12px;
-    border: 1px dashed var(--bg-panel-border);
-    border-radius: 6px;
-    margin-top: 2rem;
-}
-
-.loading-state {
-    display: flex;
-    justify-content: center;
-    padding: 4rem;
-}
-
-/* --- Slate Modal Redesign (Mirrored from Catalog.vue) --- */
-::v-deep(.slate-modal) {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-
-::v-deep(.p-dialog-content) {
-    padding: 0 !important;
-    background: transparent !important;
-    outline: none !important;
-    border: none !important;
-}
-
-.slate-modal-inner {
-    background: var(--bg-deep); /* Absolute black */
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 8px; /* Slightly softer for a modern look */
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    max-height: 85vh;
-    overflow: hidden;
-}
-
-/* Header */
-.slate-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 2rem 2.5rem 1.5rem;
-    border-bottom: 1px solid var(--bg-panel-border);
-    background: var(--bg-panel);
-}
-
-.header-left .slate-badge {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent-subtle);
-    letter-spacing: 0.1em;
-    margin-bottom: 0.5rem;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-.header-left h2 {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-    letter-spacing: -0.02em;
-}
-
-.close-trigger {
-    color: var(--text-secondary) !important;
-    width: 32px !important;
-    height: 32px !important;
-}
-
-/* Modal Body */
-.slate-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 2.5rem;
-    background: var(--bg-deep);
-}
-
-.slate-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 2rem;
-}
-
-.col-span-2 {
-    grid-column: span 2;
-}
-
-.p-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.p-field label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* Clean Form Inputs */
-::v-deep(.p-inputtext), ::v-deep(.p-select), ::v-deep(.p-inputnumber-input), ::v-deep(.p-textarea) {
-    background: var(--bg-panel) !important;
-    border: 1px solid var(--bg-panel-border) !important;
-    color: var(--text-primary) !important;
-    border-radius: 4px !important;
-    padding: 10px 14px !important;
-    font-size: 14px !important;
-    box-shadow: none !important;
-    transition: all 0.2s ease !important;
-}
-
-::v-deep(.p-inputtext:focus), ::v-deep(.p-select:focus), ::v-deep(.p-inputnumber-input:focus), ::v-deep(.p-textarea:focus) {
-    border-color: var(--accent-primary) !important;
-    outline: 0 !important;
-}
-
-/* Status Control Box */
-.status-control {
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.control-info h4 {
-    margin: 0 0 4px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.control-info p {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-/* Footer */
-.slate-modal-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2.5rem;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--bg-panel-border);
-}
-
-.sys-id {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-
-.action-buttons-group {
-    display: flex;
-    gap: 1rem;
-}
-
-.execute-btn {
-    background: var(--bg-panel-hover) !important;
-    border: none !important;
-    padding: 10px 24px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em;
-}
-
-@media (max-width: 768px) {
-    .slate-card-grid { grid-template-columns: 1fr; }
-    ::v-deep(.slate-modal) { width: 95vw !important; margin: 0 !important; }
-    .slate-form-grid { grid-template-columns: 1fr; }
-    .col-span-2 { grid-column: span 1; }
-    .slate-modal-header, .slate-modal-body, .slate-modal-footer { padding: 1.5rem; }
-}
+/* Scoped styles migrated to Tailwind Utility Classes v4 */
 </style>
