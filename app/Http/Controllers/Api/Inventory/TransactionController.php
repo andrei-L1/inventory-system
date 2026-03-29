@@ -2,36 +2,150 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\TransactionStoreRequest;
+use App\Http\Requests\Inventory\TransferStoreRequest;
 use App\Http\Resources\Inventory\TransactionResource;
 use App\Models\Product;
 use App\Models\Transaction;
+use App\Models\TransactionStatus;
 use App\Models\Vendor;
+use App\Services\Inventory\StockService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
+use LogicException;
 
 class TransactionController extends Controller
 {
-    /**
-     * Get transaction history for a specific product.
-     */
-    public function forProduct(Product $product)
+    public function __construct(protected StockService $stockService) {}
+
+    // -------------------------------------------------------------------------
+    // POST /api/transactions
+    // Create any stock movement: Receipt, Issue, or Adjustment.
+    // Pass { header: {...}, lines: [...] }.
+    // If header.transaction_status_id = draft, inventory is NOT touched.
+    // If header.transaction_status_id = posted, inventory updates immediately.
+    // -------------------------------------------------------------------------
+    public function store(TransactionStoreRequest $request): JsonResponse
+    {
+        try {
+            $transaction = $this->stockService->recordMovement($request->validated());
+
+            return response()->json(
+                new TransactionResource($transaction->load(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'lines'])),
+                201
+            );
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/transfers
+    // Atomic two-leg transfer between locations.
+    // Creates an outgoing + incoming transaction, linked by a Transfer record.
+    // -------------------------------------------------------------------------
+    public function storeTransfer(TransferStoreRequest $request): JsonResponse
+    {
+        try {
+            $result = $this->stockService->recordTransfer($request->validated());
+
+            return response()->json([
+                'transfer_id'          => $result['transfer']->id,
+                'outgoing_transaction' => new TransactionResource(
+                    $result['outgoing_transaction']->load(['type', 'status', 'fromLocation', 'toLocation', 'lines'])
+                ),
+                'incoming_transaction' => new TransactionResource(
+                    $result['incoming_transaction']->load(['type', 'status', 'fromLocation', 'toLocation', 'lines'])
+                ),
+            ], 201);
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // PATCH /api/transactions/{transaction}/post
+    // Transitions a DRAFT transaction → POSTED.
+    // This is the moment inventory is actually updated.
+    // -------------------------------------------------------------------------
+    public function post(Transaction $transaction): JsonResponse
+    {
+        try {
+            $posted = $this->stockService->postTransaction($transaction);
+
+            return response()->json(
+                new TransactionResource($posted->load(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'lines']))
+            );
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (LogicException $e) {
+            return response()->json(['message' => $e->getMessage()], 409); // Conflict
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // PATCH /api/transactions/{transaction}/cancel
+    // Voids a draft or posted transaction.
+    // NOTE: Reversal logic (un-doing inventory) is a planned future feature.
+    //       For now, only drafts can be cancelled without side effects.
+    // -------------------------------------------------------------------------
+    public function cancel(Transaction $transaction): JsonResponse
+    {
+        $transaction->loadMissing('status');
+
+        if ($transaction->status->name === 'cancelled') {
+            return response()->json(['message' => 'Transaction is already cancelled.'], 409);
+        }
+
+        if ($transaction->status->name === 'posted') {
+            // TODO: Phase 2 — implement reversal logic (creates a counter-transaction).
+            return response()->json([
+                'message' => 'Cancelling a posted transaction requires a reversal entry. This is not yet implemented.',
+            ], 422);
+        }
+
+        $cancelledStatus = TransactionStatus::where('name', 'cancelled')->firstOrFail();
+        $transaction->transaction_status_id = $cancelledStatus->id;
+        $transaction->cancelled_at = \Illuminate\Support\Carbon::now();
+        $transaction->save();
+
+        return response()->json(['message' => 'Transaction cancelled successfully.', 'id' => $transaction->id]);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/products/{product}/transactions
+    // Transaction history for a specific product (Inventory Center ledger).
+    // -------------------------------------------------------------------------
+    public function forProduct(Product $product): JsonResponse
     {
         $transactions = Transaction::whereHas('lines', function ($q) use ($product) {
             $q->where('product_id', $product->id);
         })
-            ->with(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer', 'purchaseOrder', 'salesOrder', 'lines' => function ($q) use ($product) {
-                $q->where('product_id', $product->id);
-            }])
+            ->with([
+                'type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer',
+                'purchaseOrder', 'salesOrder',
+                'lines' => function ($q) use ($product) {
+                    $q->where('product_id', $product->id);
+                },
+            ])
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();
 
-        return TransactionResource::collection($transactions);
+        return response()->json(TransactionResource::collection($transactions));
     }
 
-    /**
-     * Get transaction history for a specific vendor.
-     */
-    public function forVendor(Vendor $vendor)
+    // -------------------------------------------------------------------------
+    // GET /api/vendors/{vendor}/transactions
+    // Transaction history for a specific vendor.
+    // -------------------------------------------------------------------------
+    public function forVendor(Vendor $vendor): JsonResponse
     {
         $transactions = Transaction::where('vendor_id', $vendor->id)
             ->with(['type', 'status', 'fromLocation', 'toLocation'])
@@ -39,6 +153,6 @@ class TransactionController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        return TransactionResource::collection($transactions);
+        return response()->json(TransactionResource::collection($transactions));
     }
 }

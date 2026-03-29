@@ -1,5 +1,5 @@
 # Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-03-28. All status markers reflect actual codebase state.
+> Last audited: 2026-03-29 (post-refactor). All status markers reflect actual codebase state.
 
 ---
 
@@ -32,28 +32,40 @@ Each phase below corresponds to one stage of that chain.
 - [x] `recordMovement(array $data): Transaction`
   - Creates a `Transaction` header + `TransactionLine` rows in a single DB transaction
   - Applies `lockForUpdate()` (pessimistic locking) on `Inventory` rows to prevent race conditions
-  - Dispatches to cost layer logic per movement direction
+  - **Draft/Posted enforcement** — inventory is ONLY updated when `status = posted`; drafts save header+lines only
+  - Dispatches to `applyLineToInventory()` for each posted line
+- [x] `postTransaction(Transaction $t): Transaction`
+  - Promotes a draft → posted and applies all lines to inventory atomically
+  - Guards against re-posting or posting a cancelled transaction
 - [x] `recordTransfer(array $data): array`
   - Atomic double-sided movement: Issue from origin + Receipt at destination
   - Both legs in a single `DB::transaction()` — either both post or neither does
-- [x] `consumeLayers(Inventory $inv, float $qty)`
+  - Creates a `Transfer` pivot record linking both transaction legs by FK (no more orphan transactions)
+- [x] `consumeLayers(Inventory $inv, float $qty): float`
   - FIFO: consumes oldest layers first (`receipt_date ASC`)
   - LIFO: consumes newest layers first (`receipt_date DESC`)
   - Marks layer `is_exhausted = true` when `remaining_qty ≤ 0`
   - Throws `InsufficientStockException` if qty demanded exceeds available layers
-- [x] `updateAverageCost(Inventory $inv, float $newQty, float $newCost)`
-  - Formula: `(Existing_Value + New_Value) / (Existing_Qty + New_Qty)`
-  - Updates both `inventories.average_cost` and `products.average_cost`
+  - **Returns the weighted-average unit cost of layers consumed** (COGS for the issue line)
+- [x] `updateLocationAverageCost(Inventory $inv, float $newQty, float $newCost)`
+  - Per-location WAC: `(Existing_Value + New_Value) / (Existing_Qty + New_Qty)`
+  - Updates `inventories.average_cost` only (in-memory before save)
+- [x] `updateProductGlobalAverageCost(int $productId)`
+  - **Correct global WAC formula**: `SUM(location_QOH × location_avg_cost) / SUM(location_QOH)` across ALL locations
+  - Called AFTER `$inventory->save()` so the query sees the latest state
+  - Eliminates the single-location contamination bug
+- [x] `applyLineToInventory(TransactionLine, array)` — extracted private method reused by both `recordMovement` and `postTransaction`
 - [x] `TransactionValidator` — pre-movement guard (type, location, quantity sanity checks)
 - [x] `InsufficientStockException` — typed exception for over-issue scenarios
 
 ### 0.2 Database Schema
-- [x] 32 migrations covering every business domain
-- [x] 39 Eloquent models with full relationships, soft deletes, and fillables
+- [x] 35 migrations covering every business domain
+- [x] 40 Eloquent models with full relationships, soft deletes, and fillables
 - [x] `inventories` — per-product per-location QOH cache + average cost
 - [x] `inventory_cost_layers` — FIFO/LIFO layers with `received_qty`, `issued_qty`, computed `remaining_qty`, `is_exhausted`
-- [x] `transactions` + `transaction_lines` — the immutable ledger
+- [x] `transactions` + `transaction_lines` — the immutable ledger (issue lines now record actual COGS in `unit_cost`)
 - [x] `transaction_types` + `transaction_statuses` — lookup tables (Receipt, Issue, Transfer, Adjustment)
+- [x] `transfers` — pivot table linking the two transaction legs of every stock transfer by FK
 
 ### 0.3 Automated Tests
 - [x] FIFO layer test: 3 receipts at different unit costs → verify correct layer consumed on issue
@@ -125,34 +137,30 @@ Each phase below corresponds to one stage of that chain.
 
 ### 1.7 App Shell
 - [x] `AppLayout.vue` — collapsible sidebar, topbar, localStorage persistence
-- [x] All 4 active routes wired: Dashboard, Catalog, Inventory Center, Vendor Center
+- [x] All 5 active routes wired: Dashboard, Catalog, Inventory Center, Vendor Center, Location Center
 - [x] Topbar: username, role badge, logout button
-- [ ] Active nav link highlighting (currently no active state class on nav items)
+- [x] Active nav link highlighting — `page.url.startsWith(item.href)` active state applied to all nav items
 - [ ] Notification bell (future — for low stock alerts, pending approvals)
 
 ---
 
 ## 🚧 Phase 2 — Warehouse Operations: Stock Movements
-> Status: IN PROGRESS — NEXT SPRINT
-> The engine exists. This phase makes it accessible.
+> Status: IN PROGRESS — API layer now live, UI forms remaining
 
-### 2.1 Stock Movement API ⚠️ CRITICAL MISSING LINK
-> `StockService` is production-grade but **no HTTP route exposes it yet**.
-
-- [ ] `POST /api/transactions` — Create any stock movement
-  - Body: `{ header: { type_id, status_id, reference_number, transaction_date, from_location_id, to_location_id, vendor_id?, customer_id?, notes }, lines: [{ product_id, quantity, unit_cost, location_id }] }`
-  - Delegates to `StockService::recordMovement()`
-  - Returns `TransactionResource`
-- [ ] `POST /api/transfers` — Internal stock transfer between locations
-  - Delegates to `StockService::recordTransfer()`
-- [ ] `POST /api/adjustments` — Manual quantity correction
-  - Requires `adjustment_reason_id`
-  - Positive qty = increase (found stock), negative = decrease (shrinkage, damage)
-- [ ] `PATCH /api/transactions/{id}/post` — Change status from Draft → Posted
-- [ ] `PATCH /api/transactions/{id}/cancel` — Void a transaction (with reversal logic)
-- [ ] `TransactionStoreRequest` — validated body for the above
+### 2.1 Stock Movement API ✅ NOW LIVE
+- [x] `POST /api/transactions` — Create any stock movement (receipt, issue, adjustment)
+  - Body: `{ header: { transaction_type_id, transaction_status_id, transaction_date, reference_number, from_location_id, to_location_id, vendor_id?, customer_id?, notes }, lines: [{ product_id, location_id, quantity, unit_cost, uom_id? }] }`
+  - Draft status: saves header+lines only, inventory untouched
+  - Posted status: immediately updates inventory, cost layers, WAC
+  - Returns `TransactionResource` with all relationships loaded
+- [x] `PATCH /api/transactions/{id}/post` — Promote Draft → Posted (inventory updated at this moment)
+- [x] `PATCH /api/transactions/{id}/cancel` — Void a draft (posted cancellation stubs to reversal — Phase 2 TODO)
+- [x] `POST /api/transfers` — Atomic two-leg transfer; links both legs via `transfers` pivot table
+- [x] `TransactionStoreRequest` + `TransferStoreRequest` — fully validated with FK existence checks
+- [x] `CheckPermission` middleware applied to all write routes (`manage-inventory`)
+- [ ] `POST /api/adjustments` — Dedicated adjustment endpoint (currently handled via generic `POST /api/transactions` with negative qty; a dedicated form with `adjustment_reason_id` is still planned)
 - [ ] `AdjustmentReasonController` — Read-only list (`/api/adjustment-reasons`)
-- [ ] Apply `CheckPermission` middleware to all write routes
+- [ ] Reversal logic for posted transaction cancellation (Phase 2 — creates a counter-transaction)
 
 ### 2.2 Inventory Query API
 - [ ] `GET /api/inventory` — Global stock list (product × location × QOH × average_cost)
@@ -195,22 +203,23 @@ Each phase below corresponds to one stage of that chain.
 ---
 
 ## 📊 Phase 3 — Dashboard & Command Center
-> Status: PLACEHOLDER — needs real data
-> `Dashboard.vue` is currently 100% static hardcoded text.
+> Status: IN PROGRESS — backend API live, UI partially consuming it
+> `DashboardController` exists and returns real data. `Dashboard.vue` fetches from it but does not yet display all planned KPIs.
 
 ### 3.1 Dashboard API
-- [ ] `DashboardController` with `GET /api/dashboard/stats`:
-  - `total_products` (active, non-deleted)
-  - `total_inventory_value` (SUM of QOH × average_cost across all products/locations)
-  - `low_stock_count` (products where QOH < reorder_point)
-  - `transactions_today` count
-  - `pending_po_count` (POs in Draft or Approved status)
-  - `pending_so_count` (SOs in Confirmed or Picked status)
-- [ ] `GET /api/dashboard/recent-transactions` — Last 10 transactions (type, product, qty, date)
-- [ ] `GET /api/dashboard/low-stock` — Top 5 lowest stock items
+- [x] `DashboardController` with `GET /api/dashboard/stats`:
+  - [x] `total_products` (all, including soft-deleted)
+  - [x] `total_inventory_value` (SUM of QOH × average_cost across all inventories)
+  - [x] `low_stock_count` (products where aggregate QOH < reorder_point)
+  - [x] `recent_transactions` — last 5 transaction lines with product + type
+  - [ ] `transactions_today` count — not yet implemented
+  - [ ] `pending_po_count` — not yet implemented (no PO backend)
+  - [ ] `pending_so_count` — not yet implemented (no SO backend)
+- [ ] `GET /api/dashboard/recent-transactions` — dedicated endpoint (currently embedded in stats)
+- [ ] `GET /api/dashboard/low-stock` — dedicated top-5 low stock endpoint
 
 ### 3.2 Dashboard UI Overhaul
-- [ ] KPI cards (real data): Total Products, Total Inventory Value, Low Stock Alerts, Transactions Today
+- [ ] KPI cards fully wired to live API (currently partially static)
 - [ ] Recent Transactions feed (live, latest 10)
 - [ ] Low Stock Alert list with "Create PO" shortcut
 - [ ] Pending POs + Pending SOs count cards
@@ -416,10 +425,10 @@ Customer Inquiry
 - [ ] Apply `CheckPermission` middleware to all write API routes (currently 0% enforced server-side)
 
 ### 9.3 Location & Warehouse Admin
-- [ ] `LocationController` — CRUD (`/api/locations`)
-- [ ] Location types: Warehouse, Store, Transit, Virtual
-- [ ] **Locations page** — manage the warehouse hierarchy
-- [ ] Stock view breakdown per location in Inventory Center
+- [x] `LocationController` — CRUD (`/api/locations`) ✅ Completed in Phase 1.2
+- [x] Location types: Warehouse, Store, Transit, Virtual ✅ Completed in Phase 1.2
+- [x] **Location Center page** — manage the warehouse network topology ✅ Completed in Phase 1.2
+- [ ] Stock view breakdown per location in Inventory Center (Phase 2.3 dependency)
 
 ### 9.4 UOM & Category Admin
 - [ ] UOM Management frontend (currently no UI — only backend)
@@ -467,24 +476,25 @@ Customer Inquiry
 
 | Phase | Domain | Status |
 |-------|---------|--------|
-| 0 | Core Stock Engine | ✅ Complete |
-| 1 | System Setup: Master Data & Auth | ✅ 100% Complete |
-| 2 | Warehouse Operations (Stock Movements) | 🚧 ~15% — API missing |
-| 3 | Dashboard & KPIs | 🚧 ~5% — placeholder only |
-| 4 | Procurement (Purchase Orders) | ⬜ 0% — schema only |
-| 5 | Sales (Sales Orders) | ⬜ 0% — schema only |
-| 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema only |
-| 7 | Pricing & Discounts | ⬜ 0% — schema only |
-| 8 | Reporting & Financial Analysis | ⬜ 0% — schema only |
-| 9 | Administration & Security | ⬜ ~20% — middleware exists, no UI |
+| 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
+| 1 | System Setup: Master Data & Auth | ✅ ~97% Complete (UOM UI + ConversionController missing) |
+| 2 | Warehouse Operations (Stock Movements) | 🚧 ~40% — write API live, inventory query API + UI forms remaining |
+| 3 | Dashboard & KPIs | 🚧 ~35% — backend stats API live, UI partially consuming it |
+| 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
+| 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
+| 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
+| 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
+| 8 | Reporting & Financial Analysis | ⬜ 0% — schema + models only |
+| 9 | Administration & Security | 🚧 ~25% — middleware + models + location UI done, no user/role admin UI |
 | 10 | Production Hardening | ⬜ 0% |
 
 ---
 
 ## Immediate Next Steps (Priority Order)
 
-1. **`POST /api/transactions`** — Expose `StockService` via HTTP (Phase 2.1) — **single most critical missing piece**
-2. **Stock Movement UI** — Receipt, Issue, Transfer, Adjustment forms (Phase 2.4)
-3. **Dashboard real data** — Replace static cards with live API stats (Phase 3)
-4. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
-5. **Sales Orders lifecycle** — Full outbound flow (Phase 5)
+1. ✅ ~~**`POST /api/transactions`**~~ — DONE. Write API live.
+2. **Inventory Query API** — `GET /api/inventory`, `/low-stock`, `/cost-layers` (Phase 2.2) — needed before Movement UI can show live QOH
+3. **Stock Movement UI** — Receipt, Issue, Transfer, Adjustment forms (Phase 2.4)
+4. **Dashboard UI** — Wire remaining KPI cards to the live `DashboardController` (Phase 3.2)
+5. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
+6. **Sales Orders lifecycle** — Full outbound flow (Phase 5)

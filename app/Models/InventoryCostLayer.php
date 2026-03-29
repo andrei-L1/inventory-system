@@ -31,12 +31,12 @@ class InventoryCostLayer extends Model
      * @var array
      */
     protected $casts = [
-        'received_qty' => 'decimal:4',
-        'issued_qty' => 'decimal:4',
-        'remaining_qty' => 'decimal:4',
-        'unit_cost' => 'decimal:6',
-        'receipt_date' => 'date',
-        'is_exhausted' => 'boolean',
+        'received_qty'  => 'float',
+        'issued_qty'    => 'float',
+        'remaining_qty' => 'float',
+        'unit_cost'     => 'float',
+        'receipt_date'  => 'date',
+        'is_exhausted'  => 'boolean',
     ];
 
     /**

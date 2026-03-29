@@ -149,10 +149,10 @@ Based on the full system overhaul conducted on 2026-03-29, here is the verified 
 
 | Layer | Domain | Status |
 |---|---|---|
-| **Database Schema** | 33 Migrations covering full ERP lifecycle | **100%** |
-| **Eloquent Models** | 39 Models with full relations & soft deletes | **100%** |
-| **Core Stock Engine** | `StockService` (Locking, FIFO/LIFO/WAC/UOM) | **100%** |
-| **REST API Surface** | Controllers & Resources (Core mapped) | **~60%** |
+| **Database Schema** | 35 Migrations (Added `transfers` table) | **100%** |
+| **Eloquent Models** | 40 Models (Added `Transfer`) | **100%** |
+| **Core Stock Engine** | `StockService` (Draft/Posted, Global WAC, COGS, Transfers) | **100%** |
+| **REST API Surface** | Phase 2.1 Live: Movement & Transfer write endpoints | **~75%** |
 | **Auth/Permissions** | Session/Sanctum, Roles, Middlewares | **100%** |
 | **Dashboard UI** | Tactical KPI & Feed Modernization | **100%** |
 | **Catalog UI** | Surgical Manifest & Glassmorphic Modals | **100%** |
@@ -163,11 +163,23 @@ Based on the full system overhaul conducted on 2026-03-29, here is the verified 
 
 ---
 
-## ⏭️ Immediate Next Steps (Priority Order)
-1. **Procurement Workflow**: Develop the Purchase Order UI for replenishment from "Low Stock" alerts.
-2. **Operations UI**: Implement Receipt and Transfer modals for manual stock adjustments.
-3. **Advanced Reporting**: Develop historical movement reports and stock velocity charts.
-4. **Validation Test**: Ensure `InsufficientStockException` triggers frontend error toasts in all operations.
+### 🎯 Milestone: Stock Movement API Complete (Phase 2.1)
+**Date**: 2026-03-29 | **Status**: 100% COMPLETE
+**Summary**: Successfully exposed the `StockService` to the HTTP layer, creating the critical write-path for all inventory changes.
+- **Draft & Posted Workflow**: Engine now strictly enforces statuses. Drafts save records without touching inventory; `postTransaction()` applies the financial and stock changes atomically upon approval.
+- **Global WAC Correction**: Refactored the weighted average cost formula (`updateProductGlobalAverageCost`) to accurately aggregate `SUM(QOH × Cost) / SUM(QOH)` across *all* warehouse locations instantly after any receipt.
+- **True COGS on Issues**: Outbound transactions now automatically calculate and record the actual weighted-average unit cost of the FIFO/LIFO layers they consume, enabling flawless Gross Margin reporting.
+- **Ledger Coherence (Transfers)**: Added a new `transfers` pivot table to perfectly link the outgoing and incoming transaction legs of every internal movement.
+- **Write API Live**: Implemented `POST /api/transactions`, `POST /api/transfers`, `PATCH /api/transactions/{id}/post`, and `PATCH /api/transactions/{id}/cancel`.
+- **Validation**: 100% passing test suite across 21 integrated feature tests. Removed all static analysis lint warnings via targeted casting.
 
 ---
-*Last Updated: 2026-03-29 09:10:00*
+
+## ⏭️ Immediate Next Steps (Priority Order)
+1. **Inventory Query API (Phase 2.2)**: Build the `GET /api/inventory` endpoints required to serve live QOH data to the frontend.
+2. **Operations UI (Phase 2.4)**: Create the actual Vue forms (Receipt, Issue, Transfer, Adjustment) that will submit data to our newly completed `POST /api/transactions` routes.
+3. **Inventory Center Wiring**: Connect the new Query API to `InventoryCenter.vue` to show real stock status and add the "New Movement" trigger button.
+4. **Dashboard Wiring**: Connect `Dashboard.vue` KPI cards to the already-live `DashboardController`.
+
+---
+*Last Updated: 2026-03-29 10:15:00*
