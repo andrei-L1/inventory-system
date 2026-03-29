@@ -26,6 +26,8 @@ class ProductResource extends JsonResource
             'average_cost' => (float) $this->average_cost,
             'total_qoh' => (float) ($this->inventories_sum_quantity_on_hand ?? $this->inventories()->sum('quantity_on_hand')),
             'reorder_point' => (float) $this->reorder_point,
+            'reorder_quantity' => (float) $this->reorder_quantity,
+
             'is_active' => (bool) $this->is_active,
             'category_id' => $this->category_id,
             'uom_id' => $this->uom_id,
