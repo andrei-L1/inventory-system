@@ -9,6 +9,37 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string $reference_number
+ * @property int $transaction_type_id
+ * @property int|null $vendor_id
+ * @property int|null $customer_id
+ * @property int $transaction_status_id
+ * @property int|null $from_location_id
+ * @property int|null $to_location_id
+ * @property \Illuminate\Support\Carbon $transaction_date
+ * @property string|null $notes
+ * @property string|null $reference_doc
+ * @property int|null $purchase_order_id
+ * @property int|null $sales_order_id
+ * @property int|null $adjustment_reason_id
+ * @property int $created_by
+ * @property int|null $posted_by
+ * @property \Illuminate\Support\Carbon|null $posted_at
+ * @property int|null $cancelled_by
+ * @property \Illuminate\Support\Carbon|null $cancelled_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * 
+ * @property-read \App\Models\TransactionType $type
+ * @property-read \App\Models\TransactionStatus $status
+ * @property-read \App\Models\Location|null $fromLocation
+ * @property-read \App\Models\Location|null $toLocation
+ * @property-read \App\Models\Vendor|null $vendor
+ * @property-read \App\Models\User $createdBy
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\TransactionLine[] $lines
+ */
 class Transaction extends Model
 {
     use HasAttachments, HasFactory, SoftDeletes;

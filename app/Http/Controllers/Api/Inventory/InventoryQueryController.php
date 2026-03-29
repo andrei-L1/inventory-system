@@ -43,6 +43,7 @@ class InventoryQueryController extends Controller
             ->with(['category', 'uom', 'preferredVendor'])
             ->get()
             ->filter(function ($product) {
+                /** @var \App\Models\Product $product */
                 return $product->total_qoh < $product->reorder_point;
             })
             ->values()

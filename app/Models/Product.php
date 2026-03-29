@@ -9,6 +9,38 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property string $product_code
+ * @property string $name
+ * @property string|null $description
+ * @property int $category_id
+ * @property int $uom_id
+ * @property int|null $preferred_vendor_id
+ * @property string|null $brand
+ * @property string $sku
+ * @property string|null $barcode
+ * @property int $costing_method_id
+ * @property float $average_cost
+ * @property float $selling_price
+ * @property float $reorder_point
+ * @property float $reorder_quantity
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read float $total_qoh
+ * 
+ * @property-read \App\Models\Category $category
+ * @property-read \App\Models\UnitOfMeasure $uom
+ * @property-read \App\Models\Vendor|null $preferredVendor
+ * @property-read \App\Models\CostingMethod $costingMethod
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Inventory[] $inventories
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\InventoryCostLayer[] $costLayers
+ * 
+ * @method static \Illuminate\Database\Eloquent\Builder|Product newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Product newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Product query()
+ */
 class Product extends Model
 {
     use HasAttachments, HasFactory, SoftDeletes;
