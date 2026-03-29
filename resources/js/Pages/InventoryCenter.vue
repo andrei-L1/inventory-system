@@ -16,8 +16,11 @@ const toast = useToast();
 const products = ref([]);
 const selectedProduct = ref(null);
 const history = ref([]);
+const layers = ref([]);
+const locationBreakdown = ref([]);
 const loadingProducts = ref(false);
 const loadingHistory = ref(false);
+const loadingIntelligence = ref(false);
 const search = ref('');
 
 const loadProducts = async () => {
@@ -48,10 +51,28 @@ const loadHistory = async () => {
     }
 };
 
+const loadIntelligenceData = async () => {
+    if (!selectedProduct.value) return;
+    loadingIntelligence.value = true;
+    try {
+        const [locRes, layerRes] = await Promise.all([
+            axios.get(`/api/inventory/${selectedProduct.value.id}/locations`),
+            axios.get(`/api/inventory/${selectedProduct.value.id}/cost-layers`)
+        ]);
+        locationBreakdown.value = locRes.data.data;
+        layers.value = layerRes.data.data;
+    } catch (e) {
+        console.error("Intelligence load error", e);
+    } finally {
+        loadingIntelligence.value = false;
+    }
+};
+
 onMounted(loadProducts);
 
 watch(selectedProduct, () => {
     loadHistory();
+    loadIntelligenceData();
 });
 
 const handleLinkClick = (type, num) => {
@@ -87,6 +108,24 @@ const getStockStatusLabel = (p) => {
     if (p.total_qoh === 0) return 'CRITICAL: ZERO STOCK';
     if (p.total_qoh < p.reorder_point) return 'LOW STOCK: REPLENISH';
     return 'STOCK BALANCED';
+};
+
+const listboxPt = {
+    root: { class: '!p-2' },
+    item: (options) => ({
+        class: [
+            '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
+            options.context.selected 
+                ? '!bg-emerald-500/10 !border-emerald-500/20 !text-white shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                : '!bg-transparent !border-transparent !text-zinc-500 hover:!bg-zinc-800/40 hover:!text-zinc-200'
+        ]
+    })
+};
+
+const tablePt = {
+    root: { class: '!bg-transparent' },
+    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' },
+    header: { class: '!bg-zinc-900/60 !border-zinc-800 !text-zinc-500 !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
 };
 </script>
 
@@ -140,17 +179,7 @@ const getStockStatusLabel = (p) => {
                             :options="products" 
                             optionLabel="name" 
                             class="!border-none !bg-transparent"
-                            :pt="{
-                                root: { class: '!p-2' },
-                                item: ({ context }) => ({
-                                    class: [
-                                        '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
-                                        context.selected 
-                                            ? '!bg-emerald-500/10 !border-emerald-500/20 !text-white shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
-                                            : '!bg-transparent !border-transparent !text-zinc-500 hover:!bg-zinc-800/40 hover:!text-zinc-200'
-                                    ]
-                                })
-                            }"
+                            :pt="listboxPt"
                         >
                             <template #option="{ option }">
                                 <div class="flex flex-col gap-2 w-full">
@@ -251,6 +280,91 @@ const getStockStatusLabel = (p) => {
                         </div>
                     </section>
 
+                    <!-- Intelligence Grid: Location Breakdown & Cost Layers -->
+                    <div v-if="selectedProduct" class="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <!-- Location Distribution Sector -->
+                        <aside class="col-span-12 lg:col-span-5 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col min-h-0">
+                            <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <i class="pi pi-map-marker text-emerald-400 text-xs"></i>
+                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">NODE_DISTRIBUTION</span>
+                                </div>
+                                <span class="text-[9px] font-bold text-emerald-500 font-mono tracking-tighter uppercase">active_nodes // live</span>
+                            </div>
+                            <div class="p-6 flex-1">
+                                <template v-if="locationBreakdown.length > 0">
+                                    <div class="space-y-3">
+                                        <div v-for="loc in locationBreakdown" :key="loc.id" class="flex items-center justify-between p-4 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
+                                            <div class="flex flex-col">
+                                                <span class="text-white font-bold text-xs tracking-tight uppercase">{{ loc.location_name }}</span>
+                                                <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
+                                            </div>
+                                            <div class="flex flex-col items-end">
+                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ loc.quantity_on_hand }}</span>
+                                                <span class="text-[9px] font-bold text-zinc-700 font-mono tracking-[0.2em] uppercase">units_locked</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div v-else class="h-32 flex flex-col items-center justify-center opacity-30 grayscale border-2 border-dashed border-zinc-800 rounded-2xl">
+                                    <i class="pi pi-map-marker text-3xl mb-3"></i>
+                                    <span class="text-[9px] font-bold font-mono tracking-widest uppercase text-zinc-600">No Physical Presence Detected</span>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <!-- Cost Layer Persistence Sector -->
+                        <aside class="col-span-12 lg:col-span-7 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col min-h-0">
+                            <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <i class="pi pi-database text-sky-400 text-xs"></i>
+                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">FINANCIAL_LAYERING // FIFO</span>
+                                </div>
+                                <span class="text-[9px] font-bold text-sky-400 font-mono tracking-tighter uppercase">active_layers // active</span>
+                            </div>
+                            <div class="p-0 flex-1 flex flex-col">
+                                <DataTable 
+                                    :value="layers" 
+                                    :loading="loadingIntelligence"
+                                    scrollable 
+                                    scrollHeight="320px"
+                                    class="gh-table border-none !bg-transparent"
+                                    :pt="tablePt"
+                                >
+                                    <template #empty>
+                                        <div class="py-20 text-center opacity-20 flex flex-col items-center grayscale">
+                                            <i class="pi pi-history text-4xl mb-4"></i>
+                                            <p class="font-mono text-[10px] tracking-[0.2em] uppercase">No Financial Cost Footprint</p>
+                                        </div>
+                                    </template>
+                                    <Column field="receipt_date" header="Rcvd_Date" class="!bg-zinc-900/60 !text-zinc-500 !text-[10px] !uppercase !font-bold" style="width: 140px">
+                                        <template #body="{ data }">
+                                            <span class="font-mono text-[10px] text-zinc-500">{{ data.receipt_date }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column field="remaining_qty" header="Rem_Qty" style="width: 110px">
+                                        <template #body="{ data }">
+                                            <span class="font-mono font-bold text-zinc-200">{{ data.remaining_qty }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column field="unit_cost" header="Asset_Cost" style="width: 120px">
+                                        <template #body="{ data }">
+                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ formatCurrency(data.unit_cost) }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column header="Status" class="!text-right">
+                                        <template #body="{ data }">
+                                            <div class="inline-flex items-center gap-2 group-hover:px-2 transition-all">
+                                                <span class="w-1 h-1 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></span>
+                                                <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ data.remaining_qty > 0 ? 'ACTIVE_LAYER' : 'DEPLETED' }}</span>
+                                            </div>
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </div>
+                        </aside>
+                    </div>
+
                     <!-- Bottom Section: Transactional Ledger -->
                     <section class="flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm">
                         <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
@@ -268,14 +382,7 @@ const getStockStatusLabel = (p) => {
                                 scrollable 
                                 scrollHeight="flex" 
                                 class="gh-table border-none"
-                                :pt="{
-                                    root: { class: '!bg-transparent' },
-                                    column: {
-                                        headercell: { class: '!bg-zinc-900/60 !border-zinc-800 !text-zinc-500 !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
-                                        bodycell: { class: '!border-zinc-800/40 !py-4 !px-8 !text-[13px] !text-zinc-300' }
-                                    },
-                                    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' }
-                                }"
+                                :pt="tablePt"
                             >
                                 <template #empty>
                                     <div class="py-32 text-center opacity-20 flex flex-col items-center grayscale">
