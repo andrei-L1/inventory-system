@@ -16,8 +16,8 @@
                     <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button class="!bg-rose-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-rose-500/10 hover:!bg-rose-400 active:scale-95 transition-all rounded-xl">
-                        ISSUE ITEMS
+                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-rose-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-rose-500/10 hover:!bg-rose-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isSubmitting ? 'PROCESSING...' : 'ISSUE ITEMS' }}
                     </button>
                 </div>
             </div>
@@ -122,7 +122,7 @@
                                         <div class="flex items-center justify-end gap-6 font-mono">
                                             <div class="flex flex-col items-end">
                                                 <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Current Stock</span>
-                                                <span class="text-xs font-bold text-white">500.00</span>
+                                                <span class="text-xs font-bold text-white">{{ form.lines[index].product?.total_qoh || 0 }}</span>
                                             </div>
                                             <div class="w-px h-6 bg-zinc-800"></div>
                                             <button @click="removeLine(index)" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20">
@@ -148,8 +148,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
@@ -160,27 +161,82 @@ const locations = ref([
     { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
     { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
 ]);
-const products = ref([
-    { id: 1, sku: 'NODE-800', name: 'Standard Processor T-800', uom: { abbreviation: 'pcs' } },
-    { id: 2, sku: 'PWR-CORE', name: 'Power Module v2', uom: { abbreviation: 'unit' } }
-]);
+const products = ref([]);
 
-const form = ref({
-    from_location: null,
+const loadProducts = async () => {
+    try {
+        const res = await axios.get('/api/products');
+        products.value = res.data.data;
+    } catch (e) {
+        console.error('Failed to load products', e);
+    }
+};
+
+onMounted(() => {
+    loadProducts();
+});
+
+const form = useForm({
+    from_location: { id: 1, name: 'Warehouse Alpha' },
     reference_number: '',
     notes: '',
     lines: []
 });
 
+const isSubmitting = ref(false);
+
+const submitForm = async () => {
+    isSubmitting.value = true;
+    
+    // Frontend validation for real-time stock checks
+    for (const line of form.lines) {
+        if (!line.product) continue;
+        const requestedQty = parseFloat(line.quantity) || 0;
+        const availableQty = line.product.total_qoh || 0;
+        if (requestedQty > availableQty) {
+            alert(`Insufficient stock for ${line.product.name}. Available: ${availableQty}, Requested: ${requestedQty}`);
+            isSubmitting.value = false;
+            return;
+        }
+    }
+    
+    try {
+        const payload = {
+            header: {
+                transaction_type_id: 2, // Issue
+                transaction_status_id: 3, // Posted
+                transaction_date: new Date().toISOString().split('T')[0],
+                reference_number: form.reference_number,
+                from_location_id: form.from_location?.id,
+                notes: form.notes,
+            },
+            lines: form.lines.map(line => ({
+                product_id: line.product?.id,
+                location_id: form.from_location?.id,
+                quantity: parseFloat(line.quantity),
+                unit_cost: parseFloat(line.product?.average_cost || 0) // or logic to handle COGS
+            }))
+        };
+        
+        await axios.post('/api/transactions', payload);
+        router.visit('/inventory-center');
+    } catch (e) {
+        console.error('Submission failed', e);
+        alert(e.response?.data?.message || 'Failed to submit form');
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const addLine = () => {
-    form.value.lines.push({ product: null, quantity: 0 });
+    form.lines.push({ product: null, quantity: 0 });
 };
 
 const removeLine = (index) => {
-    form.value.lines.splice(index, 1);
+    form.lines.splice(index, 1);
 };
 
-const totalQty = computed(() => form.value.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
 </script>
 
 <style scoped>

@@ -16,8 +16,8 @@
                     <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button class="!bg-sky-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all rounded-xl">
-                        RECEIVE ITEMS
+                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-sky-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isSubmitting ? 'PROCESSING...' : 'RECEIVE ITEMS' }}
                     </button>
                 </div>
             </div>
@@ -172,7 +172,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, usePage, router } from '@inertiajs/vue3';
+import { Head, usePage, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
@@ -195,7 +195,7 @@ const vendors = ref([
 const products = ref([]);
 const loadingProducts = ref(false);
 
-const form = ref({
+const form = useForm({
     vendor: null,
     reference_number: '',
     to_location: { id: 1, name: 'Secure Vault Alpha' },
@@ -204,16 +204,49 @@ const form = ref({
     print_label: true
 });
 
+const isSubmitting = ref(false);
+
+const submitForm = async () => {
+    isSubmitting.value = true;
+    try {
+        const payload = {
+            header: {
+                transaction_type_id: 1, // Receipt
+                transaction_status_id: 3, // Posted
+                transaction_date: new Date().toISOString().split('T')[0],
+                reference_number: form.reference_number,
+                to_location_id: form.to_location?.id,
+                vendor_id: form.vendor?.id,
+                notes: form.notes,
+            },
+            lines: form.lines.map(line => ({
+                product_id: line.product?.id,
+                location_id: form.to_location?.id,
+                quantity: parseFloat(line.quantity),
+                unit_cost: parseFloat(line.unit_cost)
+            }))
+        };
+        
+        await axios.post('/api/transactions', payload);
+        router.visit('/inventory-center');
+    } catch (e) {
+        console.error('Submission failed', e);
+        alert(e.response?.data?.message || 'Failed to submit form');
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const addLine = () => {
-    form.value.lines.push({ product: null, quantity: 0, unit_cost: 0 });
+    form.lines.push({ product: null, quantity: 0, unit_cost: 0 });
 };
 
 const removeLine = (index) => {
-    form.value.lines.splice(index, 1);
+    form.lines.splice(index, 1);
 };
 
-const totalQty = computed(() => form.value.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
-const totalValue = computed(() => form.value.lines.reduce((s, l) => s + ((parseFloat(l.quantity) || 0) * (parseFloat(l.unit_cost) || 0)), 0));
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
+const totalValue = computed(() => form.lines.reduce((s, l) => s + ((parseFloat(l.quantity) || 0) * (parseFloat(l.unit_cost) || 0)), 0));
 
 const loadProducts = async () => {
     loadingProducts.value = true;
@@ -223,7 +256,7 @@ const loadProducts = async () => {
         if (queryParams.value.product_id && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == queryParams.value.product_id);
             if (preselected) {
-                form.value.lines.push({ product: preselected, quantity: 1, unit_cost: preselected.average_cost || 0 });
+                form.lines.push({ product: preselected, quantity: 1, unit_cost: preselected.average_cost || 0 });
             }
         }
     } catch (e) {

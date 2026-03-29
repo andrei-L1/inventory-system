@@ -189,12 +189,12 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Paginator Fix** — `RowsPerPageDropdown` updated to `RowsPerPageSelect` in Catalog.
 - [x] **Navigation Integration** — All forms wired to sidebars and context-aware URL parameters.
 
-### 🚧 2.5 Transaction Wiring & Processing — IN PROGRESS
-- [ ] **Receipt Form Submission** — Implement `useForm` to POST to `/api/transactions`.
-- [ ] **Issue Form Submission** — Link to `/api/transactions` with COGS tracking.
-- [ ] **Transfer Form Submission** — Wire to double-leg `/api/transfers` endpoint.
-- [ ] **Adjustment Form Submission** — Link to `/api/adjustments` with reason codes.
-- [ ] **Real-time Stock Checks** — Frontend validation against available QOH before submission.
+### ✅ 2.5 Transaction Wiring & Processing — DONE
+- [x] **Receipt Form Submission** — Implement `useForm` to POST to `/api/transactions`.
+- [x] **Issue Form Submission** — Link to `/api/transactions` with COGS tracking.
+- [x] **Transfer Form Submission** — Wire to double-leg `/api/transfers` endpoint.
+- [x] **Adjustment Form Submission** — Link to `/api/adjustments` with reason codes.
+- [x] **Real-time Stock Checks** — Frontend validation against available QOH before submission.
 
 ---
 

@@ -16,8 +16,8 @@
                     <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button class="!bg-amber-500 !border-none !text-zinc-950 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-amber-500/10 hover:!bg-amber-400 active:scale-95 transition-all rounded-xl" @click="postAdjustment">
-                        APPLY ADJUSTMENT
+                    <button @click="postAdjustment" :disabled="isSubmitting" class="!bg-amber-500 !border-none !text-zinc-950 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-amber-500/10 hover:!bg-amber-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isSubmitting ? 'PROCESSING...' : 'APPLY ADJUSTMENT' }}
                     </button>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                                         <div class="flex items-center justify-end gap-10 font-mono">
                                              <div class="flex flex-col items-end">
                                                  <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Current</span>
-                                                 <span class="text-xs font-bold text-zinc-500">1,240.00</span>
+                                                 <span class="text-xs font-bold text-zinc-500">{{ form.lines[index].product?.total_qoh || 0 }}</span>
                                              </div>
                                              <div class="flex flex-col items-end">
                                                  <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Adjustment</span>
@@ -144,8 +144,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
@@ -156,10 +157,20 @@ const locations = ref([
     { id: 1, name: 'Warehouse Alpha', code: 'WHS-A' },
     { id: 2, name: 'Warehouse Beta', code: 'WHS-B' }
 ]);
-const products = ref([
-    { id: 1, sku: 'NODE-800', name: 'Standard Processor T-800', uom: { abbreviation: 'pcs' } },
-    { id: 2, sku: 'PWR-CORE', name: 'Power Module v2', uom: { abbreviation: 'unit' } }
-]);
+const products = ref([]);
+
+const loadProducts = async () => {
+    try {
+        const res = await axios.get('/api/products');
+        products.value = res.data.data;
+    } catch (e) {
+        console.error('Failed to load products', e);
+    }
+};
+
+onMounted(() => {
+    loadProducts();
+});
 const reasons = ref([
     { label: 'Physical Count Difference', value: 'disc' },
     { label: 'Damaged Items', value: 'dmg' },
@@ -167,23 +178,67 @@ const reasons = ref([
     { label: 'System Correction', value: 'err' }
 ]);
 
-const form = ref({
-    location: null,
-    reason: null,
+const form = useForm({
+    location: { id: 1, name: 'Warehouse Alpha' },
+    reason: { label: 'Physical Count Difference', id: 1 },
     notes: '',
     lines: []
 });
 
+const isSubmitting = ref(false);
+
+const postAdjustment = async () => {
+    isSubmitting.value = true;
+    
+    // Frontend validation for real-time stock checks (if adjusting down)
+    for (const line of form.lines) {
+        if (!line.product) continue;
+        const adjustmentQty = parseFloat(line.quantity) || 0;
+        const availableQty = line.product.total_qoh || 0;
+        
+        // If we are deducting more than we have
+        if (adjustmentQty < 0 && Math.abs(adjustmentQty) > availableQty) {
+            alert(`Insufficient stock for ${line.product.name} to perform this adjustment. Available: ${availableQty}, Trying to deduct: ${Math.abs(adjustmentQty)}`);
+            isSubmitting.value = false;
+            return;
+        }
+    }
+    
+    try {
+        const payload = {
+            header: {
+                transaction_type_id: 4, // Ignored by backend as it overrides with ADJS
+                transaction_status_id: 3, // Posted
+                transaction_date: new Date().toISOString().split('T')[0],
+                adjustment_reason_id: form.reason?.id || null,
+                from_location_id: form.location?.id, // adjustments happen at a specific location
+                to_location_id: form.location?.id, // usually adjustments affect only one location (or from/to are same)
+                notes: form.notes,
+            },
+            lines: form.lines.map(line => ({
+                product_id: line.product?.id,
+                location_id: form.location?.id,
+                quantity: parseFloat(line.quantity), // +/-
+                unit_cost: parseFloat(line.product?.average_cost || 0)
+            }))
+        };
+        
+        await axios.post('/api/adjustments', payload);
+        router.visit('/inventory-center');
+    } catch (e) {
+        console.error('Submission failed', e);
+        alert(e.response?.data?.message || 'Failed to submit adjustment');
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
 const addLine = () => {
-    form.value.lines.push({ product: null, quantity: 0 });
+    form.lines.push({ product: null, quantity: 0 });
 };
 
 const removeLine = (index) => {
-    form.value.lines.splice(index, 1);
-};
-
-const postAdjustment = () => {
-    console.log('Posting adjustment...', form.value);
+    form.lines.splice(index, 1);
 };
 </script>
 
