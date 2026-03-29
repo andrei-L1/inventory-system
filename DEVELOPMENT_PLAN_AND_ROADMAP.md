@@ -82,9 +82,10 @@ Each phase below corresponds to one stage of that chain.
 
 ### 1.1 Authentication & Access Control
 - [x] Session-based login / logout (`LoginController`) for Inertia web routes
+- [x] **Google OAuth** (`GoogleController`) — `auth/google` + `auth/google/callback` routes, social login fully wired
 - [x] Laravel Sanctum — token-based auth for REST API
 - [x] `Login.vue` — username + password form, redirects to dashboard on success
-- [x] `HandleInertiaRequests` — shares user, role, and permission slugs to all frontend pages
+- [x] `HandleInertiaRequests` — shares user, role, permission slugs, and `transactionMeta` (type/status id maps) to all frontend pages
 - [x] Role-Permission system: `roles`, `permissions`, `role_permission` pivot (slug-based)
 - [x] `PermissionSeeder` — seeds default roles (Admin, Warehouse, Sales, Viewer) and all permission slugs
 - [x] `usePermissions.js` composable — `can(slug)` helper for permission-gating UI elements
@@ -145,8 +146,8 @@ Each phase below corresponds to one stage of that chain.
 
 ---
 
-## 🚧 Phase 2 — Warehouse Operations: Stock Movements
-> Status: IN PROGRESS — API layer now live, UI forms remaining
+## ✅ Phase 2 — Warehouse Operations: Stock Movements
+> Status: COMPLETE — API layer, Intelligence Grid, and all 4 Movement Forms fully wired.
 
 ### 2.1 Stock Movement API ✅ COMPLETED
 - [x] `POST /api/transactions` — Create any stock movement (receipt, issue, adjustment)
@@ -175,7 +176,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] Product specs panel (SKU, price, UOM, costing method)
 - [x] Transaction ledger, pulling directly from live backend history
 - [x] **QOH display** per product item in sidebar (color-coded: green/amber/red by stock level)
-- [x] **"New Movement" button** — inline action to trigger stock movement forms (Logic pending Phase 2.4)
+- [x] **"New Movement" button** — popup menu wired to all 4 movement form routes with product pre-selection
 - [x] **Average Cost (WAC)** display in the product technical manifest
 - [x] **Cost Layer Inspector panel** — High-performance table showing live FIFO/LIFO layers with status tracking
 - [x] **Location breakdown** — Visualized QOH distribution split by physical warehouse/location nodes
@@ -207,7 +208,7 @@ Each phase below corresponds to one stage of that chain.
   - [x] `total_inventory_value` (SUM of QOH × average_cost across all inventories)
   - [x] `low_stock_count` (products where aggregate QOH < reorder_point)
   - [x] `recent_transactions` — last 5 transaction lines with product + type
-  - [ ] `transactions_today` count — not yet implemented
+  - [x] `transactions_today` count — implemented
   - [ ] `pending_po_count` — not yet implemented (no PO backend)
   - [ ] `pending_so_count` — not yet implemented (no SO backend)
 - [ ] `GET /api/dashboard/recent-transactions` — dedicated endpoint (currently embedded in stats)
@@ -417,7 +418,7 @@ Customer Inquiry
 - [ ] `RoleController` — CRUD (`/api/roles`)
 - [ ] `PermissionController` — Read-only list (`/api/permissions`)
 - [ ] **Role Management page** — create roles, toggle permissions via checkbox grid
-- [ ] Apply `CheckPermission` middleware to all write API routes (currently 0% enforced server-side)
+- [x] Apply `CheckPermission` middleware to all write API routes ✅ — enforced on all create/update/delete routes in `api.php`
 
 ### 9.3 Location & Warehouse Admin
 - [x] `LocationController` — CRUD (`/api/locations`) ✅ Completed in Phase 1.2
@@ -426,9 +427,9 @@ Customer Inquiry
 - [ ] Stock view breakdown per location in Inventory Center (Phase 2.3 dependency)
 
 ### 9.4 UOM & Category Admin
-- [ ] UOM Management frontend (currently no UI — only backend)
+- [x] **UOM Management frontend** — `UomCenter.vue` fully built & routed at `/uom-center` ✅
+- [x] **UOM Conversion management UI** — CRUD for conversion factors in `UomCenter.vue` ✅
 - [ ] Category Management frontend (currently used as dropdown only)
-- [ ] UOM Conversion management UI
 
 ### 9.5 System Settings
 - [ ] `SettingsController` — Read/write key-value system config
@@ -473,8 +474,8 @@ Customer Inquiry
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
-| 2 | Warehouse Operations (Stock Movements) | ✅ 100% — UI completed. Logic wiring (2.5) in progress |
-| 3 | Dashboard & KPIs | ✅ 100% — backend stats live, frontend successfully consuming them |
+| 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
+| 3 | Dashboard & KPIs | 🚧 ~75% — core stats + feed live; `transactions_today` added; mini-chart + PO/SO counts pending |
 | 4 | Procurement (Purchase Orders) | ⬜ 0% — schema + models only |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
@@ -487,7 +488,10 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. **Stock Movement UI (Phase 2.4)** — Build the Receipt, Issue, Transfer, and Adjustment modals to submit data to Phase 2.1 routes.
-2. **Movements Interactivity** — Wire the "New Movement" button to launch the above stock movement forms.
-3. **Purchase Orders lifecycle** — Full procurement flow (Phase 4)
+1. **Dashboard: `transactions_today` stat** — Add live today-count to `DashboardController` and Dashboard KPI cards. ✅ Done
+2. **Fix hardcoded transaction type/status IDs** — Resolve `transaction_type_id` and `transaction_status_id` by slug name in all movement forms, not integer IDs.
+3. **Purchase Orders lifecycle (Phase 4)** — `PurchaseOrderController` + GRN flow + frontend list/create/receive pages. Schema and models already exist.
+4. **User Management (Phase 9.1)** — `UserController` + User Management page for production multi-user use.
+5. **Category Management page (Phase 9.4)** — Low friction; `CategoryController` already exists in the API.
+6. **Dashboard mini-chart** — Stock value trend visualization (last 7 days) on the Dashboard.
 

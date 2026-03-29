@@ -1,6 +1,7 @@
 <template>
     <AppLayout>
         <Head title="Inventory Receipt" />
+        <Toast />
         
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
@@ -190,8 +191,11 @@ import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import ToggleSwitch from 'primevue/toggleswitch';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 
+const toast = useToast();
 const { props, url } = usePage();
 const queryParams = computed(() => {
     const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
@@ -217,10 +221,11 @@ const isSubmitting = ref(false);
 const submitForm = async () => {
     isSubmitting.value = true;
     try {
+        const meta = props.transactionMeta;
         const payload = {
             header: {
-                transaction_type_id: 1, // Receipt
-                transaction_status_id: 3, // Posted
+                transaction_type_id: meta.types['receipt'],
+                transaction_status_id: meta.statuses['posted'],
                 transaction_date: new Date().toISOString().split('T')[0],
                 reference_number: form.reference_number,
                 to_location_id: form.to_location?.id,
@@ -236,10 +241,11 @@ const submitForm = async () => {
         };
         
         await axios.post('/api/transactions', payload);
-        router.visit('/inventory-center');
+        toast.add({ severity: 'success', summary: 'Stock Received', detail: 'Items added to inventory successfully.', life: 3000 });
+        setTimeout(() => router.visit('/inventory-center'), 1000);
     } catch (e) {
         console.error('Submission failed', e);
-        alert(e.response?.data?.message || 'Failed to submit form');
+        toast.add({ severity: 'error', summary: 'Submission Failed', detail: e.response?.data?.message || 'Failed to submit form. Check all fields.', life: 5000 });
     } finally {
         isSubmitting.value = false;
     }

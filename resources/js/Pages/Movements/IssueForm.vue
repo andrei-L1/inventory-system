@@ -1,6 +1,7 @@
 <template>
     <AppLayout>
         <Head title="Stock Issue" />
+        <Toast />
         
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
@@ -156,6 +157,11 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
+const { props } = usePage();
 
 const locations = ref([]);
 const products = ref([]);
@@ -214,17 +220,18 @@ const submitForm = async () => {
         const requestedQty = parseFloat(line.quantity) || 0;
         const availableQty = line.product.total_qoh || 0;
         if (requestedQty > availableQty) {
-            alert(`Insufficient stock for ${line.product.name}. Available: ${availableQty}, Requested: ${requestedQty}`);
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot issue ${requestedQty} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
             isSubmitting.value = false;
             return;
         }
     }
     
     try {
+        const meta = props.transactionMeta;
         const payload = {
             header: {
-                transaction_type_id: 2, // Issue
-                transaction_status_id: 3, // Posted
+                transaction_type_id: meta.types['issue'],
+                transaction_status_id: meta.statuses['posted'],
                 transaction_date: new Date().toISOString().split('T')[0],
                 reference_number: form.reference_number,
                 from_location_id: form.from_location?.id,
@@ -234,15 +241,16 @@ const submitForm = async () => {
                 product_id: line.product?.id,
                 location_id: form.from_location?.id,
                 quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.product?.average_cost || 0) // or logic to handle COGS
+                unit_cost: parseFloat(line.product?.average_cost || 0)
             }))
         };
         
         await axios.post('/api/transactions', payload);
-        router.visit('/inventory-center');
+        toast.add({ severity: 'success', summary: 'Items Issued', detail: 'Stock deducted from inventory successfully.', life: 3000 });
+        setTimeout(() => router.visit('/inventory-center'), 1000);
     } catch (e) {
         console.error('Submission failed', e);
-        alert(e.response?.data?.message || 'Failed to submit form');
+        toast.add({ severity: 'error', summary: 'Submission Failed', detail: e.response?.data?.message || 'Failed to submit form.', life: 5000 });
     } finally {
         isSubmitting.value = false;
     }

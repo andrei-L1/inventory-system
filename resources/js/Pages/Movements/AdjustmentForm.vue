@@ -1,6 +1,7 @@
 <template>
     <AppLayout>
         <Head title="Inventory Adjustment" />
+        <Toast />
         
         <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
@@ -152,6 +153,11 @@ import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
+const { props } = usePage();
 
 const locations = ref([]);
 const products = ref([]);
@@ -217,36 +223,38 @@ const postAdjustment = async () => {
         
         // If we are deducting more than we have
         if (adjustmentQty < 0 && Math.abs(adjustmentQty) > availableQty) {
-            alert(`Insufficient stock for ${line.product.name} to perform this adjustment. Available: ${availableQty}, Trying to deduct: ${Math.abs(adjustmentQty)}`);
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot deduct ${Math.abs(adjustmentQty)} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
             isSubmitting.value = false;
             return;
         }
     }
     
     try {
+        const meta = props.transactionMeta;
         const payload = {
             header: {
-                transaction_type_id: 4, // Ignored by backend as it overrides with ADJS
-                transaction_status_id: 3, // Posted
+                transaction_type_id: meta.types['adjustment'],
+                transaction_status_id: meta.statuses['posted'],
                 transaction_date: new Date().toISOString().split('T')[0],
                 adjustment_reason_id: form.reason?.id || null,
-                from_location_id: form.location?.id, // adjustments happen at a specific location
-                to_location_id: form.location?.id, // usually adjustments affect only one location (or from/to are same)
+                from_location_id: form.location?.id,
+                to_location_id: form.location?.id,
                 notes: form.notes,
             },
             lines: form.lines.map(line => ({
                 product_id: line.product?.id,
                 location_id: form.location?.id,
-                quantity: parseFloat(line.quantity), // +/-
+                quantity: parseFloat(line.quantity),
                 unit_cost: parseFloat(line.product?.average_cost || 0)
             }))
         };
         
         await axios.post('/api/adjustments', payload);
-        router.visit('/inventory-center');
+        toast.add({ severity: 'success', summary: 'Adjustment Applied', detail: 'Inventory levels updated successfully.', life: 3000 });
+        setTimeout(() => router.visit('/inventory-center'), 1000);
     } catch (e) {
         console.error('Submission failed', e);
-        alert(e.response?.data?.message || 'Failed to submit adjustment');
+        toast.add({ severity: 'error', summary: 'Adjustment Failed', detail: e.response?.data?.message || 'Failed to submit adjustment.', life: 5000 });
     } finally {
         isSubmitting.value = false;
     }
