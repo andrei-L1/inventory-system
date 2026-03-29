@@ -33,21 +33,21 @@ class TransferStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'header'                          => ['required', 'array'],
-            'header.transaction_type_id'      => ['required', 'integer', 'exists:transaction_types,id'],
-            'header.transaction_status_id'    => ['required', 'integer', 'exists:transaction_statuses,id'],
-            'header.transaction_date'         => ['required', 'date'],
-            'header.reference_number'         => ['nullable', 'string', 'max:100'],
-            'header.notes'                    => ['nullable', 'string', 'max:1000'],
+            'header' => ['required', 'array'],
+            'header.transaction_type_id' => ['required', 'integer', 'exists:transaction_types,id'],
+            'header.transaction_status_id' => ['required', 'integer', 'exists:transaction_statuses,id'],
+            'header.transaction_date' => ['required', 'date'],
+            'header.reference_number' => ['nullable', 'string', 'max:100'],
+            'header.notes' => ['nullable', 'string', 'max:1000'],
 
-            'from_location_id'                => ['required', 'integer', 'exists:locations,id', 'different:to_location_id'],
-            'to_location_id'                  => ['required', 'integer', 'exists:locations,id'],
+            'from_location_id' => ['required', 'integer', 'exists:locations,id', 'different:to_location_id'],
+            'to_location_id' => ['required', 'integer', 'exists:locations,id'],
 
-            'lines'                           => ['required', 'array', 'min:1'],
-            'lines.*.product_id'              => ['required', 'integer', 'exists:products,id'],
-            'lines.*.quantity'                => ['required', 'numeric', 'min:0.0001'],
-            'lines.*.unit_cost'               => ['required', 'numeric', 'min:0'],
-            'lines.*.uom_id'                  => ['nullable', 'integer', 'exists:unit_of_measures,id'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'lines.*.quantity' => ['required', 'numeric', 'min:0.0001'],
+            'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
+            'lines.*.uom_id' => ['nullable', 'integer', 'exists:unit_of_measures,id'],
         ];
     }
 
@@ -55,7 +55,7 @@ class TransferStoreRequest extends FormRequest
     {
         return [
             'from_location_id.different' => 'Origin and destination locations must be different.',
-            'lines.*.quantity.min'        => 'Transfer quantity must be greater than zero.',
+            'lines.*.quantity.min' => 'Transfer quantity must be greater than zero.',
         ];
     }
 }

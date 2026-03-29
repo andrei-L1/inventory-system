@@ -11,8 +11,8 @@ use App\Models\TransactionLine;
 use App\Models\TransactionStatus;
 use App\Models\Transfer;
 use App\Models\UomConversion;
-use Exception;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
@@ -93,14 +93,14 @@ class StockService
                 $lineData = [
                     'product_id' => $line->product_id,
                     'location_id' => $line->location_id,
-                    'quantity'   => (float) $line->quantity,
-                    'unit_cost'  => (float) $line->unit_cost,
+                    'quantity' => (float) $line->quantity,
+                    'unit_cost' => (float) $line->unit_cost,
                 ];
                 $this->applyLineToInventory($line, $lineData);
             }
 
             $transaction->transaction_status_id = $postedStatus->id;
-            $transaction->posted_at = \Illuminate\Support\Carbon::now();
+            $transaction->posted_at = Carbon::now();
             $transaction->save();
 
             return $transaction->fresh(['status', 'lines']);
@@ -122,30 +122,30 @@ class StockService
 
             $originData = [
                 'header' => array_merge($data['header'], [
-                    'reference_number' => $ref . '-OUT',
+                    'reference_number' => $ref.'-OUT',
                     'from_location_id' => $data['from_location_id'],
-                    'to_location_id'   => $data['to_location_id'],
-                    'notes'            => 'Transfer Out: ' . ($data['header']['notes'] ?? ''),
+                    'to_location_id' => $data['to_location_id'],
+                    'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
                     return array_merge($line, [
                         'location_id' => $data['from_location_id'],
-                        'quantity'    => -abs($line['quantity']),
+                        'quantity' => -abs($line['quantity']),
                     ]);
                 })->toArray(),
             ];
 
             $destData = [
                 'header' => array_merge($data['header'], [
-                    'reference_number' => $ref . '-IN',
+                    'reference_number' => $ref.'-IN',
                     'from_location_id' => $data['from_location_id'],
-                    'to_location_id'   => $data['to_location_id'],
-                    'notes'            => 'Transfer In: ' . ($data['header']['notes'] ?? ''),
+                    'to_location_id' => $data['to_location_id'],
+                    'notes' => 'Transfer In: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
                     return array_merge($line, [
                         'location_id' => $data['to_location_id'],
-                        'quantity'    => abs($line['quantity']),
+                        'quantity' => abs($line['quantity']),
                     ]);
                 })->toArray(),
             ];
@@ -157,13 +157,13 @@ class StockService
             $transfer = Transfer::create([
                 'outgoing_transaction_id' => $outgoing->id,
                 'incoming_transaction_id' => $incoming->id,
-                'from_location_id'        => $data['from_location_id'],
-                'to_location_id'          => $data['to_location_id'],
-                'reference_number'        => (string) $ref,
+                'from_location_id' => $data['from_location_id'],
+                'to_location_id' => $data['to_location_id'],
+                'reference_number' => (string) $ref,
             ]);
 
             return [
-                'transfer'             => $transfer,
+                'transfer' => $transfer,
                 'outgoing_transaction' => $outgoing,
                 'incoming_transaction' => $incoming,
             ];
@@ -179,7 +179,7 @@ class StockService
         // Lock the inventory row to prevent concurrent race conditions.
         $inventory = Inventory::firstOrCreate(
             [
-                'product_id'  => $lineData['product_id'],
+                'product_id' => $lineData['product_id'],
                 'location_id' => $lineData['location_id'],
             ],
             ['quantity_on_hand' => 0, 'average_cost' => 0]
@@ -203,12 +203,12 @@ class StockService
             $this->updateProductGlobalAverageCost((int) $lineData['product_id']);
 
             InventoryCostLayer::create([
-                'product_id'          => $lineData['product_id'],
-                'location_id'         => $lineData['location_id'],
+                'product_id' => $lineData['product_id'],
+                'location_id' => $lineData['location_id'],
                 'transaction_line_id' => $line->id,
-                'received_qty'        => $lineData['quantity'],
-                'unit_cost'           => $lineData['unit_cost'],
-                'receipt_date'        => now(),
+                'received_qty' => $lineData['quantity'],
+                'unit_cost' => $lineData['unit_cost'],
+                'receipt_date' => now(),
             ]);
         } else {
             // FIX [unit_cost on issues]: consumeLayers() now returns the true
@@ -216,7 +216,7 @@ class StockService
             // to the line so Gross Margin reports have accurate COGS data.
             $consumedUnitCost = $this->consumeLayers($inventory, abs((float) $lineData['quantity']));
 
-            $line->unit_cost  = $consumedUnitCost;
+            $line->unit_cost = $consumedUnitCost;
             $line->total_cost = $consumedUnitCost * abs((float) $lineData['quantity']);
             $line->save();
         }
@@ -232,11 +232,11 @@ class StockService
     private function consumeLayers(Inventory $inventory, float $quantity): float
     {
         $product = $inventory->product;
-        $method  = $product->costingMethod;
+        $method = $product->costingMethod;
 
         $direction = ($method && $method->matchesName('lifo')) ? 'desc' : 'asc';
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, InventoryCostLayer> $layers */
+        /** @var Collection<int, InventoryCostLayer> $layers */
         $layers = InventoryCostLayer::where('product_id', $inventory->product_id)
             ->where('location_id', $inventory->location_id)
             ->where('is_exhausted', false)
@@ -245,8 +245,8 @@ class StockService
             ->get();
 
         $remainingToConsume = $quantity;
-        $totalCostConsumed  = 0.0;
-        $totalQtyConsumed   = 0.0;
+        $totalCostConsumed = 0.0;
+        $totalQtyConsumed = 0.0;
 
         foreach ($layers as $layer) {
             if ($remainingToConsume <= 0) {
@@ -254,14 +254,14 @@ class StockService
             }
 
             $availableInLayer = $layer->remaining_qty;
-            $consumeAmount    = min($availableInLayer, $remainingToConsume);
+            $consumeAmount = min($availableInLayer, $remainingToConsume);
 
             $totalCostConsumed += $consumeAmount * (float) $layer->unit_cost;
-            $totalQtyConsumed  += $consumeAmount;
+            $totalQtyConsumed += $consumeAmount;
 
             /** @var InventoryCostLayer $layer */
             $layer->issued_qty = (float) $layer->issued_qty + $consumeAmount;
-            $remainingToConsume     -= $consumeAmount;
+            $remainingToConsume -= $consumeAmount;
 
             if (($layer->received_qty - $layer->issued_qty) <= 0.00001) {
                 $layer->is_exhausted = true;
@@ -273,7 +273,7 @@ class StockService
         if ($remainingToConsume > 0.00001) {
             throw new InsufficientStockException(
                 "Insufficient stock to consume {$quantity} for product ID: {$inventory->product_id} "
-                . "at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
+                ."at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
             );
         }
 
@@ -289,12 +289,12 @@ class StockService
     // -------------------------------------------------------------------------
     private function updateLocationAverageCost(Inventory $inventory, float $newQty, float $newUnitCost): void
     {
-        $currentQty     = (float) $inventory->quantity_on_hand;
+        $currentQty = (float) $inventory->quantity_on_hand;
         $currentAvgCost = (float) $inventory->average_cost;
 
         $totalValueBefore = $currentQty * $currentAvgCost;
-        $newValueInbound  = $newQty * $newUnitCost;
-        $totalQtyAfter    = $currentQty + $newQty;
+        $newValueInbound = $newQty * $newUnitCost;
+        $totalQtyAfter = $currentQty + $newQty;
 
         if ($totalQtyAfter > 0) {
             $inventory->average_cost = ($totalValueBefore + $newValueInbound) / $totalQtyAfter;

@@ -13,6 +13,7 @@ use App\Models\TransactionStatus;
 use App\Models\Vendor;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 
@@ -54,7 +55,7 @@ class TransactionController extends Controller
             $result = $this->stockService->recordTransfer($request->validated());
 
             return response()->json([
-                'transfer_id'          => $result['transfer']->id,
+                'transfer_id' => $result['transfer']->id,
                 'outgoing_transaction' => new TransactionResource(
                     $result['outgoing_transaction']->load(['type', 'status', 'fromLocation', 'toLocation', 'lines'])
                 ),
@@ -112,7 +113,7 @@ class TransactionController extends Controller
 
         $cancelledStatus = TransactionStatus::where('name', 'cancelled')->firstOrFail();
         $transaction->transaction_status_id = $cancelledStatus->id;
-        $transaction->cancelled_at = \Illuminate\Support\Carbon::now();
+        $transaction->cancelled_at = Carbon::now();
         $transaction->save();
 
         return response()->json(['message' => 'Transaction cancelled successfully.', 'id' => $transaction->id]);
