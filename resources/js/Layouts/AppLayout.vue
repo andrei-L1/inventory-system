@@ -17,7 +17,7 @@
                         <i class="pi pi-server text-white text-sm"></i>
                     </div>
                     <div v-if="!collapsed" class="flex flex-col whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">
-                        <span class="text-[10px] font-black text-sky-400 font-mono tracking-[0.3em] leading-none mb-1">TERMINAL_OS</span>
+                        <span class="text-[10px] font-black text-sky-400 font-mono tracking-[0.3em] leading-none mb-1">SYSTEM</span>
                         <span class="text-white font-bold text-sm tracking-tighter">Inventory Core</span>
                     </div>
                 </div>
@@ -50,14 +50,9 @@
                     </Link>
                 </template>
 
-                <!-- System Maintenance Section -->
                 <div v-if="!collapsed" class="pt-8 px-4">
                     <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] mb-4 block font-mono">Operations</span>
                     <div class="space-y-4">
-                        <div class="flex items-center gap-4 opacity-30 grayscale cursor-not-allowed">
-                             <div class="w-1 h-1 rounded-full bg-zinc-800"></div>
-                             <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Transfers</span>
-                        </div>
                         <div class="flex items-center gap-4 opacity-30 grayscale cursor-not-allowed">
                              <div class="w-1 h-1 rounded-full bg-zinc-800"></div>
                              <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reporting</span>
@@ -90,33 +85,33 @@
                 <div class="flex items-center gap-6">
                     <div class="hidden md:flex flex-col">
                         <div class="flex items-center gap-2 mb-0.5">
-                            <span class="text-[10px] font-bold text-zinc-700 uppercase tracking-widest font-mono">SYS_STATUS</span>
+                            <span class="text-[10px] font-bold text-zinc-700 uppercase tracking-widest font-mono">STATUS</span>
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                         </div>
-                        <span class="text-white text-[11px] font-bold tracking-tight uppercase font-mono">OPERATIONAL // ENCRYPTED</span>
+                        <span class="text-white text-[11px] font-bold tracking-tight uppercase font-mono">ONLINE // SECURE</span>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-8">
-                    <!-- Notification Uplink -->
-                    <button class="relative w-11 h-11 rounded-xl bg-zinc-900/40 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20 transition-all cursor-pointer group outline-none" title="System Alerts">
+                    <!-- Notifications -->
+                    <button class="relative w-11 h-11 rounded-xl bg-zinc-900/40 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20 transition-all cursor-pointer group outline-none" title="Alerts">
                         <i class="pi pi-bell text-sm group-hover:-rotate-12 transition-transform"></i>
                         <span class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-amber-500 border border-zinc-950 shadow-[0_0_10px_rgba(245,158,11,0.6)] animate-pulse"></span>
                     </button>
 
-                    <!-- User Registry Profile -->
+                    <!-- User Profile -->
                     <div v-if="user" class="flex flex-col items-end border-r border-zinc-900 pr-8">
                         <span class="text-white font-black text-[10px] tracking-widest uppercase font-mono mb-0.5">{{ user.username }}</span>
                         <div class="flex items-center gap-2">
                              <div class="w-1 h-1 rounded-full bg-sky-500"></div>
-                             <span class="text-zinc-600 text-[9px] font-bold uppercase tracking-wider font-mono">LVL_{{ user.role?.toUpperCase() || 'EXTERNAL' }}</span>
+                             <span class="text-zinc-600 text-[9px] font-bold uppercase tracking-wider font-mono">ROLE: {{ user.role?.toUpperCase() || 'USER' }}</span>
                         </div>
                     </div>
 
-                    <!-- Termination Sequence -->
+                    <!-- Logout -->
                     <Link href="/logout" method="post" as="button" 
                           class="w-11 h-11 rounded-xl bg-zinc-900/50 border border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all active:scale-95 group no-underline"
-                          title="Terminate Session"
+                          title="Log Out"
                     >
                         <i class="pi pi-power-off text-base group-hover:rotate-12 transition-transform"></i>
                     </Link>
@@ -126,11 +121,11 @@
             <!-- Secondary Topbar (Global Breadcrumbs) -->
             <div class="h-10 bg-zinc-900/10 border-b border-zinc-900/30 flex items-center px-10">
                 <div class="flex items-center gap-2 text-[9px] font-bold text-zinc-700 font-mono tracking-widest uppercase">
-                    <span class="hover:text-zinc-500 cursor-pointer">ROOT</span>
+                    <span class="hover:text-zinc-500 cursor-pointer">SYSTEM</span>
                     <i class="pi pi-chevron-right text-[7px]" />
-                    <span class="text-zinc-500">{{ page.component.split('/').pop().toUpperCase() }}</span>
-                    <i class="pi pi-chevron-right text-[7px]" />
-                    <span class="text-sky-400/80">CONTEXT_LIVE</span>
+                    <span class="text-zinc-500">{{ page.url.split('/')[1]?.toUpperCase() || 'DASHBOARD' }}</span>
+                    <i v-if="page.url.split('/').length > 2" class="pi pi-chevron-right text-[7px]" />
+                    <span v-if="page.url.split('/').length > 2" class="text-sky-400/80">{{ page.url.split('/').pop().toUpperCase().replace(/-/g, ' ') }}</span>
                 </div>
             </div>
 
@@ -167,6 +162,7 @@ const menuItems = [
     { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
     { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
     { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
+    { label: 'Transfers', href: '/movements/transfer', icon: 'pi pi-arrow-right-arrow-left', color: 'text-indigo-400' },
 ];
 
 onMounted(() => {
