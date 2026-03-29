@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Inventory\LocationTypeController;
 use App\Http\Controllers\Api\Inventory\ProductController;
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
+use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,9 +30,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::apiResource('vendors', VendorController::class)->only(['index', 'show'])->middleware('permission:view-products');
     Route::apiResource('vendors', VendorController::class)->except(['index', 'show'])->middleware('permission:manage-products');
 
-    // Unit of Measure
+    // Unit of Measure & Conversions
     Route::apiResource('uom', UnitOfMeasureController::class)->only(['index', 'show'])->middleware('permission:view-products');
     Route::apiResource('uom', UnitOfMeasureController::class)->except(['index', 'show'])->middleware('permission:manage-products');
+    Route::apiResource('uom-conversions', UomConversionController::class)->only(['index', 'show'])->middleware('permission:view-products');
+    Route::apiResource('uom-conversions', UomConversionController::class)->except(['index', 'show'])->middleware('permission:manage-products');
 
     // Costing Methods (Read Only)
     Route::apiResource('costing-methods', CostingMethodController::class)->only(['index', 'show'])->middleware('permission:view-products');

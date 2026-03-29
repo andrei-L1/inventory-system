@@ -183,6 +183,7 @@ Based on the full system overhaul conducted on 2026-03-29, here is the verified 
 - **Resource Wrapper Bugfix**: Fixed `TransactionController::forProduct` to return native `AnonymousResourceCollection`, assuring correct `data` array wrapping in Vue.
 - **Vendor Center Patch**: Resolved a PrimeVue `Toast` import crash affecting UI integrity.
 - **Dashboard Integrity**: Confirmed that `DashboardController::getStats` perfectly feeds the high-fidelity UI layout in `Dashboard.vue` with real-time `total_products`, `total_vendors`, `inventory_value`, and `low_stock_count` alerts.
+- **UOM Configuration Completion**: Accomplished Phase 1.5. Created `UomConversionController.php`, `UomCenter.vue`, and wired the mapping definitions into the sidebar.
 
 ---
 

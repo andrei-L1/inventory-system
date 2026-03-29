@@ -42,4 +42,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/vendor-center', function () {
         return Inertia::render('VendorCenter');
     })->name('vendor-center');
+
+    Route::get('/uom-center', function () {
+        return Inertia::render('UomCenter');
+    })->name('uom-center');
 });
