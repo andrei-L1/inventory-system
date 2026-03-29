@@ -80,4 +80,12 @@ class Product extends Model
     {
         return $this->hasMany(InventoryCostLayer::class);
     }
+
+    /**
+     * Get the total quantity on hand across all locations.
+     */
+    public function getTotalQohAttribute(): float
+    {
+        return (float) $this->inventories()->sum('quantity_on_hand');
+    }
 }

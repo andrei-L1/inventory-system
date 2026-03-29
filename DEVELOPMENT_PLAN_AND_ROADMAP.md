@@ -162,12 +162,12 @@ Each phase below corresponds to one stage of that chain.
 - [x] `AdjustmentReasonController` — Read-only list (`/api/adjustment-reasons`) 
 - [x] Reversal logic for posted transaction cancellation (Creates a counter-transaction)
 
-### 2.2 Inventory Query API ✅ NOW LIVE
+### 2.2 Inventory Query API ✅ COMPLETED
 - [x] `GET /api/inventory/{product_id}/locations` — Stock per location for a single product
 - [x] `GET /api/inventory/{product_id}/cost-layers` — Current FIFO/LIFO layers for a product
-- [ ] `GET /api/inventory` — Global stock list (product × location × QOH × average_cost)
-- [ ] `GET /api/inventory/low-stock` — All products where `QOH < reorder_point`
-- [ ] `InventoryResource` — response transformer
+- [x] `GET /api/inventory` — Global stock list (product × location × QOH × average_cost)
+- [x] `GET /api/inventory/low-stock` — All products where `QOH < reorder_point`
+- [x] `InventoryResource` — response transformer
 
 ### 2.3 Inventory Center — Enhanced UI ✅ NOW LIVE
 - [x] Product sidebar (searchable Listbox, auto-select first)
