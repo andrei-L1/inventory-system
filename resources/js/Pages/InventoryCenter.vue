@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -105,29 +105,55 @@ const movementOptions = [
 
 onMounted(loadProducts);
 
+const page = usePage();
+watch(() => page.url, () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product_id');
+    if (productId && products.value.length > 0) {
+        selectedProduct.value = products.value.find(p => p.id == productId) || selectedProduct.value;
+    }
+});
+
 watch(selectedProduct, () => {
     loadHistory();
     loadIntelligenceData();
 });
 
 const handleLinkClick = (type, name, id) => {
+    console.log(`Navigating to ${type} [ID: ${id}]`);
+    
     if (type === 'Vendor' && id) {
         router.visit(`/vendor-center?vendor_id=${id}`);
         return;
     }
+
+    if (type === 'PO' && id) {
+        router.visit(`/purchase-orders/${id}`);
+        return;
+    }
+
+    if (type === 'Product' && id) {
+        router.visit(`/inventory-center?product_id=${id}`);
+        return;
+    }
     
-    // Fallback for types that don't have their own page yet (Customer, PO, SO)
+    // Fallback or feedback if ID is missing or type is unhandled
+    const detailMsg = id 
+        ? `Pending feature for ${type}: ${name}` 
+        : `Cannot link this ${type}: Data reference (ID) is missing in the system ledger.`;
+        
     toast.add({ 
-        severity: 'info', 
-        summary: `Navigating to ${type}`, 
-        detail: `Pending feature: Redirecting to ${type} ${name}`, 
-        life: 3000 
+        severity: id ? 'info' : 'warn', 
+        summary: id ? `Navigating to ${type}` : 'Relation Missing', 
+        detail: detailMsg, 
+        life: 4000 
     });
 };
 
 const getTransactionSeverity = (type) => {
     switch (type.toLowerCase()) {
-        case 'receipt': return 'success';
+        case 'receipt': 
+        case 'good_receipt': return 'success';
         case 'issue': return 'danger';
         case 'transfer': return 'info';
         case 'adjustment': return 'warning';
@@ -261,8 +287,10 @@ const tablePt = {
                                     <div class="flex flex-col flex-1">
                                         <div class="flex items-center gap-4 mb-3">
                                             <h1 class="text-3xl font-bold text-white tracking-tighter m-0">{{ selectedProduct.name }}</h1>
-                                            <div class="flex gap-2">
+                                            <div class="flex flex-wrap gap-2">
                                                 <span class="text-[9px] font-bold px-3 py-1 bg-zinc-800/80 border border-zinc-700 rounded-full text-zinc-400 uppercase tracking-widest font-mono">{{ selectedProduct.category?.name || 'PRODUCT' }}</span>
+                                                <span v-if="selectedProduct.preferred_vendor" class="text-[9px] font-bold px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-sky-400 uppercase tracking-widest font-mono">OWNED BY: {{ selectedProduct.preferred_vendor.name }}</span>
+                                                <span v-else class="text-[9px] font-bold px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 uppercase tracking-widest font-mono">STOCK: INTERNAL</span>
                                                 <span class="text-[10px] font-bold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 uppercase tracking-widest font-mono">STATUS: ACTIVE</span>
                                             </div>
                                         </div>
@@ -390,7 +418,7 @@ const tablePt = {
                             <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <i class="pi pi-database text-sky-400 text-xs"></i>
-                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Inventory Costing (FIFO)</span>
+                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Inventory Costing ({{ selectedProduct?.valuation_method || selectedProduct?.costing_method || 'FIFO' }})</span>
                                 </div>
                                 <span class="text-[9px] font-bold text-sky-400 font-mono tracking-tighter uppercase">In Stock</span>
                             </div>
@@ -479,11 +507,11 @@ const tablePt = {
                                     <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
                                              :class="[
-                                                 data.type.toLowerCase() === 'receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
+                                                 data.type.toLowerCase() === 'receipt' || data.type.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
                                                  data.type.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
                                                  'bg-sky-500/5 text-sky-400 border-sky-500/20'
                                              ]">
-                                            {{ data.type.toUpperCase() }}
+                                            {{ data.display_type || data.type.toUpperCase() }}
                                         </div>
                                     </template>
                                 </Column>
@@ -499,10 +527,10 @@ const tablePt = {
                                 <Column header="Entity / Vendor">
                                     <template #body="{ data }">
                                         <div class="flex items-center gap-3">
-                                            <div v-if="data.vendor_name" @click="handleLinkClick('Vendor', data.vendor_name, data.vendor_id)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
+                                            <div v-if="data.vendor_name" @click.stop="handleLinkClick('Vendor', data.vendor_name, data.vendor_id)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-building text-[10px]"></i> {{ data.vendor_name }}
                                             </div>
-                                            <div v-else-if="data.customer_name" @click="handleLinkClick('Customer', data.customer_name, data.customer_id)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
+                                            <div v-else-if="data.customer_name" @click.stop="handleLinkClick('Customer', data.customer_name, data.customer_id)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-user text-[10px]"></i> {{ data.customer_name }}
                                             </div>
                                             <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal movement</span>
@@ -513,12 +541,12 @@ const tablePt = {
                                 <Column header="Linked Document" style="width: 200px">
                                     <template #body="{ data }">
                                         <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
-                                            @click="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)" 
+                                            @click.stop="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)" 
                                             class="text-emerald-400/80 hover:text-emerald-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-paperclip text-[10px]"></i> {{ data.po_number || data.reference_doc }}
                                         </div>
                                         <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
-                                            @click="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)" 
+                                            @click.stop="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)" 
                                             class="text-amber-400/80 hover:text-amber-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-send text-[10px]"></i> {{ data.so_number || data.reference_doc }}
                                         </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -73,8 +74,11 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('PurchaseOrders/Form');
     })->name('purchase-orders.create');
 
-    Route::get('/purchase-orders/{id}', function (\Illuminate\Http\Request $request, $id) {
-        if ($id === 'create') return redirect()->route('purchase-orders.create');
+    Route::get('/purchase-orders/{id}', function (Request $request, $id) {
+        if ($id === 'create') {
+            return redirect()->route('purchase-orders.create');
+        }
+
         return Inertia::render('PurchaseOrders/Show', ['id' => $id]);
     })->name('purchase-orders.show');
 });

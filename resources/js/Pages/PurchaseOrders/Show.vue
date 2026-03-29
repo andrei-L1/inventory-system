@@ -6,9 +6,10 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
 import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -23,12 +24,22 @@ const toast = useToast();
 const po = ref(null);
 const loading = ref(true);
 
+const approveLoading = ref(false);
+const sendLoading = ref(false);
+const shipLoading = ref(false);
 const grnDialog = ref(false);
+const grnDetailDialog = ref(false);
+const selectedGrn = ref(null);
+const shipDialog = ref(false);
 const grnLoading = ref(false);
 const locations = ref([]);
 const grnForm = ref({
     location_id: null,
     lines: []
+});
+const shipForm = ref({
+    carrier: '',
+    tracking_number: ''
 });
 
 const loadPO = async () => {
@@ -58,7 +69,15 @@ onMounted(() => {
 });
 
 const getStatusColor = (statusName) => {
-    const map = { 'draft': 'warning', 'open': 'info', 'partially_received': 'help', 'closed': 'success', 'cancelled': 'danger' };
+    const map = { 
+        'draft': 'warning', 
+        'open': 'info', 
+        'sent': 'info',
+        'in_transit': 'help',
+        'partially_received': 'help', 
+        'closed': 'success', 
+        'cancelled': 'danger' 
+    };
     return map[statusName] || 'info';
 };
 
@@ -70,14 +89,48 @@ const approve = async () => {
         acceptClass: 'p-button-success',
         accept: async () => {
             try {
+                approveLoading.value = true;
                 await axios.patch(`/api/purchase-orders/${po.value.id}/approve`);
                 toast.add({ severity: 'success', summary: 'Approved', detail: 'PO is now Open', life: 3000 });
                 loadPO();
             } catch (e) {
                 toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Approval failed', life: 3000 });
+            } finally {
+                approveLoading.value = false;
             }
         }
     });
+};
+
+const sendPO = async () => {
+    try {
+        sendLoading.value = true;
+        await axios.patch(`/api/purchase-orders/${po.value.id}/send`);
+        toast.add({ severity: 'success', summary: 'Success', detail: 'PO marked as Sent to Vendor', life: 3000 });
+        loadPO();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Send failed', life: 3000 });
+    } finally {
+        sendLoading.value = false;
+    }
+};
+
+const submitShipment = async () => {
+    if (!shipForm.value.carrier) {
+        toast.add({ severity: 'warn', summary: 'Warning', detail: 'Carrier is required', life: 3000 });
+        return;
+    }
+    try {
+        shipLoading.value = true;
+        await axios.post(`/api/purchase-orders/${po.value.id}/ship`, shipForm.value);
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Order marked as In Transit', life: 3000 });
+        shipDialog.value = false;
+        loadPO();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Shipment record failed', life: 3000 });
+    } finally {
+        shipLoading.value = false;
+    }
 };
 
 const openGrnMode = () => {
@@ -98,6 +151,11 @@ const openGrnMode = () => {
     }
     
     grnDialog.value = true;
+};
+
+const viewGrnDetails = (receipt) => {
+    selectedGrn.value = receipt;
+    grnDetailDialog.value = true;
 };
 
 const postReceipt = async () => {
@@ -169,8 +227,10 @@ const deletePO = async () => {
                                 class="text-[9px] font-bold tracking-widest font-mono uppercase px-2 py-0.5 rounded shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)]"
                             />
                         </div>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
-                            {{ po.vendor_name }} &bull; {{ po.currency }} {{ Number(po.total_amount).toFixed(2) }}
+                        <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
+                            <span @click="router.visit(`/vendor-center?vendor_id=${po.vendor_id}`)" class="text-zinc-500 hover:text-sky-400 cursor-pointer transition-colors">{{ po.vendor_name }}</span>
+                            <span class="text-zinc-700 mx-2">&bull;</span>
+                            <span class="text-zinc-500">₱{{ Number(po.total_amount).toFixed(2) }}</span>
                         </p>
                     </div>
                 </div>
@@ -188,12 +248,30 @@ const deletePO = async () => {
                         v-if="po.status === 'draft' && can('manage-inventory')" 
                         label="Approve Order" 
                         icon="pi pi-check" 
+                        :loading="approveLoading"
                         class="p-button-sm !bg-emerald-500/20 hover:!bg-emerald-500/30 !text-emerald-400 !border-emerald-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="approve"
                     />
 
                     <Button 
-                        v-if="['open', 'partially_received'].includes(po.status) && can('manage-inventory')" 
+                        v-if="po.status === 'open' && can('manage-inventory')" 
+                        label="Send to Vendor" 
+                        icon="pi pi-send" 
+                        :loading="sendLoading"
+                        class="p-button-sm !bg-sky-500/20 hover:!bg-sky-500/30 !text-sky-400 !border-sky-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="sendPO"
+                    />
+
+                    <Button 
+                        v-if="['open', 'sent'].includes(po.status) && can('manage-inventory')" 
+                        label="Mark Shipped" 
+                        icon="pi pi-truck" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="shipDialog = true"
+                    />
+
+                    <Button 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-inventory')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
                         class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
@@ -214,16 +292,75 @@ const deletePO = async () => {
                             <span class="text-xs font-bold text-white">{{ po.created_by }}</span>
                         </div>
                         <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Order Date</span>
-                            <span class="text-xs font-bold text-sky-400 font-mono">{{ po.order_date || 'N/A' }}</span>
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Created On</span>
+                            <span class="text-xs font-bold text-zinc-400">{{ po.created_at }}</span>
                         </div>
+                        <div v-if="po.approved_by" class="flex flex-col gap-2 py-2 border-b border-zinc-800/30">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Approved By</span>
+                                <span class="text-xs font-bold text-emerald-400">{{ po.approved_by }}</span>
+                            </div>
+                            <div v-if="po.approved_at" class="flex justify-between items-center mt-1">
+                                <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-tighter uppercase">Approved At</span>
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase">{{ po.approved_at }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Workflow Timestamps -->
+                        <div v-if="po.sent_at" class="flex justify-between items-center py-2 border-b border-zinc-800/30">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Sent To Vendor</span>
+                            <span class="text-xs font-bold text-sky-400">{{ po.sent_at }}</span>
+                        </div>
+
+                        <div v-if="po.shipped_at" class="flex flex-col gap-2 py-2 border-b border-zinc-800/30">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Shipped On</span>
+                                <span class="text-xs font-bold text-orange-400">{{ po.shipped_at }}</span>
+                            </div>
+                            <div class="flex flex-col gap-1 mt-1 p-2 bg-zinc-950 rounded border border-zinc-800">
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Carrier:</span>
+                                    <span class="text-zinc-300 font-bold">{{ po.carrier }}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Tracking:</span>
+                                    <span class="text-sky-500 font-mono">{{ po.tracking_number || 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Expected Del.</span>
-                            <span class="text-xs font-bold text-amber-400 font-mono">{{ po.expected_delivery_date || 'N/A' }}</span>
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Latest Receiver</span>
+                            <span class="text-xs font-bold" :class="po.receipts.length > 0 ? 'text-orange-400' : 'text-zinc-600'">
+                                {{ po.receipts.length > 0 ? po.receipts[po.receipts.length - 1].received_by : 'N/A' }}
+                            </span>
                         </div>
                         <div v-if="po.notes" class="flex flex-col gap-2 pt-2">
                             <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Notes</span>
                             <p class="text-xs text-zinc-400 leading-relaxed bg-zinc-950/50 p-3 rounded-lg border border-zinc-800/50">{{ po.notes }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Receipt History -->
+                    <div v-if="po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700">
+                        <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono border-b border-orange-500/20 pb-3">Goods Receipt History</span>
+                        
+                        <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-orange-500/20 transition-all">
+                            <div class="flex justify-between items-center">
+                                <span @click="viewGrnDetails(receipt)" 
+                                      class="text-[10px] font-mono text-sky-400 font-bold cursor-pointer hover:underline">{{ receipt.reference_number }}</span>
+                                <span class="text-[9px] font-mono text-zinc-500">{{ receipt.received_at }}</span>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Receiver:</span>
+                                    <span class="text-zinc-300 font-bold">{{ receipt.received_by }}</span>
+                                </div>
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Location:</span>
+                                    <span class="text-zinc-400">{{ receipt.to_location }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -252,7 +389,7 @@ const deletePO = async () => {
 
                             <Column field="unit_cost" header="UNIT COST">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-400 font-mono text-xs">{{ po.currency }} {{ Number(data.unit_cost).toFixed(2) }}</span>
+                                    <span class="text-zinc-400 font-mono text-xs">₱{{ Number(data.unit_cost).toFixed(2) }}</span>
                                 </template>
                             </Column>
 
@@ -265,14 +402,22 @@ const deletePO = async () => {
                             <Column field="received_qty" header="RCV QTY">
                                 <template #body="{ data }">
                                     <span :class="[data.received_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
-                                        {{ data.received_qty }} {{ data.uom }}
+                                        {{ data.received_qty }}
+                                    </span>
+                                </template>
+                            </Column>
+                            
+                            <Column field="pending_qty" header="REM QTY">
+                                <template #body="{ data }">
+                                    <span :class="[data.pending_qty === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
+                                        {{ data.pending_qty }} {{ data.uom }}
                                     </span>
                                 </template>
                             </Column>
 
                             <Column field="total_line_cost" header="TOTAL">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ po.currency }} {{ Number(data.total_line_cost).toFixed(2) }}</span>
+                                    <span class="text-white font-mono text-xs font-bold">₱{{ Number(data.total_line_cost).toFixed(2) }}</span>
                                 </template>
                             </Column>
                         </DataTable>
@@ -293,7 +438,7 @@ const deletePO = async () => {
 
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Receiving Location (Destination Bin)</label>
-                    <Dropdown 
+                    <Select 
                         v-model="grnForm.location_id" 
                         :options="locations" 
                         optionLabel="name" 
@@ -305,7 +450,7 @@ const deletePO = async () => {
                         <template #option="slotProps">
                             <span class="font-bold text-xs">{{ slotProps.option.code }} — {{ slotProps.option.name }}</span>
                         </template>
-                    </Dropdown>
+                    </Select>
                 </div>
 
                 <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
@@ -332,6 +477,73 @@ const deletePO = async () => {
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" @click="grnDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
                 <Button label="Post Receipt" icon="pi pi-check" @click="postReceipt" :loading="grnLoading" class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
+            </template>
+        </Dialog>
+
+        <!-- Ship Dialog -->
+        <Dialog v-model:visible="shipDialog" modal header="Log Vendor Shipment" :style="{ width: '30rem' }">
+            <div class="flex flex-col gap-4 py-2">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Carrier Name</label>
+                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, LBC" class="w-full !bg-zinc-950 !border-zinc-700 !text-zinc-500 !text-sm" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Tracking Number</label>
+                    <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking #" class="w-full !bg-zinc-950 !border-zinc-700 !text-zinc-500 !text-sm" />
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Cancel" icon="pi pi-times" @click="shipDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
+                <Button label="Confirm Shipment" icon="pi pi-truck" @click="submitShipment" :loading="shipLoading" class="p-button-sm !bg-white hover:!bg-zinc-200 !border-none !text-zinc-950 font-bold uppercase tracking-widest transition-all" />
+            </template>
+        </Dialog>
+        
+        <!-- GRN Detail View Modal -->
+        <Dialog v-model:visible="grnDetailDialog" modal header="Goods Receipt Note Details" :style="{ width: '45rem' }">
+            <div v-if="selectedGrn" class="flex flex-col gap-6">
+                <!-- Receipt Header Info -->
+                <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
+                        <span class="text-sm font-black text-sky-400 font-mono">{{ selectedGrn.reference_number }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Received At</label>
+                        <span class="text-sm font-bold text-white">{{ selectedGrn.received_at }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Received By</label>
+                        <span class="text-sm font-bold text-orange-400">{{ selectedGrn.received_by }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Storage Location</label>
+                        <span class="text-sm font-bold text-white">{{ selectedGrn.to_location }}</span>
+                    </div>
+                </div>
+
+                <!-- Receipt Line Items -->
+                <div class="border border-zinc-800 rounded-xl overflow-hidden">
+                    <DataTable :value="selectedGrn.lines" class="p-datatable-sm w-full">
+                        <Column field="sku" header="SKU">
+                            <template #body="{ data }">
+                                <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
+                            </template>
+                        </Column>
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <span class="text-xs font-bold">{{ data.product_name }}</span>
+                            </template>
+                        </Column>
+                        <Column field="quantity" header="RECEIVED">
+                            <template #body="{ data }">
+                                <span class="text-white font-mono text-xs font-bold">{{ data.quantity }} {{ data.uom }}</span>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Close Audit Trail" icon="pi pi-times" @click="grnDetailDialog = false" class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
             </template>
         </Dialog>
 
@@ -377,5 +589,5 @@ const deletePO = async () => {
 }
 :deep(.p-dialog-content) { background: transparent; padding: 1.5rem; color: #a1a1aa; }
 :deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1.25rem; }
-:deep(.p-dropdown), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
+:deep(.p-select), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
 </style>
