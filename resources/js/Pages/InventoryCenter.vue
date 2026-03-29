@@ -743,13 +743,13 @@ const tablePt = {
                         </div>
                     </div>
 
-                    <div class="pt-6 mt-6 border-t border-zinc-800 flex justify-between items-center gap-4">
-                        <button v-if="ruleForm.id" @click="deleteRule(ruleForm.id)" class="px-4 h-10 rounded text-[10px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-colors">Delete</button>
+                    <div class="pt-8 mt-8 border-t border-zinc-800 flex justify-between items-center gap-4">
+                        <button v-if="ruleForm.id" @click="deleteRule(ruleForm.id)" class="px-5 h-12 rounded-lg text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20">Delete</button>
                         <div class="flex-1"></div>
-                        <button @click="prepareNewRule" class="px-4 h-10 rounded text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">Clear</button>
-                        <button @click="saveRule" :disabled="savingRule" class="px-6 h-10 rounded bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-400 transition-colors flex items-center justify-center min-w-[100px]">
+                        <button @click="prepareNewRule" class="bg-transparent border border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600 px-8 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest transition-colors flex items-center justify-center">Clear</button>
+                        <button @click="saveRule" :disabled="savingRule" class="bg-emerald-500 border-none text-zinc-950 px-10 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center min-w-[140px]">
                             <i v-if="savingRule" class="pi pi-spin pi-spinner mr-2"></i>
-                            {{ savingRule ? 'Saving...' : 'Save Rule' }}
+                            {{ savingRule ? 'SAVING...' : 'SAVE RULE' }}
                         </button>
                     </div>
                 </div>
