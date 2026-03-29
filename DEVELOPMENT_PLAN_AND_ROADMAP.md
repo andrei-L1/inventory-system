@@ -147,20 +147,20 @@ Each phase below corresponds to one stage of that chain.
 ## 🚧 Phase 2 — Warehouse Operations: Stock Movements
 > Status: IN PROGRESS — API layer now live, UI forms remaining
 
-### 2.1 Stock Movement API ✅ NOW LIVE
+### 2.1 Stock Movement API ✅ COMPLETED
 - [x] `POST /api/transactions` — Create any stock movement (receipt, issue, adjustment)
   - Body: `{ header: { transaction_type_id, transaction_status_id, transaction_date, reference_number, from_location_id, to_location_id, vendor_id?, customer_id?, notes }, lines: [{ product_id, location_id, quantity, unit_cost, uom_id? }] }`
   - Draft status: saves header+lines only, inventory untouched
   - Posted status: immediately updates inventory, cost layers, WAC
   - Returns `TransactionResource` with all relationships loaded
 - [x] `PATCH /api/transactions/{id}/post` — Promote Draft → Posted (inventory updated at this moment)
-- [x] `PATCH /api/transactions/{id}/cancel` — Void a draft (posted cancellation stubs to reversal — Phase 2 TODO)
+- [x] `PATCH /api/transactions/{id}/cancel` — Void a draft (posted cancellation triggers reversal)
 - [x] `POST /api/transfers` — Atomic two-leg transfer; links both legs via `transfers` pivot table
 - [x] `TransactionStoreRequest` + `TransferStoreRequest` — fully validated with FK existence checks
 - [x] `CheckPermission` middleware applied to all write routes (`manage-inventory`)
-- [ ] `POST /api/adjustments` — Dedicated adjustment endpoint (currently handled via generic `POST /api/transactions` with negative qty; a dedicated form with `adjustment_reason_id` is still planned)
-- [ ] `AdjustmentReasonController` — Read-only list (`/api/adjustment-reasons`)
-- [ ] Reversal logic for posted transaction cancellation (Phase 2 — creates a counter-transaction)
+- [x] `POST /api/adjustments` — Dedicated adjustment endpoint (wrapper for ADJS type)
+- [x] `AdjustmentReasonController` — Read-only list (`/api/adjustment-reasons`) 
+- [x] Reversal logic for posted transaction cancellation (Creates a counter-transaction)
 
 ### 2.2 Inventory Query API ✅ NOW LIVE
 - [x] `GET /api/inventory/{product_id}/locations` — Stock per location for a single product

@@ -171,6 +171,58 @@ class StockService
     }
 
     // -------------------------------------------------------------------------
+    // PUBLIC: Reverse a posted transaction.
+    // Creates a counter-transaction to void all stock movements.
+    // -------------------------------------------------------------------------
+    public function reverseTransaction(Transaction $transaction): Transaction
+    {
+        return DB::transaction(function () use ($transaction) {
+            $transaction->loadMissing(['lines', 'status']);
+
+            if ($transaction->status->name !== 'posted') {
+                throw new LogicException('Only posted transactions can be reversed.');
+            }
+
+            $revStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
+
+            // 1. Prepare counter data
+            $reverseData = [
+                'header' => [
+                    'transaction_type_id' => $transaction->transaction_type_id,
+                    'transaction_status_id' => $revStatus->id,
+                    'transaction_date' => now()->toDateString(),
+                    'reference_number' => "REV-{$transaction->reference_number}",
+                    'from_location_id' => $transaction->to_location_id, // Swapped for symmetry
+                    'to_location_id' => $transaction->from_location_id,
+                    'vendor_id' => $transaction->vendor_id,
+                    'customer_id' => $transaction->customer_id,
+                    'notes' => "REVERSAL of Transaction #{$transaction->id}",
+                ],
+                'lines' => $transaction->lines->map(function ($line) {
+                    return [
+                        'product_id' => $line->product_id,
+                        'location_id' => $line->location_id,
+                        'quantity' => -((float) $line->quantity),
+                        'unit_cost' => (float) $line->unit_cost,
+                        'uom_id' => $line->uom_id,
+                    ];
+                })->toArray(),
+            ];
+
+            // 2. Record movement (posts immediately)
+            $reversal = $this->recordMovement($reverseData);
+
+            // 3. Mark original as cancelled
+            $cancelledStatus = TransactionStatus::where('name', 'cancelled')->firstOrFail();
+            $transaction->transaction_status_id = $cancelledStatus->id;
+            $transaction->cancelled_at = Carbon::now();
+            $transaction->save();
+
+            return $reversal;
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // PRIVATE: Apply a single transaction line to the inventory layer.
     //   Extracted from the old inline loop so postTransaction() can reuse it.
     // -------------------------------------------------------------------------

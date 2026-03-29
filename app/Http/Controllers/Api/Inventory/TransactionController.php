@@ -106,10 +106,17 @@ class TransactionController extends Controller
         }
 
         if ($transaction->status->name === 'posted') {
-            // TODO: Phase 2 — implement reversal logic (creates a counter-transaction).
-            return response()->json([
-                'message' => 'Cancelling a posted transaction requires a reversal entry. This is not yet implemented.',
-            ], 422);
+            try {
+                $reversal = $this->stockService->reverseTransaction($transaction);
+
+                return response()->json([
+                    'message' => 'Transaction was posted, a reversal entry has been created to void stock.',
+                    'reversal_id' => $reversal->id,
+                    'reversal' => new TransactionResource($reversal->load(['lines', 'status'])),
+                ]);
+            } catch (InsufficientStockException $e) {
+                return response()->json(['message' => 'Reversal failed: '.$e->getMessage()], 422);
+            }
         }
 
         $cancelledStatus = TransactionStatus::where('name', 'cancelled')->firstOrFail();
