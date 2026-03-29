@@ -241,17 +241,17 @@ Replenishment Suggestion
 ```
 
 ### 4.1 Purchase Order API
-- [ ] `PurchaseOrderController` — Full CRUD (`/api/purchase-orders`)
-- [ ] `PurchaseOrderStoreRequest` + `PurchaseOrderUpdateRequest`
-- [ ] `PurchaseOrderResource` + `PurchaseOrderLineResource`
-- [ ] PO Status lifecycle:
+- [x] `PurchaseOrderController` — Full CRUD (`/api/purchase-orders`)
+- [x] `PurchaseOrderStoreRequest` + `PurchaseOrderUpdateRequest`
+- [x] `PurchaseOrderResource` + `PurchaseOrderLineResource`
+- [x] PO Status lifecycle:
   - `Draft` → `Approved` → `Sent` → `Partially Received` → `Closed` | `Cancelled`
-- [ ] `PATCH /api/purchase-orders/{id}/approve` — Approve a PO
-- [ ] `POST /api/purchase-orders/{id}/receive` — Post a Goods Receipt Note (GRN):
-  - Creates a `Transaction` (type: Receipt) via `StockService`
-  - Links `transaction.purchase_order_id`
-  - Updates `purchase_order_lines.received_qty`
-  - Auto-transitions PO to `Partially Received` or `Closed`
+- [x] `PATCH /api/purchase-orders/{id}/approve` — Approve a PO
+- [x] `POST /api/purchase-orders/{id}/receive` — Post a Goods Receipt Note (GRN):
+  - [x] Creates a `Transaction` (type: Receipt) via `StockService`
+  - [x] Links `transaction.reference_doc` manually
+  - [x] Updates `purchase_order_lines.received_qty`
+  - [x] Auto-transitions PO to `Partially Received` or `Closed`
 
 ### 4.2 Purchase Orders Frontend
 - [ ] **Purchase Orders list page** (`/purchase-orders`)

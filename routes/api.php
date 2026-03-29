@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
+use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -88,6 +89,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Adjustment Reasons & Dedicated Adjustments (Phase 2.1)
     Route::get('adjustment-reasons', [AdjustmentReasonController::class, 'index'])->middleware('permission:view-inventory');
     Route::post('adjustments', [AdjustmentController::class, 'store'])->middleware('permission:manage-inventory');
+
+    // -----------------------------------------------------------------------
+    // Procurement API (Phase 4.1)
+    // -----------------------------------------------------------------------
+    Route::apiResource('purchase-orders', PurchaseOrderController::class)->middleware('permission:manage-inventory');
+    Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-inventory');
+    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-inventory');
 });
 
 Route::get('/user', function (Request $request) {
