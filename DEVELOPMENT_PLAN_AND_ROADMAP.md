@@ -266,6 +266,13 @@ Replenishment Suggestion
   - [x] Post Goods Receipt Note logic (receives remaining pending qty)
 - [x] PO status badges and lifecycle action buttons (Approve, GRN, Delete)
 
+### 4.3 Replenishment & Automation Engine ✅ NOW LIVE
+- [x] **ReorderRuleController** — Location-specific and global multi-tier threshold management.
+- [x] **Reorder Rules UI** — Modal in the Inventory Center to configure `min_stock` and `reorder_qty` per location.
+- [x] **ReplenishmentService** — Headless scan engine that checks true stock (Product + Location) against active Reorder thresholds.
+- [x] **Auto-Suggestions Pipeline** — Engine creates `ReplenishmentSuggestion` records with precise fill amounts and automated clean-up routing.
+- [x] **Bulk Procure-to-PO** — Converting 1-to-N suggestions directly into drafted POs aggregated by vendor.
+
 ---
 
 ## 🛒 Phase 5 — Sales: Sales Order Lifecycle
