@@ -68,6 +68,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->middleware('permission:view-transactions');
 
     // Phase 2.2: Inventory Queries
+    Route::get('inventory', [InventoryQueryController::class, 'index'])
+        ->middleware('permission:view-inventory');
+    Route::get('inventory/low-stock', [InventoryQueryController::class, 'getLowStock'])
+        ->middleware('permission:view-inventory');
     Route::get('inventory/{product}/locations', [InventoryQueryController::class, 'getLocations'])
         ->middleware('permission:view-inventory');
     Route::get('inventory/{product}/cost-layers', [InventoryQueryController::class, 'getCostLayers'])
