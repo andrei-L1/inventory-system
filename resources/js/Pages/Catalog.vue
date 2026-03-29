@@ -303,135 +303,155 @@ const stats = computed(() => ({
     <AppLayout>
         <Head title="Product Catalog" />
         
-        <div class="catalog-container">
+        <div class="p-8 bg-zinc-950 min-h-screen">
             <!-- Header Section -->
-            <div class="catalog-header">
-                <div class="header-left">
-                    <span class="page-badge">Master Documentation</span>
-                    <h1 class="page-title">Product Catalog</h1>
-                    <p class="page-description">Maintain systematic registry of all inventory assets and classifications.</p>
+            <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-8">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Product Inventory Management</span>
+                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Product Catalog</h1>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Manage and organize all products in your system catalog. Track classifications, pricing, and inventory parameters across the organization.</p>
                 </div>
                 
-                <div class="header-right">
-                    <div class="search-wrapper">
-                        <i class="pi pi-search search-icon"></i>
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                    <div class="relative flex-1 sm:w-80">
+                        <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
                         <InputText 
                             v-model="search" 
-                            placeholder="Filter registry..." 
-                            class="search-input"
+                            placeholder="Search by name, SKU or code..." 
+                            class="w-full !pl-11 !pr-10 !bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !text-sm focus:!border-sky-500/30 !rounded-lg transition-all"
                         />
-                        <i v-if="search" class="pi pi-times clear-search" @click="search = ''" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 10px; color: var(--text-secondary);"></i>
+                        <i v-if="search" class="pi pi-times absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-xs text-zinc-600 hover:text-zinc-400 transition-colors" @click="search = ''"></i>
                     </div>
                     <Button 
                         v-if="can('manage-products')" 
-                        label="Add Asset" 
+                        label="ADD PRODUCT" 
                         icon="pi pi-plus" 
-                        class="p-button-primary"
+                        class="!bg-sky-500 !text-white !border-none !h-12 !font-bold !px-6 !rounded-lg hover:!bg-sky-400 active:scale-95 transition-all shadow-lg shadow-sky-500/10"
                         @click="openNew" 
                     />
                 </div>
             </div>
 
             <!-- Dashboard Stats -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="pi pi-box"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.total }}</span>
-                        <span class="stat-label">Total Registry</span>
+            <div class="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 flex items-center gap-5 group hover:border-sky-500/20 transition-all duration-500 shadow-sm hover:shadow-sky-500/5">
+                    <div class="w-14 h-14 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center text-sky-400 group-hover:scale-105 transition-transform duration-500">
+                        <i class="pi pi-box text-xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-bold text-white tracking-tight leading-none">{{ stats.total }}</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 font-mono">Total Products</span>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="pi pi-check-circle"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ stats.active }}</span>
-                        <span class="stat-label">Active Nodes</span>
+                <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 flex items-center gap-5 group hover:border-emerald-500/20 transition-all duration-500 shadow-sm hover:shadow-emerald-500/5">
+                    <div class="w-14 h-14 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform duration-500">
+                        <i class="pi pi-check-circle text-xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-bold text-white tracking-tight leading-none">{{ stats.active }}</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 font-mono">Active Products</span>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="pi pi-dollar"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-value">{{ formatCurrency(stats.totalValue) }}</span>
-                        <span class="stat-label">Aggregate Valuation</span>
+                <div class="bg-zinc-900/40 border border-zinc-800/60 rounded-xl p-5 flex items-center gap-5 group hover:border-amber-500/20 transition-all duration-500 shadow-sm hover:shadow-amber-500/5">
+                    <div class="w-14 h-14 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform duration-500">
+                        <i class="pi pi-dollar text-xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-bold text-white tracking-tight leading-none">{{ formatCurrency(stats.totalValue) }}</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-2 font-mono">Total Catalog Value</span>
                     </div>
                 </div>
             </div>
 
             <!-- Central Registry Table -->
-            <div class="table-container">
-                <div class="table-header">
-                    <span class="table-title">ASSET REGISTRY</span>
-                    <span class="gh-count">{{ products.length }} items</span>
+            <div class="max-w-[1600px] mx-auto bg-zinc-900/50 border border-zinc-800/80 rounded-xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                <div class="px-6 py-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/80">
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-sky-500"></div>
+                        <span class="text-[11px] font-bold text-zinc-300 tracking-[0.15em] uppercase">Product Catalog Fleet</span>
+                    </div>
+                    <span class="bg-zinc-800/50 text-zinc-400 px-3 py-1 rounded-md text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ products.length }} PRODUCTS</span>
                 </div>
+                
                 <DataTable 
                     :value="products" 
                     :loading="loading" 
                     responsiveLayout="scroll" 
                     :paginator="true" 
-                    :rows="12"
-                    class="gh-table"
+                    :rows="10"
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
                     currentPageReportTemplate="{first} to {last} of {totalRecords}"
+                    class="gh-table"
+                    :pt="{
+                        column: {
+                            headercell: { class: '!bg-zinc-900/90 !border-zinc-800 !text-zinc-300 !text-[11px] !uppercase !font-bold !tracking-[0.1em] !py-4 !px-6' },
+                            bodycell: { class: '!border-zinc-800/40 !py-4 !px-6 !text-[13px] !text-zinc-300' }
+                        },
+                        bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' },
+                        paginator: {
+                            root: { class: '!bg-zinc-900/80 !border-t !border-zinc-800 !py-3' },
+                            pagelink: ({ props, state, context }) => ({
+                                class: context.active ? '!bg-sky-500 !text-white !rounded-md' : '!text-zinc-500 hover:!text-zinc-200'
+                            })
+                        }
+                    }"
                 >
                     <template #empty>
-                        <div class="empty-state">
-                            <i class="pi pi-search" style="font-size: 2rem; opacity: 0.2; margin-bottom: 1rem;"></i>
-                            <p>NO MATCHING RECORDS FOUND IN REGISTRY</p>
+                        <div class="py-24 text-center flex flex-col items-center justify-center opacity-30">
+                            <i class="pi pi-database text-5xl mb-6"></i>
+                            <p class="font-mono text-xs tracking-[0.2em] uppercase">System Error: No records found in specified sector</p>
                         </div>
                     </template>
 
                     <Column field="main_image_url" header="Media" style="width: 80px">
                         <template #body="{ data }">
-                            <div class="product-image-container">
-                                <img v-if="data.main_image_url" :src="data.main_image_url" class="product-image" />
-                                <i v-else class="pi pi-image" style="opacity: 0.3"></i>
+                            <div class="w-12 h-12 bg-zinc-950 border border-zinc-800 rounded-lg flex items-center justify-center overflow-hidden group/img transition-all hover:border-sky-500/40 cursor-zoom-in">
+                                <img v-if="data.main_image_url" :src="data.main_image_url" class="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-500" />
+                                <i v-else class="pi pi-image text-zinc-800 text-xl"></i>
                             </div>
                         </template>
                     </Column>
 
-                    <Column field="product_code" header="System ID" style="width: 140px">
+                    <Column field="product_code" header="Product Code" style="width: 140px">
                         <template #body="{ data }">
-                            <span class="product-code">{{ data.product_code }}</span>
+                            <span class="font-mono text-[10px] bg-zinc-950 text-sky-400 px-3 py-1 rounded border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.05)]">{{ data.product_code }}</span>
                         </template>
                     </Column>
 
-                    <Column field="sku" header="Registry SKU" style="width: 160px">
+                    <Column field="sku" header="SKU" style="width: 160px">
                         <template #body="{ data }">
-                            <span class="product-sku">{{ data.sku }}</span>
+                            <span class="font-mono text-[11px] text-zinc-500 tracking-tighter">{{ data.sku }}</span>
                         </template>
                     </Column>
 
-                    <Column field="name" header="Asset Designation">
+                    <Column field="name" header="Product Name">
                         <template #body="{ data }">
-                            <div>
-                                <span class="product-name">{{ data.name }}</span>
-                                <span v-if="data.brand" class="product-brand">{{ data.brand }}</span>
+                            <div class="flex flex-col gap-0.5">
+                                <span class="font-bold text-zinc-100 truncate max-w-[280px] tracking-tight">{{ data.name }}</span>
+                                <span v-if="data.brand" class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.1em] font-mono leading-none">{{ data.brand }}</span>
                             </div>
                         </template>
                     </Column>
                     
-                    <Column field="category" header="Classification" style="width: 150px">
+                    <Column field="category" header="Category" style="width: 180px">
                         <template #body="{ data }">
-                            <Tag :value="data.category?.name || 'Unclassified'" class="gh-tag-secondary" />
+                            <span class="text-[9px] font-bold px-3 py-1 bg-sky-500/5 border border-sky-500/20 rounded-full text-sky-400/80 uppercase tracking-widest font-mono">
+                                {{ data.category?.name || 'Unclassified' }}
+                            </span>
                         </template>
                     </Column>
                     
-                    <Column field="selling_price" header="Value" style="width: 120px">
+                    <Column field="selling_price" header="Price" style="width: 130px">
                         <template #body="{ data }">
-                            <span class="product-price">{{ formatCurrency(data.selling_price) }}</span>
+                            <span class="font-mono font-bold text-zinc-200 text-sm">{{ formatCurrency(data.selling_price) }}</span>
                         </template>
                     </Column>
 
-                    <Column field="average_cost" header="Avg Cost" style="width: 120px">
+                    <Column header="Status" style="width: 150px">
                         <template #body="{ data }">
-                            <span class="product-price">{{ formatCurrency(data.average_cost) }}</span>
-                        </template>
-                    </Column>
-
-                    <Column header="Status" style="width: 120px">
-                        <template #body="{ data }">
-                            <div class="status-pill" :class="data.is_active ? 'status-active' : 'status-inactive'">
-                                <span class="status-dot"></span>
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-widest transition-all font-mono"
+                                 :class="data.is_active ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.05)]' : 'bg-zinc-800/50 text-zinc-600 border-zinc-700/50'">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="data.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-zinc-700'"></span>
                                 {{ data.is_active ? 'ACTIVE' : 'INACTIVE' }}
                             </div>
                         </template>
@@ -439,150 +459,194 @@ const stats = computed(() => ({
                     
                     <Column header="Ops" style="width: 100px" v-if="can('manage-products')">
                         <template #body="{ data }">
-                            <div class="action-buttons">
-                                <Button icon="pi pi-pencil" class="p-button-text action-btn" @click="editProduct(data)" />
-                                <Button icon="pi pi-trash" class="p-button-text action-btn delete-btn" @click="deleteProduct(data)" />
+                            <div class="flex items-center gap-2">
+                                <Button icon="pi pi-pencil" class="!text-zinc-500 hover:!text-sky-400 hover:!bg-sky-500/10 !w-9 !h-9 !p-0 !rounded-lg !border-none transition-all" @click="editProduct(data)" />
+                                <Button icon="pi pi-trash" class="!text-zinc-500 hover:!text-red-400 hover:!bg-red-500/10 !w-9 !h-9 !p-0 !rounded-lg !border-none transition-all" @click="deleteProduct(data)" />
                             </div>
                         </template>
                     </Column>
                 </DataTable>
             </div>
             
-            <!-- Premium Asset Configuration Modal (Monochrome Slate) -->
             <Dialog 
                 v-model:visible="dialogVisible" 
                 :modal="true" 
-                :style="{ width: '800px', margin: '0 1rem' }" 
-                class="slate-modal"
+                class="!bg-transparent !border-none !shadow-none ring-0 outline-none"
+                :pt="{
+                    root: { class: 'p-0 sm:m-4 max-w-5xl w-full' },
+                    content: { class: 'p-0 !bg-transparent' }
+                }"
                 :closable="!saving"
                 :showHeader="false"
             >
-                <div class="slate-modal-inner">
-                    <!-- Header -->
-                    <div class="slate-modal-header">
-                        <div class="header-left">
-                            <div class="slate-badge">{{ isEditing ? 'SYSTEM.UPDATE' : 'SYSTEM.INIT' }}</div>
-                            <h2>{{ isEditing ? 'Asset Modification' : 'New Asset Protocol' }}</h2>
+                <div class="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row h-[85vh] overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
+                    
+                    <!-- Sidebar Navigation -->
+                    <aside class="w-full md:w-64 bg-zinc-900/50 border-r border-zinc-800 flex flex-col pt-10 px-6 gap-8">
+                        <div class="flex flex-col gap-1 px-2">
+                            <div class="text-[9px] font-bold text-sky-500 tracking-[0.3em] font-mono leading-none mb-1">PRODUCT_DATA</div>
+                            <h3 class="text-white text-lg font-bold tracking-tighter m-0 whitespace-nowrap">Product Details</h3>
                         </div>
-                        <Button icon="pi pi-times" class="p-button-text close-trigger" @click="dialogVisible = false" :disabled="saving" />
-                    </div>
 
-                    <!-- Horizontal Nav -->
-                    <nav class="slate-tabs">
-                        <button @click="activeTab = 'basic'" :class="{ active: activeTab === 'basic' }">
-                            01 // Core Specs
-                        </button>
-                        <button @click="activeTab = 'inventory'" :class="{ active: activeTab === 'inventory' }">
-                            02 // Logistics
-                        </button>
-                        <button @click="activeTab = 'media'" :class="{ active: activeTab === 'media' }">
-                            03 // Artifacts
-                        </button>
-                    </nav>
+                        <nav class="flex flex-col gap-2">
+                            <button @click="activeTab = 'basic'" 
+                                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
+                                    :class="activeTab === 'basic' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
+                                <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors" 
+                                      :class="activeTab === 'basic' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">01</span>
+                                BASIC INFO
+                            </button>
+                            <button @click="activeTab = 'inventory'" 
+                                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
+                                    :class="activeTab === 'inventory' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
+                                <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
+                                      :class="activeTab === 'inventory' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">02</span>
+                                INVENTORY INFO
+                            </button>
+                            <button @click="activeTab = 'media'" 
+                                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
+                                    :class="activeTab === 'media' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
+                                <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
+                                      :class="activeTab === 'media' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">03</span>
+                                PRODUCT IMAGE
+                            </button>
+                        </nav>
 
-                    <!-- Scrollable Form Area -->
-                    <div class="slate-modal-body">
-                        <div v-show="activeTab === 'basic'" class="form-section animate-in">
-                            <div class="slate-form-grid">
-                                <div class="p-field col-span-2">
-                                    <label>Asset Designation</label>
-                                    <InputText v-model="product.name" placeholder="E.g. High-Density Processing Unit" :class="{'p-invalid': errors.name}" />
-                                </div>
-                                <div class="p-field">
-                                    <label>System Code</label>
-                                    <InputText v-model="product.product_code" placeholder="PRD-XXXX" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Registry SKU</label>
-                                    <InputText v-model="product.sku" placeholder="SKU-XXXX" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Manufacturer Brand</label>
-                                    <InputText v-model="product.brand" placeholder="N/A" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Barcode ID</label>
-                                    <InputText v-model="product.barcode" placeholder="Optional" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Classification Node</label>
-                                    <Select v-model="product.category_id" :options="categories" optionLabel="name" optionValue="id" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Quantum Unit (UOM)</label>
-                                    <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" />
-                                </div>
-                                <div class="p-field col-span-2">
-                                    <label>Technical Description</label>
-                                    <Textarea v-model="product.description" rows="3" placeholder="Provide detailed operational parameters..." />
-                                </div>
+                        <div class="mt-auto pb-10 px-2">
+                            <div class="text-[9px] font-bold text-zinc-600 font-mono tracking-tighter uppercase mb-1">Access Level</div>
+                            <div class="text-[10px] text-zinc-400 font-mono flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                AUTHORIZED ADMIN
                             </div>
                         </div>
+                    </aside>
 
-                        <div v-show="activeTab === 'inventory'" class="form-section animate-in">
-                            <div class="slate-form-grid">
-                                <div class="p-field">
-                                    <label>Base Valuation (USD)</label>
-                                    <InputNumber v-model="product.selling_price" mode="currency" currency="USD" locale="en-US" />
+                    <!-- Main Portal -->
+                    <section class="flex-1 flex flex-col min-w-0">
+                        <!-- Content Scrollable -->
+                        <div class="flex-1 overflow-y-auto p-10 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.03),transparent_40%)]">
+                            <!-- System Status Banner -->
+                            <div class="flex justify-between items-center mb-10 pb-6 border-b border-zinc-900">
+                                <div class="flex flex-col">
+                                    <div class="text-[9px] font-bold text-zinc-600 font-mono uppercase tracking-[0.2em] mb-1">Product Data Persistence</div>
+                                    <h2 class="text-white text-2xl font-bold tracking-tight m-0">{{ isEditing ? 'Edit Product' : 'New Product' }}</h2>
                                 </div>
-                                <div class="p-field">
-                                    <label>Reorder Threshold</label>
-                                    <InputNumber v-model="product.reorder_point" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Target Buffer Qty</label>
-                                    <InputNumber v-model="product.reorder_quantity" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Valuation Model</label>
-                                    <Select v-model="product.costing_method_id" :options="costingMethods" optionLabel="label" optionValue="id" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Preferred Provider</label>
-                                    <Select v-model="product.preferred_vendor_id" :options="vendors" optionLabel="name" optionValue="id" placeholder="Select Entity" />
-                                </div>
-                                <div class="p-field">
-                                    <label>Live Valuation (Avg Cost)</label>
-                                    <InputNumber v-model="product.average_cost" mode="currency" currency="USD" locale="en-US" :disabled="true" />
-                                </div>
-                                <div class="p-field col-span-2 status-control">
-                                    <div class="control-info">
-                                        <h4>Operational Status</h4>
-                                        <p>Toggle system availability for this asset.</p>
+                                <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" :disabled="saving" />
+                            </div>
+
+                            <!-- Tab Sections -->
+                            <div v-show="activeTab === 'basic'" class="animate-in slide-in-from-right-4 duration-500">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                                    <div class="flex flex-col gap-3 md:col-span-2">
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Name</label>
+                                            <span v-if="errors.name" class="text-red-400 text-[10px] font-bold uppercase tracking-widest font-mono">!! ERROR // REQUIRED</span>
+                                        </div>
+                                        <InputText v-model="product.name" placeholder="E.g. Wireless Mouse X10" 
+                                                   class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-14 !text-lg !font-bold focus:!border-sky-500/40 transition-all !px-5"
+                                                   :class="{'!border-red-500/50': errors.name}" />
                                     </div>
-                                    <ToggleSwitch v-model="product.is_active" />
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Code</label>
+                                        <InputText v-model="product.product_code" placeholder="PRT-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono !px-4 focus:!border-sky-500/30" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">SKU</label>
+                                        <InputText v-model="product.sku" placeholder="SKU-000" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Category</label>
+                                        <Select v-model="product.category_id" :options="categories" optionLabel="name" optionValue="id" 
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit of Measure</label>
+                                        <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                    </div>
+                                    <div class="flex flex-col gap-3 md:col-span-2">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Description</label>
+                                        <Textarea v-model="product.description" rows="4" placeholder="Enter product description..." 
+                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 focus:!border-sky-500/30 transition-all !p-5 leading-relaxed" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div v-show="activeTab === 'media'" class="form-section animate-in">
-                            <div class="upload-stage">
-                                <div class="upload-dropzone" @click="$refs.fileInput.click()">
-                                    <input type="file" ref="fileInput" @change="onImageSelect" hidden />
-                                    <div v-if="imagePreview" class="preview-wrapper">
-                                        <img :src="imagePreview" class="asset-preview-img" />
-                                        <div class="overlay-actions">
-                                            <Button icon="pi pi-trash" class="p-button-danger p-button-rounded" @click.stop="removeImage" />
+                            <div v-show="activeTab === 'inventory'" class="animate-in slide-in-from-right-4 duration-500">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Selling Price (USD)</label>
+                                        <InputNumber v-model="product.selling_price" mode="currency" currency="USD" locale="en-US" 
+                                                    inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Reorder Point</label>
+                                        <InputNumber v-model="product.reorder_point" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Reorder Quantity</label>
+                                        <InputNumber v-model="product.reorder_quantity" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Costing Method</label>
+                                        <Select v-model="product.costing_method_id" :options="costingMethods" optionLabel="label" optionValue="id" 
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                    </div>
+                                    <div class="col-span-12 md:col-span-2 p-8 bg-zinc-900/30 border border-zinc-800/60 rounded-xl relative overflow-hidden group">
+                                        <div class="flex justify-between items-center relative z-10">
+                                            <div class="flex flex-col gap-1">
+                                                <h4 class="text-white font-bold text-sm m-0 uppercase tracking-tight">Product Active Status</h4>
+                                                <p class="text-zinc-500 text-[11px] font-mono tracking-tighter uppercase leading-none mt-1">Status // is_active_toggle</p>
+                                            </div>
+                                            <ToggleSwitch v-model="product.is_active" 
+                                                         :pt="{
+                                                             slider: ({ props }) => ({
+                                                                 class: props.modelValue ? '!bg-emerald-500' : '!bg-zinc-700'
+                                                             })
+                                                         }" />
                                         </div>
                                     </div>
-                                    <div v-else class="upload-prompt">
-                                        <i class="pi pi-cloud-upload"></i>
-                                        <h5>Drop System Artifact</h5>
-                                        <span>Max: 5MB (JPEG, PNG, WEBP)</span>
+                                </div>
+                            </div>
+
+                            <div v-show="activeTab === 'media'" class="animate-in slide-in-from-right-4 duration-500 h-full">
+                                <div class="h-96 border-2 border-dashed border-zinc-900 bg-zinc-950/50 rounded-2xl flex items-center justify-center relative group hover:border-sky-500/20 transition-all cursor-pointer overflow-hidden shadow-inner" 
+                                     @click="$refs.fileInput.click()">
+                                    <input type="file" ref="fileInput" @change="onImageSelect" hidden />
+                                    
+                                    <div v-if="imagePreview" class="absolute inset-0 w-full h-full p-10 flex items-center justify-center">
+                                        <img :src="imagePreview" class="w-full h-full object-contain drop-shadow-2xl" />
+                                        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                            <Button label="REPLACE IMAGE" icon="pi pi-refresh" class="!bg-sky-500 !border-none !rounded-full !px-8 !font-bold !h-12" />
+                                        </div>
+                                    </div>
+                                    <div v-else class="flex flex-col items-center gap-4 text-center opacity-30 group-hover:opacity-60 transition-opacity">
+                                        <div class="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-800">
+                                            <i class="pi pi-cloud-upload text-3xl"></i>
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <h5 class="text-white font-bold uppercase text-xs tracking-[0.2em] m-0">Upload Product Image</h5>
+                                            <span class="text-[10px] text-zinc-500 font-mono">WEBP // PNG // JPEG (MAX: 5MB)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Footer -->
-                    <div class="slate-modal-footer">
-                        <div class="sys-id">UID // {{ isEditing ? product.id : 'PENDING' }}</div>
-                        <div class="action-buttons-group">
-                            <Button label="Abort" class="p-button-secondary" @click="dialogVisible = false" />
-                            <Button :label="isEditing ? 'COMMIT UPDATE' : 'EXECUTE INIT'" class="p-button-primary" @click="saveProduct" :loading="saving" />
-                        </div>
-                    </div>
+                        <!-- Global Footer -->
+                        <footer class="px-10 py-8 border-t border-zinc-900 bg-zinc-900/50 flex flex-col sm:flex-row justify-between items-center gap-8">
+                            <div class="flex flex-col gap-1">
+                                <div class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product ID</div>
+                                <div class="text-[10px] text-sky-400 font-mono">{{ isEditing ? `ID-${product.id}` : 'PENDING' }}</div>
+                            </div>
+                            <div class="flex items-center gap-4 w-full sm:w-auto">
+                                <Button label="CANCEL" class="!bg-transparent !border-zinc-800 !text-zinc-500 hover:!text-white hover:!border-zinc-600 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest flex-1 sm:flex-none border transition-colors" @click="dialogVisible = false" />
+                                <Button :label="isEditing ? 'SAVE CHANGES' : 'SAVE PRODUCT'" 
+                                        class="!bg-emerald-500 !border-none !text-white !px-12 !h-12 !font-bold !text-[11px] uppercase tracking-widest flex-1 sm:flex-none shadow-lg shadow-emerald-500/10 hover:!bg-emerald-400 active:scale-95 transition-all" 
+                                        @click="saveProduct" :loading="saving" />
+                            </div>
+                        </footer>
+                    </section>
                 </div>
             </Dialog>
 
@@ -591,543 +655,5 @@ const stats = computed(() => ({
 </template>
 
 <style scoped>
-/* Main Catalog UI (GitHub Inspired) */
-.catalog-container {
-    padding: 1.5rem;
-    background: var(--bg-deep);
-    min-height: 100vh;
-}
-
-.catalog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 2rem;
-    gap: 1.5rem;
-}
-
-.page-badge {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--accent-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.page-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
-}
-
-.page-description {
-    color: var(--text-secondary);
-    font-size: 13px;
-    margin: 0;
-}
-
-.header-right {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.stat-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 6px;
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-primary);
-    font-size: 18px;
-}
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-value {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-    line-height: 1.2;
-}
-
-.stat-label {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-}
-
-.table-container {
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.table-header {
-    padding: 10px 16px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--bg-panel-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.table-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    letter-spacing: 0.05em;
-}
-
-.gh-count {
-    background: var(--bg-panel-hover);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    color: var(--text-primary);
-}
-
-.gh-table {
-    font-size: 13px;
-}
-
-::v-deep(.p-datatable-thead > tr > th) {
-    background: var(--bg-panel-hover) !important;
-    border-bottom: 1px solid var(--bg-panel-border) !important;
-    padding: 10px 16px !important;
-    color: var(--text-secondary) !important;
-    font-weight: 600 !important;
-}
-
-::v-deep(.p-datatable-tbody > tr) {
-    background: transparent !important;
-    border-bottom: 1px solid var(--bg-panel-border) !important;
-}
-
-::v-deep(.p-datatable-tbody > tr:hover) {
-    background: var(--bg-panel) !important;
-}
-
-.product-image-container {
-    width: 40px;
-    height: 40px;
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.product-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.product-code {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 12px;
-    background: var(--bg-panel);
-    color: var(--text-primary);
-    padding: 2px 6px;
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-}
-
-.product-sku {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 12px;
-    color: var(--accent-primary);
-}
-
-.product-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    display: block;
-}
-
-.product-brand {
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-
-.product-price {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-weight: 600;
-}
-
-.status-pill {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 1px 8px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.status-active {
-    background: rgba(87, 171, 90, 0.1);
-    color: var(--accent-primary);
-    border: 1px solid rgba(87, 171, 90, 0.2);
-}
-
-.status-inactive {
-    background: var(--bg-panel);
-    color: var(--text-secondary);
-    border: 1px solid var(--bg-panel-border);
-}
-
-.status-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-}
-
-.status-active .status-dot { background: var(--accent-primary); }
-.status-inactive .status-dot { background: var(--text-secondary); }
-
-.gh-tag-secondary {
-    background: var(--bg-panel) !important;
-    color: var(--text-secondary) !important;
-    font-size: 10px;
-    border: 1px solid var(--bg-panel-border);
-    padding: 2px 8px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.action-btn {
-    color: var(--text-secondary) !important;
-    padding: 0.5rem !important;
-    min-width: 0 !important;
-}
-
-.action-btn:hover {
-    color: var(--accent-primary) !important;
-    background: rgba(87, 171, 90, 0.1) !important;
-}
-
-.delete-btn:hover {
-    color: #f47067 !important;
-    background: rgba(244, 112, 103, 0.1) !important;
-}
-
-/* --- Slate Modal Redesign --- */
-::v-deep(.slate-modal) {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-
-::v-deep(.p-dialog-content) {
-    padding: 0 !important;
-    background: transparent !important;
-    outline: none !important;
-    border: none !important;
-}
-
-.slate-modal-inner {
-    background: var(--bg-deep); /* Absolute black */
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 8px; /* Slightly softer for a modern look */
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    max-height: 85vh;
-    overflow: hidden;
-}
-
-/* Header */
-.slate-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 2rem 2.5rem 1.5rem;
-    border-bottom: 1px solid var(--bg-panel-border);
-    background: var(--bg-panel);
-}
-
-.header-left .slate-badge {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--accent-subtle);
-    letter-spacing: 0.1em;
-    margin-bottom: 0.5rem;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-.header-left h2 {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-    letter-spacing: -0.02em;
-}
-
-.close-trigger {
-    color: var(--text-secondary) !important;
-    width: 32px !important;
-    height: 32px !important;
-}
-
-/* Horizontal Nav */
-.slate-tabs {
-    display: flex;
-    padding: 0 2.5rem;
-    border-bottom: 1px solid var(--bg-panel-border);
-    background: var(--bg-panel);
-}
-
-.slate-tabs button {
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 1rem 1.5rem;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-.slate-tabs button:hover {
-    color: var(--text-primary);
-}
-
-.slate-tabs button.active {
-    color: var(--accent-primary);
-    border-bottom-color: var(--accent-primary);
-}
-
-/* Modal Body */
-.slate-modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 2.5rem;
-    background: var(--bg-deep);
-}
-
-.slate-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem 2rem;
-}
-
-.col-span-2 {
-    grid-column: span 2;
-}
-
-.p-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.p-field label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* Clean Form Inputs */
-::v-deep(.p-inputtext), ::v-deep(.p-select), ::v-deep(.p-inputnumber-input), ::v-deep(.p-textarea) {
-    background: var(--bg-panel) !important;
-    border: 1px solid var(--bg-panel-border) !important;
-    color: var(--text-primary) !important;
-    border-radius: 4px !important;
-    padding: 10px 14px !important;
-    font-size: 14px !important;
-    box-shadow: none !important;
-    transition: all 0.2s ease !important;
-}
-
-::v-deep(.p-inputtext:focus), ::v-deep(.p-select:focus), ::v-deep(.p-inputnumber-input:focus), ::v-deep(.p-textarea:focus) {
-    border-color: var(--accent-primary) !important;
-    outline: 0 !important;
-}
-
-/* Status Control Box */
-.status-control {
-    background: var(--bg-panel);
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.control-info h4 {
-    margin: 0 0 4px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.control-info p {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-/* Upload Interface */
-.upload-stage {
-    height: 300px;
-    border: 1px dashed var(--bg-panel-border);
-    border-radius: 6px;
-    background: var(--bg-panel);
-    transition: all 0.3s ease;
-}
-
-.upload-stage:hover {
-    border-color: var(--text-secondary);
-}
-
-.upload-dropzone {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-}
-
-.upload-prompt {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.upload-prompt i {
-    font-size: 2rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
-}
-
-.upload-prompt h5 {
-    margin: 0;
-    font-size: 14px;
-    color: var(--text-primary);
-    font-weight: 500;
-}
-
-.upload-prompt span {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.preview-wrapper {
-    width: 100%;
-    height: 100%;
-    padding: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.asset-preview-img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-
-.overlay-actions {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.preview-wrapper:hover .overlay-actions {
-    opacity: 1;
-}
-
-/* Footer */
-.slate-modal-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2.5rem;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--bg-panel-border);
-}
-
-.sys-id {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--text-secondary);
-}
-
-.action-buttons-group {
-    display: flex;
-    gap: 1rem;
-}
-
-.animate-in {
-    animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 768px) {
-    .stats-grid { grid-template-columns: 1fr; }
-    .catalog-header { flex-direction: column; align-items: flex-start; }
-    .header-right { width: 100%; flex-direction: column; }
-    .search-wrapper { width: 100%; }
-    
-    ::v-deep(.slate-modal) { width: 95vw !important; margin: 0 !important; }
-    .slate-form-grid { grid-template-columns: 1fr; }
-    .col-span-2 { grid-column: span 1; }
-    .slate-modal-header, .slate-tabs, .slate-modal-body, .slate-modal-footer { padding: 1.5rem; }
-    .slate-tabs { overflow-x: auto; white-space: nowrap; }
-}
+/* Redefined via Tailwind v4 Utilities */
 </style>

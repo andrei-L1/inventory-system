@@ -1,9 +1,148 @@
+<template>
+    <div class="flex min-h-screen bg-zinc-950 font-sans selection:bg-sky-500/30 selection:text-sky-200">
+        <Toast />
+        <ConfirmDialog />
+        
+        <!-- Sidebar Navigation -->
+        <aside 
+            :class="[
+                collapsed ? 'w-20' : 'w-72',
+                'fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-950 border-r border-zinc-900 transition-all duration-500 ease-in-out'
+            ]"
+        >
+            <!-- Sidebar Header: Brand -->
+            <div class="h-20 flex items-center px-6 border-b border-zinc-900/50 bg-zinc-900/20">
+                <div class="flex items-center gap-4 overflow-hidden">
+                    <div class="min-w-[32px] w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.3)]">
+                        <i class="pi pi-server text-white text-sm"></i>
+                    </div>
+                    <div v-if="!collapsed" class="flex flex-col whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">
+                        <span class="text-[10px] font-black text-sky-400 font-mono tracking-[0.3em] leading-none mb-1">TERMINAL_OS</span>
+                        <span class="text-white font-bold text-sm tracking-tighter">Inventory Core</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Links -->
+            <nav class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1.5 py-8">
+                <template v-for="item in menuItems" :key="item.href">
+                     <Link 
+                        :href="item.href"
+                        :class="[
+                            page.url.startsWith(item.href) 
+                                ? 'bg-zinc-900 text-white border-zinc-700 shadow-[inset_0_1px_10px_rgba(0,0,0,0.2)]' 
+                                : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 border-transparent',
+                            'group flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all duration-300 no-underline'
+                        ]"
+                        :title="item.label"
+                    >
+                        <div class="min-w-[20px] flex items-center justify-center">
+                            <i :class="[
+                                item.icon, 
+                                item.color,
+                                page.url.startsWith(item.href) ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+                            ]" class="text-base transition-all duration-300"></i>
+                        </div>
+                        
+                        <span v-if="!collapsed" :class="[page.url.startsWith(item.href) ? 'text-zinc-100' : 'text-zinc-500']" class="text-[11px] font-bold tracking-[0.15em] uppercase font-mono transition-all duration-300">
+                            {{ item.label }}
+                        </span>
+                    </Link>
+                </template>
+
+                <!-- System Maintenance Section -->
+                <div v-if="!collapsed" class="pt-8 px-4">
+                    <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] mb-4 block font-mono">Operations</span>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 opacity-30 grayscale cursor-not-allowed">
+                             <div class="w-1 h-1 rounded-full bg-zinc-800"></div>
+                             <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Transfers</span>
+                        </div>
+                        <div class="flex items-center gap-4 opacity-30 grayscale cursor-not-allowed">
+                             <div class="w-1 h-1 rounded-full bg-zinc-800"></div>
+                             <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reporting</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Sidebar Footer: Collapse Toggle -->
+            <div class="p-4 border-t border-zinc-900/50 bg-zinc-950">
+                <button 
+                    @click="toggleSidebar" 
+                    class="w-full h-12 flex items-center justify-center rounded-xl bg-zinc-900/40 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-all border border-zinc-900 hover:border-zinc-700 group no-underline"
+                >
+                    <i :class="collapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'" class="text-sm group-hover:scale-125 transition-transform"></i>
+                    <span v-if="!collapsed" class="ml-3 text-[10px] font-bold tracking-[0.15em] uppercase font-mono">Collapse</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <div 
+            :class="[
+                collapsed ? 'pl-20' : 'pl-72',
+                'flex-1 flex flex-col transition-all duration-500 ease-in-out min-h-screen'
+            ]"
+        >
+            <!-- Identity & Topbar Status -->
+            <header class="h-20 flex items-center justify-between px-10 sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-900/50">
+                <div class="flex items-center gap-6">
+                    <div class="hidden md:flex flex-col">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="text-[10px] font-bold text-zinc-700 uppercase tracking-widest font-mono">SYS_STATUS</span>
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                        </div>
+                        <span class="text-white text-[11px] font-bold tracking-tight uppercase font-mono">OPERATIONAL // ENCRYPTED</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-8">
+                    <!-- User Registry Profile -->
+                    <div v-if="user" class="flex flex-col items-end border-r border-zinc-900 pr-8">
+                        <span class="text-white font-black text-[10px] tracking-widest uppercase font-mono mb-0.5">{{ user.username }}</span>
+                        <div class="flex items-center gap-2">
+                             <div class="w-1 h-1 rounded-full bg-sky-500"></div>
+                             <span class="text-zinc-600 text-[9px] font-bold uppercase tracking-wider font-mono">LVL_{{ user.role?.toUpperCase() || 'EXTERNAL' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Termination Sequence -->
+                    <Link href="/logout" method="post" as="button" 
+                          class="w-11 h-11 rounded-xl bg-zinc-900/50 border border-zinc-800 flex items-center justify-center text-zinc-600 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all active:scale-95 group no-underline"
+                          title="Terminate Session"
+                    >
+                        <i class="pi pi-power-off text-base group-hover:rotate-12 transition-transform"></i>
+                    </Link>
+                </div>
+            </header>
+
+            <!-- Secondary Topbar (Global Breadcrumbs) -->
+            <div class="h-10 bg-zinc-900/10 border-b border-zinc-900/30 flex items-center px-10">
+                <div class="flex items-center gap-2 text-[9px] font-bold text-zinc-700 font-mono tracking-widest uppercase">
+                    <span class="hover:text-zinc-500 cursor-pointer">ROOT</span>
+                    <i class="pi pi-chevron-right text-[7px]" />
+                    <span class="text-zinc-500">{{ page.component.split('/').pop().toUpperCase() }}</span>
+                    <i class="pi pi-chevron-right text-[7px]" />
+                    <span class="text-sky-400/80">CONTEXT_LIVE</span>
+                </div>
+            </div>
+
+            <!-- Core App Slot -->
+            <main class="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950 p-10">
+                <div class="max-w-[1700px] mx-auto h-full">
+                    <slot />
+                </div>
+            </main>
+        </div>
+    </div>
+</template>
+
 <script setup>
 import { usePage, Link } from '@inertiajs/vue3';
 import { computed, ref, onMounted } from 'vue';
 import Toast from 'primevue/toast';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Button from 'primevue/button';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -15,240 +154,34 @@ const toggleSidebar = () => {
     localStorage.setItem('sidebar-collapsed', collapsed.value);
 };
 
+const menuItems = [
+    { label: 'Overview', href: '/dashboard', icon: 'pi pi-compass', color: 'text-sky-400' },
+    { label: 'Catalog', href: '/catalog', icon: 'pi pi-box', color: 'text-emerald-400' },
+    { label: 'Inventory', href: '/inventory-center', icon: 'pi pi-database', color: 'text-amber-400' },
+    { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
+    { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
+];
+
 onMounted(() => {
     collapsed.value = localStorage.getItem('sidebar-collapsed') === 'true';
 });
 </script>
 
-<template>
-    <div class="app-layout" :class="{ 'sidebar-collapsed': collapsed }">
-        <Toast />
-        <ConfirmDialog />
-        
-        <!-- Sidebar -->
-        <aside class="app-sidebar sharp-panel">
-            <div class="sidebar-header">
-                <div class="brand-group">
-                    <i class="pi pi-server brand-accent" style="font-size: 1.5rem;"></i>
-                    <span v-if="!collapsed" class="brand-title" style="font-size: 1.1rem; margin: 0; padding-left: 0.5rem; letter-spacing: 0.1em;">CMD_CTR</span>
-                </div>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <Link href="/dashboard" class="nav-item" title="Dashboard">
-                    <i class="pi pi-home"></i> <span v-if="!collapsed">Dashboard</span>
-                </Link>
-                <Link href="/catalog" class="nav-item" title="Catalog">
-                    <i class="pi pi-box"></i> <span v-if="!collapsed">Catalog</span>
-                </Link>
-                <Link href="/inventory-center" class="nav-item" title="Inventory Center">
-                    <i class="pi pi-database"></i> <span v-if="!collapsed">Inventory Center</span>
-                </Link>
-                <Link href="/vendor-center" class="nav-item" title="Vendor Center">
-                    <i class="pi pi-users"></i> <span v-if="!collapsed">Vendor Center</span>
-                </Link>
-                <Link href="/location-center" class="nav-item" title="Location Center">
-                    <i class="pi pi-map-marker"></i> <span v-if="!collapsed">Location Center</span>
-                </Link>
-                <!-- Placeholders for Future Phases -->
-                <a href="#" class="nav-item disabled" title="Transfers">
-                    <i class="pi pi-arrow-right-arrow-left"></i> <span v-if="!collapsed">Transfers</span>
-                </a>
-                <a href="#" class="nav-item disabled" title="Reports">
-                    <i class="pi pi-chart-bar"></i> <span v-if="!collapsed">Reports</span>
-                </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                 <button @click="toggleSidebar" class="collapse-toggle">
-                    <i :class="collapsed ? 'pi pi-angle-double-right' : 'pi pi-angle-double-left'"></i>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <div class="app-content-wrapper">
-            <!-- Topbar -->
-            <header class="app-topbar sharp-panel">
-                <div class="topbar-left">
-                    <span class="status-badge" style="letter-spacing: 0.1em; font-size: 0.65rem; font-weight: 600;">SYS_STATUS: <span style="color: var(--accent-primary);">OPTIMAL</span></span>
-                </div>
-                <div class="topbar-right">
-                    <span v-if="user" style="font-weight: 600; text-transform: uppercase; font-size: 0.75rem; padding-right: 1rem; border-right: 1px solid var(--bg-panel-border); color: var(--text-secondary); letter-spacing: 0.1em;">
-                        {{ user.username }} <span style="color: var(--text-primary);">[{{ user.role }}]</span>
-                    </span>
-                    <Link href="/logout" method="post" as="button" class="logout-btn">
-                        <i class="pi pi-power-off"></i>
-                    </Link>
-                </div>
-            </header>
-
-            <!-- Page Content -->
-            <main class="app-main">
-                <slot />
-            </main>
-        </div>
-    </div>
-</template>
-
-<style scoped>
-.app-layout {
-    display: flex;
-    min-height: 100vh;
-    background-color: var(--bg-deep);
+<style>
+/* Global scrollbar technical redesign */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
-
-.app-sidebar {
-    width: 260px;
-    border-radius: 0;
-    border-left: none;
-    border-top: none;
-    border-bottom: none;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    z-index: 10;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
 }
-
-.sidebar-collapsed .app-sidebar {
-    width: 80px;
-    padding: 1.5rem 0.75rem;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #18181b;
+    border-radius: 10px;
+    border: 1px solid #27272a;
 }
-
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid var(--bg-panel-border);
-    margin-bottom: 2rem;
-}
-
-.brand-group {
-    display: flex;
-    align-items: center;
-    white-space: nowrap;
-}
-
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 1rem;
-    color: var(--text-primary);
-    text-decoration: none;
-    font-size: 14px;
-    border-radius: 6px;
-    transition: all 0.15s ease-in-out;
-    margin-bottom: 0.15rem;
-}
-
-.nav-item i {
-    font-size: 1rem;
-    color: var(--text-secondary);
-}
-
-.nav-item:hover:not(.disabled) {
-    background-color: var(--bg-panel-hover);
-}
-
-.nav-item.active {
-    background-color: var(--bg-panel-hover);
-    font-weight: 600;
-}
-
-.nav-item.disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.sidebar-footer {
-    padding-top: 1rem;
-    border-top: 1px solid var(--bg-panel-border);
-    display: flex;
-    justify-content: center;
-}
-
-.collapse-toggle {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 0.5rem;
-    transition: color 0.2s;
-}
-
-.collapse-toggle:hover {
-    color: var(--accent-primary);
-}
-
-.app-content-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.app-topbar {
-    height: 70px;
-    border-radius: 0;
-    border-top: none;
-    border-right: none;
-    border-left: none;
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 5;
-    box-shadow: none;
-}
-
-.topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.logout-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 0.5rem;
-    transition: color 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.logout-btn:hover {
-    color: #ef4444;
-}
-
-.app-main {
-    flex: 1;
-    padding: 2rem;
-    overflow-y: auto;
-    background-color: var(--bg-deep);
-}
-.status-badge {
-    padding: 6px 12px;
-    background: #000000;
-    border: 1px solid var(--bg-panel-border);
-    border-radius: 4px;
-    color: var(--text-secondary);
-    font-family: 'Inter', monospace;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #27272a;
 }
 </style>

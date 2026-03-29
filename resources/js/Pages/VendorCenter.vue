@@ -139,479 +139,298 @@ const deleteVendor = () => {
 <template>
     <AppLayout>
         <Head title="Vendor Center" />
+        <Toast />
 
-        <div class="vendor-grid">
-            <!-- Provider Sidebar -->
-            <div class="provider-pane sharp-panel">
-                <div class="pane-header">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <h3 class="pane-title" style="margin: 0;">Provider Registry</h3>
-                        <Button v-if="can('manage-products')" icon="pi pi-plus" class="p-button-primary p-button-sm p-0 m-0" style="width: 24px; height: 24px;" @click="openNew" />
-                    </div>
-                    <div class="search-wrapper">
-                        <i class="pi pi-search search-icon"></i>
-                        <InputText v-model="search" placeholder="Filter providers..." @input="loadVendors" class="search-input" />
-                    </div>
+        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+            <!-- Header Section -->
+            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Procurement & Supply Chain Management</span>
+                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Vendor Center</h1>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Manage your network of external suppliers, procurement history, and contact information in one central hub.</p>
                 </div>
-                <div class="provider-list-container">
-                    <Listbox v-model="selectedVendor" :options="vendors" optionLabel="name" class="gh-listbox">
-                        <template #option="{ option }">
-                            <div class="provider-item">
-                                <span class="provider-slug">{{ option.vendor_code }}</span>
-                                <span class="provider-name">{{ option.name }}</span>
-                            </div>
-                        </template>
-                    </Listbox>
+                <div v-if="can('manage-products')">
+                    <Button label="ADD VENDOR" icon="pi pi-plus-circle" 
+                            class="!bg-sky-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" 
+                            @click="openNew" />
                 </div>
             </div>
 
-            <!-- Main Documentation Area -->
-            <div class="main-pane">
-                <!-- Top Section: Provider Specifications -->
-                <div class="specs-section sharp-panel">
-                    <template v-if="selectedVendor">
-                        <div class="specs-header">
-                            <div class="title-workflow" style="width: 100%; display: flex; justify-content: space-between;">
-                                <div style="display: flex; align-items: center; gap: 1rem;">
-                                    <h1 class="specs-title">{{ selectedVendor.name }}</h1>
-                                    <div class="specs-badges">
-                                        <Tag value="RELIABLE_SOURCE" class="gh-tag-success" />
-                                        <Tag value="EXTERNAL_ENTITY" class="gh-tag-secondary" />
+            <!-- Primary Workspace Grid -->
+            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 flex-1 min-h-0">
+                
+                <!-- Left Sector: Provider Registry Sidebar -->
+                <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/60">
+                        <div class="flex items-center gap-3 mb-5">
+                            <div class="w-2 h-2 rounded-full bg-sky-500"></div>
+                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Vendor_List</span>
+                        </div>
+                        <div class="relative">
+                            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                            <InputText 
+                                v-model="search" 
+                                placeholder="Search vendors..." 
+                                @input="loadVendors" 
+                                class="!w-full !pl-11 !pr-4 !bg-zinc-950 !border-zinc-800 !text-white !h-12 !text-xs !rounded-xl focus:!border-sky-500/30 transition-all font-mono"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                        <Listbox 
+                            v-model="selectedVendor" 
+                            :options="vendors" 
+                            optionLabel="name" 
+                            class="!border-none !bg-transparent"
+                            :pt="{
+                                root: { class: '!p-2' },
+                                item: ({ context }) => ({
+                                    class: [
+                                        '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
+                                        context.selected 
+                                            ? '!bg-sky-500/10 !border-sky-500/20 !text-white shadow-[0_0_15px_rgba(14,165,233,0.05)]' 
+                                            : '!bg-transparent !border-transparent !text-zinc-500 hover:!bg-zinc-800/40 hover:!text-zinc-200'
+                                    ]
+                                })
+                            }"
+                        >
+                            <template #option="{ option }">
+                                <div class="flex flex-col gap-2 w-full">
+                                    <span class="text-[9px] font-bold font-mono tracking-tighter" :class="selectedVendor?.id === option.id ? 'text-sky-400' : 'text-zinc-600'">{{ option.vendor_code }}</span>
+                                    <span class="text-xs font-bold truncate tracking-tight">{{ option.name }}</span>
+                                </div>
+                            </template>
+                        </Listbox>
+                    </div>
+                </aside>
+
+                <!-- Right Sector: Intelligence & Activity Area -->
+                <main class="col-span-12 lg:col-span-9 flex flex-col gap-8 min-h-0">
+                    
+                    <!-- Top Section: Provider Manifest -->
+                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
+                        <!-- Background Accent -->
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 blur-[100px] -mr-32 -mt-32 rounded-full transition-opacity group-hover:opacity-100 opacity-50"></div>
+                        
+                        <template v-if="selectedVendor">
+                            <div class="relative z-10 flex flex-col">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-10 border-b border-zinc-800/60">
+                                    <div class="flex flex-col flex-1">
+                                        <div class="flex items-center gap-4 mb-3">
+                                            <h1 class="text-3xl font-bold text-white tracking-tighter m-0">{{ selectedVendor.name }}</h1>
+                                            <div class="flex gap-2">
+                                                <span class="text-[9px] font-bold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 uppercase tracking-widest font-mono">APPROVED</span>
+                                                <span class="text-[9px] font-bold px-3 py-1 bg-zinc-800/80 border border-zinc-700 rounded-full text-zinc-400 uppercase tracking-widest font-mono">VENDOR</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3 text-zinc-500 text-xs font-mono">
+                                            <i class="pi pi-at text-[10px] text-sky-400"></i>
+                                            <span>{{ selectedVendor.email || 'No email provided' }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="can('manage-products')" class="flex gap-3">
+                                        <Button icon="pi pi-pencil" 
+                                                class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white hover:!bg-zinc-800 !w-12 !h-12 !rounded-xl transition-all" 
+                                                @click="editVendor" />
+                                        <Button icon="pi pi-trash" 
+                                                class="!bg-zinc-900 !border-zinc-800 !text-red-400 hover:!text-red-300 hover:!bg-red-500/10 !w-12 !h-12 !rounded-xl transition-all" 
+                                                @click="deleteVendor" />
                                     </div>
                                 </div>
-                                <div v-if="can('manage-products')" style="display: flex; gap: 0.5rem;">
-                                    <Button icon="pi pi-pencil" class="p-button-secondary p-button-sm p-button-outlined" @click="editVendor" />
-                                    <Button icon="pi pi-trash" class="p-button-danger p-button-sm p-button-outlined" @click="deleteVendor" />
+                                
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-12">
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Vendor Code</label>
+                                        <code class="text-sky-400 font-mono text-sm tracking-tighter bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedVendor.vendor_code }}</code>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Phone Number</label>
+                                        <span class="text-white font-bold text-sm tracking-tight flex items-center gap-2">
+                                            <i class="pi pi-phone text-sky-500/50 text-[10px]"></i>
+                                            {{ selectedVendor.phone || 'N/A' }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col gap-2 lg:col-span-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Primary Contact Person</label>
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center border border-zinc-700">
+                                                <i class="pi pi-user text-zinc-500 text-xs"></i>
+                                            </div>
+                                            <span class="text-zinc-300 font-bold text-xs uppercase">{{ selectedVendor.contact_person || 'N/A' }}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <p class="specs-desc">
-                                <i class="pi pi-at mr-1" style="font-size: 12px;"></i>
-                                {{ selectedVendor.email || 'No registry email provided for this entity.' }}
-                            </p>
+                        </template>
+                        <div v-else class="h-64 flex flex-col items-center justify-center opacity-20 grayscale">
+                            <i class="pi pi-users text-6xl mb-6"></i>
+                            <p class="font-mono text-xs tracking-[0.3em] uppercase">Ready for entity initialization...</p>
+                        </div>
+                    </section>
+
+                    <!-- Bottom Section: History / Supply Chain Stream -->
+                    <section class="flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm">
+                        <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <div class="w-1.5 h-1.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
+                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History Feed</span>
+                            </div>
+                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ history.length }} RECORDS FOUND</span>
                         </div>
                         
-                        <div class="specs-dashboard-grid">
-                            <div class="doc-cell">
-                                <label>ENTITY IDENTIFIER</label>
-                                <code>{{ selectedVendor.vendor_code }}</code>
+                        <div class="flex-1 overflow-hidden">
+                            <DataTable 
+                                :value="history" 
+                                :loading="loadingHistory" 
+                                scrollable 
+                                scrollHeight="flex" 
+                                class="gh-table border-none"
+                                :pt="{
+                                    root: { class: '!bg-transparent' },
+                                    column: {
+                                        headercell: { class: '!bg-zinc-900/60 !border-zinc-800 !text-zinc-500 !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                                        bodycell: { class: '!border-zinc-800/40 !py-4 !px-8 !text-[13px] !text-zinc-300' }
+                                    },
+                                    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' }
+                                }"
+                            >
+                                <template #empty>
+                                    <div class="py-32 text-center opacity-20 flex flex-col items-center grayscale">
+                                        <i class="pi pi-history text-5xl mb-6"></i>
+                                        <p class="font-mono text-xs tracking-[0.2em] uppercase">No supply chain artifacts detected in history registry</p>
+                                    </div>
+                                </template>
+                                
+                                <Column field="transaction_date" header="Date / Time" style="width: 160px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] text-zinc-400">{{ data.transaction_date }}</span>
+                                    </template>
+                                </Column>
+                                
+                                <Column field="reference_number" header="Reference #" style="width: 200px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] bg-zinc-950 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-tighter">{{ data.reference_number }}</span>
+                                    </template>
+                                </Column>
+                                
+                                <Column field="type" header="Type" style="width: 150px">
+                                    <template #body="{ data }">
+                                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
+                                             :class="[
+                                                 data.type.toLowerCase() === 'receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
+                                                 data.type.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
+                                                 'bg-sky-500/5 text-sky-400 border-sky-500/20'
+                                             ]">
+                                            {{ data.type.toUpperCase() }}
+                                        </div>
+                                    </template>
+                                </Column>
+                                
+                                <Column field="to_location" header="Location Tracking">
+                                    <template #body="{ data }">
+                                        <div class="flex items-center gap-2 text-zinc-400 font-bold text-xs">
+                                            <i class="pi pi-map-marker text-sky-500/50 text-[10px]"></i>
+                                            {{ data.to_location || 'Internal' }}
+                                        </div>
+                                    </template>
+                                </Column>
+                                
+                                <Column field="status" header="Status" style="width: 140px">
+                                     <template #body="{ data }">
+                                        <div class="inline-flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
+                                            <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.toLowerCase() === 'posted' ? 'text-zinc-200' : 'text-zinc-600'">{{ data.status.toUpperCase() }}</span>
+                                        </div>
+                                    </template>
+                                </Column>
+                            </DataTable>
+                        </div>
+                    </section>
+                </main>
+            </div>
+            <Dialog 
+                v-model:visible="dialogVisible" 
+                :modal="true" 
+                class="!bg-transparent !border-none !shadow-none ring-0 outline-none"
+                :pt="{
+                    root: { class: 'p-0 sm:m-4 max-w-2xl w-full' },
+                    content: { class: 'p-0 !bg-transparent' }
+                }"
+                :showHeader="false"
+            >
+                <div class="bg-zinc-950 border border-zinc-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
+                    <!-- Header -->
+                    <div class="px-8 py-6 border-b border-zinc-900 bg-zinc-900/50 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">VENDOR_DATA</div>
+                            <h2 class="text-white text-xl font-bold tracking-tight m-0">{{ vendorForm.id ? 'Edit Vendor Details' : 'New Vendor Registration' }}</h2>
+                        </div>
+                        <Button icon="pi pi-times" class="!text-zinc-600 hover:!text-white !bg-transparent !border-none !w-10 !h-10 hover:!bg-zinc-900 transition-colors" @click="dialogVisible = false" />
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-8 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.03),transparent_40%)]">
+                        <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+                            <div class="col-span-12 md:col-span-8 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Vendor Name *</label>
+                                <InputText v-model="vendorForm.name" placeholder="E.g. Apex Logistics Corp" 
+                                           class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !font-bold focus:!border-sky-500/40"
+                                           :class="{'!border-red-500/50': submitted && !vendorForm.name}" />
                             </div>
-                            <div class="doc-cell">
-                                <label>COMMUNICATION LINK</label>
-                                <span>{{ selectedVendor.phone || 'N/A' }}</span>
+                            <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Vendor Code</label>
+                                <InputText v-model="vendorForm.vendor_code" placeholder="VND-000" class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono focus:!border-sky-500/30" />
                             </div>
-                            <div class="doc-cell col-span-2">
-                                <label>PRIMARY CONTACT LIAISON</label>
-                                <span>{{ selectedVendor.contact_person || 'No representative assigned.' }}</span>
+
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Email Address</label>
+                                <InputText v-model="vendorForm.email" placeholder="contact@nexus.com" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Phone Number</label>
+                                <InputText v-model="vendorForm.phone" placeholder="+1 (000) 000-0000" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+
+                            <div class="col-span-12 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Physical Address</label>
+                                <InputText v-model="vendorForm.address" placeholder="Main Facility Sector 7" class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                            </div>
+
+                            <div class="col-span-12 md:col-span-8 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Contact Person</label>
+                                <InputText v-model="vendorForm.contact_person" placeholder="Command Officer Name" class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 focus:!border-sky-500/30 font-bold" />
+                            </div>
+
+                            <div class="col-span-12 p-5 bg-zinc-900/30 border border-zinc-800/60 rounded-xl flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-[11px] uppercase tracking-tight">Vendor Active Status</span>
+                                    <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Status // {{ vendorForm.is_active ? 'active' : 'inactive' }}</span>
+                                </div>
+                                <ToggleSwitch v-model="vendorForm.is_active" 
+                                             :pt="{
+                                                 slider: ({ props }) => ({
+                                                     class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700'
+                                                 })
+                                             }" />
                             </div>
                         </div>
-                    </template>
-                    <div v-else class="empty-placeholder">
-                        <i class="pi pi-users mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
-                        <p>SELECT A PROVIDER TO INITIALIZE PARAMETERS</p>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="px-8 py-6 border-t border-zinc-900 bg-zinc-900/50 flex justify-end gap-3">
+                        <Button label="CANCEL" class="!bg-transparent !border-zinc-800 !text-zinc-500 hover:!text-white hover:!border-zinc-600 !px-6 !h-11 !font-bold !text-[10px] uppercase tracking-widest border transition-colors" @click="dialogVisible = false" />
+                        <Button label="SAVE VENDOR" 
+                                class="!bg-sky-500 !border-none !text-white !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" 
+                                @click="saveVendor" />
                     </div>
                 </div>
-
-                <!-- Bottom Section: Supply Chain Ledger -->
-                <div class="ledger-section sharp-panel">
-                    <div class="ledger-header">
-                        <h3 class="pane-title">Activity Feed / History Log <span class="gh-count">{{ history.length }}</span></h3>
-                    </div>
-                    <DataTable :value="history" :loading="loadingHistory" scrollable scrollHeight="flex" class="gh-table">
-                        <template #empty>
-                            <div class="empty-ledger">NO RECENT TRANSACTIONAL ARTIFACTS DETECTED</div>
-                        </template>
-                        <Column field="transaction_date" header="Timestamp" style="width: 130px"></Column>
-                        <Column field="reference_number" header="Reference" style="width: 180px">
-                            <template #body="{ data }">
-                                <span class="gh-code">{{ data.reference_number }}</span>
-                            </template>
-                        </Column>
-                        <Column field="type" header="Operation" style="width: 140px">
-                            <template #body="{ data }">
-                                <Tag :value="data.type" :severity="getTransactionSeverity(data.type)" class="gh-type-tag" />
-                            </template>
-                        </Column>
-                        <Column field="to_location" header="Destination Facility"></Column>
-                        <Column field="status" header="Node Status" style="width: 120px">
-                             <template #body="{ data }">
-                                <span class="gh-status-indicator" :class="data.status.toLowerCase()">{{ data.status }}</span>
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
-            </div>
-            
-            <Dialog v-model:visible="dialogVisible" :header="vendorForm.id ? 'UPDATE REGISTRY' : 'INITIALIZE PROVIDER'" :modal="true" :style="{ width: '800px' }" class="premium-dialog">
-                <div class="grid grid-cols-12 gap-x-6 gap-y-5">
-                    <div class="col-span-12 md:col-span-8 flex flex-col gap-1.5">
-                        <label class="form-label">Entity Designation (Name) *</label>
-                        <InputText v-model="vendorForm.name" required autofocus :class="{'p-invalid': submitted && !vendorForm.name}" />
-                        <small class="p-error" v-if="submitted && !vendorForm.name">Designation is required.</small>
-                    </div>
-                    <div class="col-span-12 md:col-span-4 flex flex-col gap-1.5">
-                        <label class="form-label">Identifier Code</label>
-                        <InputText v-model="vendorForm.vendor_code" class="font-mono text-sm" />
-                    </div>
-
-                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
-                        <label class="form-label">Communication Link (Email)</label>
-                        <InputText v-model="vendorForm.email" />
-                    </div>
-                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
-                        <label class="form-label">Telemetry (Phone)</label>
-                        <InputText v-model="vendorForm.phone" />
-                    </div>
-
-                    <div class="col-span-12 flex flex-col gap-1.5">
-                        <label class="form-label">Physical Interface (Address)</label>
-                        <InputText v-model="vendorForm.address" />
-                    </div>
-
-                    <div class="col-span-12 md:col-span-6 flex flex-col gap-1.5">
-                        <label class="form-label">Primary Liaison</label>
-                        <InputText v-model="vendorForm.contact_person" />
-                    </div>
-
-                    <div class="col-span-12 flex items-center gap-4 bg-slate-900/40 p-4 rounded-lg border border-white/5 mt-2">
-                        <ToggleSwitch v-model="vendorForm.is_active" />
-                        <span :class="vendorForm.is_active ? 'text-sky-400 font-bold' : 'text-slate-500 font-medium'" class="text-[11px] tracking-widest uppercase">
-                            {{ vendorForm.is_active ? 'SOURCE ACTIVE' : 'SOURCE OFFLINE' }}
-                        </span>
-                    </div>
-                </div>
-
-                <template #footer>
-                    <div class="flex items-center justify-end gap-3 w-full">
-                        <Button label="Abort Config" icon="pi pi-times" @click="dialogVisible = false" class="p-button-text !text-slate-400 hover:!text-white transition-colors" />
-                        <Button label="Apply Parameters" icon="pi pi-check" @click="saveVendor" class="p-button-primary shadow-lg shadow-sky-500/20" />
-                    </div>
-                </template>
             </Dialog>
         </div>
     </AppLayout>
 </template>
 
 <style scoped>
-.vendor-grid {
-    display: flex;
-    gap: 1.5rem;
-    height: calc(100vh - 120px);
-}
-
-.provider-pane {
-    width: 320px;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem !important;
-}
-
-.main-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    min-width: 0;
-}
-
-.pane-header {
-    margin-bottom: 1rem;
-}
-
-.pane-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #f8fafc;
-    margin-bottom: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.gh-count {
-    background: var(--bg-panel);
-    padding: 2px 6px;
-    border-radius: 20px;
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-
-.provider-list-container {
-    flex: 1;
-    overflow: hidden;
-}
-
-.gh-listbox {
-    border: none !important;
-    background: transparent !important;
-}
-
-.provider-item {
-    display: flex;
-    flex-direction: column;
-    padding: 4px 0;
-}
-
-.provider-name {
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.provider-slug {
-    font-size: 11px;
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    color: #38bdf8;
-}
-
-/* Specs Section */
-.specs-section {
-    padding: 1.5rem !important;
-}
-
-.specs-header {
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 1.25rem;
-}
-
-.title-workflow {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.specs-title {
-    font-size: 20px;
-    margin: 0;
-    color: #f8fafc;
-}
-
-.specs-desc {
-    color: #94a3b8;
-    font-size: 14px;
-    margin: 0;
-}
-
-.specs-dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-}
-
-.doc-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.doc-cell.col-span-2 {
-    grid-column: span 2;
-}
-
-.doc-cell label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-}
-
-.doc-cell span, .doc-cell code {
-    font-size: 14px;
-    font-weight: 500;
-    color: #f8fafc;
-}
-
-.doc-cell code {
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    background: var(--bg-panel);
-    padding: 2px 4px;
-    border-radius: 4px;
-    color: #38bdf8;
-    width: fit-content;
-}
-
-/* Ledger Section */
-.ledger-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0 !important;
-    overflow: hidden;
-}
-
-.ledger-header {
-    padding: 12px 16px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 6px 6px 0 0;
-}
-
-.gh-table {
-    font-size: 13px;
-}
-
-::v-deep(.p-datatable-header) {
-    display: none;
-}
-
-::v-deep(.p-datatable-thead > tr > th) {
-    background: var(--bg-deep) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    padding: 12px 16px !important;
-    color: #94a3b8 !important;
-    font-weight: 600 !important;
-}
-
-::v-deep(.p-datatable-tbody > tr) {
-    background: transparent !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-::v-deep(.p-datatable-tbody > tr:hover) {
-    background: var(--bg-panel) !important;
-}
-
-.gh-code {
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    font-size: 12px;
-}
-
-.gh-type-tag {
-    font-size: 11px;
-    border-radius: 12px;
-    padding: 2px 10px;
-}
-
-.gh-status-indicator {
-    font-size: 12px;
-    font-weight: 600;
-}
-.gh-status-indicator.posted { color: #38bdf8; }
-.gh-status-indicator.draft { color: #94a3b8; }
-
-.gh-tag-success {
-    background: rgba(87, 171, 90, 0.1) !important;
-    color: var(--accent-primary) !important;
-    font-size: 10px;
-    border: 1px solid rgba(87, 171, 90, 0.2);
-}
-
-.gh-tag-secondary {
-    background: var(--bg-panel) !important;
-    color: #94a3b8 !important;
-    font-size: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.empty-placeholder, .empty-ledger {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #94a3b8;
-    font-size: 14px;
-    text-align: center;
-}
-
-/* Listbox Selection Fix */
-::v-deep(.p-listbox-item) {
-    border-radius: 6px !important;
-    padding: 8px 12px !important;
-    margin-bottom: 2px;
-}
-
-::v-deep(.p-listbox-item.p-highlight) {
-    background: var(--bg-panel) !important;
-    color: #f8fafc !important;
-}
-
-/* Form Label & Field Styles */
-.form-label {
-    display: block;
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-bottom: 0.25rem;
-}
-
-/* Premium Dialog Design Overrides */
-::v-deep(.p-dialog) {
-    background: rgba(13, 17, 23, 0.95) !important;
-    backdrop-filter: blur(28px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 16px !important;
-    box-shadow: 0 40px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.05) !important;
-    animation: dialogFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-@keyframes dialogFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-::v-deep(.p-dialog .p-dialog-header) {
-    background: transparent !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-    padding: 1.5rem 2rem !important;
-    position: relative !important;
-}
-
-::v-deep(.p-dialog .p-dialog-header::before) {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
-    opacity: 0.8;
-}
-
-::v-deep(.p-dialog .p-dialog-title) {
-    font-size: 1.15rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.05em !important;
-    background: linear-gradient(135deg, #f8fafc, #94a3b8);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-}
-
-::v-deep(.p-dialog .p-dialog-content) {
-    background: transparent !important;
-    padding: 2.5rem 2rem !important;
-}
-
-::v-deep(.p-dialog .p-dialog-footer) {
-    background: rgba(0, 0, 0, 0.2) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-    padding: 1.25rem 2rem !important;
-}
-
-/* Premium Input Overrides */
-::v-deep(.p-inputtext), 
-::v-deep(.p-textarea), 
-::v-deep(.p-select) {
-    background: rgba(15, 23, 42, 0.6) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    color: #f8fafc !important;
-    border-radius: 8px !important;
-    padding: 0.75rem 1rem !important;
-    font-size: 0.85rem !important;
-    transition: all 0.2s ease !important;
-}
-
-::v-deep(.p-inputtext:enabled:focus),
-::v-deep(.p-textarea:enabled:focus) {
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15) !important;
-    background: rgba(15, 23, 42, 0.8) !important;
-}
-
-::v-deep(.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider) {
-    background: linear-gradient(135deg, #0ea5e9, #2563eb) !important;
-}
+/* Scoped styles migrated to Tailwind Utility Classes v4 */
 </style>
-+

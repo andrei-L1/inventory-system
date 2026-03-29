@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss/theme";
+@import "tailwindcss/utilities";
 
 @layer primevue;
 @layer custom;
@@ -131,7 +133,7 @@
         background: #000000 !important; /* Pitch black inputs for depth */
         border: 1px solid var(--bg-panel-border) !important;
         color: var(--text-primary) !important;
-        padding: 8px 12px !important;
+        padding: 8px 12px; /* Removed !important to allow utility overrides */
         border-radius: 4px !important;
         font-size: 14px !important;
         font-family: inherit !important;
