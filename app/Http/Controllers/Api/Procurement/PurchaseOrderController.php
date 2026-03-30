@@ -329,7 +329,7 @@ class PurchaseOrderController extends Controller
                     'quantity' => $item['return_qty'],
                     'unit_cost' => $poLine->unit_cost,
                     'uom_id' => $poLine->product->uom_id,
-                    'notes' => 'Resolution: ' . ucfirst($item['resolution']),
+                    'notes' => 'Resolution: '.ucfirst($item['resolution']),
                 ];
 
                 // Regardless of resolution, physical stock has left the warehouse.

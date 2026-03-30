@@ -53,10 +53,10 @@ class PurchaseOrderResource extends JsonResource
                     'lines' => $t->lines->map(function ($l) {
                         // Recovery logic: if notes are empty, try to find the resolution in the PO line notes
                         $notes = $l->notes;
-                        if (!$notes && $this->relationLoaded('lines')) {
+                        if (! $notes && $this->relationLoaded('lines')) {
                             $poLine = $this->lines->firstWhere('product_id', $l->product_id);
                             if ($poLine && $poLine->notes && preg_match('/\((replacement|credit)\)/', $poLine->notes, $matches)) {
-                                $notes = 'Resolution: ' . ucfirst($matches[1]);
+                                $notes = 'Resolution: '.ucfirst($matches[1]);
                             }
                         }
 
