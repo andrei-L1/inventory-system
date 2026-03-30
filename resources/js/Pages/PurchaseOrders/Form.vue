@@ -206,7 +206,11 @@ const cancel = () => {
                                         <template #option="slotProps">
                                             <div class="flex flex-col">
                                                 <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
-                                                <span class="text-[10px] font-mono text-zinc-500">SKU: {{ slotProps.option.sku }} | Price: ₱{{ slotProps.option.average_cost }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-mono text-sky-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
+                                                    <span v-if="slotProps.option.product_code" class="text-[9px] font-mono text-zinc-600 font-bold uppercase tracking-tight">MPN: {{ slotProps.option.product_code }}</span>
+                                                    <span class="text-zinc-800 font-mono text-[9px]">| ₱{{ Number(slotProps.option.average_cost || slotProps.option.selling_price).toFixed(2) }}</span>
+                                                </div>
                                             </div>
                                         </template>
                                     </Select>

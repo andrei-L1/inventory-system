@@ -65,6 +65,10 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Movements/AdjustmentForm');
     })->name('movements.adjustment');
 
+    Route::get('/movements/{id}', function ($id) {
+        return Inertia::render('Movements/Show', ['id' => $id]);
+    })->name('movements.show');
+
     // --- Procurement (Phase 4.2) ---
     Route::get('/purchase-orders', function () {
         return Inertia::render('PurchaseOrders/Index');

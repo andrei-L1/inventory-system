@@ -60,6 +60,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])
         ->middleware('permission:manage-inventory');
 
+    // Get single transaction detail
+    Route::get('transactions/{transaction}', [TransactionController::class, 'show'])
+        ->middleware('permission:view-transactions');
+
     // Atomic two-leg internal stock transfer.
     Route::post('transfers', [TransactionController::class, 'storeTransfer'])
         ->middleware('permission:manage-inventory');

@@ -400,11 +400,11 @@ const formatCurrency = (val) => {
                                     <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
                                              :class="[
-                                                 data.type.toLowerCase() === 'receipt' || data.type.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-                                                 data.type.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
+                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
+                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
                                                  'bg-sky-500/5 text-sky-400 border-sky-500/20'
                                              ]">
-                                            {{ data.display_type || data.type.toUpperCase() }}
+                                            {{ data.display_type || data.type.name.toUpperCase() }}
                                         </div>
                                     </template>
                                 </Column>
@@ -440,8 +440,8 @@ const formatCurrency = (val) => {
                                 <Column field="status" header="Status" style="width: 140px">
                                      <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2">
-                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
-                                            <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.toLowerCase() === 'posted' ? 'text-zinc-200' : 'text-zinc-600'">{{ data.status.toUpperCase() }}</span>
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
+                                            <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.name.toLowerCase() === 'posted' ? 'text-zinc-200' : 'text-zinc-600'">{{ data.status.name.toUpperCase() }}</span>
                                         </div>
                                     </template>
                                 </Column>

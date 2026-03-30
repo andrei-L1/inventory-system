@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Inventory;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 
 class ProductStoreRequest extends FormRequest
 {
@@ -18,31 +17,17 @@ class ProductStoreRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        if (empty($this->product_code)) {
-            $this->merge([
-                'product_code' => 'PRD-'.strtoupper(Str::random(8)),
-            ]);
-        }
-
-        if (empty($this->sku)) {
-            // Generate SKU based on name if blank
-            $sku = Str::slug($this->name);
-            if (empty($sku)) {
-                $sku = 'SKU-'.strtoupper(Str::random(6));
-            } else {
-                $sku = strtoupper($sku).'-'.strtoupper(Str::random(4));
-            }
-            $this->merge(['sku' => $sku]);
-        }
+        // Automation is now handled by the Product Model observer
+        // to ensure proper ID-based sequencing (0001-HAM format).
     }
 
     public function rules(): array
     {
         return [
-            'product_code' => 'required|string|max:100|unique:products,product_code',
+            'product_code' => 'nullable|string|max:100|unique:products,product_code',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'sku' => 'required|string|max:100|unique:products,sku',
+            'sku' => 'nullable|string|max:100|unique:products,sku',
             'barcode' => 'nullable|string|max:100|unique:products,barcode',
             'category_id' => 'required|exists:categories,id',
             'uom_id' => 'required|exists:units_of_measure,id',

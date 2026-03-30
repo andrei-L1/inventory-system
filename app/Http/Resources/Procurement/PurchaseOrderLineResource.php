@@ -12,8 +12,9 @@ class PurchaseOrderLineResource extends JsonResource
         return [
             'id' => $this->id,
             'product_id' => $this->product_id,
-            'product_name' => $this->product->name ?? null,
-            'sku' => $this->product->sku ?? null,
+            'product_name' => $this->product->name ?? '[DELETED PRODUCT]',
+            'sku' => $this->product?->sku ?? 'N/A',
+            'product_code' => $this->product?->product_code ?? 'N/A',
             'uom' => $this->product->uom->abbreviation ?? null,
             'ordered_qty' => (float) $this->ordered_qty,
             'received_qty' => (float) $this->received_qty,

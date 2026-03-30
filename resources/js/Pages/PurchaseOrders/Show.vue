@@ -507,15 +507,18 @@ const deletePO = async () => {
                             class="p-datatable-sm w-full"
                             stripedRows
                         >
-                            <Column field="sku" header="SKU">
+                            <Column field="sku" header="INTERNAL ID" style="width: 15rem">
                                 <template #body="{ data }">
-                                    <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
+                                    <span class="text-sky-400 font-mono text-[10px] font-bold tracking-widest text-[#50e3c2]">{{ data.sku }}</span>
                                 </template>
                             </Column>
                             
                             <Column field="product_name" header="PRODUCT">
                                 <template #body="{ data }">
-                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                        <span v-if="data.product_code" class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                    </div>
                                 </template>
                             </Column>
 
@@ -595,12 +598,19 @@ const deletePO = async () => {
 
                 <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
                     <DataTable :value="grnForm.lines" class="p-datatable-sm w-full">
-                        <Column field="sku" header="SKU">
+                        <Column field="sku" header="INTERNAL ID">
                             <template #body="{ data }">
                                 <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
                             </template>
                         </Column>
-                        <Column field="product_name" header="PRODUCT"></Column>
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span v-if="data.product_code" class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                </div>
+                            </template>
+                        </Column>
                         <Column field="pending_qty" header="PENDING">
                             <template #body="{ data }">
                                 <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }}</span>
@@ -683,7 +693,10 @@ const deletePO = async () => {
                                 <!-- Product Identity -->
                                 <div class="lg:col-span-4 flex flex-col gap-1">
                                     <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
-                                    <span class="text-[9px] font-mono font-bold text-zinc-600 uppercase">{{ line.sku }}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest">{{ line.sku }}</span>
+                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-600 uppercase">MPN: {{ line.product_code }}</span>
+                                    </div>
                                 </div>
 
                                 <!-- Status Badges -->
