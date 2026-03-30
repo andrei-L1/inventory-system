@@ -227,6 +227,7 @@ class PurchaseOrderController extends Controller
                     'reference_doc' => $purchaseOrder->po_number,
                     'notes' => 'Goods Receipt Note for PO: '.$purchaseOrder->po_number,
                     'created_by' => $request->user()->id,
+                    'to_location_id' => $request->location_id,
                 ],
                 'lines' => [],
             ];
@@ -308,6 +309,7 @@ class PurchaseOrderController extends Controller
                     'reference_doc' => $purchaseOrder->po_number,
                     'notes' => 'Purchase Return for PO: '.$purchaseOrder->po_number,
                     'created_by' => $request->user()->id,
+                    'from_location_id' => $request->location_id,
                 ],
                 'lines' => [],
             ];
@@ -327,15 +329,13 @@ class PurchaseOrderController extends Controller
                     'quantity' => $item['return_qty'],
                     'unit_cost' => $poLine->unit_cost,
                     'uom_id' => $poLine->product->uom_id,
+                    'notes' => 'Resolution: ' . ucfirst($item['resolution']),
                 ];
 
-                if ($item['resolution'] === 'replacement') {
-                    // Expecting it back, so we reduce received_qty
-                    $poLine->received_qty = max(0, $poLine->received_qty - $item['return_qty']);
-                } else {
-                    // Credit track: keep received_qty, increment returned_qty
-                    $poLine->returned_qty += $item['return_qty'];
-                }
+                // Regardless of resolution, physical stock has left the warehouse.
+                // We decrease the received count (which reflects net stock) and increase return count.
+                $poLine->received_qty = max(0, $poLine->received_qty - $item['return_qty']);
+                $poLine->returned_qty += $item['return_qty'];
 
                 $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
                 $poLine->save();
