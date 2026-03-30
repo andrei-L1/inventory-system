@@ -19,14 +19,14 @@ class SampleDataSeeder extends Seeder
             $zoneTypeId = DB::table('location_types')->where('name', 'zone')->value('id');
 
             // 2. Vendors
-            $vendorId = DB::table('vendors')->updateOrInsert(['code' => 'DEMO-VEND'], [
+            $vendorId = DB::table('vendors')->updateOrInsert(['vendor_code' => 'DEMO-VEND'], [
                 'name' => 'Apex Components',
                 'email' => 'sales@apex.example',
                 'is_active' => true,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ]);
-            $vendorId = DB::table('vendors')->where('code', 'DEMO-VEND')->value('id');
+            $vendorId = DB::table('vendors')->where('vendor_code', 'DEMO-VEND')->value('id');
 
             // 3. Products
             $products = [
