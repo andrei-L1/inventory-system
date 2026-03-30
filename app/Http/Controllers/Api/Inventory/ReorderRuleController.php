@@ -30,12 +30,12 @@ class ReorderRuleController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'product_id'  => 'required|exists:products,id',
+            'product_id' => 'required|exists:products,id',
             'location_id' => 'nullable|exists:locations,id',
-            'min_stock'   => 'required|numeric|min:0',
-            'max_stock'   => 'nullable|numeric|min:0',
+            'min_stock' => 'required|numeric|min:0',
+            'max_stock' => 'nullable|numeric|min:0',
             'reorder_qty' => 'required|numeric|min:1',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         // Prevent duplicate rules for the same product+location combination
@@ -61,10 +61,10 @@ class ReorderRuleController extends Controller
     public function update(Request $request, ReorderRule $reorderRule): JsonResponse
     {
         $data = $request->validate([
-            'min_stock'   => 'sometimes|numeric|min:0',
-            'max_stock'   => 'nullable|numeric|min:0',
+            'min_stock' => 'sometimes|numeric|min:0',
+            'max_stock' => 'nullable|numeric|min:0',
             'reorder_qty' => 'sometimes|numeric|min:1',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $reorderRule->update($data);
@@ -86,16 +86,16 @@ class ReorderRuleController extends Controller
     private function format(ReorderRule $rule): array
     {
         return [
-            'id'           => $rule->id,
-            'product_id'   => $rule->product_id,
+            'id' => $rule->id,
+            'product_id' => $rule->product_id,
             'product_name' => $rule->product?->name,
-            'location_id'  => $rule->location_id,
-            'location_name'=> $rule->location?->name ?? 'All Locations (Global)',
-            'min_stock'    => (float) $rule->min_stock,
-            'max_stock'    => $rule->max_stock ? (float) $rule->max_stock : null,
-            'reorder_qty'  => (float) $rule->reorder_qty,
-            'is_active'    => (bool) $rule->is_active,
-            'created_at'   => $rule->created_at?->format('Y-m-d'),
+            'location_id' => $rule->location_id,
+            'location_name' => $rule->location?->name ?? 'All Locations (Global)',
+            'min_stock' => (float) $rule->min_stock,
+            'max_stock' => $rule->max_stock ? (float) $rule->max_stock : null,
+            'reorder_qty' => (float) $rule->reorder_qty,
+            'is_active' => (bool) $rule->is_active,
+            'created_at' => $rule->created_at?->format('Y-m-d'),
         ];
     }
 }

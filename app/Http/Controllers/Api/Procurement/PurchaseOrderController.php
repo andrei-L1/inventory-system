@@ -336,8 +336,8 @@ class PurchaseOrderController extends Controller
                     // Credit track: keep received_qty, increment returned_qty
                     $poLine->returned_qty += $item['return_qty'];
                 }
-                
-                $poLine->notes = trim(($poLine->notes ?? '') . " | Return Reason: " . ($item['reason'] ?? 'N/A') . " (" . $item['resolution'] . ")");
+
+                $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
                 $poLine->save();
             }
 
@@ -347,7 +347,7 @@ class PurchaseOrderController extends Controller
             // Update PO Status if a replacement caused received_qty to drop below ordered_qty
             $purchaseOrder->refresh();
             $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
-            
+
             $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
             $purchaseOrder->status_id = $poStatus->id;
             $purchaseOrder->save();

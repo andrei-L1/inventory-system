@@ -9,13 +9,12 @@ use App\Http\Controllers\Api\Inventory\InventoryQueryController;
 use App\Http\Controllers\Api\Inventory\LocationController;
 use App\Http\Controllers\Api\Inventory\LocationTypeController;
 use App\Http\Controllers\Api\Inventory\ProductController;
+use App\Http\Controllers\Api\Inventory\ReorderRuleController;
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
-use App\Http\Controllers\Api\Inventory\ReorderRuleController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -112,7 +111,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('reorder-rules', [ReorderRuleController::class, 'store'])->middleware('permission:manage-inventory');
     Route::put('reorder-rules/{reorderRule}', [ReorderRuleController::class, 'update'])->middleware('permission:manage-inventory');
     Route::delete('reorder-rules/{reorderRule}', [ReorderRuleController::class, 'destroy'])->middleware('permission:manage-inventory');
-
 
     // Utility route for Artisan commands (Phase 4.2)
     Route::post('run-command', function (Request $request) {
