@@ -31,9 +31,15 @@ const grnDialog = ref(false);
 const grnDetailDialog = ref(false);
 const selectedGrn = ref(null);
 const shipDialog = ref(false);
+const returnDialog = ref(false);
 const grnLoading = ref(false);
+const returnLoading = ref(false);
 const locations = ref([]);
 const grnForm = ref({
+    location_id: null,
+    lines: []
+});
+const returnForm = ref({
     location_id: null,
     lines: []
 });
@@ -186,6 +192,61 @@ const postReceipt = async () => {
     }
 };
 
+const openReturnMode = () => {
+    returnForm.value.location_id = null;
+    returnForm.value.lines = po.value.lines
+        .filter(l => l.received_qty > 0)
+        .map(l => ({
+            po_line_id: l.id,
+            product_name: l.product_name,
+            sku: l.sku,
+            received_qty: l.received_qty,
+            return_qty: 0,
+            resolution: 'replacement',
+            reason: ''
+        }));
+    
+    if (returnForm.value.lines.length === 0) {
+        toast.add({ severity: 'warn', summary: 'Cannot Return', detail: 'No items have been received for this PO.', life: 3000 });
+        return;
+    }
+    
+    returnDialog.value = true;
+};
+
+const postReturn = async () => {
+    if (!returnForm.value.location_id) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Return Location is required', life: 3000 });
+        return;
+    }
+
+    const payloadLines = returnForm.value.lines.filter(l => l.return_qty > 0);
+    if (payloadLines.length === 0) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please specify items and quantities to return.', life: 3000 });
+        return;
+    }
+
+    returnLoading.value = true;
+    try {
+        await axios.post(`/api/purchase-orders/${po.value.id}/return`, {
+            location_id: returnForm.value.location_id,
+            lines: payloadLines.map(l => ({ 
+                po_line_id: l.po_line_id, 
+                return_qty: l.return_qty,
+                resolution: l.resolution,
+                reason: l.reason
+            }))
+        });
+        toast.add({ severity: 'success', summary: 'RTV Success', detail: 'Purchase Return processed successfully.', life: 3000 });
+        returnDialog.value = false;
+        loadPO();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Return failed', life: 3000 });
+    } finally {
+        returnLoading.value = false;
+    }
+};
+
 const deletePO = async () => {
     confirm.require({
         message: 'Permanently delete this draft PO?',
@@ -268,6 +329,14 @@ const deletePO = async () => {
                         icon="pi pi-truck" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="shipDialog = true"
+                    />
+
+                    <Button 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-inventory')" 
+                        label="Return Items (RTV)" 
+                        icon="pi pi-replay" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openReturnMode"
                     />
 
                     <Button 
@@ -406,6 +475,14 @@ const deletePO = async () => {
                                     </span>
                                 </template>
                             </Column>
+
+                            <Column field="returned_qty" header="RET QTY">
+                                <template #body="{ data }">
+                                    <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-zinc-700', 'font-mono text-xs']">
+                                        {{ data.returned_qty }}
+                                    </span>
+                                </template>
+                            </Column>
                             
                             <Column field="pending_qty" header="REM QTY">
                                 <template #body="{ data }">
@@ -477,6 +554,76 @@ const deletePO = async () => {
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" @click="grnDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
                 <Button label="Post Receipt" icon="pi pi-check" @click="postReceipt" :loading="grnLoading" class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
+            </template>
+        </Dialog>
+
+        <!-- Return Items (RTV) Dialog -->
+        <Dialog v-model:visible="returnDialog" modal header="Process Purchase Return (RTV / RMA)" :style="{ width: '60rem' }" :breakpoints="{ '1199px': '85vw', '575px': '95vw' }">
+            <div class="flex flex-col gap-6 py-2">
+                <div class="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-start gap-4">
+                    <i class="pi pi-exclamation-circle text-red-500 mt-0.5"></i>
+                    <p class="text-[11px] text-red-400 font-bold leading-relaxed">
+                        Processing a return will issue items out of your selected location as a 'PRET' transaction. <br/>
+                        <b>Replacement</b>: Will reduce 'Received Qty' on this PO, allowing you to receive them again later. <br/>
+                        <b>Credit</b>: Will keep 'Received Qty' high but increment 'Returned Qty' for financial reconciliation.
+                    </p>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Return From Location (Picking Bin)</label>
+                    <Select 
+                        v-model="returnForm.location_id" 
+                        :options="locations" 
+                        optionLabel="name" 
+                        optionValue="id" 
+                        placeholder="Location to pick from" 
+                        filter
+                        class="w-full bg-zinc-950 border-zinc-700 text-sm"
+                    >
+                        <template #option="slotProps">
+                            <span class="font-bold text-xs">{{ slotProps.option.code }} — {{ slotProps.option.name }}</span>
+                        </template>
+                    </Select>
+                </div>
+
+                <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
+                    <DataTable :value="returnForm.lines" class="p-datatable-sm w-full">
+                        <Column field="sku" header="SKU">
+                            <template #body="{ data }">
+                                <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
+                            </template>
+                        </Column>
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                            </template>
+                        </Column>
+                        <Column field="received_qty" header="MAX RETURNABLE">
+                            <template #body="{ data }">
+                                <span class="text-zinc-500 font-mono text-xs font-bold">{{ data.received_qty }}</span>
+                            </template>
+                        </Column>
+                        <Column field="return_qty" header="QTY TO RETURN">
+                            <template #body="{ data }">
+                                <InputNumber v-model="data.return_qty" :min="0" :max="data.received_qty" class="w-24 bg-zinc-900 border-zinc-700 p-inputtext-sm text-center" />
+                            </template>
+                        </Column>
+                        <Column field="resolution" header="RESOLUTION">
+                            <template #body="{ data }">
+                                <Select v-model="data.resolution" :options="[{label: 'Replacement', value: 'replacement'}, {label: 'Credit/Refund', value: 'credit'}]" optionLabel="label" optionValue="value" class="w-full min-w-[120px] bg-zinc-900 border-zinc-700 p-inputtext-sm" />
+                            </template>
+                        </Column>
+                        <Column field="reason" header="REASON / NOTES">
+                            <template #body="{ data }">
+                                <InputText v-model="data.reason" placeholder="e.g. Damaged" class="w-full bg-zinc-900 border-zinc-700 p-inputtext-sm" />
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Cancel" icon="pi pi-times" @click="returnDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
+                <Button label="Process Return" icon="pi pi-replay" @click="postReturn" :loading="returnLoading" class="p-button-sm !bg-red-600 hover:!bg-red-700 !border-none !text-white font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(220,38,38,0.3)]" />
             </template>
         </Dialog>
 
