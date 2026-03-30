@@ -35,6 +35,7 @@ const returnDialog = ref(false);
 const grnLoading = ref(false);
 const returnLoading = ref(false);
 const locations = ref([]);
+const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const grnForm = ref({
     location_id: null,
     lines: []
@@ -192,26 +193,58 @@ const postReceipt = async () => {
     }
 };
 
-const openReturnMode = () => {
-    returnForm.value.location_id = null;
-    returnForm.value.lines = po.value.lines
-        .filter(l => l.received_qty > 0)
-        .map(l => ({
-            po_line_id: l.id,
-            product_name: l.product_name,
-            sku: l.sku,
-            received_qty: l.received_qty,
-            return_qty: 0,
-            resolution: 'replacement',
-            reason: ''
-        }));
-    
-    if (returnForm.value.lines.length === 0) {
-        toast.add({ severity: 'warn', summary: 'Cannot Return', detail: 'No items have been received for this PO.', life: 3000 });
-        return;
+const openReturnMode = async () => {
+    returnLoading.value = true;
+    try {
+        // Fetch current inventory distribution for all products on this PO
+        const productIds = po.value.lines.map(l => l.product_id);
+        const inventoryRes = await Promise.all(
+            productIds.map(id => axios.get(`/api/inventory?product_id=${id}&limit=100`))
+        );
+        
+        availableInventory.value = inventoryRes.flatMap(res => res.data.data);
+
+        returnForm.value.location_id = null;
+        returnForm.value.lines = po.value.lines
+            .filter(l => l.received_qty > 0)
+            .map(l => ({
+                po_line_id: l.id,
+                product_id: l.product_id, // ensure ID is available for filtering
+                product_name: l.product_name,
+                sku: l.sku,
+                received_qty: l.received_qty,
+                return_qty: 0,
+                resolution: 'replacement',
+                reason: ''
+            }));
+        
+        if (returnForm.value.lines.length === 0) {
+            toast.add({ severity: 'warn', summary: 'Cannot Return', detail: 'No items have been received for this PO.', life: 3000 });
+            return;
+        }
+        
+        returnDialog.value = true;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not fetch inventory distribution', life: 3000 });
+    } finally {
+        returnLoading.value = false;
     }
+};
+
+const filteredReturnLocations = computed(() => {
+    if (availableInventory.value.length === 0) return [];
     
-    returnDialog.value = true;
+    // Get unique location IDs that have stock for any of the products in the PO
+    const locIdsWithStock = new Set(availableInventory.value.map(inv => inv.location?.id).filter(Boolean));
+    return locations.value.filter(loc => locIdsWithStock.has(loc.id));
+});
+
+const getStockInSelectedLocation = (productId) => {
+    if (!returnForm.value.location_id) return 0;
+    const inv = availableInventory.value.find(
+        i => i.product?.id === productId && i.location?.id === returnForm.value.location_id
+    );
+    return inv ? inv.quantity_on_hand : 0;
 };
 
 const postReturn = async () => {
@@ -573,10 +606,10 @@ const deletePO = async () => {
                     <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Return From Location (Picking Bin)</label>
                     <Select 
                         v-model="returnForm.location_id" 
-                        :options="locations" 
+                        :options="filteredReturnLocations" 
                         optionLabel="name" 
                         optionValue="id" 
-                        placeholder="Location to pick from" 
+                        placeholder="Select location where stock is available" 
                         filter
                         class="w-full bg-zinc-950 border-zinc-700 text-sm"
                     >
@@ -598,14 +631,21 @@ const deletePO = async () => {
                                 <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
                             </template>
                         </Column>
-                        <Column field="received_qty" header="MAX RETURNABLE">
+                        <Column field="received_qty" header="MAX RET (PO)">
                             <template #body="{ data }">
                                 <span class="text-zinc-500 font-mono text-xs font-bold">{{ data.received_qty }}</span>
                             </template>
                         </Column>
+                        <Column header="AVAIL (LOC)">
+                            <template #body="{ data }">
+                                <span :class="[getStockInSelectedLocation(data.product_id) > 0 ? 'text-emerald-400' : 'text-zinc-600', 'font-mono text-xs font-bold']">
+                                    {{ getStockInSelectedLocation(data.product_id) }}
+                                </span>
+                            </template>
+                        </Column>
                         <Column field="return_qty" header="QTY TO RETURN">
                             <template #body="{ data }">
-                                <InputNumber v-model="data.return_qty" :min="0" :max="data.received_qty" class="w-24 bg-zinc-900 border-zinc-700 p-inputtext-sm text-center" />
+                                <InputNumber v-model="data.return_qty" :min="0" :max="Math.min(data.received_qty, getStockInSelectedLocation(data.product_id))" class="w-24 bg-zinc-900 border-zinc-700 p-inputtext-sm text-center" />
                             </template>
                         </Column>
                         <Column field="resolution" header="RESOLUTION">
