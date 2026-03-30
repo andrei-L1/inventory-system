@@ -12,6 +12,7 @@ class PurchaseOrderLine extends Model
         'product_id',
         'ordered_qty',
         'received_qty',
+        'returned_qty',
         'unit_cost',
         'notes',
     ];
@@ -19,6 +20,7 @@ class PurchaseOrderLine extends Model
     protected $casts = [
         'ordered_qty' => 'decimal:4',
         'received_qty' => 'decimal:4',
+        'returned_qty' => 'decimal:4',
         'unit_cost' => 'decimal:6',
         'total_cost' => 'decimal:6', // Virtual column from DB
     ];

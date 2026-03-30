@@ -266,6 +266,18 @@ Replenishment Suggestion
   - [x] Post Goods Receipt Note logic (receives remaining pending qty)
 - [x] PO status badges and lifecycle action buttons (Approve, GRN, Delete)
 
+### 4.3 Replenishment & Automation Engine ✅ NOW LIVE
+- [x] **ReorderRuleController** — Location-specific and global multi-tier threshold management.
+- [x] **Reorder Rules UI** — Modal in the Inventory Center to configure `min_stock` and `reorder_qty` per location.
+- [x] **ReplenishmentService** — Headless scan engine that checks true stock (Product + Location) against active Reorder thresholds.
+- [x] **Auto-Suggestions Pipeline** — Engine creates `ReplenishmentSuggestion` records with precise fill amounts and automated clean-up routing.
+- [x] **Bulk Procure-to-PO** — Converting 1-to-N suggestions directly into drafted POs aggregated by vendor.
+
+### 4.4 Purchase Returns / RTV Core Engine ✅ NOW LIVE
+- [x] Database: `returned_qty` column on PO lines.
+- [x] Core Transaction Type `PRET` defined.
+- [x] API Endpoint `POST /api/purchase-orders/{id}/return` running intelligent replacement (reopens PO) vs credit note (closes PO line) logic natively tied into the Stock Engine.
+
 ---
 
 ## 🛒 Phase 5 — Sales: Sales Order Lifecycle

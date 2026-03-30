@@ -227,6 +227,7 @@ class PurchaseOrderController extends Controller
                     'reference_doc' => $purchaseOrder->po_number,
                     'notes' => 'Goods Receipt Note for PO: '.$purchaseOrder->po_number,
                     'created_by' => $request->user()->id,
+                    'to_location_id' => $request->location_id,
                 ],
                 'lines' => [],
             ];
@@ -273,6 +274,89 @@ class PurchaseOrderController extends Controller
 
         return response()->json([
             'message' => 'Goods Receipt Note posted successfully.',
+            'purchase_order' => new PurchaseOrderResource($purchaseOrder->fresh('lines', 'status')),
+            'transaction_id' => $transaction->id,
+        ]);
+    }
+
+    public function processReturn(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
+    {
+        $request->validate([
+            'location_id' => 'required|exists:locations,id',
+            'lines' => 'required|array',
+            'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
+            'lines.*.return_qty' => 'required|numeric|min:0.01',
+            'lines.*.resolution' => 'required|in:replacement,credit',
+            'lines.*.reason' => 'nullable|string',
+        ]);
+
+        if (in_array($purchaseOrder->status->name, ['draft', 'cancelled'])) {
+            abort(400, "Cannot process return for PO in {$purchaseOrder->status->name} status.");
+        }
+
+        $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
+            $pretType = TransactionType::where('code', 'PRET')->firstOrFail();
+            $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
+
+            $transactionData = [
+                'header' => [
+                    'transaction_type_id' => $pretType->id,
+                    'transaction_status_id' => $postedStatus->id,
+                    'transaction_date' => now()->toDateString(),
+                    'reference_number' => 'RTV-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
+                    'vendor_id' => $purchaseOrder->vendor_id,
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'reference_doc' => $purchaseOrder->po_number,
+                    'notes' => 'Purchase Return for PO: '.$purchaseOrder->po_number,
+                    'created_by' => $request->user()->id,
+                    'from_location_id' => $request->location_id,
+                ],
+                'lines' => [],
+            ];
+
+            $poLines = $purchaseOrder->lines()->get()->keyBy('id');
+
+            foreach ($request->lines as $item) {
+                $poLine = $poLines->get($item['po_line_id']);
+
+                if (! $poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
+                    abort(400, 'Invalid PO line ID.');
+                }
+
+                $transactionData['lines'][] = [
+                    'product_id' => $poLine->product_id,
+                    'location_id' => $request->location_id,
+                    'quantity' => $item['return_qty'],
+                    'unit_cost' => $poLine->unit_cost,
+                    'uom_id' => $poLine->product->uom_id,
+                    'notes' => 'Resolution: '.ucfirst($item['resolution']),
+                ];
+
+                // Regardless of resolution, physical stock has left the warehouse.
+                // We decrease the received count (which reflects net stock) and increase return count.
+                $poLine->received_qty = max(0, $poLine->received_qty - $item['return_qty']);
+                $poLine->returned_qty += $item['return_qty'];
+
+                $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
+                $poLine->save();
+            }
+
+            // Record movement in Stock Engine (Issue logic handles layer dedupe)
+            $transaction = $stockService->recordMovement($transactionData);
+
+            // Update PO Status if a replacement caused received_qty to drop below ordered_qty
+            $purchaseOrder->refresh();
+            $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+
+            $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
+            $purchaseOrder->status_id = $poStatus->id;
+            $purchaseOrder->save();
+
+            return $transaction;
+        });
+
+        return response()->json([
+            'message' => 'Purchase Return posted successfully.',
             'purchase_order' => new PurchaseOrderResource($purchaseOrder->fresh('lines', 'status')),
             'transaction_id' => $transaction->id,
         ]);

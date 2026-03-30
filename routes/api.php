@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Inventory\InventoryQueryController;
 use App\Http\Controllers\Api\Inventory\LocationController;
 use App\Http\Controllers\Api\Inventory\LocationTypeController;
 use App\Http\Controllers\Api\Inventory\ProductController;
+use App\Http\Controllers\Api\Inventory\ReorderRuleController;
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
@@ -99,10 +100,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-inventory');
     Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-inventory');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-inventory');
+    Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-inventory');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:manage-inventory');
     Route::post('replenishment/suggestions/bulk-po', [PurchaseOrderController::class, 'bulkCreateFromSuggestions'])->middleware('permission:manage-inventory');
+
+    // Reorder Rules (Phase 4.2)
+    Route::get('reorder-rules', [ReorderRuleController::class, 'index'])->middleware('permission:view-inventory');
+    Route::post('reorder-rules', [ReorderRuleController::class, 'store'])->middleware('permission:manage-inventory');
+    Route::put('reorder-rules/{reorderRule}', [ReorderRuleController::class, 'update'])->middleware('permission:manage-inventory');
+    Route::delete('reorder-rules/{reorderRule}', [ReorderRuleController::class, 'destroy'])->middleware('permission:manage-inventory');
 
     // Utility route for Artisan commands (Phase 4.2)
     Route::post('run-command', function (Request $request) {

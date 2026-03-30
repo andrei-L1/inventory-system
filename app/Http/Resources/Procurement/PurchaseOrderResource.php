@@ -29,19 +29,46 @@ class PurchaseOrderResource extends JsonResource
             'carrier' => $this->carrier,
             'tracking_number' => $this->tracking_number,
             'lines' => PurchaseOrderLineResource::collection($this->whenLoaded('lines')),
-            'receipts' => $this->transactions->map(fn ($t) => [
-                'id' => $t->id,
-                'reference_number' => $t->reference_number,
-                'received_by' => $t->createdBy->name ?? 'System Administrator',
-                'received_at' => $t->created_at->format('Y-m-d H:i'),
-                'to_location' => $t->toLocation->name ?? 'Multiple Points',
-                'lines' => $t->lines->map(fn ($l) => [
-                    'sku' => $l->product->sku ?? 'N/A',
-                    'product_name' => $l->product->name ?? 'Unknown',
-                    'quantity' => (float) $l->quantity,
-                    'uom' => $l->product->uom->abbreviation ?? '',
-                ]),
-            ]),
+            'receipts' => $this->when($this->relationLoaded('transactions'), function () {
+                return $this->transactions->filter(fn ($t) => $t->type->code === 'RCPT')->values()->map(fn ($t) => [
+                    'id' => $t->id,
+                    'reference_number' => $t->reference_number,
+                    'received_by' => $t->createdBy->name ?? 'System',
+                    'received_at' => $t->created_at->format('Y-m-d H:i'),
+                    'to_location' => $t->toLocation->name ?? $t->lines->first()?->location?->name ?? 'Mixed/Unknown',
+                    'lines' => $t->lines->map(fn ($l) => [
+                        'sku' => $l->product->sku ?? 'N/A',
+                        'product_name' => $l->product->name ?? 'Unknown',
+                        'quantity' => (float) $l->quantity,
+                    ]),
+                ]);
+            }),
+            'returns' => $this->when($this->relationLoaded('transactions'), function () {
+                return $this->transactions->filter(fn ($t) => $t->type->code === 'PRET')->values()->map(fn ($t) => [
+                    'id' => $t->id,
+                    'reference_number' => $t->reference_number,
+                    'returned_by' => $t->createdBy->name ?? 'System',
+                    'returned_at' => $t->created_at->format('Y-m-d H:i'),
+                    'from_location' => $t->fromLocation->name ?? $t->lines->first()?->location?->name ?? 'Mixed/Unknown',
+                    'lines' => $t->lines->map(function ($l) {
+                        // Recovery logic: if notes are empty, try to find the resolution in the PO line notes
+                        $notes = $l->notes;
+                        if (! $notes && $this->relationLoaded('lines')) {
+                            $poLine = $this->lines->firstWhere('product_id', $l->product_id);
+                            if ($poLine && $poLine->notes && preg_match('/\((replacement|credit)\)/', $poLine->notes, $matches)) {
+                                $notes = 'Resolution: '.ucfirst($matches[1]);
+                            }
+                        }
+
+                        return [
+                            'sku' => $l->product->sku ?? 'N/A',
+                            'product_name' => $l->product->name ?? 'Unknown',
+                            'quantity' => (float) abs($l->quantity),
+                            'notes' => $notes,
+                        ];
+                    }),
+                ]);
+            }),
             'created_at' => $this->created_at->format('Y-m-d H:i'),
         ];
     }

@@ -29,11 +29,20 @@ const sendLoading = ref(false);
 const shipLoading = ref(false);
 const grnDialog = ref(false);
 const grnDetailDialog = ref(false);
+const returnDetailDialog = ref(false);
 const selectedGrn = ref(null);
+const selectedReturn = ref(null);
 const shipDialog = ref(false);
+const returnDialog = ref(false);
 const grnLoading = ref(false);
+const returnLoading = ref(false);
 const locations = ref([]);
+const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const grnForm = ref({
+    location_id: null,
+    lines: []
+});
+const returnForm = ref({
     location_id: null,
     lines: []
 });
@@ -158,6 +167,11 @@ const viewGrnDetails = (receipt) => {
     grnDetailDialog.value = true;
 };
 
+const viewReturnDetails = (ret) => {
+    selectedReturn.value = ret;
+    returnDetailDialog.value = true;
+};
+
 const postReceipt = async () => {
     if (!grnForm.value.location_id) {
         toast.add({ severity: 'warn', summary: 'Validation', detail: 'Destination Location is required', life: 3000 });
@@ -183,6 +197,93 @@ const postReceipt = async () => {
         toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'GRN failed', life: 3000 });
     } finally {
         grnLoading.value = false;
+    }
+};
+
+const openReturnMode = async () => {
+    returnLoading.value = true;
+    try {
+        // Fetch current inventory distribution for all products on this PO
+        const productIds = po.value.lines.map(l => l.product_id);
+        const inventoryRes = await Promise.all(
+            productIds.map(id => axios.get(`/api/inventory?product_id=${id}&limit=100`))
+        );
+        
+        availableInventory.value = inventoryRes.flatMap(res => res.data.data);
+
+        returnForm.value.location_id = null;
+        returnForm.value.lines = po.value.lines
+            .filter(l => l.received_qty > 0)
+            .map(l => ({
+                po_line_id: l.id,
+                product_id: l.product_id, // ensure ID is available for filtering
+                product_name: l.product_name,
+                sku: l.sku,
+                received_qty: l.received_qty,
+                return_qty: 0,
+                resolution: 'replacement',
+                reason: ''
+            }));
+        
+        if (returnForm.value.lines.length === 0) {
+            toast.add({ severity: 'warn', summary: 'Cannot Return', detail: 'No items have been received for this PO.', life: 3000 });
+            return;
+        }
+        
+        returnDialog.value = true;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not fetch inventory distribution', life: 3000 });
+    } finally {
+        returnLoading.value = false;
+    }
+};
+
+const filteredReturnLocations = computed(() => {
+    if (availableInventory.value.length === 0) return [];
+    
+    // Get unique location IDs that have stock for any of the products in the PO
+    const locIdsWithStock = new Set(availableInventory.value.map(inv => inv.location?.id).filter(Boolean));
+    return locations.value.filter(loc => locIdsWithStock.has(loc.id));
+});
+
+const getStockInSelectedLocation = (productId) => {
+    if (!returnForm.value.location_id) return 0;
+    const inv = availableInventory.value.find(
+        i => i.product?.id === productId && i.location?.id === returnForm.value.location_id
+    );
+    return inv ? inv.quantity_on_hand : 0;
+};
+
+const postReturn = async () => {
+    if (!returnForm.value.location_id) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Return Location is required', life: 3000 });
+        return;
+    }
+
+    const payloadLines = returnForm.value.lines.filter(l => l.return_qty > 0);
+    if (payloadLines.length === 0) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please specify items and quantities to return.', life: 3000 });
+        return;
+    }
+
+    returnLoading.value = true;
+    try {
+        await axios.post(`/api/purchase-orders/${po.value.id}/return`, {
+            location_id: returnForm.value.location_id,
+            lines: payloadLines.map(l => ({ 
+                po_line_id: l.po_line_id, 
+                return_qty: l.return_qty,
+                resolution: l.resolution,
+                reason: l.reason
+            }))
+        });
+        toast.add({ severity: 'success', summary: 'RTV Success', detail: 'Purchase Return processed successfully.', life: 3000 });
+        returnDialog.value = false;
+        loadPO();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Return failed', life: 3000 });
+    } finally {
+        returnLoading.value = false;
     }
 };
 
@@ -271,6 +372,14 @@ const deletePO = async () => {
                     />
 
                     <Button 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-inventory')" 
+                        label="Return Items (RTV)" 
+                        icon="pi pi-replay" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openReturnMode"
+                    />
+
+                    <Button 
                         v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-inventory')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
@@ -341,11 +450,11 @@ const deletePO = async () => {
                         </div>
                     </div>
 
-                    <!-- Receipt History -->
-                    <div v-if="po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700">
-                        <span class="text-[10px] font-bold text-orange-500 uppercase tracking-widest font-mono border-b border-orange-500/20 pb-3">Goods Receipt History</span>
+                    <!-- Receipt History (GRN) -->
+                    <div v-if="po.receipts && po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700">
+                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-3">Goods Receipt History (GRN)</span>
                         
-                        <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-orange-500/20 transition-all">
+                        <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-sky-500/20 transition-all">
                             <div class="flex justify-between items-center">
                                 <span @click="viewGrnDetails(receipt)" 
                                       class="text-[10px] font-mono text-sky-400 font-bold cursor-pointer hover:underline">{{ receipt.reference_number }}</span>
@@ -353,12 +462,35 @@ const deletePO = async () => {
                             </div>
                             <div class="flex flex-col gap-1">
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Receiver:</span>
-                                    <span class="text-zinc-300 font-bold">{{ receipt.received_by }}</span>
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Logistics:</span>
+                                    <span class="text-zinc-300 font-bold text-[10px]">{{ receipt.received_by }}</span>
                                 </div>
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Location:</span>
-                                    <span class="text-zinc-400">{{ receipt.to_location }}</span>
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Receipt Bin:</span>
+                                    <span class="text-zinc-400 text-[10px]">{{ receipt.to_location }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Return History (PRN) -->
+                    <div v-if="po.returns && po.returns.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700 border-l-2 border-l-red-900/50">
+                        <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-3">Purchase Return History (PRN)</span>
+                        
+                        <div v-for="ret in po.returns" :key="ret.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-red-500/20 transition-all">
+                            <div class="flex justify-between items-center">
+                                <span @click="viewReturnDetails(ret)" 
+                                      class="text-[10px] font-mono text-red-400 font-bold cursor-pointer hover:underline">{{ ret.reference_number }}</span>
+                                <span class="text-[9px] font-mono text-zinc-500">{{ ret.returned_at }}</span>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Authorized:</span>
+                                    <span class="text-zinc-300 font-bold text-[10px]">{{ ret.returned_by }}</span>
+                                </div>
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Origin Bin:</span>
+                                    <span class="text-zinc-400 text-[10px]">{{ ret.from_location }}</span>
                                 </div>
                             </div>
                         </div>
@@ -403,6 +535,14 @@ const deletePO = async () => {
                                 <template #body="{ data }">
                                     <span :class="[data.received_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
                                         {{ data.received_qty }}
+                                    </span>
+                                </template>
+                            </Column>
+
+                            <Column field="returned_qty" header="RET QTY">
+                                <template #body="{ data }">
+                                    <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-zinc-700', 'font-mono text-xs']">
+                                        {{ data.returned_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -479,6 +619,144 @@ const deletePO = async () => {
                 <Button label="Post Receipt" icon="pi pi-check" @click="postReceipt" :loading="grnLoading" class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
             </template>
         </Dialog>
+        <!-- Return Items (RTV) Dialog (Surgical Precision Redesign) -->
+        <Dialog v-model:visible="returnDialog" modal :header="null" :closable="false" :style="{ width: '60rem' }" class="!p-0 !border-0 !bg-transparent !shadow-2xl">
+            <div class="flex flex-col bg-zinc-950 border border-zinc-800 rounded-sm overflow-hidden">
+                
+                <!-- Modal Header (Minimalist) -->
+                <div class="px-6 py-4 border-b border-zinc-800 bg-zinc-900/50 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-1.5 h-6 bg-red-600"></div>
+                        <h2 class="text-sm font-bold text-white tracking-widest uppercase font-mono">Process Purchase Return (RTV)</h2>
+                    </div>
+                    <button @click="returnDialog = false" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="pi pi-times text-xs"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 flex flex-col gap-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+                    
+                    <!-- Technical Alert -->
+                    <div class="bg-zinc-900 border border-zinc-800 p-4 border-l-2 border-l-red-600">
+                        <div class="flex items-center gap-3 mb-2">
+                            <i class="pi pi-info-circle text-red-500 text-xs"></i>
+                            <span class="text-[10px] font-bold text-white uppercase tracking-widest font-mono">System Protocol: Stock Reversal</span>
+                        </div>
+                        <p class="text-[11px] text-zinc-500 leading-relaxed font-medium">
+                            Executing a return generates a <span class="text-zinc-300 font-mono italic">PRET</span> movement. 
+                            <span class="text-zinc-400 font-bold">Replacement</span> resets line receipt status. 
+                            <span class="text-zinc-400 font-bold">Credit</span> adjusts accounting values only.
+                        </p>
+                    </div>
+
+                    <!-- Filter Configuration -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-bold text-zinc-600 tracking-widest uppercase font-mono">Source Picking Location</label>
+                            <Select 
+                                v-model="returnForm.location_id" 
+                                :options="filteredReturnLocations" 
+                                optionLabel="name" 
+                                optionValue="id" 
+                                placeholder="SELECT BIN..." 
+                                filter
+                                class="!w-full !bg-black !border-zinc-800 !rounded-none !h-10 !px-2 !flex !items-center !text-xs font-mono"
+                            >
+                                <template #option="slotProps">
+                                    <div class="flex items-center justify-between w-full">
+                                        <span class="text-[10px] font-bold text-zinc-300 uppercase tracking-tight">{{ slotProps.option.name }}</span>
+                                        <span class="text-[10px] font-mono font-bold text-sky-500">{{ slotProps.option.code }}</span>
+                                    </div>
+                                </template>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <!-- Item Matrix -->
+                    <div class="flex flex-col gap-3">
+                        <label class="text-[9px] font-bold text-zinc-600 tracking-widest uppercase font-mono">Inventory Context</label>
+                        
+                        <div class="space-y-px bg-zinc-800 border border-zinc-800">
+                            <div v-for="line in returnForm.lines" :key="line.po_line_id" 
+                                 class="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-zinc-950 items-center hover:bg-zinc-900/50 transition-colors"
+                            >
+                                <!-- Product Identity -->
+                                <div class="lg:col-span-4 flex flex-col gap-1">
+                                    <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
+                                    <span class="text-[9px] font-mono font-bold text-zinc-600 uppercase">{{ line.sku }}</span>
+                                </div>
+
+                                <!-- Status Badges -->
+                                <div class="lg:col-span-2 flex gap-2">
+                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 bg-black py-1">
+                                        <span class="text-[8px] font-bold text-zinc-700 uppercase">PO</span>
+                                        <span class="text-[10px] font-mono font-bold text-zinc-400">{{ line.received_qty }}</span>
+                                    </div>
+                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 py-1"
+                                         :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-black']">
+                                        <span class="text-[8px] font-bold uppercase" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-700' : 'text-zinc-700']">BIN</span>
+                                        <span class="text-[10px] font-mono font-bold" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-500' : 'text-zinc-600']">
+                                            {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Inputs -->
+                                <div class="lg:col-span-2">
+                                    <InputNumber 
+                                        v-model="line.return_qty" 
+                                        :min="0" 
+                                        :max="Math.min(line.received_qty, getStockInSelectedLocation(line.product_id))" 
+                                        class="!w-full !rounded-none !border-zinc-800 !bg-black" 
+                                        inputClass="!bg-black !text-center !font-mono !text-xs !py-1 !text-red-500 !border-zinc-800 !h-8"
+                                        placeholder="0"
+                                    />
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <Select 
+                                        v-model="line.resolution" 
+                                        :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'CREDIT', value: 'credit'}]" 
+                                        optionLabel="label" 
+                                        optionValue="value" 
+                                        class="!w-full !bg-black !border-zinc-800 !rounded-none !h-8 !flex !items-center !text-[9px] !font-bold tracking-widest" 
+                                    />
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <InputText 
+                                        v-model="line.reason" 
+                                        placeholder="REASON..." 
+                                        class="!w-full !bg-black !border-zinc-800 !rounded-none !text-[9px] !font-bold !py-1 !h-8 focus:!border-zinc-600" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Footer -->
+                <div class="px-6 py-4 border-t border-zinc-800 bg-zinc-900/50 flex justify-between items-center">
+                    <Button 
+                        label="Cancel" 
+                        @click="returnDialog = false" 
+                        class="p-button-text !text-zinc-600 hover:!text-white !font-bold !text-[10px] !tracking-widest uppercase" 
+                    />
+                    
+                    <div class="flex items-center gap-4">
+                        <span v-if="returnForm.lines.some(l => l.return_qty > 0)" class="text-[9px] font-mono text-red-500 font-bold uppercase tracking-tighter">
+                            {{ returnForm.lines.filter(l => l.return_qty > 0).length }} Items Prepared for Reversal
+                        </span>
+                        <Button 
+                            label="Process Return" 
+                            @click="postReturn" 
+                            :loading="returnLoading" 
+                            class="!h-9 !px-6 !bg-white hover:!bg-zinc-200 !text-black !font-bold !text-[11px] !tracking-widest !rounded-none !border-none transition-all uppercase" 
+                        />
+                    </div>
+                </div>
+            </div>
+        </Dialog>
 
         <!-- Ship Dialog -->
         <Dialog v-model:visible="shipDialog" modal header="Log Vendor Shipment" :style="{ width: '30rem' }">
@@ -547,6 +825,67 @@ const deletePO = async () => {
             </template>
         </Dialog>
 
+        <!-- PRN (Return) Detail View Modal -->
+        <Dialog v-model:visible="returnDetailDialog" modal header="Purchase Return Note Details" :style="{ width: '45rem' }">
+            <div v-if="selectedReturn" class="flex flex-col gap-6">
+                <!-- Return Header Info -->
+                <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800 border-l-4 border-l-red-600">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
+                        <span class="text-sm font-black text-red-500 font-mono">{{ selectedReturn.reference_number }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Returned At</label>
+                        <span class="text-sm font-bold text-zinc-300">{{ selectedReturn.returned_at }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Authorized By</label>
+                        <span class="text-sm font-bold text-zinc-100">{{ selectedReturn.returned_by }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Origin Location</label>
+                        <span class="text-sm font-bold text-zinc-300">{{ selectedReturn.from_location }}</span>
+                    </div>
+                </div>
+
+                <!-- Return Line Items -->
+                <div class="border border-zinc-800 rounded-xl overflow-hidden">
+                    <DataTable :value="selectedReturn.lines" class="p-datatable-sm w-full">
+                        <Column field="sku" header="SKU">
+                            <template #body="{ data }">
+                                <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
+                            </template>
+                        </Column>
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <span class="text-xs font-bold text-zinc-200">{{ data.product_name }}</span>
+                            </template>
+                        </Column>
+                        <Column field="notes" header="RESOLUTION">
+                            <template #body="{ data }">
+                                <span 
+                                    :class="[
+                                        data.notes?.includes('Replacement') ? 'text-sky-400' : 'text-amber-400',
+                                        'text-[9px] font-mono font-bold uppercase tracking-tighter border border-current/20 px-1.5 py-0.5 opacity-80'
+                                    ]"
+                                >
+                                    {{ data.notes?.replace('Resolution: ', '') || 'N/A' }}
+                                </span>
+                            </template>
+                        </Column>
+                        <Column field="quantity" header="QTY RETURNED">
+                            <template #body="{ data }">
+                                <span class="text-red-500 font-mono text-xs font-black">{{ data.quantity }}</span>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Close Audit Trail" icon="pi pi-times" @click="returnDetailDialog = false" class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
+            </template>
+        </Dialog>
+
     </AppLayout>
 </template>
 
@@ -590,4 +929,6 @@ const deletePO = async () => {
 :deep(.p-dialog-content) { background: transparent; padding: 1.5rem; color: #a1a1aa; }
 :deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1.25rem; }
 :deep(.p-select), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
+:deep(.p-inputnumber-button) { background: #18181b; border-color: #27272a; color: #a1a1aa; }
+:deep(.p-inputnumber-button:hover) { background: #27272a; color: white; }
 </style>

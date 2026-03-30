@@ -10,6 +10,10 @@ import Card from 'primevue/card';
 import Tag from 'primevue/tag';
 import Toast from 'primevue/toast';
 import Menu from 'primevue/menu';
+import Dialog from 'primevue/dialog';
+import Select from 'primevue/select';
+import InputNumber from 'primevue/inputnumber';
+import ToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
 
@@ -23,6 +27,19 @@ const loadingProducts = ref(false);
 const loadingHistory = ref(false);
 const loadingIntelligence = ref(false);
 const search = ref('');
+
+const rulesDialogVisible = ref(false);
+const reorderRules = ref([]);
+const loadingRules = ref(false);
+const ruleForm = ref({
+    id: null,
+    location_id: null,
+    min_stock: 0,
+    max_stock: null,
+    reorder_qty: 0,
+    is_active: true
+});
+const savingRule = ref(false);
 
 const loadProducts = async () => {
     loadingProducts.value = true;
@@ -74,6 +91,71 @@ const loadIntelligenceData = async () => {
         loadingIntelligence.value = false;
     }
 };
+
+const loadReorderRules = async () => {
+    if (!selectedProduct.value) return;
+    loadingRules.value = true;
+    try {
+        const res = await axios.get(`/api/reorder-rules?product_id=${selectedProduct.value.id}`);
+        reorderRules.value = res.data;
+    } catch (e) {
+        console.error("Rules load error", e);
+    } finally {
+        loadingRules.value = false;
+    }
+};
+
+const openReorderRulesDialog = () => {
+    loadReorderRules();
+    rulesDialogVisible.value = true;
+};
+
+const editRule = (rule) => {
+    ruleForm.value = { ...rule };
+};
+
+const prepareNewRule = () => {
+    ruleForm.value = {
+        id: null,
+        location_id: null,
+        min_stock: selectedProduct.value?.reorder_point || 0,
+        max_stock: null,
+        reorder_qty: selectedProduct.value?.reorder_quantity || 0,
+        is_active: true
+    };
+};
+
+const saveRule = async () => {
+    savingRule.value = true;
+    try {
+        const payload = { ...ruleForm.value, product_id: selectedProduct.value.id };
+        if (ruleForm.value.id) {
+            await axios.put(`/api/reorder-rules/${ruleForm.value.id}`, payload);
+            toast.add({ severity: 'success', summary: 'Updated', detail: 'Reorder rule updated', life: 3000 });
+        } else {
+            await axios.post('/api/reorder-rules', payload);
+            toast.add({ severity: 'success', summary: 'Created', detail: 'New reorder rule active', life: 3000 });
+        }
+        loadReorderRules();
+        ruleForm.value = { id: null, location_id: null, min_stock: 0, max_stock: null, reorder_qty: 0, is_active: true };
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to save rule', life: 4000 });
+    } finally {
+        savingRule.value = false;
+    }
+};
+
+const deleteRule = async (id) => {
+    if(!confirm("Are you sure you want to delete this rule?")) return;
+    try {
+        await axios.delete(`/api/reorder-rules/${id}`);
+        toast.add({ severity: 'success', summary: 'Deleted', detail: 'Rule deleted successfully', life: 3000 });
+        loadReorderRules();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Delete failed', life: 3000 });
+    }
+};
+
 
 const menu = ref(null);
 const toggleMenu = (event) => {
@@ -370,6 +452,11 @@ const tablePt = {
                                                 class="px-6 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-zinc-950 transition-all active:scale-95 flex items-center gap-2">
                                             <i class="pi pi-sliders-h" /> Adjust
                                         </button>
+                                        <button @click="openReorderRulesDialog" 
+                                                class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all active:scale-95 flex items-center gap-2 ml-4 relative">
+                                            <i class="pi pi-cog" /> Reorder Rules
+                                            <span class="absolute -top-2 -right-2 w-3 h-3 bg-indigo-500 rounded-full animate-pulse border-2 border-zinc-900"></span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -569,6 +656,105 @@ const tablePt = {
                 </main>
             </div>
         </div>
+        
+        <Dialog 
+            v-model:visible="rulesDialogVisible" 
+            modal 
+            header="Reorder & Replenishment Rules"
+            class="max-w-4xl w-full mx-4"
+            :pt="{
+                root: { class: '!bg-zinc-950 !border !border-zinc-800' },
+                header: { class: '!bg-zinc-900 !text-white !border-b !border-zinc-800 !p-6' },
+                content: { class: '!p-0 !bg-zinc-950' }
+            }"
+            @show="prepareNewRule"
+        >
+            <div class="flex flex-col md:flex-row shadow-inner min-h-[500px]">
+                <!-- Rules List -->
+                <div class="w-full md:w-1/2 border-r border-zinc-800 bg-zinc-900/30 flex flex-col p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-widest font-mono m-0">Active Rules</h3>
+                        <button @click="prepareNewRule" class="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-widest"><i class="pi pi-plus" /> New</button>
+                    </div>
+                    
+                    <div v-if="loadingRules" class="flex-1 flex justify-center items-center">
+                        <i class="pi pi-spin pi-spinner text-zinc-500 text-2xl"></i>
+                    </div>
+                    
+                    <div v-else-if="reorderRules.length === 0" class="flex-1 flex flex-col items-center justify-center opacity-50 grayscale">
+                        <i class="pi pi-sitemap text-3xl mb-4"></i>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.2em] font-mono text-zinc-500 text-center">No rules configured.<br/>Engine will ignore this product.</span>
+                    </div>
+
+                    <div v-else class="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                        <div v-for="rule in reorderRules" :key="rule.id" 
+                             @click="editRule(rule)"
+                             class="p-4 rounded-xl border cursor-pointer transition-all group"
+                             :class="ruleForm.id === rule.id ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-xs font-bold text-white truncate max-w-[150px]">{{ rule.location_name }}</span>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded text-white" :class="rule.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'">{{ rule.is_active ? 'ACTIVE' : 'INACTIVE' }}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] text-zinc-600 font-bold uppercase font-mono">Min Stock</span>
+                                    <span class="text-amber-400 font-bold font-mono text-xs">{{ rule.min_stock }}</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] text-zinc-600 font-bold uppercase font-mono">Restock</span>
+                                    <span class="text-emerald-400 font-bold font-mono text-xs">{{ rule.reorder_qty }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <div class="w-full md:w-1/2 p-8 flex flex-col bg-zinc-950">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-widest font-mono mb-8 m-0">{{ ruleForm.id ? 'Edit Rule' : 'Create Rule' }}</h3>
+                    
+                    <div class="space-y-6 flex-1">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Location <span class="text-zinc-600 italic lowercase">(leave blank for global root rule)</span></label>
+                            <Select v-model="ruleForm.location_id" :options="locationBreakdown" optionLabel="location_name" optionValue="location_id" 
+                                    placeholder="Global Defaults (All Locations)" showClear 
+                                    class="!bg-zinc-900 !border-zinc-800 text-white w-full" />
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Min Stock (Trigger)</label>
+                                <InputNumber v-model="ruleForm.min_stock" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Restock Amount</label>
+                                <InputNumber v-model="ruleForm.reorder_qty" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Max Stock Limit (Optional)</label>
+                            <InputNumber v-model="ruleForm.max_stock" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" placeholder="No limit" />
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 border border-zinc-800 bg-zinc-900/50 rounded-lg">
+                            <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Status</span>
+                            <ToggleSwitch v-model="ruleForm.is_active" />
+                        </div>
+                    </div>
+
+                    <div class="pt-8 mt-8 border-t border-zinc-800 flex justify-between items-center gap-4">
+                        <button v-if="ruleForm.id" @click="deleteRule(ruleForm.id)" class="px-5 h-12 rounded-lg text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20">Delete</button>
+                        <div class="flex-1"></div>
+                        <button @click="prepareNewRule" class="bg-transparent border border-zinc-800 text-zinc-500 hover:text-white hover:border-zinc-600 px-8 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest transition-colors flex items-center justify-center">Clear</button>
+                        <button @click="saveRule" :disabled="savingRule" class="bg-emerald-500 border-none text-zinc-950 px-10 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center min-w-[140px]">
+                            <i v-if="savingRule" class="pi pi-spin pi-spinner mr-2"></i>
+                            {{ savingRule ? 'SAVING...' : 'SAVE RULE' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Dialog>
     </AppLayout>
 </template>
 
