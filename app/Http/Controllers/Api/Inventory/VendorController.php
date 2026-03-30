@@ -9,9 +9,17 @@ use Illuminate\Http\Request;
 
 class VendorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return VendorResource::collection(Vendor::all());
+        $query = $request->input('query');
+        $vendors = Vendor::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('vendor_code', 'like', "%{$query}%");
+            })
+            ->get();
+
+        return VendorResource::collection($vendors);
     }
 
     public function store(Request $request)
@@ -21,7 +29,9 @@ class VendorController extends Controller
             'name' => 'required|string',
             'email' => 'nullable|email|unique:vendors,email',
             'phone' => 'nullable|string',
+            'address' => 'nullable|string',
             'contact_person' => 'nullable|string',
+            'is_active' => 'boolean',
         ]);
 
         return new VendorResource(Vendor::create($validated));
@@ -39,7 +49,9 @@ class VendorController extends Controller
             'name' => 'required|string',
             'email' => 'nullable|email|unique:vendors,email,'.$vendor->id,
             'phone' => 'nullable|string',
+            'address' => 'nullable|string',
             'contact_person' => 'nullable|string',
+            'is_active' => 'boolean',
         ]);
         $vendor->update($validated);
 
