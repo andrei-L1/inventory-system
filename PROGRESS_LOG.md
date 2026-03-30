@@ -143,16 +143,46 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Vendor Database Alignment & API Fix (Phase 1.4)
+**Date**: 2026-03-30 | **Status**: 100% COMPLETE
+**Summary**: Resolved a critical 500 Internal Server Error by aligning the database schema with the application's "Vendor Code" naming convention.
+- **Schema Harmonization**: Renamed the ambiguous `vendors.code` column to `vendor_code` to match the frontend expectations and overall system naming patterns.
+- **Model & Resource Sync**: Updated `Vendor.php` and `VendorResource.php` to map the new column name and included previously missing fields like `address` and `is_active`.
+- **Search Optimization**: Enhanced the `VendorController@index` method to support high-performance searching by name or vendor code.
+- **Seeder Integrity**: Updated `VendorSeeder` and `SampleDataSeeder` to use the new column name, maintaining idempotent data generation.
+- **Test Suite Recovery**: Fixed `StockEngineTest` to use the new column name and ensured the test database is correctly primed with vendor data, restoring a 100% pass rate.
+
+---
+
+## 🗓️ 2026-03-30 (Sprint: Data Integrity)
+
+### ✅ Completed Tasks:
+- **Database Architecture**:
+    - Renamed `vendors.code` to `vendors.vendor_code` via migration.
+    - Added `is_active` and `address` to the Vendor fillable and resource schemas.
+- **API Stability**:
+    - Fixed 500 error on Vendor creation by matching validation rules to database columns.
+    - Implemented a unified search query in `VendorController`.
+- **QA & Testing**:
+    - Restored automated test suite to 100% success (21/21 passing).
+    - Verified that no cross-module codes (Product/Location) were affected by the rename.
+
+### 🔍 Technical Audit Results:
+- **API Schema Consistency**: 100% (Vendor Resource now matches Database) | **Status**: PASS
+- **Automated Tests**: 21/21 Passing | **Status**: PASS
+
+---
+
 ## 🚀 Overall Progress Tracker (Audited)
 
-Based on the full system overhaul conducted on 2026-03-29, here is the verified completion status:
+Based on the full system audit conducted on 2026-03-30, here is the verified completion status:
 
 | Layer | Domain | Status |
 |---|---|---|
 | **Database Schema** | 35 Migrations (Added `transfers` table) | **100%** |
 | **Eloquent Models** | 40 Models (Added `Transfer`) | **100%** |
 | **Core Stock Engine** | `StockService` (Draft/Posted, Global WAC, COGS, Transfers) | **100%** |
-| **REST API Surface** | Phase 2.1 Live: Movement & Transfer write endpoints | **~75%** |
+| **REST API Surface** | Phase 2.1 Live: Movement & Transfer write endpoints | **~80%** |
 | **Auth/Permissions** | Session/Sanctum, Roles, Middlewares | **100%** |
 | **Dashboard UI** | Tactical KPI & Feed Modernization | **100%** |
 | **Catalog UI** | Surgical Manifest & Glassmorphic Modals | **100%** |
