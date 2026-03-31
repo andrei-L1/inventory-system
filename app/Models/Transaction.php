@@ -59,6 +59,7 @@ class Transaction extends Model
         'purchase_order_id',
         'sales_order_id',
         'adjustment_reason_id',
+        'reverses_transaction_id',
         'created_by',
         'posted_by',
         'posted_at',
@@ -114,6 +115,14 @@ class Transaction extends Model
     public function adjustmentReason(): BelongsTo
     {
         return $this->belongsTo(AdjustmentReason::class);
+    }
+
+    /**
+     * Original transaction that this reversal entry voids (if this row is a reversal).
+     */
+    public function reversesTransaction(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'reverses_transaction_id');
     }
 
     /**

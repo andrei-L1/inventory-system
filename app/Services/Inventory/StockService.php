@@ -3,6 +3,7 @@
 namespace App\Services\Inventory;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\UomConversionException;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Product;
@@ -18,6 +19,8 @@ use LogicException;
 
 class StockService
 {
+    private const QTY_EPSILON = 0.00001;
+
     protected TransactionValidator $validator;
 
     public function __construct(TransactionValidator $validator)
@@ -197,6 +200,7 @@ class StockService
                     'vendor_id' => $transaction->vendor_id,
                     'customer_id' => $transaction->customer_id,
                     'notes' => "REVERSAL of Transaction #{$transaction->id}",
+                    'reverses_transaction_id' => $transaction->id,
                 ],
                 'lines' => $transaction->lines->map(function ($line) {
                     return [
@@ -315,14 +319,14 @@ class StockService
             $layer->issued_qty = (float) $layer->issued_qty + $consumeAmount;
             $remainingToConsume -= $consumeAmount;
 
-            if (($layer->received_qty - $layer->issued_qty) <= 0.00001) {
+            if (($layer->received_qty - $layer->issued_qty) <= self::QTY_EPSILON) {
                 $layer->is_exhausted = true;
             }
 
             $layer->save();
         }
 
-        if ($remainingToConsume > 0.00001) {
+        if ($remainingToConsume > self::QTY_EPSILON) {
             throw new InsufficientStockException(
                 "Insufficient stock to consume {$quantity} for product ID: {$inventory->product_id} "
                 ."at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
@@ -393,11 +397,16 @@ class StockService
                 ->where('to_uom_id', $product->uom_id)
                 ->first();
 
-            if ($conversion) {
-                $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
-                if (isset($lineData['unit_cost'])) {
-                    $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
-                }
+            if (! $conversion) {
+                throw new UomConversionException(
+                    'No UOM conversion is defined from the selected unit to this product\'s base unit. '
+                    ."Product #{$product->id}, from UOM #{$lineData['uom_id']} to base UOM #{$product->uom_id}."
+                );
+            }
+
+            $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
+            if (isset($lineData['unit_cost'])) {
+                $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
             }
         }
 
