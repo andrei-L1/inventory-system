@@ -81,6 +81,7 @@ class PurchaseOrderController extends Controller
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => $lineData['ordered_qty'],
                     'received_qty' => 0,
                     'unit_cost' => $lineData['unit_cost'],
@@ -121,6 +122,7 @@ class PurchaseOrderController extends Controller
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => $lineData['ordered_qty'],
                     'received_qty' => 0,
                     'unit_cost' => $lineData['unit_cost'],
@@ -253,7 +255,7 @@ class PurchaseOrderController extends Controller
                     'location_id' => $request->location_id,
                     'quantity' => $item['received_qty'],
                     'unit_cost' => $poLine->unit_cost,
-                    'uom_id' => $poLine->product->uom_id,
+                    'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
                 ];
 
                 // Update PO line received quantity
@@ -338,7 +340,7 @@ class PurchaseOrderController extends Controller
                         'location_id' => $request->location_id,
                         'quantity' => -abs($returnQty),
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->product->uom_id,
+                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
@@ -461,6 +463,7 @@ class PurchaseOrderController extends Controller
 
                     $po->lines()->create([
                         'product_id' => $suggestion->product_id,
+                        'uom_id' => $suggestion->product->uom_id,
                         'ordered_qty' => $suggestion->suggested_qty,
                         'received_qty' => 0,
                         'unit_cost' => $unitCost,

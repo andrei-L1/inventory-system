@@ -36,10 +36,12 @@ class ProductUpdateRequest extends FormRequest
             'image' => 'nullable|image|max:2048',
         ];
 
-        // If the product has history, lock the core identifiers
+        // If the product has history, lock the core identifiers & accounting math fields
         if ($hasHistory) {
             $rules['product_code'] = "required|string|in:{$existingProduct->product_code}";
             $rules['sku'] = "required|string|in:{$existingProduct->sku}";
+            $rules['uom_id'] = "required|integer|in:{$existingProduct->uom_id}";
+            $rules['costing_method_id'] = "required|integer|in:{$existingProduct->costing_method_id}";
         } else {
             $rules['product_code'] = "required|string|max:100|unique:products,product_code,{$id}";
             $rules['sku'] = "required|string|max:100|unique:products,sku,{$id}";

@@ -10,6 +10,7 @@ class PurchaseOrderLine extends Model
     protected $fillable = [
         'purchase_order_id',
         'product_id',
+        'uom_id',
         'ordered_qty',
         'received_qty',
         'returned_qty',
@@ -40,6 +41,14 @@ class PurchaseOrderLine extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /**
+     * Get the UOM used for this specific order line.
+     */
+    public function uom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'uom_id');
     }
 
     /**

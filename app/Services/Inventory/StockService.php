@@ -393,20 +393,33 @@ class StockService
             && $product->uom_id
             && (int) $lineData['uom_id'] !== (int) $product->uom_id
         ) {
+            // 1. Try direct conversion (e.g. Box -> Piece)
             $conversion = UomConversion::where('from_uom_id', $lineData['uom_id'])
                 ->where('to_uom_id', $product->uom_id)
                 ->first();
 
-            if (! $conversion) {
-                throw new UomConversionException(
-                    'No UOM conversion is defined from the selected unit to this product\'s base unit. '
-                    ."Product #{$product->id}, from UOM #{$lineData['uom_id']} to base UOM #{$product->uom_id}."
-                );
-            }
+            if ($conversion) {
+                $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
+                if (isset($lineData['unit_cost'])) {
+                    $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
+                }
+            } else {
+                // 2. Try inverse conversion (e.g. Piece -> Box if only Box -> Piece is defined)
+                $inverse = UomConversion::where('from_uom_id', $product->uom_id)
+                    ->where('to_uom_id', $lineData['uom_id'])
+                    ->first();
 
-            $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
-            if (isset($lineData['unit_cost'])) {
-                $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
+                if ($inverse) {
+                    $lineData['quantity'] = $lineData['quantity'] / $inverse->conversion_factor;
+                    if (isset($lineData['unit_cost'])) {
+                        $lineData['unit_cost'] = $lineData['unit_cost'] * $inverse->conversion_factor;
+                    }
+                } else {
+                    throw new UomConversionException(
+                        'No UOM conversion is defined (direct or inverse) from the selected unit to this product\'s base unit. '
+                        ."Product #{$product->id}, from UOM #{$lineData['uom_id']} to base UOM #{$product->uom_id}."
+                    );
+                }
             }
         }
 

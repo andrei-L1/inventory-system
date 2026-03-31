@@ -150,6 +150,7 @@ const openGrnMode = () => {
             po_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
+            uom: l.uom,
             pending_qty: l.pending_qty,
             received_qty: l.pending_qty // default to receiving all remaining
         }));
@@ -220,6 +221,7 @@ const openReturnMode = async () => {
                 product_name: l.product_name,
                 sku: l.sku,
                 received_qty: l.received_qty,
+                uom: l.uom,
                 return_qty: 0,
                 resolution: 'replacement',
                 reason: ''
@@ -613,7 +615,7 @@ const deletePO = async () => {
                         </Column>
                         <Column field="pending_qty" header="PENDING">
                             <template #body="{ data }">
-                                <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }}</span>
+                                <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }} {{ data.uom }}</span>
                             </template>
                         </Column>
                         <Column field="received_qty" header="RECEIVE QTY">
@@ -703,7 +705,7 @@ const deletePO = async () => {
                                 <div class="lg:col-span-2 flex gap-2">
                                     <div class="flex flex-col items-center flex-1 border border-zinc-800 bg-black py-1">
                                         <span class="text-[8px] font-bold text-zinc-700 uppercase">PO</span>
-                                        <span class="text-[10px] font-mono font-bold text-zinc-400">{{ line.received_qty }}</span>
+                                        <span class="text-[10px] font-mono font-bold text-zinc-400">{{ line.received_qty }} {{ line.uom }}</span>
                                     </div>
                                     <div class="flex flex-col items-center flex-1 border border-zinc-800 py-1"
                                          :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-black']">
