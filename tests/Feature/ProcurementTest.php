@@ -49,7 +49,7 @@ class ProcurementTest extends TestCase
         $poRes = $this->postJson('/api/purchase-orders', [
             'vendor_id' => $vendor->id,
             'lines' => [
-                ['product_id' => $product->id, 'ordered_qty' => 10, 'unit_cost' => 5],
+                ['product_id' => $product->id, 'ordered_qty' => 10, 'unit_cost' => 5, 'uom_id' => $product->uom_id],
             ],
         ]);
 
@@ -106,7 +106,7 @@ class ProcurementTest extends TestCase
         $poRes = $this->postJson('/api/purchase-orders', [
             'vendor_id' => $vendor->id,
             'lines' => [
-                ['product_id' => $product->id, 'ordered_qty' => 10, 'unit_cost' => 5],
+                ['product_id' => $product->id, 'ordered_qty' => 10, 'unit_cost' => 5, 'uom_id' => $product->uom_id],
             ],
         ]);
 
