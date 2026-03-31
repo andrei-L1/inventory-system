@@ -8,7 +8,6 @@ use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use App\Models\Transaction;
 use App\Models\Vendor;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -69,7 +68,7 @@ class DashboardController extends Controller
         // Calculate 7-day stock value trend
         $currentValue = (float) ($valuation->total_value ?? 0);
         $trend = [];
-        
+
         // Get net changes per day for the last 7 days
         $netChanges = DB::table('transaction_lines')
             ->join('transactions', 'transaction_lines.transaction_id', '=', 'transactions.id')
@@ -87,13 +86,13 @@ class DashboardController extends Controller
             $date = now()->subDays($i)->format('Y-m-d');
             $trend[] = [
                 'date' => $date,
-                'value' => round($tempValue, 2)
+                'value' => round($tempValue, 2),
             ];
             // Subtract the change that happened ON that day to get the value at the START of that day (which is the value at the END of the previous day)
             $changeOnThisDay = $netChanges->get($date, 0);
             $tempValue -= $changeOnThisDay;
         }
-        
+
         // Reverse to chronological order (oldest to newest)
         $trend = array_reverse($trend);
 
