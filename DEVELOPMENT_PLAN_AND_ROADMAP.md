@@ -1,5 +1,5 @@
 # Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-03-31 (UOM Integration Phase). All status markers reflect actual codebase state.
+> Last audited: 2026-03-31 (Stock Service Integrity Audit Phase). All status markers reflect actual codebase state.
 
 ---
 
@@ -59,6 +59,8 @@ Each phase below corresponds to one stage of that chain.
 - [x] `InsufficientStockException` — typed exception for over-issue scenarios
 - [x] **Reversal Audit Link** — `reverses_transaction_id` foreign key added to track the origin of a voided transaction. ✅ NEW
 - [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing mappings, preventing silent math errors. ✅ NEW
+- [x] **Controller Exception Hardening** — `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` now catch operational exceptions and return clean 422 errors. ✅ NEW
+
 
 ### 0.2 Database Schema
 - [x] 35 migrations covering every business domain

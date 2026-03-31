@@ -361,5 +361,20 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Eager Loading Optimization**: Refactored the `TransactionController` to eager-load UOM relationships, eliminating N+1 performance bottlenecks in the product history view.
 
 ---
-*Last Updated: 2026-03-31 11:15:00*
+### 🎯 Milestone: Stock Service Integrity & Exception Audit
+**Date**: 2026-03-31 | **Status**: 100% VERIFIED
+**Summary**: Successfully conducted a comprehensive integrity audit of the core `StockService` and its integration with operational controllers. Hardened the system's error-handling layer to provide surgical feedback during complex UOM conversions and stock exhaustion.
+- **Controller-Level Hardening**: 
+    - Updated `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` with dedicated try-catch blocks for `UomConversionException`.
+    - Standardized API response patterns to return clean 422 errors instead of generic 500s when UOM mappings are missing or stock is insufficient.
+- **Model Casting Audit**: 
+    - Verified and enforced strict attribute casting in `InventoryCostLayer.php` (e.g., `is_exhausted => boolean`, `remaining_qty => float`) to prevent precision loss and logic drift during mathematical operations.
+- **Service Logic Verification**: 
+    - Confirmed that `StockService::recordMovement()` and `StockService::postTransaction()` correctly trigger the global exception renderer, ensuring absolute data consistency regardless of the entry point.
+- **Operational UX**: 
+    - Improved UX by surfacing specific "Product #X from UOM #Y to base UOM #Z" detail in error messages, enabling warehouse operators to identify and resolve missing conversion factors instantly.
+
+---
+*Last Updated: 2026-03-31 20:56:00*
+
 
