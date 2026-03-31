@@ -215,16 +215,16 @@ Each phase below corresponds to one stage of that chain.
   - [x] `low_stock_count` (products where aggregate QOH < reorder_point)
   - [x] `recent_transactions` — last 5 transaction lines with product + type
   - [x] `transactions_today` count
-  - [ ] `pending_po_count` — deferred (no PO backend yet)
-  - [ ] `pending_so_count` — deferred (no SO backend yet)
+  - [x] `pending_po_count` — (live)
+  - [x] `pending_so_count` — (live)
 - [x] `GET /api/inventory/low-stock` — dedicated low stock endpoint
 
 ### 3.2 Dashboard UI Overhaul ✅ NOW LIVE
 - [x] KPI cards fully wired to live API (`loadDashboard`)
 - [x] Recent Transactions feed (live)
 - [x] Critical Low Stock Alerts side panel (replaces placeholder)
-- [ ] Pending POs + Pending SOs count cards
-- [ ] Stock value trend mini-chart (last 7 days)
+- [x] Pending POs + Pending SOs count cards
+- [x] Stock value trend mini-chart (last 7 days)
 
 ---
 
@@ -494,7 +494,7 @@ Customer Inquiry
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
-| 3 | Dashboard & KPIs | 🚧 ~80% — core stats + feed live; `transactions_today` added; mini-chart + PO/SO counts pending |
+| 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | 🚧 ~90% — Basic lifecycle done; UOM integration pending |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
@@ -508,7 +508,6 @@ Customer Inquiry
 ## Immediate Next Steps (Priority Order)
 
 1. **UOM Support in Procurement** — Add `uom_id` to PO lines, update UI for UOM selection, and ensure `StockService` receives converted quantities during GRN.
-2. **Dashboard: Stock Value Trend** — Add the 7-day visualization mini-chart.
-3. **User Management (Phase 9.1)** — `UserController` + User Management UI.
+2. **User Management (Phase 9.1)** — `UserController` + User Management UI.
 4. **Category Management page (Phase 9.4)** — CRUD UI for product categories.
 
