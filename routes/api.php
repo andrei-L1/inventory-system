@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 /**
  * Master Data API
  */
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Categories
     Route::apiResource('categories', CategoryController::class)->only(['index', 'show'])->middleware('permission:view-products');
     Route::apiResource('categories', CategoryController::class)->except(['index', 'show'])->middleware('permission:manage-products');
@@ -56,7 +56,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('transactions/{transaction}/post', [TransactionController::class, 'post'])
         ->middleware('permission:manage-inventory');
 
-    // Cancel a draft transaction (posted transactions require reversal — not yet implemented).
+    // Cancel draft, or reverse posted (creates counter-entry and links via reverses_transaction_id).
     Route::patch('transactions/{transaction}/cancel', [TransactionController::class, 'cancel'])
         ->middleware('permission:manage-inventory');
 
@@ -99,16 +99,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // -----------------------------------------------------------------------
     // Procurement API (Phase 4.1)
     // -----------------------------------------------------------------------
-    Route::apiResource('purchase-orders', PurchaseOrderController::class)->middleware('permission:manage-inventory');
-    Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-inventory');
-    Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-inventory');
-    Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-inventory');
-    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-inventory');
-    Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-inventory');
+    Route::apiResource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show'])->middleware('permission:view-purchase-orders');
+    Route::apiResource('purchase-orders', PurchaseOrderController::class)->except(['index', 'show'])->middleware('permission:manage-purchase-orders');
+    Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-purchase-orders');
+    Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-purchase-orders');
 
     // Replenishment (Phase 4.2)
-    Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:manage-inventory');
-    Route::post('replenishment/suggestions/bulk-po', [PurchaseOrderController::class, 'bulkCreateFromSuggestions'])->middleware('permission:manage-inventory');
+    Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');
+    Route::post('replenishment/suggestions/bulk-po', [PurchaseOrderController::class, 'bulkCreateFromSuggestions'])->middleware('permission:manage-purchase-orders');
 
     // Reorder Rules (Phase 4.2)
     Route::get('reorder-rules', [ReorderRuleController::class, 'index'])->middleware('permission:view-inventory');
@@ -129,4 +130,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', 'active']);

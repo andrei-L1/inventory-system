@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\Procurement;
 
+use App\Exceptions\InsufficientStockException;
+use App\Exceptions\UomConversionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
 use App\Models\ReplenishmentSuggestion;
 use App\Models\TransactionStatus;
@@ -89,10 +92,10 @@ class PurchaseOrderController extends Controller
             return $po;
         });
 
-        return response()->json(new PurchaseOrderResource($po->load('lines.product.uom')), 201);
+        return (new PurchaseOrderResource($po->load('lines.product.uom')))->response()->setStatusCode(201);
     }
 
-    public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
         if (! $purchaseOrder->status->is_editable) {
             abort(403, 'Purchase order cannot be edited in its current status.');
@@ -129,7 +132,7 @@ class PurchaseOrderController extends Controller
             return $purchaseOrder;
         });
 
-        return response()->json(new PurchaseOrderResource($po->load('lines.product.uom')));
+        return new PurchaseOrderResource($po->load('lines.product.uom'));
     }
 
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
@@ -143,7 +146,7 @@ class PurchaseOrderController extends Controller
         return response()->json(null, 204);
     }
 
-    public function approve(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function approve(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
         if ($purchaseOrder->status->name !== 'draft') {
             abort(400, 'Only draft purchase orders can be approved.');
@@ -157,10 +160,10 @@ class PurchaseOrderController extends Controller
             'approved_at' => now(),
         ]);
 
-        return response()->json(new PurchaseOrderResource($purchaseOrder->load('lines', 'status')));
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
-    public function send(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function send(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
         if ($purchaseOrder->status->name !== 'open') {
             abort(400, 'Only approved (open) purchase orders can be sent to vendors.');
@@ -173,10 +176,10 @@ class PurchaseOrderController extends Controller
             'sent_at' => now(),
         ]);
 
-        return response()->json(new PurchaseOrderResource($purchaseOrder->load('lines', 'status')));
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
-    public function markAsShipped(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
+    public function markAsShipped(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
         $request->validate([
             'carrier' => 'required|string|max:100',
@@ -196,7 +199,7 @@ class PurchaseOrderController extends Controller
             'tracking_number' => $request->tracking_number,
         ]);
 
-        return response()->json(new PurchaseOrderResource($purchaseOrder->load('lines', 'status')));
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
     public function receive(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
@@ -294,72 +297,99 @@ class PurchaseOrderController extends Controller
             abort(400, "Cannot process return for PO in {$purchaseOrder->status->name} status.");
         }
 
-        $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
-            $pretType = TransactionType::where('code', 'PRET')->firstOrFail();
-            $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
+        try {
+            $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
+                $pretType = TransactionType::where('code', 'PRET')->firstOrFail();
+                $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
-            $transactionData = [
-                'header' => [
-                    'transaction_type_id' => $pretType->id,
-                    'transaction_status_id' => $postedStatus->id,
-                    'transaction_date' => now()->toDateString(),
-                    'reference_number' => 'RTV-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
-                    'vendor_id' => $purchaseOrder->vendor_id,
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'reference_doc' => $purchaseOrder->po_number,
-                    'notes' => 'Purchase Return for PO: '.$purchaseOrder->po_number,
-                    'created_by' => $request->user()->id,
-                    'from_location_id' => $request->location_id,
-                ],
-                'lines' => [],
-            ];
-
-            $poLines = $purchaseOrder->lines()->get()->keyBy('id');
-
-            foreach ($request->lines as $item) {
-                $poLine = $poLines->get($item['po_line_id']);
-
-                if (! $poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
-                    abort(400, 'Invalid PO line ID.');
-                }
-
-                $transactionData['lines'][] = [
-                    'product_id' => $poLine->product_id,
-                    'location_id' => $request->location_id,
-                    'quantity' => $item['return_qty'],
-                    'unit_cost' => $poLine->unit_cost,
-                    'uom_id' => $poLine->product->uom_id,
-                    'notes' => 'Resolution: '.ucfirst($item['resolution']),
+                $transactionData = [
+                    'header' => [
+                        'transaction_type_id' => $pretType->id,
+                        'transaction_status_id' => $postedStatus->id,
+                        'transaction_date' => now()->toDateString(),
+                        'reference_number' => 'RTV-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
+                        'vendor_id' => $purchaseOrder->vendor_id,
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'reference_doc' => $purchaseOrder->po_number,
+                        'notes' => 'Purchase Return for PO: '.$purchaseOrder->po_number,
+                        'created_by' => $request->user()->id,
+                        'from_location_id' => $request->location_id,
+                    ],
+                    'lines' => [],
                 ];
 
-                // Regardless of resolution, physical stock has left the warehouse.
-                // We decrease the received count (which reflects net stock) and increase return count.
-                $poLine->received_qty = max(0, $poLine->received_qty - $item['return_qty']);
-                $poLine->returned_qty += $item['return_qty'];
+                $poLines = $purchaseOrder->lines()->get()->keyBy('id');
 
-                $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
-                $poLine->save();
-            }
+                foreach ($request->lines as $item) {
+                    $poLine = $poLines->get($item['po_line_id']);
 
-            // Record movement in Stock Engine (Issue logic handles layer dedupe)
-            $transaction = $stockService->recordMovement($transactionData);
+                    if (! $poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
+                        abort(400, 'Invalid PO line ID.');
+                    }
 
-            // Update PO Status if a replacement caused received_qty to drop below ordered_qty
-            $purchaseOrder->refresh();
-            $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+                    $returnQty = (float) $item['return_qty'];
+                    if ($returnQty > (float) $poLine->received_qty) {
+                        abort(422, 'Return quantity cannot exceed the quantity still recorded as received on this line.');
+                    }
 
-            $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
-            $purchaseOrder->status_id = $poStatus->id;
-            $purchaseOrder->save();
+                    // Negative quantity → issue path (consumes layers and reduces QOH).
+                    $transactionData['lines'][] = [
+                        'product_id' => $poLine->product_id,
+                        'location_id' => $request->location_id,
+                        'quantity' => -abs($returnQty),
+                        'unit_cost' => $poLine->unit_cost,
+                        'uom_id' => $poLine->product->uom_id,
+                        'notes' => 'Resolution: '.ucfirst($item['resolution']),
+                    ];
 
-            return $transaction;
-        });
+                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $returnQty);
+                    $poLine->returned_qty = (float) $poLine->returned_qty + $returnQty;
+
+                    if ($item['resolution'] === 'credit') {
+                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $returnQty);
+                    }
+
+                    $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
+                    $poLine->save();
+                }
+
+                $this->recalculatePurchaseOrderTotal($purchaseOrder);
+
+                $transaction = $stockService->recordMovement($transactionData);
+
+                $purchaseOrder->refresh();
+                $purchaseOrder->load('lines');
+                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+
+                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
+                $purchaseOrder->status_id = $poStatus->id;
+                $purchaseOrder->save();
+
+                return $transaction;
+            });
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => 'Purchase Return posted successfully.',
             'purchase_order' => new PurchaseOrderResource($purchaseOrder->fresh('lines', 'status')),
             'transaction_id' => $transaction->id,
         ]);
+    }
+
+    /**
+     * PO header total = sum of (ordered_qty × unit_cost) per line.
+     */
+    private function recalculatePurchaseOrderTotal(PurchaseOrder $purchaseOrder): void
+    {
+        $total = PurchaseOrderLine::where('purchase_order_id', $purchaseOrder->id)
+            ->get()
+            ->sum(fn ($line) => (float) $line->ordered_qty * (float) $line->unit_cost);
+
+        $purchaseOrder->update(['total_amount' => round($total, 2)]);
     }
 
     /**
