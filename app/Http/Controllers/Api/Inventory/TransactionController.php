@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\UomConversionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\TransactionStoreRequest;
 use App\Http\Requests\Inventory\TransferStoreRequest;
@@ -53,6 +54,8 @@ class TransactionController extends Controller
             );
         } catch (InsufficientStockException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Validation failed.', 'errors' => $e->errors()], 422);
         }
@@ -90,6 +93,8 @@ class TransactionController extends Controller
             ], 201);
         } catch (InsufficientStockException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (ValidationException $e) {
             return response()->json(['message' => 'Validation failed.', 'errors' => $e->errors()], 422);
         }
@@ -109,6 +114,8 @@ class TransactionController extends Controller
                 new TransactionResource($posted->load(['type', 'status', 'fromLocation', 'toLocation', 'vendor', 'lines']))
             );
         } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (LogicException $e) {
             return response()->json(['message' => $e->getMessage()], 409); // Conflict
@@ -164,7 +171,7 @@ class TransactionController extends Controller
                 'type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer',
                 'purchaseOrder', 'salesOrder',
                 'lines' => function ($q) use ($product) {
-                    $q->where('product_id', $product->id);
+                    $q->where('product_id', $product->id)->with(['product.uom', 'uom']);
                 },
             ])
             ->orderBy('transaction_date', 'desc')

@@ -81,6 +81,7 @@ class PurchaseOrderController extends Controller
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => $lineData['ordered_qty'],
                     'received_qty' => 0,
                     'unit_cost' => $lineData['unit_cost'],
@@ -121,6 +122,7 @@ class PurchaseOrderController extends Controller
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => $lineData['ordered_qty'],
                     'received_qty' => 0,
                     'unit_cost' => $lineData['unit_cost'],
@@ -215,65 +217,71 @@ class PurchaseOrderController extends Controller
             abort(400, "Purchase order cannot be received while in {$purchaseOrder->status->name} status.");
         }
 
-        $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
-            $receiptType = TransactionType::where('name', 'receipt')->firstOrFail();
-            $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
+        try {
+            $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
+                $receiptType = TransactionType::where('name', 'receipt')->firstOrFail();
+                $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
-            $transactionData = [
-                'header' => [
-                    'transaction_type_id' => $receiptType->id,
-                    'transaction_status_id' => $postedStatus->id,
-                    'transaction_date' => now()->toDateString(),
-                    'reference_number' => 'GRN-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
-                    'vendor_id' => $purchaseOrder->vendor_id,
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'reference_doc' => $purchaseOrder->po_number,
-                    'notes' => 'Goods Receipt Note for PO: '.$purchaseOrder->po_number,
-                    'created_by' => $request->user()->id,
-                    'to_location_id' => $request->location_id,
-                ],
-                'lines' => [],
-            ];
-
-            $poLines = $purchaseOrder->lines()->get()->keyBy('id');
-
-            foreach ($request->lines as $item) {
-                $poLine = $poLines->get($item['po_line_id']);
-
-                if (! $poLine) {
-                    abort(400, 'Invalid PO line ID.');
-                }
-
-                if ($poLine->purchase_order_id !== $purchaseOrder->id) {
-                    abort(400, 'PO line does not belong to this purchase order.');
-                }
-
-                $transactionData['lines'][] = [
-                    'product_id' => $poLine->product_id,
-                    'location_id' => $request->location_id,
-                    'quantity' => $item['received_qty'],
-                    'unit_cost' => $poLine->unit_cost,
-                    'uom_id' => $poLine->product->uom_id,
+                $transactionData = [
+                    'header' => [
+                        'transaction_type_id' => $receiptType->id,
+                        'transaction_status_id' => $postedStatus->id,
+                        'transaction_date' => now()->toDateString(),
+                        'reference_number' => 'GRN-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
+                        'vendor_id' => $purchaseOrder->vendor_id,
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'reference_doc' => $purchaseOrder->po_number,
+                        'notes' => 'Goods Receipt Note for PO: '.$purchaseOrder->po_number,
+                        'created_by' => $request->user()->id,
+                        'to_location_id' => $request->location_id,
+                    ],
+                    'lines' => [],
                 ];
 
-                // Update PO line received quantity
-                $poLine->received_qty += $item['received_qty'];
-                $poLine->save();
-            }
+                $poLines = $purchaseOrder->lines()->get()->keyBy('id');
 
-            // Record movement in Stock Engine
-            $transaction = $stockService->recordMovement($transactionData);
+                foreach ($request->lines as $item) {
+                    $poLine = $poLines->get($item['po_line_id']);
 
-            // Update PO Status
-            $purchaseOrder->refresh();
-            $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
-            $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
+                    if (! $poLine) {
+                        abort(400, 'Invalid PO line ID.');
+                    }
 
-            $purchaseOrder->status_id = $poStatus->id;
-            $purchaseOrder->save();
+                    if ($poLine->purchase_order_id !== $purchaseOrder->id) {
+                        abort(400, 'PO line does not belong to this purchase order.');
+                    }
 
-            return $transaction;
-        });
+                    $transactionData['lines'][] = [
+                        'product_id' => $poLine->product_id,
+                        'location_id' => $request->location_id,
+                        'quantity' => $item['received_qty'],
+                        'unit_cost' => $poLine->unit_cost,
+                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
+                    ];
+
+                    // Update PO line received quantity
+                    $poLine->received_qty += $item['received_qty'];
+                    $poLine->save();
+                }
+
+                // Record movement in Stock Engine
+                $transaction = $stockService->recordMovement($transactionData);
+
+                // Update PO Status
+                $purchaseOrder->refresh();
+                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
+
+                $purchaseOrder->status_id = $poStatus->id;
+                $purchaseOrder->save();
+
+                return $transaction;
+            });
+        } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message' => 'Goods Receipt Note posted successfully.',
@@ -338,7 +346,7 @@ class PurchaseOrderController extends Controller
                         'location_id' => $request->location_id,
                         'quantity' => -abs($returnQty),
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->product->uom_id,
+                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
@@ -461,6 +469,7 @@ class PurchaseOrderController extends Controller
 
                     $po->lines()->create([
                         'product_id' => $suggestion->product_id,
+                        'uom_id' => $suggestion->product->uom_id,
                         'ordered_qty' => $suggestion->suggested_qty,
                         'received_qty' => 0,
                         'unit_cost' => $unitCost,

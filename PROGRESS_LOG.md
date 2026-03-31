@@ -346,6 +346,46 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Strict UOM Protocols**: Refactored the `StockService` to throw a `UomConversionException` on missing mappings. Integrated a global exception renderer in `bootstrap/app.php` to return clean 422 errors to the UI.
 - **Traceability Expansion**: Added `reverses_transaction_id` to the `transactions` ledger to create a definitive audit link between original movements and their reversals.
 
+
 ---
-*Last Updated: 2026-03-31 09:00:00*
+
+### 🎯 Milestone: Phase 2.3 — Comprehensive UOM Integration
+**Date**: 2026-03-31 | **Status**: 100% COMPLETE
+**Summary**: Achieved full Unit of Measure (UOM) consistency across the inventory system by integrating automated conversion logic into the core stock engine and manual movement forms.
+- **Ledger Persistence Audit**: Modified the `transaction_lines` schema to include `uom_id`, providing a definitive historical record of the original unit used for every movement.
+- **Automated Service Normalization**: Updated `StockService.php` to perform transparent quantity-to-base transitions (e.g., converting 1 Box of 10 into 10 Pieces) before committing to the ledger, while perfectly recalibrating individual unit costs.
+- **Operational Form Modernization**: 
+    - **Receipts**: Added UOM selection and real-time "Cost-to-Unit" recalculation in `ReceiptForm.vue`.
+    - **Issues/Transfers/Adjustments**: Integrated UOM support and automated stock-presence validation in base units, preventing over-issuance of partial units.
+- **Inventory Intelligence UI**: Enhanced `InventoryCenter.vue` to display UOM abbreviations (e.g., BOX, PCS) directly in the transactional ledger, providing surgical clarity for operational audits.
+- **Eager Loading Optimization**: Refactored the `TransactionController` to eager-load UOM relationships, eliminating N+1 performance bottlenecks in the product history view.
+
+---
+### 🎯 Milestone: Stock Service Integrity & Exception Audit
+**Date**: 2026-03-31 | **Status**: 100% VERIFIED
+**Summary**: Successfully conducted a comprehensive integrity audit of the core `StockService` and its integration with operational controllers. Hardened the system's error-handling layer to provide surgical feedback during complex UOM conversions and stock exhaustion.
+- **Controller-Level Hardening**: 
+    - Updated `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` with dedicated try-catch blocks for `UomConversionException`.
+    - Standardized API response patterns to return clean 422 errors instead of generic 500s when UOM mappings are missing or stock is insufficient.
+- **Model Casting Audit**: 
+    - Verified and enforced strict attribute casting in `InventoryCostLayer.php` (e.g., `is_exhausted => boolean`, `remaining_qty => float`) to prevent precision loss and logic drift during mathematical operations.
+- **Service Logic Verification**: 
+    - Confirmed that `StockService::recordMovement()` and `StockService::postTransaction()` correctly trigger the global exception renderer, ensuring absolute data consistency regardless of the entry point.
+- **Operational UX**: 
+    - Improved UX by surfacing specific "Product #X from UOM #Y to base UOM #Z" detail in error messages, enabling warehouse operators to identify and resolve missing conversion factors instantly.
+
+---
+
+### 🎯 Milestone: Layered Hybrid Costing & Terminology Alignment
+**Date**: 2026-03-31 | **Status**: 100% VERIFIED
+**Summary**: Successfully refactored the inventory costing engine to a "Layered Hybrid" approach, ensuring 100% consistency between the ledger, physical stock, and cost layers for all methods (FIFO, LIFO, and Weighted Average).
+- **Engine Standardization**: Unified all costing methods to consume cost layers using FIFO ordering. This eliminates the "Traceability Trap" where physical QOH and layer sums could diverge, providing a perfect audit trail even for Weighted Average products.
+- **Zero-Migration Naming Strategy**: Implemented a professional terminology layer at the API Resource level. The internal `average` key is now dynamically mapped to **"Weighted Average (Layered)"** and **"Weighted Avg Cost"** across all user-facing dashboards and reports.
+- **Phase-Separated Performance**: Refactored `StockService::recordMovement()` into a two-phase process (Creation → Hydration → Posting). This optimization uses batch eager-loading of product costing methods, effectively eliminating N+1 query bottlenecks during stock movements.
+- **Architecture Documentation**: Updated `INVENTORY_ARCHITECTURE.md` to formally define the "Ledger-over-Purity" philosophy, prioritizing audit integrity and layer synchronization over theoretical perpetual average purity.
+- **UI/UX Polish**: Updated `InventoryCenter.vue` and `ProductResource.php` to align all headers, labels, and tooltips with the new professional branding, ensuring a premium "Command Center" experience.
+
+---
+*Last Updated: 2026-03-31 21:51:00*
+
 

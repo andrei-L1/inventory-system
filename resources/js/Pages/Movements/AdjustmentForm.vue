@@ -89,11 +89,25 @@
                                                 optionLabel="name" 
                                                 placeholder="Select product..." 
                                                 filter 
+                                                @change="onProductSelect(form.lines[index])"
                                                 class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                             />
                                         </div>
                                     </template>
                                 </Column>
+
+                                <Column field="uom" header="UNIT" class="!py-6 !px-4">
+                                     <template #body="{ index }">
+                                         <Select 
+                                             v-model="form.lines[index].uom_id" 
+                                             :options="uoms" 
+                                             optionLabel="abbreviation" 
+                                             optionValue="id"
+                                             placeholder="UOM" 
+                                             class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                         />
+                                     </template>
+                                 </Column>
 
                                 <Column field="quantity" header="QUANTITY (+/-)" class="!py-6 !px-4">
                                     <template #body="{ index }">
@@ -161,18 +175,24 @@ const { props } = usePage();
 
 const locations = ref([]);
 const products = ref([]);
+const uoms = ref([]);
+const uomConversions = ref([]);
 const loadingData = ref(false);
 
 const loadData = async () => {
     loadingData.value = true;
     try {
-        const [prodRes, locRes] = await Promise.all([
+        const [prodRes, locRes, uomRes, convRes] = await Promise.all([
             axios.get('/api/products'),
-            axios.get('/api/locations')
+            axios.get('/api/locations'),
+            axios.get('/api/uom'),
+            axios.get('/api/uom-conversions')
         ]);
         
         products.value = prodRes.data.data;
         locations.value = locRes.data.data;
+        uoms.value = uomRes.data.data;
+        uomConversions.value = convRes.data.data;
         
         const { url } = usePage();
         const searchParams = new URLSearchParams(new URL(url, window.location.origin).search);
@@ -181,9 +201,8 @@ const loadData = async () => {
         if (productId && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == productId);
             if (preselected) {
-                if (form.lines.length === 0) {
-                    form.lines.push({ product: preselected, quantity: 0 });
-                }
+                const line = { product: preselected, uom_id: preselected.uom_id, quantity: 0 };
+                form.lines.push(line);
             }
         }
     } catch (e) {
@@ -218,12 +237,25 @@ const postAdjustment = async () => {
     // Frontend validation for real-time stock checks (if adjusting down)
     for (const line of form.lines) {
         if (!line.product) continue;
-        const adjustmentQty = parseFloat(line.quantity) || 0;
+        
+        let adjustmentQtyInBase = parseFloat(line.quantity) || 0;
+        if (line.uom_id !== line.product.uom_id) {
+             const conv = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === line.product.uom_id);
+             if (conv) {
+                 adjustmentQtyInBase *= conv.conversion_factor;
+             } else {
+                 const inv = uomConversions.value.find(c => c.from_uom_id === line.product.uom_id && c.to_uom_id === line.uom_id);
+                 if (inv) {
+                     adjustmentQtyInBase /= inv.conversion_factor;
+                 }
+             }
+        }
+
         const availableQty = line.product.total_qoh || 0;
         
         // If we are deducting more than we have
-        if (adjustmentQty < 0 && Math.abs(adjustmentQty) > availableQty) {
-            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot deduct ${Math.abs(adjustmentQty)} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
+        if (adjustmentQtyInBase < 0 && Math.abs(adjustmentQtyInBase) > availableQty) {
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot deduct equivalent of ${Math.abs(adjustmentQtyInBase)} ${line.product.uom?.abbreviation || 'pcs'} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
             isSubmitting.value = false;
             return;
         }
@@ -244,6 +276,7 @@ const postAdjustment = async () => {
             lines: form.lines.map(line => ({
                 product_id: line.product?.id,
                 location_id: form.location?.id,
+                uom_id: line.uom_id,
                 quantity: parseFloat(line.quantity),
                 unit_cost: parseFloat(line.product?.average_cost || 0)
             }))
@@ -260,8 +293,14 @@ const postAdjustment = async () => {
     }
 };
 
+const onProductSelect = (line) => {
+    if (line.product) {
+        line.uom_id = line.product.uom_id;
+    }
+};
+
 const addLine = () => {
-    form.lines.push({ product: null, quantity: 0 });
+    form.lines.push({ product: null, uom_id: null, quantity: 0 });
 };
 
 const removeLine = (index) => {

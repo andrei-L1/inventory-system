@@ -15,10 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $total_cost
  * @property float $unit_price
  * @property int|null $costing_method_id
+ * @property int|null $uom_id
  * @property string|null $notes
  * @property-read Transaction $transaction
  * @property-read Product $product
  * @property-read Location|null $location
+ * @property-read UnitOfMeasure|null $uom
  */
 class TransactionLine extends Model
 {
@@ -26,6 +28,7 @@ class TransactionLine extends Model
         'transaction_id',
         'product_id',
         'location_id',
+        'uom_id',
         'quantity',
         'unit_cost',
         'total_cost',
@@ -33,6 +36,14 @@ class TransactionLine extends Model
         'costing_method_id',
         'notes',
     ];
+
+    /**
+     * Get the UOM used for this transaction line.
+     */
+    public function uom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class);
+    }
 
     /**
      * Get the costing method for this transaction line.

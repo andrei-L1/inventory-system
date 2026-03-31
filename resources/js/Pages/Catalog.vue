@@ -624,8 +624,10 @@ const stats = computed(() => ({
                                             <span v-if="errors.uom_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
                                         </div>
                                         <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
+                                                :disabled="isEditing && product.has_history"
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 disabled:opacity-50"
                                                 :class="{'!border-red-500/50': errors.uom_id}" />
+                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">UOM locked due to audit history</p>
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">
@@ -674,8 +676,10 @@ const stats = computed(() => ({
                                             <span v-if="errors.costing_method_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
                                         </div>
                                         <Select v-model="product.costing_method_id" :options="costingMethods" optionLabel="label" optionValue="id" 
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
+                                                :disabled="isEditing && product.has_history"
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 disabled:opacity-50"
                                                 :class="{'!border-red-500/50': errors.costing_method_id}" />
+                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">Costing method locked due to audit history</p>
                                     </div>
                                     <div class="col-span-12 md:col-span-2 p-8 bg-zinc-900/30 border border-zinc-800/60 rounded-xl relative overflow-hidden group">
                                         <div class="flex justify-between items-center relative z-10">

@@ -127,11 +127,26 @@
                                                 optionLabel="name" 
                                                 placeholder="Search Catalog..." 
                                                 filter 
+                                                @change="onProductSelect(form.lines[index])"
                                                 class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                             />
                                         </div>
                                     </template>
                                 </Column>
+
+                                <Column field="uom" header="UNIT" class="!py-6 !px-4">
+                                     <template #body="{ index }">
+                                         <Select 
+                                             v-model="form.lines[index].uom_id" 
+                                             :options="uoms" 
+                                             optionLabel="abbreviation" 
+                                             optionValue="id"
+                                             placeholder="UOM" 
+                                             @change="onUomChange(form.lines[index])"
+                                             class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                         />
+                                     </template>
+                                 </Column>
 
                                 <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
                                     <template #body="{ index }">
@@ -205,6 +220,8 @@ const queryParams = computed(() => {
 const vendors = ref([]);
 const products = ref([]);
 const locations = ref([]);
+const uoms = ref([]);
+const uomConversions = ref([]);
 const loadingProducts = ref(false);
 
 const form = useForm({
@@ -235,6 +252,7 @@ const submitForm = async () => {
             lines: form.lines.map(line => ({
                 product_id: line.product?.id,
                 location_id: form.to_location?.id,
+                uom_id: line.uom_id,
                 quantity: parseFloat(line.quantity),
                 unit_cost: parseFloat(line.unit_cost)
             }))
@@ -251,8 +269,45 @@ const submitForm = async () => {
     }
 };
 
+const onProductSelect = (line) => {
+    const product = line.product;
+    if (product) {
+        line.uom_id = product.uom_id;
+        line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+    }
+};
+
+const onUomChange = (line) => {
+    const product = line.product;
+    if (!product || !line.uom_id) return;
+
+    // Reset to base cost first
+    const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+    
+    if (line.uom_id === product.uom_id) {
+        line.unit_cost = baseCost;
+        return;
+    }
+
+    // 1. Try direct conversion (e.g. Line is Box, Product is Piece)
+    const direct = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === product.uom_id);
+    if (direct) {
+        line.unit_cost = baseCost * direct.conversion_factor;
+        return;
+    }
+
+    // 2. Try inverse conversion (e.g. Line is Piece, Product is Box)
+    const inverse = uomConversions.value.find(c => c.from_uom_id === product.uom_id && c.to_uom_id === line.uom_id);
+    if (inverse) {
+        line.unit_cost = baseCost / inverse.conversion_factor;
+        return;
+    }
+
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No conversion found for this UOM pairing.', life: 3000 });
+};
+
 const addLine = () => {
-    form.lines.push({ product: null, quantity: 0, unit_cost: 0 });
+    form.lines.push({ product: null, uom_id: null, quantity: 1, unit_cost: 0 });
 };
 
 const removeLine = (index) => {
@@ -265,20 +320,26 @@ const totalValue = computed(() => form.lines.reduce((s, l) => s + ((parseFloat(l
 const loadData = async () => {
     loadingProducts.value = true;
     try {
-        const [prodRes, locRes, vendRes] = await Promise.all([
+        const [prodRes, locRes, vendRes, uomRes, convRes] = await Promise.all([
             axios.get('/api/products'),
             axios.get('/api/locations'),
-            axios.get('/api/vendors')
+            axios.get('/api/vendors'),
+            axios.get('/api/uom'),
+            axios.get('/api/uom-conversions')
         ]);
         
         products.value = prodRes.data.data;
         locations.value = locRes.data.data;
         vendors.value = vendRes.data.data;
+        uoms.value = uomRes.data.data;
+        uomConversions.value = convRes.data.data;
         
         if (queryParams.value.product_id && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == queryParams.value.product_id);
             if (preselected) {
-                form.lines.push({ product: preselected, quantity: 1, unit_cost: preselected.average_cost || 0 });
+                const line = { product: preselected, quantity: 1, unit_cost: 0 };
+                onProductSelect(line);
+                form.lines.push(line);
             }
         }
     } catch (e) {

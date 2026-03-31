@@ -36,7 +36,12 @@ class ProductResource extends JsonResource
             'category' => new CategoryResource($this->whenLoaded('category')),
             'uom' => new UnitOfMeasureResource($this->whenLoaded('uom')),
             'preferred_vendor' => new VendorResource($this->whenLoaded('preferredVendor')),
-            'costing_method' => $this->costingMethod->name ?? 'unknown',
+            'costing_method' => match ($this->costingMethod->name ?? '') {
+                'average' => 'Weighted Average (Layered)',
+                'fifo' => 'FIFO (First-In, First-Out)',
+                'lifo' => 'LIFO (Last-In, First-Out)',
+                default => $this->costingMethod->label ?? 'unknown',
+            },
             'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/'.$this->attachmentsIn('main_image')->first()->file_path) : null,
             'has_history' => (bool) ($this->transaction_lines_count ?? $this->transactionLines()->exists()),
             'created_at' => $this->created_at,

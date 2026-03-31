@@ -40,6 +40,21 @@ class InventoryCostLayer extends Model
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['remaining_qty'];
+
+    /**
+     * Calculate current remaining quantity on-the-fly.
+     */
+    public function getRemainingQtyAttribute(): float
+    {
+        return (float) ($this->received_qty - $this->issued_qty);
+    }
+
+    /**
      * Get the product associated with this layer.
      */
     public function product(): BelongsTo

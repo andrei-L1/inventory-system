@@ -25,6 +25,8 @@ const loading = ref(false);
 
 const vendors = ref([]);
 const products = ref([]);
+const uoms = ref([]);
+const uomConversions = ref([]);
 
 const form = ref({
     vendor_id: null,
@@ -32,18 +34,22 @@ const form = ref({
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, ordered_qty: 1, unit_cost: 0.00 }
+        { product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 }
     ]
 });
 
 const loadLookups = async () => {
     try {
-        const [vendRes, prodRes] = await Promise.all([
+        const [vendRes, prodRes, uomRes, convRes] = await Promise.all([
             axios.get('/api/vendors?limit=1000'),
-            axios.get('/api/products?limit=1000')
+            axios.get('/api/products?limit=1000'),
+            axios.get('/api/uom?limit=1000'),
+            axios.get('/api/uom-conversions?limit=1000')
         ]);
         vendors.value = vendRes.data.data;
         products.value = prodRes.data.data;
+        uoms.value = uomRes.data.data;
+        uomConversions.value = convRes.data.data;
     } catch (e) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load system data', life: 3000 });
     }
@@ -58,8 +64,38 @@ const filteredProducts = computed(() => {
 const onProductSelect = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (product) {
+        line.uom_id = product.uom_id;
         line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
     }
+};
+
+const onUomChange = (line) => {
+    const product = products.value.find(p => p.id === line.product_id);
+    if (!product || !line.uom_id) return;
+
+    // Reset to base cost first
+    const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+    
+    if (line.uom_id === product.uom_id) {
+        line.unit_cost = baseCost;
+        return;
+    }
+
+    // 1. Try direct conversion (e.g. Line is Box, Product is Piece)
+    const direct = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === product.uom_id);
+    if (direct) {
+        line.unit_cost = baseCost * direct.conversion_factor;
+        return;
+    }
+
+    // 2. Try inverse conversion (e.g. Line is Piece, Product is Box)
+    const inverse = uomConversions.value.find(c => c.from_uom_id === product.uom_id && c.to_uom_id === line.uom_id);
+    if (inverse) {
+        line.unit_cost = baseCost / inverse.conversion_factor;
+        return;
+    }
+
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No conversion found for this UOM pairing.', life: 3000 });
 };
 
 onMounted(async () => {
@@ -71,12 +107,23 @@ onMounted(async () => {
     }
     await loadLookups();
     if (isEdit.value) {
-        // Hydrate form logic if doing edit
+        form.value = {
+            vendor_id: props.purchaseOrder.vendor_id,
+            expected_delivery_date: props.purchaseOrder.expected_delivery_date ? new Date(props.purchaseOrder.expected_delivery_date) : null,
+            currency: props.purchaseOrder.currency || 'PHP',
+            notes: props.purchaseOrder.notes || '',
+            lines: props.purchaseOrder.lines.map(l => ({
+                product_id: l.product_id,
+                uom_id: l.uom_id,
+                ordered_qty: l.ordered_qty,
+                unit_cost: l.unit_cost
+            }))
+        };
     }
 });
 
 const addLine = () => {
-    form.value.lines.push({ product_id: null, ordered_qty: 1, unit_cost: 0.00 });
+    form.value.lines.push({ product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 });
 };
 
 const removeLine = (index) => {
@@ -164,7 +211,7 @@ const cancel = () => {
                                 optionValue="id" 
                                 placeholder="Select vendor" 
                                 filter
-                                @change="form.lines = [{ product_id: null, ordered_qty: 1, unit_cost: 0.00 }]"
+                                @change="form.lines = [{ product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 }]"
                                 class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
                             />
                         </div>
@@ -224,8 +271,20 @@ const cancel = () => {
                                     </Select>
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                    <Select 
+                                        v-model="line.uom_id" 
+                                        :options="uoms" 
+                                        optionLabel="abbreviation" 
+                                        optionValue="id" 
+                                        placeholder="UOM" 
+                                        @change="onUomChange(line)"
+                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-orange-500/50"
+                                    />
+                                </div>
+                                <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
-                                    <InputNumber v-model="line.ordered_qty" :min="1" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                    <InputNumber v-model="line.ordered_qty" :min="0.01" :maxFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>

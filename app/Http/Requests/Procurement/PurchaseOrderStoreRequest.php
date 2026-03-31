@@ -21,6 +21,7 @@ class PurchaseOrderStoreRequest extends FormRequest
 
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.product_id' => ['required', 'exists:products,id'],
+            'lines.*.uom_id' => ['required', 'exists:units_of_measure,id'],
             'lines.*.ordered_qty' => ['required', 'numeric', 'min:0.01'],
             'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
         ];
