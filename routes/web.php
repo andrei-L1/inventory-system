@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;

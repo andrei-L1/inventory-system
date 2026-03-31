@@ -8,6 +8,7 @@ use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\PurchaseOrderLine;
+use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Models\Vendor;
 use Database\Seeders\DatabaseSeeder;
@@ -39,7 +40,7 @@ class ProcurementTest extends TestCase
             'product_code' => 'PO-RTV-REP',
             'name' => 'RTV Replacement',
             'category_id' => Category::first()->id,
-            'uom_id' => \App\Models\UnitOfMeasure::first()->id,
+            'uom_id' => UnitOfMeasure::first()->id,
             'costing_method_id' => CostingMethod::first()->id,
             'selling_price' => 10,
             'is_active' => true,
@@ -96,7 +97,7 @@ class ProcurementTest extends TestCase
             'product_code' => 'PO-RTV-CR',
             'name' => 'RTV Credit',
             'category_id' => Category::first()->id,
-            'uom_id' => \App\Models\UnitOfMeasure::first()->id,
+            'uom_id' => UnitOfMeasure::first()->id,
             'costing_method_id' => CostingMethod::first()->id,
             'selling_price' => 10,
             'is_active' => true,
