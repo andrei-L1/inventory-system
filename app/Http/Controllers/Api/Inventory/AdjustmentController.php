@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\UomConversionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\TransactionStoreRequest;
 use App\Http\Resources\Inventory\TransactionResource;
@@ -50,6 +51,8 @@ class AdjustmentController extends Controller
                 201
             );
         } catch (InsufficientStockException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (UomConversionException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Adjustment failed.', 'error' => $e->getMessage()], 500);
