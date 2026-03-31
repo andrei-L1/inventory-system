@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ Route::middleware('guest')->group(function () {
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     // The Stock Command Center Placeholder

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { usePermissions } from '@/Composables/usePermissions';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputText from 'primevue/inputtext';
@@ -13,6 +14,7 @@ import { useToast } from "primevue/usetoast";
 import axios from 'axios';
 
 const toast = useToast();
+const { can } = usePermissions();
 
 const props = defineProps({
     purchaseOrder: { type: Object, default: null }
@@ -61,6 +63,12 @@ const onProductSelect = (line) => {
 };
 
 onMounted(async () => {
+    if (!can('manage-purchase-orders')) {
+        toast.add({ severity: 'warn', summary: 'Access denied', detail: 'You do not have permission to create or edit purchase orders.', life: 4000 });
+        router.visit('/purchase-orders');
+
+        return;
+    }
     await loadLookups();
     if (isEdit.value) {
         // Hydrate form logic if doing edit

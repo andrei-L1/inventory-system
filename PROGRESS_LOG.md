@@ -333,5 +333,19 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 3. **Reporting Engine (Phase 8)**: Start building the async reporting engine for Inventory Valuation and Gross Margin analysis.
 
 ---
-*Last Updated: 2026-03-29 13:30:00*
+
+### 🎯 Milestone: System Integrity & Security Hardening
+**Date**: 2026-03-31 | **Status**: 100% VERIFIED
+**Summary**: Conducted a deep-dive security and mathematical audit of the core engine and procurement pipeline. The system was significantly hardened against edge cases and human error.
+- **RTV Logic Refinement**: Fixed a critical "Stock Inflation" bug where returns were being added to inventory. Returns now use negative quantities (PRET path), correctly consuming cost layers and reducing QOH.
+- **Credit vs Replacement Rules**: Implemented "Credit" resolution for returns, which automatically adjusts both `received_qty` and `ordered_qty` on the PO line and recomputes the global PO `total_amount`.
+- **Auth Security Enclosure**: 
+    - Enforced `is_active` status across all login portals (Password & Google OAuth).
+    - Hardened `hasPermission()` with null-checks to prevent 500 errors on unsynced user roles.
+    - Added a global `EnsureUserIsActive` middleware to "fail-fast" for deactivated sessions.
+- **Strict UOM Protocols**: Refactored the `StockService` to throw a `UomConversionException` on missing mappings. Integrated a global exception renderer in `bootstrap/app.php` to return clean 422 errors to the UI.
+- **Traceability Expansion**: Added `reverses_transaction_id` to the `transactions` ledger to create a definitive audit link between original movements and their reversals.
+
+---
+*Last Updated: 2026-03-31 09:00:00*
 

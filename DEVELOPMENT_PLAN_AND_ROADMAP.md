@@ -57,6 +57,8 @@ Each phase below corresponds to one stage of that chain.
 - [x] `applyLineToInventory(TransactionLine, array)` — extracted private method reused by both `recordMovement` and `postTransaction`
 - [x] `TransactionValidator` — pre-movement guard (type, location, quantity sanity checks)
 - [x] `InsufficientStockException` — typed exception for over-issue scenarios
+- [x] **Reversal Audit Link** — `reverses_transaction_id` foreign key added to track the origin of a voided transaction. ✅ NEW
+- [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing mappings, preventing silent math errors. ✅ NEW
 
 ### 0.2 Database Schema
 - [x] 35 migrations covering every business domain
@@ -90,6 +92,9 @@ Each phase below corresponds to one stage of that chain.
 - [x] `PermissionSeeder` — seeds default roles (Admin, Warehouse, Sales, Viewer) and all permission slugs
 - [x] `usePermissions.js` composable — `can(slug)` helper for permission-gating UI elements
 - [x] `CheckPermission` middleware — tied to API routes enforcing server-side security for writes
+- [x] **Login Security Guard** — Enforced `is_active` status in both Password and Google OAuth login flows. ✅ NEW
+- [x] **Null-Safe Permissions** — Hardened `User::hasPermission()` to handle users with missing or invalid roles safely. ✅ NEW
+- [x] **Permission Granularity** — Split PO access into `view-purchase-orders` (READ) and `manage-purchase-orders` (WRITE). ✅ NEW
 
 ### 1.2 Location & Warehouse Configuration
 - [x] `locations` and `location_types` tables — migrated and seeded
@@ -275,10 +280,12 @@ Replenishment Suggestion (UOM-Aware)
 - [x] **Auto-Suggestions Pipeline** — Engine creates `ReplenishmentSuggestion` records with precise fill amounts and automated clean-up routing.
 - [x] **Bulk Procure-to-PO** — Converting 1-to-N suggestions directly into drafted POs aggregated by vendor.
 
-### 4.4 Purchase Returns / RTV Core Engine ✅ NOW LIVE
+### ✅ 4.4 Purchase Returns / RTV Core Engine — HARDENED
 - [x] Database: `returned_qty` column on PO lines.
 - [x] Core Transaction Type `PRET` defined.
 - [x] API Endpoint `POST /api/purchase-orders/{id}/return` running intelligent replacement (reopens PO) vs credit note (closes PO line) logic natively tied into the Stock Engine.
+- [x] **Financial Recalculation** — "Credit" resolutions automatically shrink the PO `total_amount` for accounting accuracy. ✅ NEW
+- [x] **Over-Return Prevention** — Validation logic to ensure return quantities do not exceed net physical receipts. ✅ NEW
 
 ---
 

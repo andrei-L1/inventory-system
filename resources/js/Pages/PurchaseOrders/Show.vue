@@ -339,14 +339,14 @@ const deletePO = async () => {
                 <div class="flex items-center gap-3 z-10">
                     <!-- Actions based on status -->
                     <Button 
-                        v-if="po.status === 'draft' && can('manage-inventory')" 
+                        v-if="po.status === 'draft' && can('manage-purchase-orders')" 
                         icon="pi pi-trash" 
                         class="p-button-danger p-button-text p-button-sm !font-bold" 
                         @click="deletePO"
                     />
                     
                     <Button 
-                        v-if="po.status === 'draft' && can('manage-inventory')" 
+                        v-if="po.status === 'draft' && can('manage-purchase-orders')" 
                         label="Approve Order" 
                         icon="pi pi-check" 
                         :loading="approveLoading"
@@ -355,7 +355,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="po.status === 'open' && can('manage-inventory')" 
+                        v-if="po.status === 'open' && can('manage-purchase-orders')" 
                         label="Send to Vendor" 
                         icon="pi pi-send" 
                         :loading="sendLoading"
@@ -364,7 +364,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent'].includes(po.status) && can('manage-inventory')" 
+                        v-if="['open', 'sent'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Mark Shipped" 
                         icon="pi pi-truck" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -372,7 +372,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-inventory')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-purchase-orders')" 
                         label="Return Items (RTV)" 
                         icon="pi pi-replay" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -380,7 +380,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-inventory')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
                         class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
