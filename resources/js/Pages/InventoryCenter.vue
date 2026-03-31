@@ -615,6 +615,7 @@ const tablePt = {
                                     <template #body="{ data }">
                                         <div class="font-mono font-bold text-sm tracking-tighter" :class="data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
                                             {{ data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.quantity }}
+                                            <span class="text-[9px] opacity-40 ml-1 uppercase">{{ data.uom_abbreviation || 'PCS' }}</span>
                                         </div>
                                     </template>
                                 </Column>

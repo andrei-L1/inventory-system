@@ -423,6 +423,10 @@ class StockService
             }
         }
 
+        // Ensure the resulting line data reflects the product's base UOM 
+        // as the quantity/cost are now normalized.
+        $lineData['uom_id'] = $product->uom_id;
+
         return $lineData;
     }
 }

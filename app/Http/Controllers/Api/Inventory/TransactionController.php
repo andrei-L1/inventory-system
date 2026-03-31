@@ -164,7 +164,7 @@ class TransactionController extends Controller
                 'type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer',
                 'purchaseOrder', 'salesOrder',
                 'lines' => function ($q) use ($product) {
-                    $q->where('product_id', $product->id);
+                    $q->where('product_id', $product->id)->with(['product.uom', 'uom']);
                 },
             ])
             ->orderBy('transaction_date', 'desc')

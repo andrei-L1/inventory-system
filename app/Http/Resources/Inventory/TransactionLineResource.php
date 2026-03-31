@@ -19,8 +19,9 @@ class TransactionLineResource extends JsonResource
                 'sku' => $this->product->sku ?? 'N/A',
                 'product_code' => $this->product->product_code ?? 'N/A',
                 'uom' => [
-                    'abbreviation' => $this->product->uom->abbreviation ?? 'PCS',
+                    'abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? 'PCS',
                 ],
+                'uom_abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? 'PCS',
             ],
             'quantity' => (float) $this->quantity,
             'unit_cost' => (float) ($this->unit_cost ?? 0),

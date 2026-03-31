@@ -62,6 +62,7 @@ class TransactionResource extends JsonResource
             'product_id' => $line->product_id ?? null,
             'product_name' => $line->product->name ?? null,
             'quantity' => (float) ($line->quantity ?? null),
+            'uom_abbreviation' => $line->uom->abbreviation ?? $line->product->uom->abbreviation ?? 'PCS',
             'unit_cost' => (float) ($line->unit_cost ?? 0),
             'unit_price' => (float) ($line->unit_price ?? 0),
             'total_cost' => (float) ($line->total_cost ?? 0),

@@ -1,5 +1,5 @@
 # Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-03-29 (post-refactor). All status markers reflect actual codebase state.
+> Last audited: 2026-03-31 (UOM Integration Phase). All status markers reflect actual codebase state.
 
 ---
 
@@ -186,6 +186,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Average Cost (WAC)** display in the product technical manifest
 - [x] **Cost Layer Inspector panel** — High-performance table showing live FIFO/LIFO layers with status tracking
 - [x] **Location breakdown** — Visualized QOH distribution split by physical warehouse/location nodes
+- [x] **UOM in Ledger** — Ledger rows now explicitly show the move unit (PCS, BOX, etc.) and perform conversion. ✅ NEW
 - [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability
 
 
@@ -258,15 +259,15 @@ Replenishment Suggestion (UOM-Aware)
   - [x] Links `transaction.reference_doc` manually
   - [x] Updates `purchase_order_lines.received_qty`
   - [x] Auto-transitions PO to `Partially Received` or `Closed`
-- [ ] **Multi-UOM Integration**:
-  - [ ] Add `uom_id` to `purchase_order_lines`.
-  - [ ] Implement conversion logic in `PurchaseOrderController@receive` (convert PO UOM to Base UOM before posting to `StockService`).
+- [x] **Multi-UOM Integration**:
+  - [x] Add `uom_id` to `purchase_order_lines`.
+  - [x] Implement conversion logic in `PurchaseOrderController@receive` (convert PO UOM to Base UOM before posting to `StockService`).
 
 ### 4.2 Purchase Orders Frontend ✅ NOW LIVE (v1.0)
 - [x] **Purchase Orders list page** (`/purchase-orders`)
 - [x] **PO Create/Edit form**
   - [x] Header: Vendor, expected delivery date, notes
-  - [ ] **Multi-UOM Line Selector** — support for choosing "Box", "Case", etc.
+  - [x] **Multi-UOM Line Selector** — support for choosing "Box", "Case", etc.
   - [x] "Save Draft" and "Discard" buttons
 - [x] **PO Detail / Receive page**
   - [x] Shows PO metadata and lines with ordered qty vs. received qty
@@ -495,7 +496,7 @@ Customer Inquiry
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
-| 4 | Procurement (Purchase Orders) | 🚧 ~90% — Basic lifecycle done; UOM integration pending |
+| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, UOM, GRN, and Returns complete. |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
@@ -507,7 +508,7 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. **UOM Support in Procurement** — Add `uom_id` to PO lines, update UI for UOM selection, and ensure `StockService` receives converted quantities during GRN.
-2. **User Management (Phase 9.1)** — `UserController` + User Management UI.
-4. **Category Management page (Phase 9.4)** — CRUD UI for product categories.
+1. **User Management (Phase 9.1)** — `UserController` + User Management UI.
+2. **Category Management page (Phase 9.4)** — CRUD UI for product categories.
+3. **Sales Orders (Phase 5)** — Begin backend data schema for the outbound pipeline.
 
