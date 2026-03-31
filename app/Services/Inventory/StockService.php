@@ -123,11 +123,12 @@ class StockService
         return DB::transaction(function () use ($data) {
             $ref = $data['header']['reference_number'] ?? now()->timestamp;
 
+            // 1. Record Outbound Leg (Issue)
             $originData = [
                 'header' => array_merge($data['header'], [
                     'reference_number' => $ref.'-OUT',
                     'from_location_id' => $data['from_location_id'],
-                    'to_location_id' => $data['to_location_id'],
+                    'to_location_id' => $data['to_location_id'], // Keep context
                     'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
@@ -138,22 +139,29 @@ class StockService
                 })->toArray(),
             ];
 
+            $outgoing = $this->recordMovement($originData);
+
+            // 2. Record Inbound Leg (Receipt)
+            // CRITICAL: We map the exact unit_cost calculated by the OUT leg (FIFO/LIFO) 
+            // into the IN leg to ensure perfect cost preservation across locations.
             $destData = [
                 'header' => array_merge($data['header'], [
                     'reference_number' => $ref.'-IN',
-                    'from_location_id' => $data['from_location_id'],
+                    'from_location_id' => $data['from_location_id'], // Keep context
                     'to_location_id' => $data['to_location_id'],
                     'notes' => 'Transfer In: '.($data['header']['notes'] ?? ''),
                 ]),
-                'lines' => collect($data['lines'])->map(function ($line) use ($data) {
-                    return array_merge($line, [
+                'lines' => $outgoing->lines->map(function ($outLine) use ($data) {
+                    return [
+                        'product_id' => $outLine->product_id,
                         'location_id' => $data['to_location_id'],
-                        'quantity' => abs($line['quantity']),
-                    ]);
+                        'quantity' => abs($outLine->quantity),
+                        'unit_cost' => $outLine->unit_cost, // Preserve the COGS
+                        'uom_id' => $outLine->uom_id,
+                    ];
                 })->toArray(),
             ];
 
-            $outgoing = $this->recordMovement($originData);
             $incoming = $this->recordMovement($destData);
 
             // FIX: Create the pivot record that permanently links both legs.
@@ -232,22 +240,37 @@ class StockService
     // -------------------------------------------------------------------------
     private function applyLineToInventory(TransactionLine $line, array $lineData): void
     {
-        // Lock the inventory row to prevent concurrent race conditions.
-        $inventory = Inventory::firstOrCreate(
-            [
+        // Optimized Locking: find or create, THEN lock in one sweep
+        $inventory = Inventory::where('product_id', $lineData['product_id'])
+            ->where('location_id', $lineData['location_id'])
+            ->lockForUpdate()
+            ->first();
+
+        if (! $inventory) {
+            $inventory = Inventory::create([
                 'product_id' => $lineData['product_id'],
                 'location_id' => $lineData['location_id'],
-            ],
-            ['quantity_on_hand' => 0, 'average_cost' => 0]
-        );
+                'quantity_on_hand' => 0,
+                'average_cost' => 0,
+            ]);
+            // Re-fetch model with lock AFTER creation
+            $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
+        }
 
-        $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
+        $qtyMove = (float) $lineData['quantity'];
+        $isReceipt = $qtyMove > 0;
 
-        $isReceipt = (float) $lineData['quantity'] > 0;
+        // HIGH PRIORITY: Validating stock availability before any consumption logic begins.
+        if (! $isReceipt && $inventory->quantity_on_hand < abs($qtyMove)) {
+            throw new InsufficientStockException(
+                "Insufficient stock for product #{$lineData['product_id']}. "
+                ."Required: ".abs($qtyMove).", Available: {$inventory->quantity_on_hand}."
+            );
+        }
 
         if ($isReceipt) {
             // Receipt: update location-level weighted average cost first (before QOH changes).
-            $this->updateLocationAverageCost($inventory, (float) $lineData['quantity'], (float) $lineData['unit_cost']);
+            $this->updateLocationAverageCost($inventory, $qtyMove, (float) $lineData['unit_cost']);
         }
 
         $inventory->quantity_on_hand += (float) $lineData['quantity'];
@@ -256,7 +279,12 @@ class StockService
         if ($isReceipt) {
             // FIX [Global WAC]: Recalculate the product-level global average cost
             // AFTER saving the updated location row, so the query sees correct data.
-            $this->updateProductGlobalAverageCost((int) $lineData['product_id']);
+            $this->updateProductGlobalAverageCost($inventory->product);
+
+            // FIX: Add total_cost to the line for receipts
+            $line->unit_cost = (float) $lineData['unit_cost'];
+            $line->total_cost = (float) $lineData['quantity'] * (float) $lineData['unit_cost'];
+            $line->save();
 
             InventoryCostLayer::create([
                 'product_id' => $lineData['product_id'],
@@ -298,6 +326,9 @@ class StockService
             ->where('is_exhausted', false)
             ->orderBy('receipt_date', $direction)
             ->orderBy('id', $direction)
+            ->select('*') // Ensure we get all columns
+            ->selectRaw('(received_qty - issued_qty) as calc_remaining_qty') // Use raw for safety
+            ->lockForUpdate()
             ->get();
 
         $remainingToConsume = $quantity;
@@ -309,7 +340,7 @@ class StockService
                 break;
             }
 
-            $availableInLayer = $layer->remaining_qty;
+            $availableInLayer = (float) $layer->calc_remaining_qty;
             $consumeAmount = min($availableInLayer, $remainingToConsume);
 
             $totalCostConsumed += $consumeAmount * (float) $layer->unit_cost;
@@ -369,19 +400,25 @@ class StockService
     //   This is called AFTER the inventory row has been saved so the DB query
     //   reflects the latest state.
     // -------------------------------------------------------------------------
-    private function updateProductGlobalAverageCost(int $productId): void
+    /**
+     * Incremental product global average cost.
+     * Uses SUMs across locations to ensure mathematical correctness
+     * across multi-warehouse environments.
+     */
+    private function updateProductGlobalAverageCost(Product $product): void
     {
-        $stats = Inventory::where('product_id', $productId)
+        $stats = Inventory::where('product_id', $product->id)
             ->where('quantity_on_hand', '>', 0)
             ->selectRaw('SUM(quantity_on_hand * average_cost) as total_value, SUM(quantity_on_hand) as total_qty')
             ->first();
 
         if ($stats && (float) $stats->total_qty > 0) {
-            Product::where('id', $productId)->update([
-                'average_cost' => round((float) $stats->total_value / (float) $stats->total_qty, 6),
-            ]);
+            $newAvg = round((float) $stats->total_value / (float) $stats->total_qty, 8);
+            $product->update(['average_cost' => $newAvg]);
         }
     }
+
+    protected array $uomCache = [];
 
     // -------------------------------------------------------------------------
     // PRIVATE: Apply UOM conversion to line data before storing.
@@ -393,33 +430,43 @@ class StockService
             && $product->uom_id
             && (int) $lineData['uom_id'] !== (int) $product->uom_id
         ) {
-            // 1. Try direct conversion (e.g. Box -> Piece)
-            $conversion = UomConversion::where('from_uom_id', $lineData['uom_id'])
-                ->where('to_uom_id', $product->uom_id)
-                ->first();
+            $fromId = (int) $lineData['uom_id'];
+            $toId = (int) $product->uom_id;
+            $cacheKey = "{$product->id}_{$fromId}_{$toId}"; // Scope to product
 
-            if ($conversion) {
-                $lineData['quantity'] = $lineData['quantity'] * $conversion->conversion_factor;
-                if (isset($lineData['unit_cost'])) {
-                    $lineData['unit_cost'] = $lineData['unit_cost'] / $conversion->conversion_factor;
-                }
-            } else {
-                // 2. Try inverse conversion (e.g. Piece -> Box if only Box -> Piece is defined)
-                $inverse = UomConversion::where('from_uom_id', $product->uom_id)
-                    ->where('to_uom_id', $lineData['uom_id'])
+            if (! isset($this->uomCache[$cacheKey])) {
+                // 1. Try direct conversion (e.g. Box -> Piece)
+                $conversion = UomConversion::where('from_uom_id', $fromId)
+                    ->where('to_uom_id', $toId)
                     ->first();
 
-                if ($inverse) {
-                    $lineData['quantity'] = $lineData['quantity'] / $inverse->conversion_factor;
-                    if (isset($lineData['unit_cost'])) {
-                        $lineData['unit_cost'] = $lineData['unit_cost'] * $inverse->conversion_factor;
-                    }
+                if ($conversion) {
+                    $this->uomCache[$cacheKey] = (float) $conversion->conversion_factor;
+                    $this->uomCache["{$toId}_{$fromId}"] = 1 / (float) $conversion->conversion_factor; // Pre-cache inverse
                 } else {
-                    throw new UomConversionException(
-                        'No UOM conversion is defined (direct or inverse) from the selected unit to this product\'s base unit. '
-                        ."Product #{$product->id}, from UOM #{$lineData['uom_id']} to base UOM #{$product->uom_id}."
-                    );
+                    // 2. Try inverse conversion (e.g. Piece -> Box if only Box -> Piece is defined)
+                    $inverse = UomConversion::where('from_uom_id', $toId)
+                        ->where('to_uom_id', $fromId)
+                        ->first();
+
+                    if ($inverse) {
+                        $this->uomCache[$cacheKey] = 1 / (float) $inverse->conversion_factor;
+                        $this->uomCache["{$toId}_{$fromId}"] = (float) $inverse->conversion_factor;
+                    } else {
+                        throw new UomConversionException(
+                            'No UOM conversion is defined (direct or inverse) from the selected unit to this product\'s base unit. '
+                            ."Product #{$product->id}, from UOM #{$fromId} to base UOM #{$toId}."
+                        );
+                    }
                 }
+            }
+
+            $factor = $this->uomCache[$cacheKey];
+
+            // Apply high-precision conversion (matching DB decimal 18,8)
+            $lineData['quantity'] = round($lineData['quantity'] * $factor, 8);
+            if (isset($lineData['unit_cost'])) {
+                $lineData['unit_cost'] = round($lineData['unit_cost'] / $factor, 8);
             }
         }
 
