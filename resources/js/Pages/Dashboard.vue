@@ -9,7 +9,10 @@ const stats = ref({
     total_vendors: 0,
     inventory_value: 0,
     low_stock_count: 0,
-    transactions_today: 0
+    transactions_today: 0,
+    pending_po_count: 0,
+    pending_so_count: 0,
+    stock_value_trend: []
 });
 const recentTransactions = ref([]);
 const lowStockItems = ref([]);
@@ -37,6 +40,26 @@ const loadDashboard = async () => {
 
 const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
+};
+
+const generatePath = (data) => {
+    if (!data || data.length < 2) return '';
+    const points = data.map(d => d.value);
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min || 1;
+    
+    return points.map((val, i) => {
+        const x = (i / (points.length - 1)) * 100;
+        const y = 20 - ((val - min) / range) * 18 - 1; // 18 height, 1 padding
+        return (i === 0 ? 'M' : 'L') + `${x},${y}`;
+    }).join(' ');
+};
+
+const generateFillPath = (data) => {
+    const path = generatePath(data);
+    if (!path) return '';
+    return `${path} L 100,20 L 0,20 Z`;
 };
 
 onMounted(loadDashboard);
@@ -79,6 +102,29 @@ onMounted(loadDashboard);
                     </div>
                     <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Total Inventory Value</div>
                     <div class="text-3xl font-bold leading-none text-white tracking-tighter">{{ formatCurrency(stats.inventory_value) }}</div>
+                    
+                    <!-- Trend Mini Chart -->
+                    <div class="mt-4 flex items-end gap-1 h-8" v-if="stats.stock_value_trend && stats.stock_value_trend.length > 0">
+                        <svg class="w-full h-full overflow-visible" viewBox="0 0 100 20" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:rgb(14, 165, 233);stop-opacity:0.3" />
+                                    <stop offset="100%" style="stop-color:rgb(14, 165, 233);stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                            <path 
+                                :d="generatePath(stats.stock_value_trend)" 
+                                fill="none" 
+                                stroke="#0ea5e9" 
+                                stroke-width="1.5" 
+                                stroke-linecap="round"
+                            />
+                            <path 
+                                :d="generateFillPath(stats.stock_value_trend)" 
+                                fill="url(#trendGradient)"
+                            />
+                        </svg>
+                    </div>
                     <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Total value of all on-hand stock assets.</div>
                 </div>
             </div>
@@ -128,6 +174,30 @@ onMounted(loadDashboard);
                 </div>
             </div>
             
+            <!-- Operations Summary -->
+            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+                 <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
+                 <div class="relative z-10">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
+                            <i class="pi pi-briefcase text-zinc-500 group-hover:text-amber-400 text-sm transition-colors"></i>
+                        </div>
+                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Operations</span>
+                    </div>
+                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">Pending Workflow</div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 hover:border-amber-500/30 transition-colors cursor-pointer" @click="$inertia.visit('/purchase-orders')">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">PURCHASE ORDERS</span>
+                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.pending_po_count }}</span>
+                        </div>
+                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 hover:border-amber-500/30 transition-colors cursor-pointer">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">SALES ORDERS</span>
+                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.pending_so_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Today's Activity -->
             <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-xl">
                 <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-colors"></div>
@@ -139,10 +209,10 @@ onMounted(loadDashboard);
                         <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Today</span>
                     </div>
                     <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Transactions Today</div>
-                    <div class="text-3xl font-bold leading-none tracking-tighter" :class="stats.transactions_today > 0 ? 'text-emerald-400' : 'text-zinc-600'">
+                    <div class="text-3xl font-bold font-mono tracking-tighter" :class="stats.transactions_today > 0 ? 'text-emerald-400' : 'text-zinc-600'">
                         {{ stats.transactions_today }}
                     </div>
-                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Stock movements posted so far today.</div>
+                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Stock movements posted today.</div>
                 </div>
             </div>
         </div>
