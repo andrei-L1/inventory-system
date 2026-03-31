@@ -48,8 +48,6 @@ class InventoryCostLayer extends Model
 
     /**
      * Calculate current remaining quantity on-the-fly.
-     *
-     * @return float
      */
     public function getRemainingQtyAttribute(): float
     {

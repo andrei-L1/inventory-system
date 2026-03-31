@@ -421,7 +421,7 @@ const tablePt = {
                                         <span class="text-white font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.selling_price) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
-                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Average Unit Cost</label>
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
                                         <span class="text-sky-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.average_cost) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
@@ -430,7 +430,7 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Valuation Method</label>
-                                        <span class="text-emerald-400 font-mono font-bold text-[11px] bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 w-fit uppercase">{{ selectedProduct.valuation_method || selectedProduct.costing_method }}</span>
+                                        <span class="text-emerald-400 font-mono font-bold text-[11px] bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 w-fit uppercase">{{ selectedProduct.costing_method }}</span>
                                     </div>
                                 </div>
 
@@ -510,7 +510,7 @@ const tablePt = {
                             <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <i class="pi pi-database text-sky-400 text-xs"></i>
-                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Inventory Costing ({{ selectedProduct?.valuation_method || selectedProduct?.costing_method || 'FIFO' }})</span>
+                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Inventory Costing ({{ selectedProduct?.costing_method || 'FIFO' }})</span>
                                 </div>
                                 <span class="text-[9px] font-bold text-sky-400 font-mono tracking-tighter uppercase">In Stock</span>
                             </div>

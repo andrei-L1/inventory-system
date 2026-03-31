@@ -47,21 +47,30 @@ class StockService
             // 1. Create the immutable transaction header.
             $transaction = Transaction::create($data['header']);
 
+            // PHASE 1: Creation & Normalization
+            // All lines are stored in the product's base UOM.
             foreach ($data['lines'] as $lineData) {
                 $product = Product::findOrFail($lineData['product_id']);
-
-                // FIX [UOM Conversion] — always convert before storing the line,
-                // so the stored quantity/unit_cost is always in the product's base UOM.
                 $lineData = $this->applyUomConversion($lineData, $product);
 
-                // 2. Always create the transaction line (regardless of status).
-                $line = $transaction->lines()->create(array_merge($lineData, [
+                $transaction->lines()->create(array_merge($lineData, [
                     'transaction_id' => $transaction->id,
                 ]));
+            }
 
-                // 3. Only touch inventory when the transaction is posted.
-                if ($isPosted) {
-                    $this->applyLineToInventory($line, $lineData);
+            // HYDRATION: Single-query resolution of all product costing methods.
+            $transaction->loadMissing('lines.product.costingMethod');
+
+            // PHASE 2: Inventory Posting
+            // Only touch inventory and cost layers when the transaction is 'posted'.
+            if ($isPosted) {
+                foreach ($transaction->lines as $line) {
+                    $this->applyLineToInventory($line, [
+                        'product_id' => $line->product_id,
+                        'location_id' => $line->location_id,
+                        'quantity' => (float) $line->quantity,
+                        'unit_cost' => (float) $line->unit_cost,
+                    ]);
                 }
             }
 
@@ -80,7 +89,8 @@ class StockService
     public function postTransaction(Transaction $transaction): Transaction
     {
         return DB::transaction(function () use ($transaction) {
-            $transaction->loadMissing('status');
+            // HYDRATION: Ensure status and all costing methods are available for the engine.
+            $transaction->loadMissing(['status', 'lines.product.costingMethod']);
 
             if ($transaction->status->name === 'posted') {
                 throw new LogicException("Transaction #{$transaction->id} is already posted.");
@@ -142,7 +152,7 @@ class StockService
             $outgoing = $this->recordMovement($originData);
 
             // 2. Record Inbound Leg (Receipt)
-            // CRITICAL: We map the exact unit_cost calculated by the OUT leg (FIFO/LIFO) 
+            // CRITICAL: We map the exact unit_cost calculated by the OUT leg (FIFO/LIFO)
             // into the IN leg to ensure perfect cost preservation across locations.
             $destData = [
                 'header' => array_merge($data['header'], [
@@ -264,7 +274,7 @@ class StockService
         if (! $isReceipt && $inventory->quantity_on_hand < abs($qtyMove)) {
             throw new InsufficientStockException(
                 "Insufficient stock for product #{$lineData['product_id']}. "
-                ."Required: ".abs($qtyMove).", Available: {$inventory->quantity_on_hand}."
+                .'Required: '.abs($qtyMove).", Available: {$inventory->quantity_on_hand}."
             );
         }
 
@@ -295,9 +305,9 @@ class StockService
                 'receipt_date' => now(),
             ]);
         } else {
-            // FIX [unit_cost on issues]: consumeLayers() now returns the true
-            // weighted average cost of the layers it consumed. We write that back
-            // to the line so Gross Margin reports have accurate COGS data.
+            // ISSUE: All costing methods (FIFO, LIFO, Weighted Average) use layer consumption.
+            // This design ensures layers always stay perfectly synchronized with physical QOH,
+            // maintaining 100% audit integrity between the ledger and the valuation tiers.
             $consumedUnitCost = $this->consumeLayers($inventory, abs((float) $lineData['quantity']));
 
             $line->unit_cost = $consumedUnitCost;
@@ -306,13 +316,15 @@ class StockService
         }
     }
 
-    // -------------------------------------------------------------------------
-    // PRIVATE: Consume cost layers FIFO or LIFO.
-    //
-    // FIX [unit_cost on issues]:
-    //   Now returns the weighted-average unit cost of all layers consumed.
-    //   This is the true COGS for the issue, enabling Gross Margin analysis.
-    // -------------------------------------------------------------------------
+    /**
+     * Consumes cost layers using FIFO (default) or LIFO.
+     *
+     * Even Weighted Average products consume cost layers using FIFO ordering on issues.
+     * This design prioritizes ledger-layer consistency and auditability over a
+     * pure perpetual average calculation, ensuring the two tables never diverge.
+     *
+     * @return float The weighted-average unit cost of all layers consumed.
+     */
     private function consumeLayers(Inventory $inventory, float $quantity): float
     {
         $product = $inventory->product;
@@ -470,7 +482,7 @@ class StockService
             }
         }
 
-        // Ensure the resulting line data reflects the product's base UOM 
+        // Ensure the resulting line data reflects the product's base UOM
         // as the quantity/cost are now normalized.
         $lineData['uom_id'] = $product->uom_id;
 

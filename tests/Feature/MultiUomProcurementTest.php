@@ -9,9 +9,9 @@ use App\Models\Location;
 use App\Models\Product;
 use App\Models\PurchaseOrderLine;
 use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Models\UomConversion;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\VendorSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,10 +63,10 @@ class MultiUomProcurementTest extends TestCase
             'vendor_id' => $vendor->id,
             'lines' => [
                 [
-                    'product_id' => $product->id, 
+                    'product_id' => $product->id,
                     'uom_id' => $boxUom->id,
-                    'ordered_qty' => 5, 
-                    'unit_cost' => 500 // 500 per box
+                    'ordered_qty' => 5,
+                    'unit_cost' => 500, // 500 per box
                 ],
             ],
         ]);
@@ -79,7 +79,7 @@ class MultiUomProcurementTest extends TestCase
             'purchase_order_id' => $poId,
             'product_id' => $product->id,
             'uom_id' => $boxUom->id,
-            'ordered_qty' => 5
+            'ordered_qty' => 5,
         ]);
 
         // 4. Approve PO
@@ -151,10 +151,10 @@ class MultiUomProcurementTest extends TestCase
             'vendor_id' => $vendor->id,
             'lines' => [
                 [
-                    'product_id' => $product->id, 
+                    'product_id' => $product->id,
                     'uom_id' => $pcsUom->id,
-                    'ordered_qty' => 20, 
-                    'unit_cost' => 100 // 100 per piece
+                    'ordered_qty' => 20,
+                    'unit_cost' => 100, // 100 per piece
                 ],
             ],
         ]);

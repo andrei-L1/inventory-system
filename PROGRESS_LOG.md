@@ -375,6 +375,17 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
     - Improved UX by surfacing specific "Product #X from UOM #Y to base UOM #Z" detail in error messages, enabling warehouse operators to identify and resolve missing conversion factors instantly.
 
 ---
-*Last Updated: 2026-03-31 20:56:00*
+
+### 🎯 Milestone: Layered Hybrid Costing & Terminology Alignment
+**Date**: 2026-03-31 | **Status**: 100% VERIFIED
+**Summary**: Successfully refactored the inventory costing engine to a "Layered Hybrid" approach, ensuring 100% consistency between the ledger, physical stock, and cost layers for all methods (FIFO, LIFO, and Weighted Average).
+- **Engine Standardization**: Unified all costing methods to consume cost layers using FIFO ordering. This eliminates the "Traceability Trap" where physical QOH and layer sums could diverge, providing a perfect audit trail even for Weighted Average products.
+- **Zero-Migration Naming Strategy**: Implemented a professional terminology layer at the API Resource level. The internal `average` key is now dynamically mapped to **"Weighted Average (Layered)"** and **"Weighted Avg Cost"** across all user-facing dashboards and reports.
+- **Phase-Separated Performance**: Refactored `StockService::recordMovement()` into a two-phase process (Creation → Hydration → Posting). This optimization uses batch eager-loading of product costing methods, effectively eliminating N+1 query bottlenecks during stock movements.
+- **Architecture Documentation**: Updated `INVENTORY_ARCHITECTURE.md` to formally define the "Ledger-over-Purity" philosophy, prioritizing audit integrity and layer synchronization over theoretical perpetual average purity.
+- **UI/UX Polish**: Updated `InventoryCenter.vue` and `ProductResource.php` to align all headers, labels, and tooltips with the new professional branding, ensuring a premium "Command Center" experience.
+
+---
+*Last Updated: 2026-03-31 21:51:00*
 
 

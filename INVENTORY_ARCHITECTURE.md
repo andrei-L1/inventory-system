@@ -18,9 +18,9 @@ We use **Pessimistic Locking** (`lockForUpdate()`) on the `inventories` table ro
 
 ---
 
-## 2. Costing Logic (FIFO/LIFO/Average)
+## 2. Costing Logic (FIFO / LIFO / Weighted Average)
 
-The system supports multiple costing methods defined at the **Product** level.
+This system uses a **Layered Costing Engine**. Even Weighted Average products consume cost layers using FIFO ordering on issues. This design prioritizes ledger-layer consistency and auditability over a pure perpetual average calculation, ensuring that the physical stock balance always matches the sum of the valuation tiers.
 
 ### A. Inventory Cost Layers
 Every "Receipt" (Inbound) creates a record in `inventory_cost_layers`.
@@ -31,8 +31,9 @@ Every "Receipt" (Inbound) creates a record in `inventory_cost_layers`.
 ### B. Consumption Workflow
 When an "Issue" (Outbound) occurs:
 1. The service identifies the selected `costing_method` for the product.
-2. It fetches active layers sorted by `receipt_date` (**ASC** for FIFO, **DESC** for LIFO).
+2. It fetches active layers sorted by `receipt_date` (**ASC** for FIFO and Weighted Average, **DESC** for LIFO).
 3. It iterates through layers, incrementing `issued_qty` until the total requested quantity is satisfied.
+4. The transaction line records the weighted-average cost of the specific layers consumed as the true COGS.
 
 ---
 
