@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,7 +20,7 @@ Route::middleware('guest')->group(function () {
     Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 
     // The Stock Command Center Placeholder
@@ -64,6 +65,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/movements/adjustment', function () {
         return Inertia::render('Movements/AdjustmentForm');
     })->name('movements.adjustment');
+
+    Route::get('/movements/{id}', function ($id) {
+        return Inertia::render('Movements/Show', ['id' => $id]);
+    })->name('movements.show');
 
     // --- Procurement (Phase 4.2) ---
     Route::get('/purchase-orders', function () {

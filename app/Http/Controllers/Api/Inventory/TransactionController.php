@@ -175,6 +175,20 @@ class TransactionController extends Controller
     }
 
     // -------------------------------------------------------------------------
+    // GET /api/transactions/{transaction}
+    // Single transaction detail view.
+    // -------------------------------------------------------------------------
+    public function show(Transaction $transaction): TransactionResource
+    {
+        return new TransactionResource(
+            $transaction->load([
+                'type', 'status', 'fromLocation', 'toLocation', 'vendor', 'customer',
+                'purchaseOrder', 'salesOrder', 'lines.product.uom',
+            ])
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // GET /api/vendors/{vendor}/transactions
     // Transaction history for a specific vendor.
     // -------------------------------------------------------------------------
@@ -185,7 +199,6 @@ class TransactionController extends Controller
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
             ->get();
-        // ... (omitted)
 
         return TransactionResource::collection($transactions);
     }

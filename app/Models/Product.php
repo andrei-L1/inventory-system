@@ -46,6 +46,43 @@ class Product extends Model
 {
     use HasAttachments, HasFactory, SoftDeletes;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($product) {
+            // 1. Generate the Suffix (Abbreviation)
+            // Strategy: Take first letter of each word. If one word, take first 3 letters.
+            $nameClean = preg_replace('/[^A-Za-z0-9 ]/', '', $product->name);
+            $words = explode(' ', strtoupper(trim($nameClean)));
+
+            if (count($words) > 1) {
+                $abbreviation = '';
+                foreach ($words as $w) {
+                    if (! empty($w)) {
+                        $abbreviation .= $w[0];
+                    }
+                }
+                // Limit to 4 letters for the acronym if it's very long
+                $abbreviation = substr($abbreviation, 0, 4);
+            } else {
+                $abbreviation = substr($words[0], 0, 3);
+            }
+
+            // 2. Automated Internal ID (SKU)
+            if (empty($product->sku)) {
+                $nextId = (self::max('id') ?? 0) + 1;
+                $paddedId = str_pad($nextId, 12, '0', STR_PAD_LEFT);
+                $product->sku = "{$paddedId}-{$abbreviation}";
+            }
+
+            // 3. Automated Vendor Code (Product Code)
+            if (empty($product->product_code)) {
+                $product->product_code = "PRD-{$abbreviation}-".strtoupper(substr(uniqid(), -4));
+            }
+        });
+    }
+
     protected $fillable = [
         'product_code',
         'name',
@@ -104,6 +141,14 @@ class Product extends Model
     public function inventories(): HasMany
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    /**
+     * Get the transactions this product has been involved in.
+     */
+    public function transactionLines(): HasMany
+    {
+        return $this->hasMany(TransactionLine::class);
     }
 
     /**

@@ -28,9 +28,17 @@ class LoginController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+            if (! $user->is_active) {
+                Auth::logout();
+
+                return back()->withErrors([
+                    'username' => 'This account has been deactivated.',
+                ])->onlyInput('username');
+            }
+
             $request->session()->regenerate();
 
-            // Redirect to the internal Stock Command Center
             return redirect()->intended('/dashboard');
         }
 

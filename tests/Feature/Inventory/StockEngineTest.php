@@ -14,6 +14,7 @@ use App\Models\UomConversion;
 use App\Models\Vendor;
 use App\Services\Inventory\StockService;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\VendorSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -30,7 +31,8 @@ class StockEngineTest extends TestCase
         parent::setUp();
         $this->service = app(StockService::class);
         $this->seed(DatabaseSeeder::class);
-        $this->vendor = Vendor::where('code', 'VEND-001')->first();
+        $this->seed(VendorSeeder::class);
+        $this->vendor = Vendor::where('vendor_code', 'VEND-001')->first();
     }
 
     public function test_weighted_average_cost_is_recalculated_on_receipt()

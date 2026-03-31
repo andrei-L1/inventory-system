@@ -52,5 +52,26 @@ class TransactionValidator
                 'vendor_id' => 'An issue transaction must NOT have a vendor.',
             ]);
         }
+
+        // 4. Purchase returns (RTV): vendor + source location
+        if ($type->matchesCode('PRET')) {
+            if (empty($header['vendor_id'])) {
+                throw ValidationException::withMessages([
+                    'vendor_id' => 'A purchase return must specify a vendor.',
+                ]);
+            }
+            if (empty($header['from_location_id'])) {
+                throw ValidationException::withMessages([
+                    'from_location_id' => 'A purchase return must specify a source location.',
+                ]);
+            }
+        }
+
+        // 5. Adjustments: reason required
+        if ($type->matchesCode('ADJS') && empty($header['adjustment_reason_id'])) {
+            throw ValidationException::withMessages([
+                'adjustment_reason_id' => 'An adjustment must specify a reason.',
+            ]);
+        }
     }
 }

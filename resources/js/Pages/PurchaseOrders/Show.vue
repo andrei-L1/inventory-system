@@ -339,14 +339,14 @@ const deletePO = async () => {
                 <div class="flex items-center gap-3 z-10">
                     <!-- Actions based on status -->
                     <Button 
-                        v-if="po.status === 'draft' && can('manage-inventory')" 
+                        v-if="po.status === 'draft' && can('manage-purchase-orders')" 
                         icon="pi pi-trash" 
                         class="p-button-danger p-button-text p-button-sm !font-bold" 
                         @click="deletePO"
                     />
                     
                     <Button 
-                        v-if="po.status === 'draft' && can('manage-inventory')" 
+                        v-if="po.status === 'draft' && can('manage-purchase-orders')" 
                         label="Approve Order" 
                         icon="pi pi-check" 
                         :loading="approveLoading"
@@ -355,7 +355,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="po.status === 'open' && can('manage-inventory')" 
+                        v-if="po.status === 'open' && can('manage-purchase-orders')" 
                         label="Send to Vendor" 
                         icon="pi pi-send" 
                         :loading="sendLoading"
@@ -364,7 +364,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent'].includes(po.status) && can('manage-inventory')" 
+                        v-if="['open', 'sent'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Mark Shipped" 
                         icon="pi pi-truck" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -372,7 +372,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-inventory')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-purchase-orders')" 
                         label="Return Items (RTV)" 
                         icon="pi pi-replay" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -380,7 +380,7 @@ const deletePO = async () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-inventory')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
                         class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
@@ -507,15 +507,18 @@ const deletePO = async () => {
                             class="p-datatable-sm w-full"
                             stripedRows
                         >
-                            <Column field="sku" header="SKU">
+                            <Column field="sku" header="INTERNAL ID" style="width: 15rem">
                                 <template #body="{ data }">
-                                    <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
+                                    <span class="text-sky-400 font-mono text-[10px] font-bold tracking-widest text-[#50e3c2]">{{ data.sku }}</span>
                                 </template>
                             </Column>
                             
                             <Column field="product_name" header="PRODUCT">
                                 <template #body="{ data }">
-                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                        <span v-if="data.product_code" class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                    </div>
                                 </template>
                             </Column>
 
@@ -595,12 +598,19 @@ const deletePO = async () => {
 
                 <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
                     <DataTable :value="grnForm.lines" class="p-datatable-sm w-full">
-                        <Column field="sku" header="SKU">
+                        <Column field="sku" header="INTERNAL ID">
                             <template #body="{ data }">
                                 <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
                             </template>
                         </Column>
-                        <Column field="product_name" header="PRODUCT"></Column>
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span v-if="data.product_code" class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                </div>
+                            </template>
+                        </Column>
                         <Column field="pending_qty" header="PENDING">
                             <template #body="{ data }">
                                 <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }}</span>
@@ -683,7 +693,10 @@ const deletePO = async () => {
                                 <!-- Product Identity -->
                                 <div class="lg:col-span-4 flex flex-col gap-1">
                                     <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
-                                    <span class="text-[9px] font-mono font-bold text-zinc-600 uppercase">{{ line.sku }}</span>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest">{{ line.sku }}</span>
+                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-600 uppercase">MPN: {{ line.product_code }}</span>
+                                    </div>
                                 </div>
 
                                 <!-- Status Badges -->

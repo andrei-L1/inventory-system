@@ -16,7 +16,7 @@ class ProductResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'sku' => $this->sku,
+            'sku' => $this->sku ?? $this->product_code, // Guaranteed display ID
             'product_code' => $this->product_code,
             'name' => $this->name,
             'description' => $this->description,
@@ -38,6 +38,7 @@ class ProductResource extends JsonResource
             'preferred_vendor' => new VendorResource($this->whenLoaded('preferredVendor')),
             'costing_method' => $this->costingMethod->name ?? 'unknown',
             'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/'.$this->attachmentsIn('main_image')->first()->file_path) : null,
+            'has_history' => (bool) ($this->transaction_lines_count ?? $this->transactionLines()->exists()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

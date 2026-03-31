@@ -23,7 +23,7 @@ class Vendor extends Model
     use HasAttachments, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'code',
+        'vendor_code',
         'name',
         'contact_person',
         'email',
@@ -33,6 +33,10 @@ class Vendor extends Model
         'country',
         'tax_id',
         'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
     ];
 
     /**

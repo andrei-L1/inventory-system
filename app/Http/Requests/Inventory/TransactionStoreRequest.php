@@ -63,7 +63,7 @@ class TransactionStoreRequest extends FormRequest
             'lines.*.location_id' => ['required', 'integer', 'exists:locations,id'],
             'lines.*.quantity' => ['required', 'numeric'],
             'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
-            'lines.*.uom_id' => ['nullable', 'integer', 'exists:unit_of_measures,id'],
+            'lines.*.uom_id' => ['nullable', 'integer', 'exists:units_of_measure,id'],
             'lines.*.notes' => ['nullable', 'string', 'max:500'],
         ];
     }

@@ -148,7 +148,7 @@ const getStatusColor = (statusName) => {
                         </div>
                         <Link href="/purchase-orders/create" class="no-underline pb-1">
                             <Button 
-                                v-if="can('manage-inventory')" 
+                                v-if="can('manage-purchase-orders')" 
                                 icon="pi pi-plus" 
                                 label="Draft PO" 
                                 class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
@@ -165,7 +165,7 @@ const getStatusColor = (statusName) => {
                             class="p-button-sm p-button-text !text-zinc-400 hover:!text-white font-bold tracking-widest uppercase text-[10px]"
                         />
                         <Button 
-                            v-if="selectedSuggestions.length > 0"
+                            v-if="selectedSuggestions.length > 0 && can('manage-purchase-orders')"
                             icon="pi pi-shopping-cart" 
                             :label="`Draft ${selectedSuggestions.length} POs`" 
                             :loading="bulkLoading"

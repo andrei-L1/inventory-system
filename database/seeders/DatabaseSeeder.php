@@ -117,11 +117,11 @@ class DatabaseSeeder extends Seeder
         // ────────────────────────────────────────────────────────────────────
         // 6. Vendors
         // ────────────────────────────────────────────────────────────────────
-        $this->call(VendorSeeder::class);
+        //        $this->call(VendorSeeder::class);
 
         // ────────────────────────────────────────────────────────────────────
         // 7. Sample Inventory Data (Products + Stock Movements)
         // ────────────────────────────────────────────────────────────────────
-        $this->call(SampleDataSeeder::class);
+        //        $this->call(SampleDataSeeder::class);
     }
 }

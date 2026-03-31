@@ -57,6 +57,8 @@ Each phase below corresponds to one stage of that chain.
 - [x] `applyLineToInventory(TransactionLine, array)` — extracted private method reused by both `recordMovement` and `postTransaction`
 - [x] `TransactionValidator` — pre-movement guard (type, location, quantity sanity checks)
 - [x] `InsufficientStockException` — typed exception for over-issue scenarios
+- [x] **Reversal Audit Link** — `reverses_transaction_id` foreign key added to track the origin of a voided transaction. ✅ NEW
+- [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing mappings, preventing silent math errors. ✅ NEW
 
 ### 0.2 Database Schema
 - [x] 35 migrations covering every business domain
@@ -90,6 +92,9 @@ Each phase below corresponds to one stage of that chain.
 - [x] `PermissionSeeder` — seeds default roles (Admin, Warehouse, Sales, Viewer) and all permission slugs
 - [x] `usePermissions.js` composable — `can(slug)` helper for permission-gating UI elements
 - [x] `CheckPermission` middleware — tied to API routes enforcing server-side security for writes
+- [x] **Login Security Guard** — Enforced `is_active` status in both Password and Google OAuth login flows. ✅ NEW
+- [x] **Null-Safe Permissions** — Hardened `User::hasPermission()` to handle users with missing or invalid roles safely. ✅ NEW
+- [x] **Permission Granularity** — Split PO access into `view-purchase-orders` (READ) and `manage-purchase-orders` (WRITE). ✅ NEW
 
 ### 1.2 Location & Warehouse Configuration
 - [x] `locations` and `location_types` tables — migrated and seeded
@@ -119,8 +124,9 @@ Each phase below corresponds to one stage of that chain.
 ### 1.4 Vendor Master
 - [x] `VendorController` — Full CRUD (`/api/vendors`)
 - [x] `VendorResource` — API response transformer
-- [x] **VendorCenter.vue** — Full CRUD view (vendor details, transaction history, and creation/editing parameters)
-- [x] **Vendor Create/Edit Dialog** — Interactive premium form integrated into Vendor Center
+- [x] **Vendor Database Alignment** — Renamed column from `code` to `vendor_code` for naming consistency.
+- [x] **VendorCenter.vue** — Full CRUD view with high-performance search.
+- [x] **Vendor Create/Edit Dialog** — Interactive premium form integrated into Vendor Center.
 
 ### 1.5 UOM & Costing Configuration ✅ NOW LIVE
 - [x] `UnitOfMeasureController` — Full CRUD
@@ -222,22 +228,22 @@ Each phase below corresponds to one stage of that chain.
 
 ---
 
-## ✅ Phase 4 — Procurement: Purchase Order Lifecycle
-> Status: COMPLETE — End-to-end PO lifecycle with GRN audit-trail and automated user attribution.
+## 🚧 Phase 4 — Procurement: Purchase Order Lifecycle
+> Status: IN PROGRESS — Basic lifecycle live; Multi-UOM conversion & RTV core pending refinement.
 
 ### Procurement Workflow
 ```
-Replenishment Suggestion
+Replenishment Suggestion (UOM-Aware)
        ↓
   Draft PO Created  →  Approved  →  Sent to Vendor
        ↓                                  ↓
   PO Lines (product,                Vendor ships goods
-   qty, agreed price)
-       ↓
-  Goods Receipt Note (GRN)  →  StockService::recordMovement()
+   qty, UOM, price)                       ↓
+       ↓                           Goods Receipt Note (GRN)
+  PO Received (auto-convert) →  StockService::recordMovement()
        ↓                            ↓
   PO status: Partially         Transaction posted,
-  Received / Closed            cost layers updated
+  Received / Closed            cost layers updated (in Pieces)
 ```
 
 ### 4.1 Purchase Order API
@@ -252,14 +258,15 @@ Replenishment Suggestion
   - [x] Links `transaction.reference_doc` manually
   - [x] Updates `purchase_order_lines.received_qty`
   - [x] Auto-transitions PO to `Partially Received` or `Closed`
+- [ ] **Multi-UOM Integration**:
+  - [ ] Add `uom_id` to `purchase_order_lines`.
+  - [ ] Implement conversion logic in `PurchaseOrderController@receive` (convert PO UOM to Base UOM before posting to `StockService`).
 
-### 4.2 Purchase Orders Frontend ✅ NOW LIVE
+### 4.2 Purchase Orders Frontend ✅ NOW LIVE (v1.0)
 - [x] **Purchase Orders list page** (`/purchase-orders`)
-  - [x] DataTable: PO number, vendor, date, status, total value, actions
-  - [x] Filters: status, vendor, search
 - [x] **PO Create/Edit form**
   - [x] Header: Vendor, expected delivery date, notes
-  - [x] Lines: product selector, qty, agreed unit cost, UOM
+  - [ ] **Multi-UOM Line Selector** — support for choosing "Box", "Case", etc.
   - [x] "Save Draft" and "Discard" buttons
 - [x] **PO Detail / Receive page**
   - [x] Shows PO metadata and lines with ordered qty vs. received qty
@@ -273,10 +280,12 @@ Replenishment Suggestion
 - [x] **Auto-Suggestions Pipeline** — Engine creates `ReplenishmentSuggestion` records with precise fill amounts and automated clean-up routing.
 - [x] **Bulk Procure-to-PO** — Converting 1-to-N suggestions directly into drafted POs aggregated by vendor.
 
-### 4.4 Purchase Returns / RTV Core Engine ✅ NOW LIVE
+### ✅ 4.4 Purchase Returns / RTV Core Engine — HARDENED
 - [x] Database: `returned_qty` column on PO lines.
 - [x] Core Transaction Type `PRET` defined.
 - [x] API Endpoint `POST /api/purchase-orders/{id}/return` running intelligent replacement (reopens PO) vs credit note (closes PO line) logic natively tied into the Stock Engine.
+- [x] **Financial Recalculation** — "Credit" resolutions automatically shrink the PO `total_amount` for accounting accuracy. ✅ NEW
+- [x] **Over-Return Prevention** — Validation logic to ensure return quantities do not exceed net physical receipts. ✅ NEW
 
 ---
 
@@ -485,8 +494,8 @@ Customer Inquiry
 | 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
-| 3 | Dashboard & KPIs | 🚧 ~75% — core stats + feed live; `transactions_today` added; mini-chart + PO/SO counts pending |
-| 4 | Procurement (Purchase Orders) | ✅ COMPLETE — End-to-end lifecycle with GRN audit trail |
+| 3 | Dashboard & KPIs | 🚧 ~80% — core stats + feed live; `transactions_today` added; mini-chart + PO/SO counts pending |
+| 4 | Procurement (Purchase Orders) | 🚧 ~90% — Basic lifecycle done; UOM integration pending |
 | 5 | Sales (Sales Orders) | ⬜ 0% — schema + models only |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
@@ -498,10 +507,8 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. **Dashboard: `transactions_today` stat** — Add live today-count to `DashboardController` and Dashboard KPI cards. ✅ Done
-2. **Fix hardcoded transaction type/status IDs** — Resolve `transaction_type_id` and `transaction_status_id` by slug name in all movement forms, not integer IDs.
-3. **Purchase Orders lifecycle (Phase 4)** — `PurchaseOrderController` + GRN flow + frontend list/create/receive pages. Schema and models already exist.
-4. **User Management (Phase 9.1)** — `UserController` + User Management page for production multi-user use.
-5. **Category Management page (Phase 9.4)** — Low friction; `CategoryController` already exists in the API.
-6. **Dashboard mini-chart** — Stock value trend visualization (last 7 days) on the Dashboard.
+1. **UOM Support in Procurement** — Add `uom_id` to PO lines, update UI for UOM selection, and ensure `StockService` receives converted quantities during GRN.
+2. **Dashboard: Stock Value Trend** — Add the 7-day visualization mini-chart.
+3. **User Management (Phase 9.1)** — `UserController` + User Management UI.
+4. **Category Management page (Phase 9.4)** — CRUD UI for product categories.
 

@@ -47,7 +47,7 @@ class TransferStoreRequest extends FormRequest
             'lines.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'lines.*.quantity' => ['required', 'numeric', 'min:0.0001'],
             'lines.*.unit_cost' => ['required', 'numeric', 'min:0'],
-            'lines.*.uom_id' => ['nullable', 'integer', 'exists:unit_of_measures,id'],
+            'lines.*.uom_id' => ['nullable', 'integer', 'exists:units_of_measure,id'],
         ];
     }
 

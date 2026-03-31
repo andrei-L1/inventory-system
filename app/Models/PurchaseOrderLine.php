@@ -35,10 +35,11 @@ class PurchaseOrderLine extends Model
 
     /**
      * Get the product being ordered.
+     * Including trashed allows historical POs to show product info.
      */
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     /**

@@ -439,15 +439,15 @@ const stats = computed(() => ({
                         </template>
                     </Column>
 
-                    <Column field="product_code" header="Product Code" style="width: 140px">
+                    <Column field="product_code" header="Vendor Code" style="width: 140px">
                         <template #body="{ data }">
-                            <span class="font-mono text-[10px] bg-zinc-950 text-sky-400 px-3 py-1 rounded border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.05)]">{{ data.product_code }}</span>
+                            <span class="font-mono text-[10px] bg-zinc-950 text-sky-400 px-3 py-1 rounded border border-sky-500/20 shadow-[0_0_15px_rgba(56,189,248,0.05)]">{{ data.product_code || '---' }}</span>
                         </template>
                     </Column>
 
-                    <Column field="sku" header="SKU" style="width: 160px">
+                    <Column field="sku" header="Internal ID" style="width: 160px">
                         <template #body="{ data }">
-                            <span class="font-mono text-[11px] text-zinc-500 tracking-tighter">{{ data.sku }}</span>
+                            <span class="font-mono text-[11px] text-zinc-500 tracking-widest uppercase">{{ data.sku }}</span>
                         </template>
                     </Column>
 
@@ -587,23 +587,27 @@ const stats = computed(() => ({
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">
-                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Product Code</label>
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Vendor Code (MPN)</label>
                                             <span v-if="errors.product_code" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.product_code }}</span>
-                                            <span v-else-if="!isEditing && !product.product_code" class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
+                                            <span v-else-if="!isEditing && !product.product_code" class="text-red-500 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
                                         </div>
                                         <InputText v-model="product.product_code" placeholder="PRT-000" 
-                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono !px-4 focus:!border-sky-500/30"
+                                                  :disabled="isEditing && product.has_history"
+                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-sky-400 !h-12 !font-mono !px-4 focus:!border-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                                                   :class="{'!border-red-500/50': errors.product_code}" />
+                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">Identifier locked due to audit history</p>
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">
-                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">SKU</label>
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Internal ID (SKU)</label>
                                             <span v-if="errors.sku" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.sku }}</span>
-                                            <span v-else-if="!isEditing && !product.sku" class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
+                                            <span v-else-if="!isEditing && !product.sku" class="text-red-500 text-[9px] font-bold uppercase tracking-widest font-mono italic">Auto-generates if blank</span>
                                         </div>
-                                        <InputText v-model="product.sku" placeholder="SKU-000" 
-                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30"
+                                        <InputText v-model="product.sku" placeholder="000000000000-ITM" 
+                                                  :disabled="isEditing && product.has_history"
+                                                  class="!bg-zinc-900/50 !border-zinc-800 !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                                                   :class="{'!border-red-500/50': errors.sku}" />
+                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">Identifier locked due to audit history</p>
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">

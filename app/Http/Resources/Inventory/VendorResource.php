@@ -19,6 +19,7 @@ class VendorResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'address' => $this->address,
             'contact_person' => $this->contact_person,
             'is_active' => (bool) $this->is_active,
         ];

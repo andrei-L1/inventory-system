@@ -31,7 +31,8 @@ class PermissionSeeder extends Seeder
             ['name' => 'Post Transactions', 'slug' => 'post-transactions', 'description' => 'Can post pending transactions'],
 
             // Procurement
-            ['name' => 'Manage Purchase Orders', 'slug' => 'manage-purchase-orders', 'description' => 'Can create and manage POs'],
+            ['name' => 'View Purchase Orders', 'slug' => 'view-purchase-orders', 'description' => 'Can view purchase orders and related receipts'],
+            ['name' => 'Manage Purchase Orders', 'slug' => 'manage-purchase-orders', 'description' => 'Can create, edit, and process POs'],
 
             // Sales
             ['name' => 'Manage Sales Orders', 'slug' => 'manage-sales-orders', 'description' => 'Can create and manage sales orders'],
@@ -61,6 +62,7 @@ class PermissionSeeder extends Seeder
                 'manage-products',
                 'view-transactions',
                 'post-transactions',
+                'view-purchase-orders',
                 'manage-purchase-orders',
                 'manage-sales-orders',
                 'view-reports',
@@ -74,6 +76,7 @@ class PermissionSeeder extends Seeder
             $userPermissions = Permission::whereIn('slug', [
                 'view-inventory',
                 'view-products',
+                'view-purchase-orders',
                 'view-reports',
             ])->get();
             $userRole->permissions()->sync($userPermissions);

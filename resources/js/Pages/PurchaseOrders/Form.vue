@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { usePermissions } from '@/Composables/usePermissions';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InputText from 'primevue/inputtext';
@@ -13,6 +14,7 @@ import { useToast } from "primevue/usetoast";
 import axios from 'axios';
 
 const toast = useToast();
+const { can } = usePermissions();
 
 const props = defineProps({
     purchaseOrder: { type: Object, default: null }
@@ -61,6 +63,12 @@ const onProductSelect = (line) => {
 };
 
 onMounted(async () => {
+    if (!can('manage-purchase-orders')) {
+        toast.add({ severity: 'warn', summary: 'Access denied', detail: 'You do not have permission to create or edit purchase orders.', life: 4000 });
+        router.visit('/purchase-orders');
+
+        return;
+    }
     await loadLookups();
     if (isEdit.value) {
         // Hydrate form logic if doing edit
@@ -206,7 +214,11 @@ const cancel = () => {
                                         <template #option="slotProps">
                                             <div class="flex flex-col">
                                                 <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
-                                                <span class="text-[10px] font-mono text-zinc-500">SKU: {{ slotProps.option.sku }} | Price: ₱{{ slotProps.option.average_cost }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-mono text-sky-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
+                                                    <span v-if="slotProps.option.product_code" class="text-[9px] font-mono text-zinc-600 font-bold uppercase tracking-tight">MPN: {{ slotProps.option.product_code }}</span>
+                                                    <span class="text-zinc-800 font-mono text-[9px]">| ₱{{ Number(slotProps.option.average_cost || slotProps.option.selling_price).toFixed(2) }}</span>
+                                                </div>
                                             </div>
                                         </template>
                                     </Select>

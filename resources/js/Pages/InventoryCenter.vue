@@ -214,6 +214,11 @@ const handleLinkClick = (type, name, id) => {
         return;
     }
 
+    if (type === 'Movement' && id) {
+        router.visit(`/movements/${id}`);
+        return;
+    }
+
     if (type === 'Product' && id) {
         router.visit(`/inventory-center?product_id=${id}`);
         return;
@@ -338,7 +343,7 @@ const tablePt = {
                             <template #option="{ option }">
                                 <div class="flex flex-col gap-2 w-full">
                                     <div class="flex justify-between items-center w-full">
-                                        <span class="text-[9px] font-bold font-mono tracking-tighter" :class="selectedProduct?.id === option.id ? 'text-emerald-400' : 'text-zinc-600'">{{ option.sku }}</span>
+                                        <span class="text-[9px] font-bold font-mono tracking-widest uppercase" :class="selectedProduct?.id === option.id ? 'text-emerald-400' : 'text-zinc-600'">{{ option.sku }}</span>
                                         <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none" 
                                               :class="[
                                                   option.total_qoh === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
@@ -408,8 +413,8 @@ const tablePt = {
                                 
                                 <div class="grid grid-cols-2 md:grid-cols-5 gap-x-12 gap-y-8">
                                     <div class="flex flex-col gap-2">
-                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">SKU / Code</label>
-                                        <code class="text-sky-400 font-mono text-sm tracking-tighter bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Internal ID</label>
+                                        <code class="text-sky-400 font-mono text-sm tracking-widest bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
@@ -586,7 +591,10 @@ const tablePt = {
                                 
                                 <Column field="reference_number" header="Reference #" style="width: 180px">
                                     <template #body="{ data }">
-                                        <span class="font-mono text-[11px] bg-zinc-950 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-tighter">{{ data.reference_number }}</span>
+                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)" 
+                                              class="font-mono text-[11px] bg-zinc-950 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-widest cursor-pointer hover:bg-sky-500/10 hover:border-sky-500/30 transition-all shadow-[0_0_15px_rgba(56,189,248,0.05)] uppercase">
+                                            {{ data.reference_number }}
+                                        </span>
                                     </template>
                                 </Column>
                                 
@@ -594,19 +602,19 @@ const tablePt = {
                                     <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
                                              :class="[
-                                                 data.type.toLowerCase() === 'receipt' || data.type.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-                                                 data.type.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
+                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
+                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
                                                  'bg-sky-500/5 text-sky-400 border-sky-500/20'
                                              ]">
-                                            {{ data.display_type || data.type.toUpperCase() }}
+                                            {{ data.display_type || data.type.name.toUpperCase() }}
                                         </div>
                                     </template>
                                 </Column>
                                 
                                 <Column field="quantity" header="Change Qty" style="width: 140px">
                                     <template #body="{ data }">
-                                        <div class="font-mono font-bold text-sm tracking-tighter" :class="data.type.toLowerCase() === 'issue' || (data.type.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
-                                            {{ data.type.toLowerCase() === 'issue' || (data.type.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.quantity }}
+                                        <div class="font-mono font-bold text-sm tracking-tighter" :class="data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
+                                            {{ data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.quantity }}
                                         </div>
                                     </template>
                                 </Column>
@@ -645,8 +653,8 @@ const tablePt = {
                                 <Column field="status" header="Status" style="width: 140px">
                                      <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2">
-                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
-                                            <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.toLowerCase() === 'posted' ? 'text-zinc-200' : 'text-zinc-600'">{{ data.status.toUpperCase() }}</span>
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
+                                            <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.name.toLowerCase() === 'posted' ? 'text-zinc-200' : 'text-zinc-600'">{{ data.status.name.toUpperCase() }}</span>
                                         </div>
                                     </template>
                                 </Column>
