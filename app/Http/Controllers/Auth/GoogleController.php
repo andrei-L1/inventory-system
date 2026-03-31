@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -54,8 +55,10 @@ class GoogleController extends Controller
 
             return redirect()->intended('/dashboard');
 
-        } catch (\Exception $e) {
-            return redirect('/login')->with('error', 'Google Login failed: '.$e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Google OAuth callback failed', ['exception' => $e]);
+
+            return redirect('/login')->with('error', 'Google sign-in is unavailable. Please try again later.');
         }
     }
 }
