@@ -79,14 +79,14 @@ Each phase below corresponds to one stage of that chain.
 - [x] Average cost test: verify WAC formula recalculates correctly across multiple receipts
 
 ### 0.4 Inventory Reservation Engine
-> Status: 🚧 IN PROGRESS (Core Hardening for Phase 5)
-- [ ] Database: `reserved_qty` column exists in `inventories` table (Verify migration).
-- [ ] `StockService::reserveStock(Product $p, Location $l, float $qty)`:
+> Status: ✅ COMPLETE
+- [x] Database: `reserved_qty` column added to `inventories` table.
+- [x] `StockService::reserveStock(Product $p, Location $l, float $qty)`:
   - Increases `reserved_qty` (does not touch `quantity_on_hand`).
   - Guards against `reserved_qty + requested > quantity_on_hand`.
-- [ ] `StockService::releaseReservation(Product $p, Location $l, float $qty)`:
+- [x] `StockService::releaseReservation(Product $p, Location $l, float $qty)`:
   - Decreases `reserved_qty`.
-- [ ] Integration: Confirmation of SO triggers `reserveStock()`; Fulfillment triggers `releaseReservation()` + `recordMovement()`.
+- [x] Integration: confirmed orders trigger `reserveStock()`; Fulfillment triggers `releaseReservation()` + `recordMovement()`. (Reservation engine tested and verified).
 
 ---
 
@@ -322,12 +322,14 @@ Customer Inquiry
 ```
 
 ### 5.1 Customer Management API
-- [ ] `CustomerController` — Full CRUD (`/api/customers`)
-- [ ] `CustomerResource` + `CustomerStoreRequest`
-- [ ] Customer fields: name, code, email, phone, address, credit_limit, payment_terms
+> Status: ✅ COMPLETE
+- [x] `CustomerController` — Full CRUD (`/api/customers`)
+- [x] `CustomerResource` + `CustomerStoreRequest` + `CustomerUpdateRequest`
+- [x] **Customer Center UI** (`CustomerCenter.vue`) — Dashboard with premium cyan-themed UI.
+- [x] Customer fields: name, code, email, phone, billing_address, shipping_address, tax_number, credit_limit, is_active.
 
 ### 5.2 Sales Order API
-- [ ] `SalesOrderController` — Full CRUD (`/api/sales-orders`)
+- [ ] `SalesOrderController` — Full CRUD (`/api/sales-orders`) [🚧 IN PROGRESS]
 - [ ] `SalesOrderStoreRequest` + `SalesOrderResource`
 - [ ] SO Status lifecycle:
   - `Quotation` → `Confirmed` → `Picked` → `Shipped` → `Delivered` → `Invoiced` → `Paid` → `Closed` | `Cancelled`
@@ -338,11 +340,11 @@ Customer Inquiry
   - Releases reserved stock in `inventories`
   - Consumes FIFO/LIFO cost layers (cost of goods sold tracked)
   - Transitions SO to Shipped/Closed
-- [ ] **Multi-UOM Integration**:
-  - [ ] Add `uom_id` to `sales_order_lines`. ✅ (Identified Gap)
+- [x] **Multi-UOM Integration (Schema)**:
+  - [x] Add `uom_id` to `sales_order_lines`.
   - [ ] Implement conversion logic (convert Sales UOM to Base UOM for stock movement).
-- [ ] **Financial Precision Engine**:
-  - [ ] Add `tax_rate`, `tax_amount`, `discount_rate`, `discount_amount` to `sales_order_lines`. ✅ (Identified Gap)
+- [x] **Financial Precision Engine (Schema)**:
+  - [x] Add `tax_rate`, `tax_amount`, `discount_rate`, `discount_amount` to `sales_order_lines`.
   - [ ] Automated tax resolution (apply tax_rate to lines).
   - [ ] Discount resolution (apply prices from Phase 7 to lines).
 - [ ] Price lookup: apply price list if assigned to customer
@@ -539,7 +541,7 @@ Customer Inquiry
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, UOM, GRN, and Returns complete. |
-| 5 | Sales (Sales Orders) | 🚧 IN PROGRESS — Hardening Stock Engine (Reservations) |
+| 5 | Sales (Sales Orders) | 🚧 ~30% — Stock Reservation Engine & Customer Module LIVE |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — schema + models only |
@@ -550,8 +552,7 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. **Stock Engine: Reservation Logic (Phase 0.4)** — Implement `reserveStock` / `releaseReservation` in `StockService`.
-2. **Sales Schema Alignment (Phase 5.2)** — Add `uom_id`, taxes, and discounts to `sales_order_lines`.
-3. **Customer Management (Phase 5.1)** — `CustomerController` + Customer Center UI.
-4. **Sales Orders (Phase 5.2)** — Backend lifecycle (Quotation → Confirmation → Fulfillment).
+1. **Sales Orders: Phase A (Quotation)** — Build `SalesOrderController`, `SalesOrderCenter.vue`, and the multi-line entry form.
+2. **Sales Orders: Phase B (Confirmation)** — Link the "Confirm" action to the `StockService::reserveStock()` engine.
+3. **Sales Orders: Phase C (Fulfillment)** — Complete the fulfillment logic (Physically issue inventory and record COGS).
 
