@@ -98,13 +98,18 @@ class PurchaseOrderController extends Controller
 
     public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
-        if (! $purchaseOrder->status->is_editable) {
-            abort(403, 'Purchase order cannot be edited in its current status.');
-        }
-
         $data = $request->validated();
 
         $po = DB::transaction(function () use ($data, $purchaseOrder) {
+            // If the PO is already not editable (Sent/Closed), we allow updating ONLY notes and delivery dates.
+            if (! $purchaseOrder->status->is_editable) {
+                $purchaseOrder->update([
+                    'expected_delivery_date' => $data['expected_delivery_date'] ?? $purchaseOrder->expected_delivery_date,
+                    'notes' => $data['notes'] ?? $purchaseOrder->notes,
+                ]);
+                return $purchaseOrder;
+            }
+
             $purchaseOrder->update([
                 'vendor_id' => $data['vendor_id'],
                 'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
@@ -204,6 +209,22 @@ class PurchaseOrderController extends Controller
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
+    public function close(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
+    {
+        if (in_array($purchaseOrder->status->name, ['closed', 'cancelled'])) {
+            abort(400, "Purchase order is already {$purchaseOrder->status->name}.");
+        }
+
+        $closedStatus = \App\Models\PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
+
+        $purchaseOrder->update([
+            'status_id' => $closedStatus->id,
+            'notes' => trim(($purchaseOrder->notes ?? '').' | Manually closed by '.$request->user()->name.' on '.now()->toDateString()),
+        ]);
+
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
+    }
+
     public function receive(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
@@ -249,6 +270,12 @@ class PurchaseOrderController extends Controller
 
                     if ($poLine->purchase_order_id !== $purchaseOrder->id) {
                         abort(400, 'PO line does not belong to this purchase order.');
+                    }
+
+                    // VALIDATION: Prevent over-receipt
+                    if (($poLine->received_qty + $item['received_qty']) > $poLine->ordered_qty) {
+                        $remaining = max(0, $poLine->ordered_qty - $poLine->received_qty);
+                        abort(422, "Cannot receive {$item['received_qty']} for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
                     }
 
                     $transactionData['lines'][] = [
@@ -460,9 +487,15 @@ class PurchaseOrderController extends Controller
 
                 $totalAmount = 0.0;
                 foreach ($vendorSuggestions as $suggestion) {
-                    $unitCost = $suggestion->product->average_cost > 0
-                        ? $suggestion->product->average_cost
-                        : $suggestion->product->selling_price * 0.6; // Fallback estimate
+                    /** @var \App\Models\ReplenishmentSuggestion $suggestion */
+                    // Try to get the last unit cost from cost layers (actual procurement cost)
+                    $lastCost = \App\Models\InventoryCostLayer::where('product_id', $suggestion->product_id)
+                        ->latest('id')
+                        ->value('unit_cost');
+
+                    $unitCost = $lastCost
+                        ?? ($suggestion->product->average_cost > 0 ? $suggestion->product->average_cost : null)
+                        ?? ($suggestion->product->selling_price * 0.6); // Fallback estimate
 
                     $lineCost = $suggestion->suggested_qty * $unitCost;
                     $totalAmount += $lineCost;
