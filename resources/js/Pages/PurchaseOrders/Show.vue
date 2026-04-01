@@ -37,6 +37,7 @@ const returnDialog = ref(false);
 const grnLoading = ref(false);
 const returnLoading = ref(false);
 const locations = ref([]);
+const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const grnForm = ref({
     location_id: null,
@@ -79,9 +80,19 @@ const loadLocations = async () => {
     }
 };
 
+const loadUoms = async () => {
+    try {
+        const res = await axios.get('/api/uom?limit=1000');
+        uoms.value = res.data.data;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
 onMounted(() => {
     loadPO();
     loadLocations();
+    loadUoms();
 });
 
 const getStatusColor = (statusName) => {
@@ -158,6 +169,7 @@ const openGrnMode = () => {
             product_name: l.product_name,
             sku: l.sku,
             uom: l.uom,
+            uom_id: l.uom_id,
             pending_qty: l.pending_qty,
             received_qty: l.pending_qty // default to receiving all remaining
         }));
@@ -196,7 +208,11 @@ const postReceipt = async () => {
     try {
         await axios.post(`/api/purchase-orders/${po.value.id}/receive`, {
             location_id: grnForm.value.location_id,
-            lines: payloadLines.map(l => ({ po_line_id: l.po_line_id, received_qty: l.received_qty }))
+            lines: payloadLines.map(l => ({ 
+                po_line_id: l.po_line_id, 
+                received_qty: l.received_qty,
+                uom_id: l.uom_id
+            }))
         });
         toast.add({ severity: 'success', summary: 'Success', detail: 'Goods Receipt Note posted!', life: 3000 });
         grnDialog.value = false;
@@ -625,9 +641,37 @@ const deletePO = async () => {
                                 <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }} {{ data.uom }}</span>
                             </template>
                         </Column>
-                        <Column field="received_qty" header="RECEIVE QTY">
+                        <Column field="received_qty" header="RECEIVE QTY" style="width: 14rem">
                             <template #body="{ data }">
-                                <InputNumber v-model="data.received_qty" :min="0" :max="data.pending_qty" class="w-24 bg-zinc-900 border-zinc-700 p-inputtext-sm text-center" />
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-orange-500/50 transition-all shadow-inner h-9 group">
+                                    <div class="flex-1 flex items-center px-1">
+                                        <InputNumber 
+                                            v-model="data.received_qty" 
+                                            :min="0" 
+                                            :minFractionDigits="0" 
+                                            :maxFractionDigits="4" 
+                                            class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                            :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: 'white', width: '100%', boxShadow: 'none' }"
+                                        />
+                                    </div>
+                                    
+                                    <!-- Simple Divider -->
+                                    <div class="w-px h-5 bg-zinc-800 group-focus-within:bg-orange-500/20"></div>
+                                    
+                                    <div class="w-20">
+                                        <Select 
+                                            v-model="data.uom_id" 
+                                            :options="uoms" 
+                                            optionLabel="abbreviation" 
+                                            optionValue="id" 
+                                            placeholder="Unit"
+                                            class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
+                                            pt:root:class="!border-0 !bg-transparent !shadow-none"
+                                            pt:label:class="!text-amber-500 !p-2 !text-center !uppercase font-black"
+                                            pt:dropdown:class="!text-zinc-600 !w-6"
+                                        />
+                                    </div>
+                                </div>
                             </template>
                         </Column>
                     </DataTable>

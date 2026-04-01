@@ -18,6 +18,8 @@ use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderController extends Controller
@@ -232,6 +234,7 @@ class PurchaseOrderController extends Controller
             'lines' => 'required|array',
             'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.received_qty' => 'required|numeric|min:0.01',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
         ]);
 
         if (in_array($purchaseOrder->status->name, ['draft', 'closed', 'cancelled'])) {
@@ -272,22 +275,33 @@ class PurchaseOrderController extends Controller
                         abort(400, 'PO line does not belong to this purchase order.');
                     }
 
-                    // VALIDATION: Prevent over-receipt
-                    if (($poLine->received_qty + $item['received_qty']) > $poLine->ordered_qty) {
+                    $receivedQty = (float) $item['received_qty'];
+                    $receivedUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                    $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
+
+                    // 1. Convert received quantity to the PO line's UOM for validation and tracking
+                    $qtyToUpdatePO = $receivedQty;
+                    if ((int) $receivedUomId !== (int) $lineUomId) {
+                        $factor = $this->getUomConversionFactor($receivedUomId, $lineUomId);
+                        $qtyToUpdatePO = round($receivedQty * $factor, 8);
+                    }
+
+                    // VALIDATION: Prevent over-receipt (measured in PO Line UOM)
+                    if (($poLine->received_qty + $qtyToUpdatePO) > ($poLine->ordered_qty + 0.00001)) {
                         $remaining = max(0, $poLine->ordered_qty - $poLine->received_qty);
-                        abort(422, "Cannot receive {$item['received_qty']} for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
+                        abort(422, "Cannot receive {$receivedQty} units (equiv. to {$qtyToUpdatePO} in PO unit) for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
                     }
 
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => $item['received_qty'],
+                        'quantity' => $receivedQty,
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
+                        'uom_id' => $receivedUomId,
                     ];
 
-                    // Update PO line received quantity
-                    $poLine->received_qty += $item['received_qty'];
+                    // Update PO line received quantity (normalized to PO unit)
+                    $poLine->received_qty += $qtyToUpdatePO;
                     $poLine->save();
                 }
 
@@ -524,5 +538,29 @@ class PurchaseOrderController extends Controller
             'message' => 'Successfully generated '.count($posCreated).' Purchase Orders.',
             'po_numbers' => $posCreated,
         ]);
+    }
+
+    /**
+     * Helper to find a conversion factor between two UOMs.
+     */
+    private function getUomConversionFactor(int $fromId, int $toId): float
+    {
+        // 1. Try direct
+        $direct = UomConversion::where('from_uom_id', $fromId)
+            ->where('to_uom_id', $toId)
+            ->first();
+        if ($direct) {
+            return (float) $direct->conversion_factor;
+        }
+
+        // 2. Try inverse
+        $inverse = UomConversion::where('from_uom_id', $toId)
+            ->where('to_uom_id', $fromId)
+            ->first();
+        if ($inverse) {
+            return 1 / (float) $inverse->conversion_factor;
+        }
+
+        throw new UomConversionException("No conversion defined between UOM #{$fromId} and #{$toId}.");
     }
 }
