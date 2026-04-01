@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
+use App\Models\Location;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
@@ -192,6 +193,63 @@ class StockService
     }
 
     // -------------------------------------------------------------------------
+    // PUBLIC: Reserve stock for a product at a specific location.
+    // DOES NOT move physical QOH, only increments reserved_qty.
+    // -------------------------------------------------------------------------
+    public function reserveStock(Product $product, Location $location, float $quantity): void
+    {
+        DB::transaction(function () use ($product, $location, $quantity) {
+            $inventory = Inventory::where('product_id', $product->id)
+                ->where('location_id', $location->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $inventory) {
+                $inventory = Inventory::create([
+                    'product_id' => $product->id,
+                    'location_id' => $location->id,
+                    'quantity_on_hand' => 0,
+                    'reserved_qty' => 0,
+                    'average_cost' => 0,
+                ]);
+                $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
+            }
+
+            $availableToReserve = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+
+            if ($quantity > ($availableToReserve + self::QTY_EPSILON)) {
+                throw new InsufficientStockException(
+                    "Cannot reserve {$quantity} units for product #{$product->id}. "
+                    ."Available (Unreserved): {$availableToReserve}."
+                );
+            }
+
+            $inventory->reserved_qty += $quantity;
+            $inventory->save();
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // PUBLIC: Release a stock reservation.
+    // -------------------------------------------------------------------------
+    public function releaseReservation(Product $product, Location $location, float $quantity): void
+    {
+        DB::transaction(function () use ($product, $location, $quantity) {
+            $inventory = Inventory::where('product_id', $product->id)
+                ->where('location_id', $location->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $inventory) {
+                throw new LogicException('Cannot release reservation for non-existent inventory record.');
+            }
+
+            $inventory->reserved_qty = max(0, (float) $inventory->reserved_qty - $quantity);
+            $inventory->save();
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // PUBLIC: Reverse a posted transaction.
     // Creates a counter-transaction to void all stock movements.
     // -------------------------------------------------------------------------
@@ -271,10 +329,14 @@ class StockService
         $isReceipt = $qtyMove > 0;
 
         // HIGH PRIORITY: Validating stock availability before any consumption logic begins.
-        if (! $isReceipt && $inventory->quantity_on_hand < abs($qtyMove)) {
+        // We now check against Unreserved Stock (QOH - Reserved) to ensure that manual
+        // issues or other transactions do not "steal" stock promised to a Sales Order.
+        $availableForIssue = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+
+        if (! $isReceipt && $availableForIssue < (abs($qtyMove) - self::QTY_EPSILON)) {
             throw new InsufficientStockException(
-                "Insufficient stock for product #{$lineData['product_id']}. "
-                .'Required: '.abs($qtyMove).", Available: {$inventory->quantity_on_hand}."
+                "Insufficient unreserved stock for product #{$lineData['product_id']}. "
+                .'Required: '.abs($qtyMove).", Available (Unreserved): {$availableForIssue}."
             );
         }
 

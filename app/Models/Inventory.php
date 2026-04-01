@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
  * @property int $product_id
  * @property int $location_id
  * @property float $quantity_on_hand
+ * @property float $reserved_qty
  * @property float $average_cost
  * @property Carbon $created_at
  * @property Carbon $updated_at
@@ -30,6 +31,7 @@ class Inventory extends Model
         'product_id',
         'location_id',
         'quantity_on_hand',
+        'reserved_qty',
         'average_cost',
     ];
 
