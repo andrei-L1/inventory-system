@@ -152,7 +152,7 @@ const submit = async () => {
             : await axios.post('/api/purchase-orders', payload);
             
         toast.add({ severity: 'success', summary: 'Success', detail: 'Purchase Order drafted successfully', life: 3000 });
-        router.visit(`/purchase-orders/${res.data.id}`);
+        router.visit(`/purchase-orders/${res.data.data.id}`);
     } catch (e) {
         toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Submission failed', life: 3000 });
     } finally {

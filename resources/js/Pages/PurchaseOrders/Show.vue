@@ -52,6 +52,13 @@ const shipForm = ref({
 });
 
 const loadPO = async () => {
+    if (!props.id || props.id === 'undefined') {
+        console.error("Invalid Purchase Order ID detected at boot.");
+        router.visit('/purchase-orders');
+        return;
+    }
+    
+    loading.value = true;
     try {
         const res = await axios.get(`/api/purchase-orders/${props.id}`);
         po.value = res.data.data;
