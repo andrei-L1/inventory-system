@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Inventory\AdjustmentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentReasonController;
 use App\Http\Controllers\Api\Inventory\CategoryController;
 use App\Http\Controllers\Api\Inventory\CostingMethodController;
+use App\Http\Controllers\Api\Inventory\CustomerController;
 use App\Http\Controllers\Api\Inventory\DashboardController;
 use App\Http\Controllers\Api\Inventory\InventoryQueryController;
 use App\Http\Controllers\Api\Inventory\LocationController;
@@ -34,6 +35,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Vendors
     Route::apiResource('vendors', VendorController::class)->only(['index', 'show'])->middleware('permission:view-products');
     Route::apiResource('vendors', VendorController::class)->except(['index', 'show'])->middleware('permission:manage-products');
+
+    // Customers
+    Route::apiResource('customers', CustomerController::class)->only(['index', 'show'])->middleware('permission:view-customers');
+    Route::apiResource('customers', CustomerController::class)->except(['index', 'show'])->middleware('permission:manage-customers');
+    Route::get('customers/{customer}/transactions', [CustomerController::class, 'transactions'])->middleware('permission:view-customers');
 
     // Unit of Measure & Conversions
     Route::apiResource('uom', UnitOfMeasureController::class)->only(['index', 'show'])->middleware('permission:view-products');
