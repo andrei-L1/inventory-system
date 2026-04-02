@@ -40,6 +40,8 @@ class PurchaseOrderResource extends JsonResource
                         'sku' => $l->product->sku ?? 'N/A',
                         'product_name' => $l->product->name ?? 'Unknown',
                         'quantity' => (float) $l->quantity,
+                        'formatted_quantity' => $l->formatted_quantity,
+                        'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
                     ]),
                 ]);
             }),
@@ -64,6 +66,8 @@ class PurchaseOrderResource extends JsonResource
                             'sku' => $l->product->sku ?? 'N/A',
                             'product_name' => $l->product->name ?? 'Unknown',
                             'quantity' => (float) abs($l->quantity),
+                            'formatted_quantity' => $l->formatted_quantity,
+                            'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
                             'notes' => $notes,
                         ];
                     }),

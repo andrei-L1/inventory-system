@@ -530,7 +530,7 @@ class StockService
 
         // Ensure the resulting line data reflects the absolute base unit (Atom)
         // so the Inventory Ledger is 100% accurate (no decimals for discrete units).
-        $lineData['uom_id'] = UomHelper::getSmallestUnitId($product->uom_id);
+        $lineData['base_uom_id'] = UomHelper::getSmallestUnitId($product->uom_id);
 
         return $lineData;
     }
