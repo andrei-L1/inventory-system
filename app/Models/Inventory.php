@@ -61,6 +61,7 @@ class Inventory extends Model
     public function getScaledQuantityOnHandAttribute(): float
     {
         $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+
         return $multiplier > 0 ? (float) $this->getRawOriginal('quantity_on_hand') / $multiplier : (float) $this->getRawOriginal('quantity_on_hand');
     }
 
@@ -70,6 +71,7 @@ class Inventory extends Model
     public function getScaledAverageCostAttribute(): float
     {
         $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+
         return $multiplier > 0 ? (float) $this->getRawOriginal('average_cost') * $multiplier : (float) $this->getRawOriginal('average_cost');
     }
 

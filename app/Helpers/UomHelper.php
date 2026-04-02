@@ -118,7 +118,9 @@ class UomHelper
      */
     public static function getSmallestUnitId(?int $startingUomId): ?int
     {
-        if (!$startingUomId) return null;
+        if (! $startingUomId) {
+            return null;
+        }
         self::ensureCacheLoaded();
 
         $currentUomId = $startingUomId;
@@ -144,7 +146,9 @@ class UomHelper
      */
     public static function getMultiplierToSmallest(?int $fromUomId): float
     {
-        if (!$fromUomId) return 1.0;
+        if (! $fromUomId) {
+            return 1.0;
+        }
         self::ensureCacheLoaded();
 
         $smallestUnitId = self::getSmallestUnitId($fromUomId);
