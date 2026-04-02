@@ -398,6 +398,23 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **UI/UX Polish**: Updated `InventoryCenter.vue` and `ProductResource.php` to align all headers, labels, and tooltips with the new professional branding, ensuring a premium "Command Center" experience.
 
 ---
-*Last Updated: 2026-03-31 21:51:00*
+### 🎯 Milestone: Inventory Ledger UOM Persistence & Audit Transparency
+**Date**: 2026-04-02 | **Status**: 100% VERIFIED
+**Summary**: Resolved a critical data integrity issue where the inventory ledger was overwriting original transaction Units of Measure (UOM) with atomic base units, causing audit confusion.
+- **Schema Migration**: Implemented `base_uom_id` in `transaction_lines` to decouple the atomic storage unit (calculative) from the original transaction unit (display).
+- **Service Refactor**: Updated `StockService::applyUomConversion` to preserve the original `uom_id` while storing the conversion base in `base_uom_id`.
+- **Frontend Standardization**:
+    - **Inventory Center**: Standardized the ledger with dedicated columns for "Change Qty" and "Unit".
+    - **Movement Receipts**: Refactored the receipt view to display clean, signed quantities and original UOMs in dedicated columns.
+    - **Vendor Center**: Added "Change Qty" and "Unit" columns to the vendor transaction history and enabled click-to-navigate for GRN/RTV references pointing to the movement receipt.
+- **Purchase Order Details**: 
+    - Added "Unit" columns to the Goods Receipt (GRN) and Purchase Return (PRN) audit modals.
+    - **RTV Flexibility**: Added a UOM selector to the Purchase Return (RTV) modal, enabling users to return stock in any valid conversion unit (e.g., returning Boxes instead of Pieces).
+    - **Navigation**: Made Reference Numbers (GRN/PRN) clickable within audit modals for direct access to full movement details.
+- **Resource Alignment**: Updated `TransactionLineResource` and `PurchaseOrderResource` to expose `uom_abbreviation` as a top-level field, ensuring consistent UI data access.
+
+---
+
+*Last Updated: 2026-04-02 20:05:00*
 
 

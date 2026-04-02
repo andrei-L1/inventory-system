@@ -61,6 +61,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing or incompatible mappings, preventing silent math errors. ✅ NEW
 - [x] **Atomic Piece Ledger** — All inventory quantities (QOH, Cost Layers, Transactions) are stored as integers in the absolute smallest unit ("Pieces"), eliminating floating-point drift. ✅ NEW
 - [x] **Controller Exception Hardening** — `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` now catch operational exceptions and return clean 422 errors. ✅ NEW
+- [x] **Ledger UOM Persistence** — Refactored `transaction_lines` to store `base_uom_id`, decoupling calculative storage from original transaction UOM for 100% audit transparency. ✅ NEW
 
 
 ### 0.2 Database Schema
@@ -201,6 +202,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Location breakdown** — Visualized QOH distribution split by physical warehouse/location nodes
 - [x] **UOM in Ledger** — Ledger rows now explicitly show the move unit (PCS, BOX, etc.) and perform recursive conversion to "Atomic Pieces". ✅ NEW
 - [x] **Recursive Conversion Engine** — Implemented `UomHelper` to bridge non-direct units (e.g. Case of 24 -> Box of 12) via a shared base unit. ✅ NEW
+- [x] **Navigation & Context** — Enabled direct navigation from transaction references to movement details with smart "Go Back" history tracking. ✅ NEW
 - [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability.
 
 
