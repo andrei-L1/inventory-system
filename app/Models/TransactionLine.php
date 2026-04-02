@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property int $id
@@ -80,8 +82,16 @@ class TransactionLine extends Model
     /**
      * Get the serial numbers associated with this transaction line.
      */
-    public function serials()
+    public function serials(): BelongsToMany
     {
         return $this->belongsToMany(ProductSerial::class, 'transaction_line_serials');
+    }
+
+    /**
+     * Get the formatted quantity.
+     */
+    public function getFormattedQuantityAttribute(): string
+    {
+        return UomHelper::format($this->quantity, $this->uom_id ?? $this->product->uom_id);
     }
 }

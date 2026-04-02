@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Inventory\AdjustmentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentReasonController;
 use App\Http\Controllers\Api\Inventory\CategoryController;
 use App\Http\Controllers\Api\Inventory\CostingMethodController;
+use App\Http\Controllers\Api\Inventory\CustomerController;
 use App\Http\Controllers\Api\Inventory\DashboardController;
 use App\Http\Controllers\Api\Inventory\InventoryQueryController;
 use App\Http\Controllers\Api\Inventory\LocationController;
@@ -34,6 +35,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Vendors
     Route::apiResource('vendors', VendorController::class)->only(['index', 'show'])->middleware('permission:view-products');
     Route::apiResource('vendors', VendorController::class)->except(['index', 'show'])->middleware('permission:manage-products');
+
+    // Customers
+    Route::apiResource('customers', CustomerController::class)->only(['index', 'show'])->middleware('permission:view-customers');
+    Route::apiResource('customers', CustomerController::class)->except(['index', 'show'])->middleware('permission:manage-customers');
+    Route::get('customers/{customer}/transactions', [CustomerController::class, 'transactions'])->middleware('permission:view-customers');
 
     // Unit of Measure & Conversions
     Route::apiResource('uom', UnitOfMeasureController::class)->only(['index', 'show'])->middleware('permission:view-products');
@@ -106,6 +112,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-purchase-orders');
+    Route::patch('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:manage-purchase-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

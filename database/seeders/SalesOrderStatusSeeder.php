@@ -13,9 +13,10 @@ class SalesOrderStatusSeeder extends Seeder
     public function run(): void
     {
         $statuses = [
+            ['name' => 'Quotation', 'is_editable' => true],
+            ['name' => 'Quotation-Sent', 'is_editable' => true],
             ['name' => 'Draft', 'is_editable' => true],
-            ['name' => 'Pending Approval', 'is_editable' => true],
-            ['name' => 'Approved', 'is_editable' => false],
+            ['name' => 'Confirmed', 'is_editable' => false],
             ['name' => 'Processing', 'is_editable' => false],
             ['name' => 'Shipped', 'is_editable' => false],
             ['name' => 'Cancelled', 'is_editable' => false],

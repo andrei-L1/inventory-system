@@ -22,6 +22,7 @@ This document serves as the **Complete System Capability Map**, detailing all fe
   - **LIFO (Last-In, First-Out)**: Consumes the newest cost layers first. Useful in specialized commodities.
   - **Weighted Average Cost (WAC)**: Creates a smoothed, moving average on every single inbound receipt.
 - **Correct Multi-Location Global WAC**: The product-level average cost is computed as `SUM(location_QOH × location_avg_cost) / SUM(all_QOH)` across every warehouse simultaneously — not contaminated by a single location's last receipt.
+- **Atomic Piece Ledger**: All quantities are stored as integers in the absolute smallest base unit ("Pieces"). This eliminates floating-point rounding errors common in ERPs, ensuring that 1.0 Box and 24 Pieces are mathematically identical at the database level.
 - **Physical Cost Layers**: The system doesn't just calculate costs dynamically; it physically persists `InventoryCostLayers` in the database. You can drill down into a product and see exactly what receipts make up your current on-hand value.
 - **Cost of Goods Sold (COGS) Tracing**: Every outbound issue records the true weighted-average cost of the layers it consumed directly on the `transaction_lines.unit_cost` field. Gross Margin reports in Phase 8 will have accurate COGS data with zero back-calculation needed.
 
@@ -64,8 +65,10 @@ This document serves as the **Complete System Capability Map**, detailing all fe
   - Trace specific, unique units (e.g., IMEI numbers or MAC addresses) from vendor receipt, through the warehouse, out to the specific customer.
 - **Batch & Expiration Tracking**: 
   - Group stock by production lot. Enable rapid product recalls and implement FEFO (First-Expired, First-Out) picking strategies.
-- **UOM (Unit of Measure) Conversions**: 
-  - Buy in `Pallets`, store in `Cases`, sell in `Pieces`. The system handles the multi-tiered fractional math seamlessly under the hood without losing a cent of cost precision.
+- **Recursive UOM Conversions**: 
+  - Buy in `Pallets`, store in `Cases`, sell in `Pieces`. The system handles multi-tiered fractional math by traversing the UOM tree to find shared base units.
+  - **Auto-Normalization**: Transactions in any unit (e.g., "BX of 24") are automatically normalized to "Atomic Pieces" before being written to the ledger.
+  - **Dynamic Scaling**: The UI automatically scales raw atomic values back to the product's preferred unit for display, providing a seamless user experience without sacrificing data precision.
 
 ---
 

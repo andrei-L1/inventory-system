@@ -17,6 +17,7 @@ class InventoryResource extends JsonResource
             'product_id' => $this->product_id,
             'location_id' => $this->location_id,
             'quantity_on_hand' => (float) $this->quantity_on_hand,
+            'formatted_quantity_on_hand' => $this->formatted_quantity_on_hand,
             'average_cost' => (float) $this->average_cost,
             'total_value' => (float) ($this->quantity_on_hand * $this->average_cost),
             'last_movement_date' => $this->updated_at,

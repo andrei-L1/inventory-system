@@ -12,9 +12,14 @@ class SalesOrderLine extends Model
     protected $fillable = [
         'sales_order_id',
         'product_id',
+        'uom_id',
         'ordered_qty',
         'shipped_qty',
         'unit_price',
+        'tax_rate',
+        'tax_amount',
+        'discount_rate',
+        'discount_amount',
         'notes',
     ];
 
@@ -26,5 +31,10 @@ class SalesOrderLine extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function uom()
+    {
+        return $this->belongsTo(UnitOfMeasure::class);
     }
 }

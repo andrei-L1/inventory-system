@@ -4,16 +4,19 @@ namespace App\Http\Controllers\Api\Procurement;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
+use App\Models\InventoryCostLayer;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
 use App\Models\ReplenishmentSuggestion;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
+use App\Models\UnitOfMeasure;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,13 +101,19 @@ class PurchaseOrderController extends Controller
 
     public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
-        if (! $purchaseOrder->status->is_editable) {
-            abort(403, 'Purchase order cannot be edited in its current status.');
-        }
-
         $data = $request->validated();
 
         $po = DB::transaction(function () use ($data, $purchaseOrder) {
+            // If the PO is already not editable (Sent/Closed), we allow updating ONLY notes and delivery dates.
+            if (! $purchaseOrder->status->is_editable) {
+                $purchaseOrder->update([
+                    'expected_delivery_date' => $data['expected_delivery_date'] ?? $purchaseOrder->expected_delivery_date,
+                    'notes' => $data['notes'] ?? $purchaseOrder->notes,
+                ]);
+
+                return $purchaseOrder;
+            }
+
             $purchaseOrder->update([
                 'vendor_id' => $data['vendor_id'],
                 'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
@@ -204,6 +213,22 @@ class PurchaseOrderController extends Controller
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
+    public function close(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
+    {
+        if (in_array($purchaseOrder->status->name, ['closed', 'cancelled'])) {
+            abort(400, "Purchase order is already {$purchaseOrder->status->name}.");
+        }
+
+        $closedStatus = PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
+
+        $purchaseOrder->update([
+            'status_id' => $closedStatus->id,
+            'notes' => trim(($purchaseOrder->notes ?? '').' | Manually closed by '.$request->user()->name.' on '.now()->toDateString()),
+        ]);
+
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
+    }
+
     public function receive(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
@@ -211,6 +236,7 @@ class PurchaseOrderController extends Controller
             'lines' => 'required|array',
             'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.received_qty' => 'required|numeric|min:0.01',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
         ]);
 
         if (in_array($purchaseOrder->status->name, ['draft', 'closed', 'cancelled'])) {
@@ -251,16 +277,51 @@ class PurchaseOrderController extends Controller
                         abort(400, 'PO line does not belong to this purchase order.');
                     }
 
+                    $receivedQtyRaw = (float) $item['received_qty'];
+                    $receivedUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                    $receivedUom = UnitOfMeasure::find($receivedUomId);
+                    $productUom = $poLine->product->uom;
+
+                    // LOCK 1: Discrete units must be whole numbers
+                    if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
+                        if (floor($receivedQtyRaw) != $receivedQtyRaw) {
+                            abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
+                        }
+                    }
+
+                    // LOCK 2: Discrete products cannot be received in continuous units (No KG for Pieces)
+                    if ($productUom && UomHelper::isDiscrete($productUom->abbreviation)) {
+                        if ($receivedUom && ! UomHelper::isDiscrete($receivedUom->abbreviation)) {
+                            abort(422, "This product is discrete ({$productUom->abbreviation}). You cannot receive it in continuous units like {$receivedUom->abbreviation} to prevent piece integrity errors.");
+                        }
+                    }
+
+                    $receivedQty = $receivedQtyRaw;
+                    $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
+
+                    // 1. Convert received quantity to the PO line's UOM for validation and tracking
+                    $qtyToUpdatePO = $receivedQty;
+                    if ((int) $receivedUomId !== (int) $lineUomId) {
+                        $factor = $this->getUomConversionFactor($receivedUomId, $lineUomId);
+                        $qtyToUpdatePO = round($receivedQty * $factor, 8);
+                    }
+
+                    // VALIDATION: Prevent over-receipt (measured in PO Line UOM)
+                    if (($poLine->received_qty + $qtyToUpdatePO) > ($poLine->ordered_qty + 0.00001)) {
+                        $remaining = max(0, $poLine->ordered_qty - $poLine->received_qty);
+                        abort(422, "Cannot receive {$receivedQty} units (equiv. to {$qtyToUpdatePO} in PO unit) for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
+                    }
+
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => $item['received_qty'],
+                        'quantity' => $receivedQty,
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
+                        'uom_id' => $receivedUomId,
                     ];
 
-                    // Update PO line received quantity
-                    $poLine->received_qty += $item['received_qty'];
+                    // Update PO line received quantity (normalized to PO unit)
+                    $poLine->received_qty += $qtyToUpdatePO;
                     $poLine->save();
                 }
 
@@ -460,9 +521,15 @@ class PurchaseOrderController extends Controller
 
                 $totalAmount = 0.0;
                 foreach ($vendorSuggestions as $suggestion) {
-                    $unitCost = $suggestion->product->average_cost > 0
-                        ? $suggestion->product->average_cost
-                        : $suggestion->product->selling_price * 0.6; // Fallback estimate
+                    /** @var ReplenishmentSuggestion $suggestion */
+                    // Try to get the last unit cost from cost layers (actual procurement cost)
+                    $lastCost = InventoryCostLayer::where('product_id', $suggestion->product_id)
+                        ->latest('id')
+                        ->value('unit_cost');
+
+                    $unitCost = $lastCost
+                        ?? ($suggestion->product->average_cost > 0 ? $suggestion->product->average_cost : null)
+                        ?? ($suggestion->product->selling_price * 0.6); // Fallback estimate
 
                     $lineCost = $suggestion->suggested_qty * $unitCost;
                     $totalAmount += $lineCost;
@@ -491,5 +558,17 @@ class PurchaseOrderController extends Controller
             'message' => 'Successfully generated '.count($posCreated).' Purchase Orders.',
             'po_numbers' => $posCreated,
         ]);
+    }
+
+    /**
+     * Helper to find a conversion factor between two UOMs.
+     */
+    private function getUomConversionFactor(int $fromId, int $toId): float
+    {
+        try {
+            return UomHelper::getConversionFactor($fromId, $toId);
+        } catch (\Exception $e) {
+            throw new UomConversionException($e->getMessage());
+        }
     }
 }

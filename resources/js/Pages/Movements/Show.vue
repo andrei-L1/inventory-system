@@ -204,9 +204,8 @@ const getTypeLabel = (type) => {
                                     <template #body="{ data }">
                                         <div class="flex items-center gap-3">
                                             <span class="text-lg font-bold font-mono" :class="transaction.type?.name.toLowerCase() === 'issue' || (transaction.type?.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
-                                                {{ transaction.type?.name.toLowerCase() === 'issue' || (transaction.type?.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '-' : '+' }}{{ Math.abs(data.quantity) }}
+                                                {{ data.formatted_quantity || (Math.abs(data.quantity) + ' ' + (data.product?.uom?.abbreviation || 'PCS')) }}
                                             </span>
-                                            <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mt-0.5">{{ data.product?.uom?.abbreviation || 'PCS' }}</span>
                                         </div>
                                     </template>
                                 </Column>

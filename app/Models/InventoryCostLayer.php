@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -60,6 +61,22 @@ class InventoryCostLayer extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /**
+     * Get the formatted remaining quantity.
+     */
+    public function getFormattedRemainingQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_qty, $this->product->uom_id);
+    }
+
+    /**
+     * Get the formatted received quantity.
+     */
+    public function getFormattedReceivedQtyAttribute(): string
+    {
+        return UomHelper::format($this->received_qty, $this->product->uom_id);
     }
 
     /**

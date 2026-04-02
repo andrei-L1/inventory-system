@@ -45,6 +45,10 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         return Inertia::render('VendorCenter');
     })->name('vendor-center');
 
+    Route::get('/customer-center', function () {
+        return Inertia::render('CustomerCenter');
+    })->name('customer-center');
+
     Route::get('/uom-center', function () {
         return Inertia::render('UomCenter');
     })->name('uom-center');

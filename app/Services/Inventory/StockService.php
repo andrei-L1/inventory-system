@@ -4,14 +4,15 @@ namespace App\Services\Inventory;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\UomHelper;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
+use App\Models\Location;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionLine;
 use App\Models\TransactionStatus;
 use App\Models\Transfer;
-use App\Models\UomConversion;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,9 @@ class StockService
             foreach ($data['lines'] as $lineData) {
                 $product = Product::findOrFail($lineData['product_id']);
                 $lineData = $this->applyUomConversion($lineData, $product);
+
+                // Ensure TransactionLine record uses the smallest unit for ledger consistency
+                // to prevent floating point drift in large units.
 
                 $transaction->lines()->create(array_merge($lineData, [
                     'transaction_id' => $transaction->id,
@@ -192,6 +196,63 @@ class StockService
     }
 
     // -------------------------------------------------------------------------
+    // PUBLIC: Reserve stock for a product at a specific location.
+    // DOES NOT move physical QOH, only increments reserved_qty.
+    // -------------------------------------------------------------------------
+    public function reserveStock(Product $product, Location $location, float $quantity): void
+    {
+        DB::transaction(function () use ($product, $location, $quantity) {
+            $inventory = Inventory::where('product_id', $product->id)
+                ->where('location_id', $location->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $inventory) {
+                $inventory = Inventory::create([
+                    'product_id' => $product->id,
+                    'location_id' => $location->id,
+                    'quantity_on_hand' => 0,
+                    'reserved_qty' => 0,
+                    'average_cost' => 0,
+                ]);
+                $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
+            }
+
+            $availableToReserve = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+
+            if ($quantity > ($availableToReserve + self::QTY_EPSILON)) {
+                throw new InsufficientStockException(
+                    "Cannot reserve {$quantity} units for product #{$product->id}. "
+                    ."Available (Unreserved): {$availableToReserve}."
+                );
+            }
+
+            $inventory->reserved_qty += $quantity;
+            $inventory->save();
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // PUBLIC: Release a stock reservation.
+    // -------------------------------------------------------------------------
+    public function releaseReservation(Product $product, Location $location, float $quantity): void
+    {
+        DB::transaction(function () use ($product, $location, $quantity) {
+            $inventory = Inventory::where('product_id', $product->id)
+                ->where('location_id', $location->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $inventory) {
+                throw new LogicException('Cannot release reservation for non-existent inventory record.');
+            }
+
+            $inventory->reserved_qty = max(0, (float) $inventory->reserved_qty - $quantity);
+            $inventory->save();
+        });
+    }
+
+    // -------------------------------------------------------------------------
     // PUBLIC: Reverse a posted transaction.
     // Creates a counter-transaction to void all stock movements.
     // -------------------------------------------------------------------------
@@ -271,10 +332,14 @@ class StockService
         $isReceipt = $qtyMove > 0;
 
         // HIGH PRIORITY: Validating stock availability before any consumption logic begins.
-        if (! $isReceipt && $inventory->quantity_on_hand < abs($qtyMove)) {
+        // We now check against Unreserved Stock (QOH - Reserved) to ensure that manual
+        // issues or other transactions do not "steal" stock promised to a Sales Order.
+        $availableForIssue = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+
+        if (! $isReceipt && $availableForIssue < (abs($qtyMove) - self::QTY_EPSILON)) {
             throw new InsufficientStockException(
-                "Insufficient stock for product #{$lineData['product_id']}. "
-                .'Required: '.abs($qtyMove).", Available: {$inventory->quantity_on_hand}."
+                "Insufficient unreserved stock for product #{$lineData['product_id']}. "
+                .'Required: '.abs($qtyMove).", Available (Unreserved): {$availableForIssue}."
             );
         }
 
@@ -440,36 +505,17 @@ class StockService
         if (
             isset($lineData['uom_id'])
             && $product->uom_id
-            && (int) $lineData['uom_id'] !== (int) $product->uom_id
         ) {
             $fromId = (int) $lineData['uom_id'];
-            $toId = (int) $product->uom_id;
+            $targetUomId = UomHelper::getSmallestUnitId($product->uom_id);
+            $toId = $targetUomId;
             $cacheKey = "{$product->id}_{$fromId}_{$toId}"; // Scope to product
 
             if (! isset($this->uomCache[$cacheKey])) {
-                // 1. Try direct conversion (e.g. Box -> Piece)
-                $conversion = UomConversion::where('from_uom_id', $fromId)
-                    ->where('to_uom_id', $toId)
-                    ->first();
-
-                if ($conversion) {
-                    $this->uomCache[$cacheKey] = (float) $conversion->conversion_factor;
-                    $this->uomCache["{$toId}_{$fromId}"] = 1 / (float) $conversion->conversion_factor; // Pre-cache inverse
-                } else {
-                    // 2. Try inverse conversion (e.g. Piece -> Box if only Box -> Piece is defined)
-                    $inverse = UomConversion::where('from_uom_id', $toId)
-                        ->where('to_uom_id', $fromId)
-                        ->first();
-
-                    if ($inverse) {
-                        $this->uomCache[$cacheKey] = 1 / (float) $inverse->conversion_factor;
-                        $this->uomCache["{$toId}_{$fromId}"] = (float) $inverse->conversion_factor;
-                    } else {
-                        throw new UomConversionException(
-                            'No UOM conversion is defined (direct or inverse) from the selected unit to this product\'s base unit. '
-                            ."Product #{$product->id}, from UOM #{$fromId} to base UOM #{$toId}."
-                        );
-                    }
+                try {
+                    $this->uomCache[$cacheKey] = UomHelper::getConversionFactor($fromId, $toId);
+                } catch (\Exception $e) {
+                    throw new UomConversionException($e->getMessage());
                 }
             }
 
@@ -482,9 +528,9 @@ class StockService
             }
         }
 
-        // Ensure the resulting line data reflects the product's base UOM
-        // as the quantity/cost are now normalized.
-        $lineData['uom_id'] = $product->uom_id;
+        // Ensure the resulting line data reflects the absolute base unit (Atom)
+        // so the Inventory Ledger is 100% accurate (no decimals for discrete units).
+        $lineData['uom_id'] = UomHelper::getSmallestUnitId($product->uom_id);
 
         return $lineData;
     }

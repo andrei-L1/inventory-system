@@ -37,7 +37,62 @@ const returnDialog = ref(false);
 const grnLoading = ref(false);
 const returnLoading = ref(false);
 const locations = ref([]);
+const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
+const uomConversions = ref([]);
+const loadingConversions = ref(false);
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? isDiscrete(uom.abbreviation) : true;
+};
+
+const getFilteredUoms = (line) => {
+    if (!line.product_uom || !isDiscrete(line.product_uom)) return uoms.value;
+    
+    // If product is discrete, only allow discrete units for receiving
+    return uoms.value.filter(u => isDiscrete(u.abbreviation));
+};
+
+const getFactorToBase = (uomId) => {
+    let factor = 1.0;
+    let current = uomId;
+    let processed = [current];
+    while (true) {
+        // We need uomConversions here, but it's not and ref. Wait.
+        // Actually, Show.vue doesn't have uomConversions ref!
+        // I need to add it.
+        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        if (!rule || processed.includes(rule.to_uom_id)) break;
+        factor *= rule.conversion_factor;
+        current = rule.to_uom_id;
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
+
+const onGrnUomChange = (line) => {
+    // We need the original PO line to know its base unit and pending qty in its unit
+    const poLine = po.value.lines.find(l => l.id === line.po_line_id);
+    if (!poLine) return;
+
+    const targetInfo = getFactorToBase(line.uom_id);
+    const poBaseInfo = getFactorToBase(poLine.uom_id);
+
+    if (targetInfo.baseId === poBaseInfo.baseId) {
+        const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
+        line.received_qty = poLine.pending_qty * effectiveFactor;
+        return;
+    }
+
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
+};
+
 const grnForm = ref({
     location_id: null,
     lines: []
@@ -52,6 +107,13 @@ const shipForm = ref({
 });
 
 const loadPO = async () => {
+    if (!props.id || props.id === 'undefined') {
+        console.error("Invalid Purchase Order ID detected at boot.");
+        router.visit('/purchase-orders');
+        return;
+    }
+    
+    loading.value = true;
     try {
         const res = await axios.get(`/api/purchase-orders/${props.id}`);
         po.value = res.data.data;
@@ -72,9 +134,29 @@ const loadLocations = async () => {
     }
 };
 
+const loadUoms = async () => {
+    try {
+        const res = await axios.get('/api/uom?limit=1000');
+        uoms.value = res.data.data;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+const loadConversions = async () => {
+    try {
+        const res = await axios.get('/api/uom-conversions?limit=1000');
+        uomConversions.value = res.data.data;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
 onMounted(() => {
     loadPO();
     loadLocations();
+    loadUoms();
+    loadConversions();
 });
 
 const getStatusColor = (statusName) => {
@@ -148,11 +230,15 @@ const openGrnMode = () => {
         .filter(l => l.pending_qty > 0)
         .map(l => ({
             po_line_id: l.id,
-            product_name: l.product_name,
             sku: l.sku,
-            uom: l.uom,
+            product_name: l.product_name,
+            product_code: l.product_code,
             pending_qty: l.pending_qty,
-            received_qty: l.pending_qty // default to receiving all remaining
+            formatted_pending_qty: l.formatted_pending_qty,
+            received_qty: l.pending_qty,
+            unit: l.uom || 'PCS',
+            uom_id: l.uom_id,
+            product_uom: l.uom || 'PCS'
         }));
     
     if (grnForm.value.lines.length === 0) {
@@ -189,7 +275,11 @@ const postReceipt = async () => {
     try {
         await axios.post(`/api/purchase-orders/${po.value.id}/receive`, {
             location_id: grnForm.value.location_id,
-            lines: payloadLines.map(l => ({ po_line_id: l.po_line_id, received_qty: l.received_qty }))
+            lines: payloadLines.map(l => ({ 
+                po_line_id: l.po_line_id, 
+                received_qty: l.received_qty,
+                uom_id: l.uom_id
+            }))
         });
         toast.add({ severity: 'success', summary: 'Success', detail: 'Goods Receipt Note posted!', life: 3000 });
         grnDialog.value = false;
@@ -532,14 +622,14 @@ const deletePO = async () => {
 
                             <Column field="ordered_qty" header="REQ QTY">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ data.ordered_qty }} {{ data.uom }}</span>
+                                    <span class="text-white font-mono text-xs font-bold">{{ data.formatted_ordered_qty || data.ordered_qty }}</span>
                                 </template>
                             </Column>
 
                             <Column field="received_qty" header="RCV QTY">
                                 <template #body="{ data }">
                                     <span :class="[data.received_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
-                                        {{ data.received_qty }}
+                                        {{ data.formatted_received_qty || data.received_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -547,7 +637,7 @@ const deletePO = async () => {
                             <Column field="returned_qty" header="RET QTY">
                                 <template #body="{ data }">
                                     <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-zinc-700', 'font-mono text-xs']">
-                                        {{ data.returned_qty }}
+                                        {{ data.formatted_returned_qty || data.returned_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -555,7 +645,7 @@ const deletePO = async () => {
                             <Column field="pending_qty" header="REM QTY">
                                 <template #body="{ data }">
                                     <span :class="[data.pending_qty === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
-                                        {{ data.pending_qty }} {{ data.uom }}
+                                        {{ data.formatted_pending_qty || data.pending_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -615,12 +705,41 @@ const deletePO = async () => {
                         </Column>
                         <Column field="pending_qty" header="PENDING">
                             <template #body="{ data }">
-                                <span class="text-amber-400 font-mono text-xs font-bold">{{ data.pending_qty }} {{ data.uom }}</span>
+                                <span class="text-amber-400 font-mono text-xs font-bold">{{ data.formatted_pending_qty || data.pending_qty }}</span>
                             </template>
                         </Column>
-                        <Column field="received_qty" header="RECEIVE QTY">
+                        <Column field="received_qty" header="RECEIVE QTY" style="width: 14rem">
                             <template #body="{ data }">
-                                <InputNumber v-model="data.received_qty" :min="0" :max="data.pending_qty" class="w-24 bg-zinc-900 border-zinc-700 p-inputtext-sm text-center" />
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-orange-500/50 transition-all shadow-inner h-9 group">
+                                    <div class="flex-1 flex items-center px-1">
+                                        <InputNumber 
+                                            v-model="data.received_qty" 
+                                            :min="0" 
+                                            :minFractionDigits="0" 
+                                            :maxFractionDigits="isUomIdDiscrete(data.uom_id) ? 0 : 4" 
+                                            class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                            :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: 'white', width: '100%', boxShadow: 'none' }"
+                                        />
+                                    </div>
+                                    
+                                    <!-- Simple Divider -->
+                                    <div class="w-px h-5 bg-zinc-800 group-focus-within:bg-orange-500/20"></div>
+                                    
+                                    <div class="w-20">
+                                        <Select 
+                                            v-model="data.uom_id" 
+                                            :options="getFilteredUoms(data)" 
+                                            optionLabel="abbreviation" 
+                                            optionValue="id" 
+                                            placeholder="Unit"
+                                            @change="onGrnUomChange(data)"
+                                            class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
+                                            pt:root:class="!border-0 !bg-transparent !shadow-none"
+                                            pt:label:class="!text-amber-500 !p-2 !text-center !uppercase font-black"
+                                            pt:dropdown:class="!text-zinc-600 !w-6"
+                                        />
+                                    </div>
+                                </div>
                             </template>
                         </Column>
                     </DataTable>
@@ -829,7 +948,7 @@ const deletePO = async () => {
                         </Column>
                         <Column field="quantity" header="RECEIVED">
                             <template #body="{ data }">
-                                <span class="text-white font-mono text-xs font-bold">{{ data.quantity }} {{ data.uom }}</span>
+                                <span class="text-white font-mono text-xs font-bold">{{ data.formatted_quantity || data.quantity }}</span>
                             </template>
                         </Column>
                     </DataTable>
@@ -890,7 +1009,7 @@ const deletePO = async () => {
                         </Column>
                         <Column field="quantity" header="QTY RETURNED">
                             <template #body="{ data }">
-                                <span class="text-red-500 font-mono text-xs font-black">{{ data.quantity }}</span>
+                                <span class="text-red-500 font-mono text-xs font-black">{{ data.formatted_quantity || data.quantity }}</span>
                             </template>
                         </Column>
                     </DataTable>
