@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -35,6 +36,12 @@ class Inventory extends Model
         'average_cost',
     ];
 
+    protected $appends = [
+        'scaled_quantity_on_hand',
+        'scaled_average_cost',
+        'formatted_quantity_on_hand',
+    ];
+
     /**
      * Get the product.
      */
@@ -43,11 +50,34 @@ class Inventory extends Model
         return $this->belongsTo(Product::class)->withTrashed();
     }
 
-    /**
-     * Get the location.
-     */
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class)->withTrashed();
+    }
+
+    /**
+     * Get the scaled quantity on hand based on the product's UOM.
+     */
+    public function getScaledQuantityOnHandAttribute(): float
+    {
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+        return $multiplier > 0 ? (float) $this->getRawOriginal('quantity_on_hand') / $multiplier : (float) $this->getRawOriginal('quantity_on_hand');
+    }
+
+    /**
+     * Get the scaled average cost based on the product's UOM.
+     */
+    public function getScaledAverageCostAttribute(): float
+    {
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+        return $multiplier > 0 ? (float) $this->getRawOriginal('average_cost') * $multiplier : (float) $this->getRawOriginal('average_cost');
+    }
+
+    /**
+     * Get the formatted quantity on hand.
+     */
+    public function getFormattedQuantityOnHandAttribute(): string
+    {
+        return UomHelper::format($this->scaled_quantity_on_hand, $this->product->uom_id);
     }
 }

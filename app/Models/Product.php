@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use App\Traits\HasAttachments;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -160,10 +161,35 @@ class Product extends Model
     }
 
     /**
+     * Get the average cost scaled to the primary unit of measure.
+     * Stored value is now "Cost per Piece" (Atomic).
+     */
+    public function getAverageCostAttribute($value): float
+    {
+        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id);
+
+        return $multiplier > 0 ? (float) $value * $multiplier : (float) $value;
+    }
+
+    /**
      * Get the total quantity on hand across all locations.
      */
     public function getTotalQohAttribute(): float
     {
-        return (float) $this->inventories()->sum('quantity_on_hand');
+        // Internal QOH is now stored in Atomic Pieces.
+        // We convert it back to the Product's Base UOM for catalog display.
+        $pieces = (float) $this->inventories()->sum('quantity_on_hand');
+        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id);
+
+        return $multiplier > 0 ? $pieces / $multiplier : $pieces;
+    }
+
+    /**
+     * Get the formatted total quantity on hand across all locations.
+     */
+    public function getFormattedTotalQohAttribute(): string
+    {
+        // total_qoh is now correctly scaled to the product's UOM in the getter above.
+        return UomHelper::format($this->total_qoh, $this->uom_id);
     }
 }
