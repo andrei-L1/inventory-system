@@ -24,6 +24,21 @@
             </div>
 
             <div class="max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-2">
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_LINES</span>
+                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ form.lines.length.toString().padStart(2, '0') }}</div>
+                    </div>
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">SUM_TRANSFER</span>
+                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toFixed(2) }}</div>
+                    </div>
+                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-violet-500 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-violet-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">SOURCE ROUTE</span>
+                        <div class="text-[11px] font-bold text-zinc-300 uppercase truncate text-center lg:text-left tracking-tight">{{ form.from_location?.name || 'NOT_SELECTED' }}</div>
+                    </div>
+                </div>
+
                 <!-- Transfer Route Map -->
                 <div class="mb-10 p-10 rounded-3xl bg-zinc-900/20 border border-zinc-900 flex items-center justify-between gap-12 relative overflow-hidden group shadow-2xl backdrop-blur-sm">
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.05),transparent)] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -115,6 +130,35 @@
                     </aside>
 
                     <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                        <!-- Scattered Stock Breakdown Popover -->
+                        <Popover ref="stockOp" class="!bg-zinc-900 !border-zinc-800 !shadow-2xl">
+                            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+                                <div class="text-[9px] font-black text-violet-500 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2 flex justify-between">
+                                    <span>Location Breakdown</span>
+                                    <span>{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
+                                </div>
+                                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                    <div v-for="inv in selectedLineForStock.inventories" :key="inv.id" class="flex justify-between items-center text-[10px]">
+                                        <span class="text-zinc-400 truncate pr-2 uppercase font-bold" :class="{'text-violet-400': inv.location_id === form.from_location?.id}">
+                                            {{ inv.location_name }}
+                                        </span>
+                                        <span class="font-mono text-zinc-200">
+                                            {{ getScaledQty(selectedLineForStock, inv.quantity_on_hand) }}
+                                        </span>
+                                    </div>
+                                    <div v-if="!selectedLineForStock.inventories?.length" class="text-center py-2 text-zinc-600 text-[10px] italic">
+                                        No stock available in any location
+                                    </div>
+                                </div>
+                                <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono">
+                                    <span class="text-[9px] font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
+                                    <span class="text-[10px] font-black text-white px-2 py-0.5 bg-zinc-800 rounded">
+                                        {{ getScaledQty(selectedLineForStock, selectedLineForStock.product?.total_qoh) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </Popover>
+
                         <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-violet-400"></div>
@@ -160,33 +204,73 @@
                                      </template>
                                  </Column>
 
-                                 <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
-                                     <template #body="{ index }">
-                                         <InputNumber 
-                                             v-model="form.lines[index].quantity" 
-                                             :min="0"
-                                             :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
-                                             placeholder="0" 
-                                             class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                             :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'center', color: 'white', width: '100%', borderRadius: '0.75rem', height: '3rem' }"
-                                         />
+                                 <Column header="STOCK LEVEL" style="width: 140px">
+                                     <template #body="{ data }">
+                                        <div class="flex flex-col gap-1 items-end">
+                                             <div class="flex items-center gap-2">
+                                                 <span class="text-xs font-bold font-mono" :class="isInsufficient(data) ? 'text-rose-400' : 'text-zinc-400'">
+                                                     {{ getScaledQty(data, getLocalStock(data)) }}
+                                                 </span>
+                                                 <button 
+                                                     v-if="data.product"
+                                                     @click="toggleStockInfo($event, data)"
+                                                     class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-violet-500/20 text-zinc-600 hover:text-violet-400 transition-all border border-zinc-800"
+                                                 >
+                                                     <i class="pi pi-info-circle text-[10px]" />
+                                                 </button>
+                                             </div>
+                                             <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono">
+                                                 {{ form.from_location?.name || 'Pick Source' }}
+                                             </span>
+                                        </div>
                                      </template>
                                  </Column>
 
-                                <Column header="STOCK EFFECT" class="!py-6 !px-8 text-right">
-                                    <template #body="{ index }">
-                                        <div class="flex items-center justify-end gap-8 font-mono">
+                                <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
+                                     <template #body="{ index, data }">
+                                         <div class="flex flex-col gap-1">
+                                            <InputNumber 
+                                                v-model="form.lines[index].quantity" 
+                                                :min="0"
+                                                :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
+                                                placeholder="0" 
+                                                class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                                :inputStyle="{ 
+                                                    background: '#09090b', 
+                                                    border: '1px solid ' + (isInsufficient(data) ? '#f43f5e' : '#27272a'), 
+                                                    textAlign: 'center', 
+                                                    color: isInsufficient(data) ? '#f43f5e' : 'white', 
+                                                    width: '100%', 
+                                                    borderRadius: '0.75rem', 
+                                                    height: '3rem' 
+                                                }"
+                                            />
+                                            <div v-if="isInsufficient(data)" class="text-[8px] text-rose-500 font-bold uppercase text-center animate-pulse">
+                                                Exceeds source stock
+                                            </div>
+                                         </div>
+                                     </template>
+                                 </Column>
+
+                                <Column header="SUMMARY" class="!py-6 !px-8 text-right">
+                                    <template #body="{ index, data }">
+                                        <div class="flex items-center justify-end gap-5 font-mono">
                                             <div class="flex flex-col items-end gap-1">
-                                                <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Before</span>
-                                                <span class="text-xs font-bold font-mono text-zinc-500">{{ form.lines[index].product?.total_qoh || 0 }}</span>
+                                                <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Moved</span>
+                                                <span class="text-xs font-black text-violet-400">
+                                                    {{ data.quantity || 0 }}
+                                                    <span class="text-[10px] text-violet-500/50 font-medium ml-1">{{ getUomAbbr(data.uom_id) }}</span>
+                                                </span>
                                             </div>
                                             <i class="pi pi-arrow-right text-[10px] text-zinc-800" />
                                             <div class="flex flex-col items-end gap-1">
-                                                <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">After</span>
-                                                <span class="text-xs font-black font-mono text-violet-400">{{ ((form.lines[index].product?.total_qoh || 0) - (form.lines[index].quantity || 0)).toFixed(2) }}</span>
+                                                <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Post-Transfer</span>
+                                                <span class="text-xs font-black text-rose-400">
+                                                    {{ (parseFloat(getScaledQty(data, getLocalStock(data))) - (parseFloat(data.quantity) || 0)).toFixed(2) }}
+                                                </span>
                                             </div>
-                                            <button @click="removeLine(index)" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20 ml-2">
-                                                <i class="pi pi-trash text-[10px]" />
+                                            <button @click="removeLine(index)" class="w-10 h-10 rounded-xl hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20 ml-2">
+                                                <i class="pi pi-trash text-[11px]" />
                                             </button>
                                         </div>
                                     </template>
@@ -219,6 +303,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import Popover from 'primevue/popover';
 
 const toast = useToast();
 const { props } = usePage();
@@ -241,14 +326,15 @@ const isUomIdDiscrete = (id) => {
 };
 
 const getFactorToBase = (uomId) => {
+    if (!uomId) return { factor: 1, baseId: null };
     let factor = 1.0;
-    let current = uomId;
+    let current = Number(uomId);
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => c.from_uom_id === current);
-        if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
-        current = rule.to_uom_id;
+        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
+        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
+        factor *= Number(rule.conversion_factor);
+        current = Number(rule.to_uom_id);
         processed.push(current);
     }
     return { factor, baseId: current };
@@ -276,8 +362,9 @@ const loadData = async () => {
         if (productId && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == productId);
             if (preselected) {
-                const line = { product: preselected, uom_id: preselected.uom_id, quantity: 1 };
+                const line = { product: preselected, uom_id: preselected.uom_id, quantity: 1, inventories: [] };
                 form.lines.push(line);
+                fetchProductInventory(line);
             }
         }
     } catch (e) {
@@ -300,6 +387,56 @@ const form = useForm({
 });
 
 const isSubmitting = ref(false);
+
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
+
+const fetchProductInventory = async (line) => {
+    if (!line.product) return;
+    try {
+        const res = await axios.get(`/api/inventory/${line.product.id}/locations`);
+        line.inventories = res.data.data;
+    } catch (e) {
+        console.error('Failed to fetch inventories', e);
+    }
+};
+
+const toggleStockInfo = (event, line) => {
+    selectedLineForStock.value = line;
+    stockOp.value.toggle(event);
+};
+
+const getScaledQty = (line, rawPieces) => {
+    if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
+    const factor = getFactorToBase(line.uom_id).factor;
+    const scaled = (parseFloat(rawPieces) / factor);
+    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+};
+
+const getLocalStock = (line) => {
+    if (!line.inventories || !form.from_location) return 0;
+    const inv = line.inventories.find(i => i.location_id === form.from_location.id);
+    return inv ? inv.quantity_on_hand : 0;
+};
+
+const getUomAbbr = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? uom.abbreviation : '';
+};
+
+const isInsufficient = (line) => {
+    if (!line.product || !form.from_location) return false;
+    let qtyInBase = parseFloat(line.quantity) || 0;
+    const targetInfo = getFactorToBase(line.uom_id);
+    const productBaseInfo = getFactorToBase(line.product.uom_id);
+
+    if (targetInfo.baseId === productBaseInfo.baseId) {
+        const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+        qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+    }
+    
+    return qtyInBase > getLocalStock(line);
+};
 
 const submitForm = async () => {
     if (!form.from_location || !form.to_location) {
@@ -327,9 +464,9 @@ const submitForm = async () => {
             return;
         }
 
-        const availableQty = line.product.total_qoh || 0;
+        const availableQty = getLocalStock(line);
         if (qtyInBase > availableQty) {
-            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot transfer equivalent of ${qtyInBase} ${line.product.uom?.abbreviation || 'pcs'} of ${line.product.name}. Available: ${availableQty}.`, life: 5000 });
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot transfer equivalent of ${qtyInBase} ${line.product.uom?.abbreviation || 'pcs'} at ${form.from_location.name}. Available: ${availableQty}.`, life: 5000 });
             isSubmitting.value = false;
             return;
         }
@@ -369,16 +506,19 @@ const submitForm = async () => {
 const onProductSelect = (line) => {
     if (line.product) {
         line.uom_id = line.product.uom_id;
+        fetchProductInventory(line);
     }
 };
 
 const addLine = () => {
-    form.lines.push({ product: null, uom_id: null, quantity: 1 });
+    form.lines.push({ product: null, uom_id: null, quantity: 1, inventories: [] });
 };
 
 const removeLine = (index) => {
     form.lines.splice(index, 1);
 };
+
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
 </script>
 
 <style scoped>
