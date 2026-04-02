@@ -24,6 +24,7 @@ class TransactionLineResource extends JsonResource
                 'uom_abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? 'PCS',
             ],
             'quantity' => (float) $this->quantity,
+            'formatted_quantity' => $this->formatted_quantity,
             'unit_cost' => (float) ($this->unit_cost ?? 0),
             'unit_price' => (float) ($this->unit_price ?? 0),
             'total_cost' => (float) (($this->unit_cost ?? 0) * abs($this->quantity)),

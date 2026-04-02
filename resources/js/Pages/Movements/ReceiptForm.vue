@@ -148,28 +148,35 @@
                                      </template>
                                  </Column>
 
-                                <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
-                                    <template #body="{ index }">
-                                        <InputText 
-                                            v-model="form.lines[index].quantity" 
-                                            placeholder="0.00" 
-                                            class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-center text-white"
-                                        />
-                                    </template>
-                                </Column>
+                                 <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
+                                     <template #body="{ index }">
+                                         <InputNumber 
+                                             v-model="form.lines[index].quantity" 
+                                             :min="0"
+                                             :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
+                                             placeholder="0" 
+                                             class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                             :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'center', color: 'white', width: '100%', borderRadius: '0.75rem', height: '3rem' }"
+                                         />
+                                     </template>
+                                 </Column>
 
-                                <Column field="unit_cost" header="COST PER UNIT" class="!py-6 !px-4">
-                                    <template #body="{ index }">
-                                        <div class="relative w-32">
-                                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 text-[10px] font-mono">₱</span>
-                                            <InputText 
-                                                v-model="form.lines[index].unit_cost" 
-                                                placeholder="0.00" 
-                                                class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !pl-8 !pr-4 !text-xs !font-mono text-emerald-400"
-                                            />
-                                        </div>
-                                    </template>
-                                </Column>
+                                 <Column field="unit_cost" header="COST PER UNIT" class="!py-6 !px-4">
+                                     <template #body="{ index }">
+                                         <div class="relative w-32">
+                                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 text-[10px] font-mono z-10">₱</span>
+                                             <InputNumber 
+                                                 v-model="form.lines[index].unit_cost" 
+                                                 :min="0"
+                                                 :minFractionDigits="2"
+                                                 :maxFractionDigits="4"
+                                                 placeholder="0.00" 
+                                                 class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                                 :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'right', color: '#34d399', width: '100%', borderRadius: '0.75rem', height: '3rem', paddingLeft: '2rem' }"
+                                             />
+                                         </div>
+                                     </template>
+                                 </Column>
 
                                 <Column header="SUBTOTAL" class="!py-6 !px-8 text-right">
                                     <template #body="{ index }">
@@ -203,6 +210,7 @@ import { Head, usePage, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import ToggleSwitch from 'primevue/toggleswitch';
@@ -223,6 +231,31 @@ const locations = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingProducts = ref(false);
+
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? isDiscrete(uom.abbreviation) : true;
+};
+
+const getFactorToBase = (uomId) => {
+    let factor = 1.0;
+    let current = uomId;
+    let processed = [current];
+    while (true) {
+        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        if (!rule || processed.includes(rule.to_uom_id)) break;
+        factor *= rule.conversion_factor;
+        current = rule.to_uom_id;
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
 
 const form = useForm({
     vendor: null,
@@ -281,29 +314,17 @@ const onUomChange = (line) => {
     const product = line.product;
     if (!product || !line.uom_id) return;
 
-    // Reset to base cost first
     const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
-    
-    if (line.uom_id === product.uom_id) {
-        line.unit_cost = baseCost;
+    const targetInfo = getFactorToBase(line.uom_id);
+    const productBaseInfo = getFactorToBase(product.uom_id);
+
+    if (targetInfo.baseId === productBaseInfo.baseId) {
+        const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+        line.unit_cost = baseCost * effectiveFactor;
         return;
     }
 
-    // 1. Try direct conversion (e.g. Line is Box, Product is Piece)
-    const direct = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === product.uom_id);
-    if (direct) {
-        line.unit_cost = baseCost * direct.conversion_factor;
-        return;
-    }
-
-    // 2. Try inverse conversion (e.g. Line is Piece, Product is Box)
-    const inverse = uomConversions.value.find(c => c.from_uom_id === product.uom_id && c.to_uom_id === line.uom_id);
-    if (inverse) {
-        line.unit_cost = baseCost / inverse.conversion_factor;
-        return;
-    }
-
-    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No conversion found for this UOM pairing.', life: 3000 });
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
 };
 
 const addLine = () => {

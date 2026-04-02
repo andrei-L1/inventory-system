@@ -350,7 +350,7 @@ const tablePt = {
                                                   option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
                                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                               ]">
-                                            {{ option.total_qoh }}
+                                            {{ option.formatted_total_qoh || option.total_qoh }}
                                         </span>
                                     </div>
                                     <span class="text-xs font-bold truncate tracking-tight">{{ option.name }}</span>
@@ -398,7 +398,7 @@ const tablePt = {
                                                   selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400' : 
                                                   'text-emerald-400'
                                               ]">
-                                            {{ selectedProduct.total_qoh }}
+                                            {{ selectedProduct.formatted_total_qoh || selectedProduct.total_qoh }}
                                         </span>
                                         <span class="text-[10px] font-bold font-mono mt-2" 
                                               :class="[
@@ -492,7 +492,7 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
                                             <div class="flex flex-col items-end">
-                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ loc.quantity_on_hand }}</span>
+                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ loc.formatted_quantity_on_hand || loc.quantity_on_hand }}</span>
                                                 <span class="text-[9px] font-bold text-zinc-700 font-mono tracking-[0.2em] uppercase">Items at this area</span>
                                             </div>
                                         </div>
@@ -534,9 +534,9 @@ const tablePt = {
                                             <span class="font-mono text-[10px] text-zinc-500">{{ data.receipt_date }}</span>
                                         </template>
                                     </Column>
-                                    <Column field="remaining_qty" header="Remaining" style="width: 110px">
+                                    <Column field="remaining_qty" header="Remaining" style="width: 160px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-zinc-200">{{ data.remaining_qty }}</span>
+                                            <span class="font-mono font-bold text-zinc-200">{{ data.formatted_remaining_qty || data.remaining_qty }}</span>
                                         </template>
                                     </Column>
                                     <Column field="unit_cost" header="Unit Cost" style="width: 120px">
@@ -611,11 +611,10 @@ const tablePt = {
                                     </template>
                                 </Column>
                                 
-                                <Column field="quantity" header="Change Qty" style="width: 140px">
+                                <Column field="quantity" header="Change Qty" style="width: 180px">
                                     <template #body="{ data }">
-                                        <div class="font-mono font-bold text-sm tracking-tighter" :class="data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
-                                            {{ data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.quantity }}
-                                            <span class="text-[9px] opacity-40 ml-1 uppercase">{{ data.uom_abbreviation || 'PCS' }}</span>
+                                        <div class="font-mono font-bold text-xs tracking-tighter" :class="data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
+                                            {{ data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.formatted_quantity || data.quantity }}
                                         </div>
                                     </template>
                                 </Column>

@@ -21,6 +21,15 @@ const uoms = ref([]);
 const conversions = ref([]);
 const loadingUoms = ref(false);
 const loadingConversions = ref(false);
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const isUnitAChild = (uomId) => {
+    return conversions.value.some(c => c.to_uom_id === uomId);
+};
 
 // UOM Dialog
 const uomDialogVisible = ref(false);
@@ -237,9 +246,20 @@ const getUomAbbr = (id) => {
                         <div class="p-6 flex-1 flex flex-col bg-zinc-950/30 relative z-10">
                             <div class="flex items-center justify-between mb-4">
                                 <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono">Conversion Rules</span>
-                                <button v-if="can('manage-products')" @click="openNewConversion(uom.id)" class="text-[10px] bg-transparent border-none outline-none cursor-pointer font-bold text-sky-400 hover:text-sky-300 uppercase tracking-widest font-mono flex items-center gap-1 transition-colors">
-                                    <i class="pi pi-plus text-[8px]"></i> Rule
-                                </button>
+                                <div class="flex flex-col items-end">
+                                    <button 
+                                        v-if="can('manage-products')" 
+                                        @click="openNewConversion(uom.id)" 
+                                        :disabled="isUnitAChild(uom.id)"
+                                        class="text-[10px] bg-transparent border-none outline-none font-bold uppercase tracking-widest font-mono flex items-center gap-1 transition-colors"
+                                        :class="isUnitAChild(uom.id) ? 'text-zinc-700 cursor-not-allowed' : 'text-sky-400 hover:text-sky-300 cursor-pointer'"
+                                    >
+                                        <i class="pi pi-plus text-[8px]"></i> Rule
+                                    </button>
+                                    <span v-if="isUnitAChild(uom.id)" class="text-[8px] font-bold text-amber-600/60 uppercase mt-1 text-right max-w-[120px] leading-tight">
+                                        Nesting Restricted: This is already a child unit.
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="flex flex-col gap-3">
@@ -374,7 +394,17 @@ const getUomAbbr = (id) => {
                             </div>
                             <div class="flex flex-col gap-2 flex-1">
                                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">To Unit (e.g. Pcs)</label>
-                                <Select v-model="convForm.to_uom_id" :options="uoms.filter(u => u.id !== convForm.from_uom_id)" optionLabel="abbreviation" optionValue="id" placeholder="Select"
+                                <Select v-model="convForm.to_uom_id" 
+                                        :options="uoms.filter(u => {
+                                            const fromUom = uoms.find(x => x.id === convForm.from_uom_id);
+                                            if (!fromUom) return u.id !== convForm.from_uom_id;
+                                            
+                                            // If parent is discrete, child MUST be discrete
+                                            if (isDiscrete(fromUom.abbreviation) && !isDiscrete(u.abbreviation)) return false;
+                                            
+                                            return u.id !== convForm.from_uom_id;
+                                        })" 
+                                        optionLabel="abbreviation" optionValue="id" placeholder="Select"
                                         class="!bg-zinc-900/50 !border-zinc-800 !text-white w-full !h-12 !font-bold"
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.to_uom_id}" />
                             </div>

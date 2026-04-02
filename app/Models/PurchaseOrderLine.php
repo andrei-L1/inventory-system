@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -56,6 +57,26 @@ class PurchaseOrderLine extends Model
      */
     public function getRemainingQtyAttribute(): float
     {
-        return max(0, $this->ordered_qty - $this->received_qty);
+        return max(0, (float) $this->ordered_qty - (float) $this->received_qty);
+    }
+
+    public function getFormattedOrderedQtyAttribute(): string
+    {
+        return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id);
+    }
+
+    public function getFormattedReceivedQtyAttribute(): string
+    {
+        return UomHelper::format($this->received_qty, $this->uom_id ?? $this->product->uom_id);
+    }
+
+    public function getFormattedReturnedQtyAttribute(): string
+    {
+        return UomHelper::format($this->returned_qty, $this->uom_id ?? $this->product->uom_id);
+    }
+
+    public function getFormattedPendingQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_qty, $this->uom_id ?? $this->product->uom_id);
     }
 }
