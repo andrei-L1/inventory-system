@@ -58,7 +58,8 @@ Each phase below corresponds to one stage of that chain.
 - [x] `TransactionValidator` — pre-movement guard (type, location, quantity sanity checks)
 - [x] `InsufficientStockException` — typed exception for over-issue scenarios
 - [x] **Reversal Audit Link** — `reverses_transaction_id` foreign key added to track the origin of a voided transaction. ✅ NEW
-- [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing mappings, preventing silent math errors. ✅ NEW
+- [x] **Strict UOM Safety** — `StockService` now throws `UomConversionException` on missing or incompatible mappings, preventing silent math errors. ✅ NEW
+- [x] **Atomic Piece Ledger** — All inventory quantities (QOH, Cost Layers, Transactions) are stored as integers in the absolute smallest unit ("Pieces"), eliminating floating-point drift. ✅ NEW
 - [x] **Controller Exception Hardening** — `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` now catch operational exceptions and return clean 422 errors. ✅ NEW
 
 
@@ -198,8 +199,9 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Average Cost (WAC)** display in the product technical manifest
 - [x] **Cost Layer Inspector panel** — High-performance table showing live FIFO/LIFO layers with status tracking
 - [x] **Location breakdown** — Visualized QOH distribution split by physical warehouse/location nodes
-- [x] **UOM in Ledger** — Ledger rows now explicitly show the move unit (PCS, BOX, etc.) and perform conversion. ✅ NEW
-- [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability
+- [x] **UOM in Ledger** — Ledger rows now explicitly show the move unit (PCS, BOX, etc.) and perform recursive conversion to "Atomic Pieces". ✅ NEW
+- [x] **Recursive Conversion Engine** — Implemented `UomHelper` to bridge non-direct units (e.g. Case of 24 -> Box of 12) via a shared base unit. ✅ NEW
+- [x] **Null-Safety & Error Resolution** — Audited template structure and backend resources for 100% stability.
 
 
 ### ✅ 2.4 Stock Movement UI (Terminology & v4 Migration) — NOW LIVE
@@ -536,11 +538,11 @@ Customer Inquiry
 
 | Phase | Domain | Status |
 |-------|---------|--------|
-| 0 | Core Stock Engine | ✅ Complete (refactored: global WAC, COGS tracking, draft enforcement, transfer pivot) |
+| 0 | Core Stock Engine | ✅ Complete (Atomic Piece Ledger, recursive UOMs, WAC, COGS) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
-| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, UOM, GRN, and Returns complete. |
+| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, Atomic UOM, GRN, and Returns complete. |
 | 5 | Sales (Sales Orders) | 🚧 ~30% — Stock Reservation Engine & Customer Module LIVE |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |

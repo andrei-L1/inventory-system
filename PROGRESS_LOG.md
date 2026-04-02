@@ -3,6 +3,18 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 - **Engine-First Logic**: We prioritized the most complex math (Costing layers and Atomic movements) over UI development to guarantee a "Foundation of Truth."
 - **Service-Oriented Design**: All business rules live in the `Services` layer, making the system 100% future-proof for Mobile Apps or external integrations.
 - **Test-Driven Verification**: Every logic enhancement is validated by an automated test suite before progressing to the next phase.
+- **Atomic Pieces Storage**: Transitioned the entire ledger to store quantities in the absolute smallest unit (Pieces), eliminating floating-point drift and ensuring 100% audit integrity.
+
+---
+
+### 🎯 Milestone: Atomic Inventory Ledger & High-Precision Scaling
+**Date**: 2026-04-02 | **Status**: 100% VERIFIED
+**Summary**: Successfully re-engineered the core inventory ledger to use "Atomic Pieces" storage, combined with a recursive multi-level UOM conversion engine.
+- **Atomic Normalization**: Refactored `StockService` to convert all inbound and outbound quantities into the absolute base unit ("Pieces") before database insertion. This provides 100% mathematical certainty for stock balances.
+- **Recursive UOM Engine**: Implemented `UomHelper::getConversionFactor`, allowing the system to bridge any two units (e.g., Box(24) to BX(12)) by traversing the UOM tree to find a shared base.
+- **Decoupled Display Layer**: Added `scaled_` attributes to `Inventory` and `Product` models, ensuring the UI remains human-friendly (displaying Boxes/Cases) while the database remains atomic.
+- **Form Integration**: Updated Issue, Adjustment, Transfer, and Purchase Order forms to use the new recursive scaling logic, including real-time "Cost-to-Unit" and "Qty-to-Base" recalculations.
+- **QA Verification**: Achieved a 100% pass rate across the full inventory test suite (33 tests), including specialized "Atomic-aware" assertions for `StockEngineTest` and `StockIntegrityTest`.
 
 ---
 

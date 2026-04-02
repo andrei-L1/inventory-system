@@ -52,3 +52,22 @@ When an "Issue" (Outbound) occurs:
 - **Transaction** has many **TransactionLines**.
 - **TransactionLine** belongs to a **Product** and a **Location**.
 - **InventoryCostLayer** is linked to the **TransactionLine** that created it.
+
+---
+
+## 5. Atomic Storage Model (The Piece Ledger)
+
+To maintain 100% mathematical integrity and eliminate rounding errors common in traditional ERP systems, this system uses an **Atomic Storage** model.
+
+### A. The "Piece" Standard
+- All inventory quantities in the database (`inventories`, `inventory_cost_layers`, `transaction_lines`) are stored as **raw integers** representing the absolute smallest unit (e.g., "Pieces").
+- Even if a user transacts in "Boxes", "Cases", or "Pallets", the `StockService` calculates the equivalent "Pieces" using the UOM conversion tree before writing to the database.
+
+### B. Scaled Display Logic
+Because users rarely want to see "4800 Pieces" when they actually have "200 Boxes", the system uses **Display Scaling**:
+- Models (`Product` and `Inventory`) use `scaled_` attributes (e.g., `$inventory->scaled_quantity_on_hand`) to convert raw integers back into the product's preferred unit for the UI.
+- Calculation: `Raw Pieces / (Multiplier to Smallest) = Scaled Quantity`.
+
+### C. Financial Precision
+- **Atomic Costing**: Unit costs are similarly normalized. If a Box of 10 costs $100, the ledger records a unit cost of $10 per "Piece".
+- **Zero-Loss Reversals**: By using integers for the base ledger, the system avoids floating-point drift, ensuring that reversing a "Box" movement always returns exactly the same "Piece" count to the shelves.
