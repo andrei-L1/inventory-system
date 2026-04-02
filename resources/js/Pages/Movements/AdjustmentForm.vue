@@ -109,19 +109,20 @@
                                      </template>
                                  </Column>
 
-                                <Column field="quantity" header="QUANTITY (+/-)" class="!py-6 !px-4">
-                                    <template #body="{ index }">
-                                        <div class="flex flex-col gap-1 items-center">
-                                            <InputText 
-                                                v-model="form.lines[index].quantity" 
-                                                placeholder="0.00" 
-                                                class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-center"
-                                                :class="form.lines[index].quantity < 0 ? 'text-red-400' : 'text-emerald-400'"
-                                            />
-                                            <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest">CHANGE AMOUNT</span>
-                                        </div>
-                                    </template>
-                                </Column>
+                                 <Column field="quantity" header="QUANTITY (+/-)" class="!py-6 !px-4">
+                                     <template #body="{ index }">
+                                         <div class="flex flex-col gap-1 items-center">
+                                             <InputNumber 
+                                                 v-model="form.lines[index].quantity" 
+                                                 :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
+                                                 placeholder="0" 
+                                                 class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                                 :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'center', color: form.lines[index].quantity < 0 ? '#f87171' : '#34d399', width: '100%', borderRadius: '0.75rem', height: '3rem' }"
+                                             />
+                                             <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest">CHANGE AMOUNT</span>
+                                         </div>
+                                     </template>
+                                 </Column>
 
                                 <Column header="EFFECT" class="!py-6 !px-8 text-right">
                                     <template #body="{ index }">
@@ -165,6 +166,7 @@ import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Toast from 'primevue/toast';
@@ -178,6 +180,31 @@ const products = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingData = ref(false);
+
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? isDiscrete(uom.abbreviation) : true;
+};
+
+const getFactorToBase = (uomId) => {
+    let factor = 1.0;
+    let current = uomId;
+    let processed = [current];
+    while (true) {
+        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        if (!rule || processed.includes(rule.to_uom_id)) break;
+        factor *= rule.conversion_factor;
+        current = rule.to_uom_id;
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
 
 const loadData = async () => {
     loadingData.value = true;
@@ -239,16 +266,17 @@ const postAdjustment = async () => {
         if (!line.product) continue;
         
         let adjustmentQtyInBase = parseFloat(line.quantity) || 0;
-        if (line.uom_id !== line.product.uom_id) {
-             const conv = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === line.product.uom_id);
-             if (conv) {
-                 adjustmentQtyInBase *= conv.conversion_factor;
-             } else {
-                 const inv = uomConversions.value.find(c => c.from_uom_id === line.product.uom_id && c.to_uom_id === line.uom_id);
-                 if (inv) {
-                     adjustmentQtyInBase /= inv.conversion_factor;
-                 }
-             }
+        
+        const targetInfo = getFactorToBase(line.uom_id);
+        const productBaseInfo = getFactorToBase(line.product.uom_id);
+
+        if (targetInfo.baseId === productBaseInfo.baseId) {
+            const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+            adjustmentQtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+        } else {
+            toast.add({ severity: 'error', summary: 'UOM Error', detail: `No conversion path from ${line.uom_id} to product base.`, life: 5000 });
+            isSubmitting.value = false;
+            return;
         }
 
         const availableQty = line.product.total_qoh || 0;

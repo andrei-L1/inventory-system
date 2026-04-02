@@ -28,6 +28,31 @@ const products = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? isDiscrete(uom.abbreviation) : true;
+};
+
+const getFactorToBase = (uomId) => {
+    let factor = 1.0;
+    let current = uomId;
+    let processed = [current];
+    while (true) {
+        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        if (!rule || processed.includes(rule.to_uom_id)) break;
+        factor *= rule.conversion_factor;
+        current = rule.to_uom_id;
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
+
 const form = ref({
     vendor_id: null,
     expected_delivery_date: null,
@@ -65,7 +90,10 @@ const onProductSelect = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (product) {
         line.uom_id = product.uom_id;
-        line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        // Only suggest cost if current cost is zero or unset
+        if (!line.unit_cost || line.unit_cost == 0) {
+            line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        }
     }
 };
 
@@ -73,29 +101,19 @@ const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
-    // Reset to base cost first
-    const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
-    
-    if (line.uom_id === product.uom_id) {
-        line.unit_cost = baseCost;
-        return;
-    }
+    // Only scale or suggest cost if current cost is zero or unset
+    if (!line.unit_cost || line.unit_cost == 0) {
+        const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        const targetInfo = getFactorToBase(line.uom_id);
+        const productBaseInfo = getFactorToBase(product.uom_id);
 
-    // 1. Try direct conversion (e.g. Line is Box, Product is Piece)
-    const direct = uomConversions.value.find(c => c.from_uom_id === line.uom_id && c.to_uom_id === product.uom_id);
-    if (direct) {
-        line.unit_cost = baseCost * direct.conversion_factor;
-        return;
+        if (targetInfo.baseId === productBaseInfo.baseId) {
+            const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+            line.unit_cost = baseCost * effectiveFactor;
+            return;
+        }
+        toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
     }
-
-    // 2. Try inverse conversion (e.g. Line is Piece, Product is Box)
-    const inverse = uomConversions.value.find(c => c.from_uom_id === product.uom_id && c.to_uom_id === line.uom_id);
-    if (inverse) {
-        line.unit_cost = baseCost / inverse.conversion_factor;
-        return;
-    }
-
-    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No conversion found for this UOM pairing.', life: 3000 });
 };
 
 onMounted(async () => {
@@ -284,7 +302,13 @@ const cancel = () => {
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
-                                    <InputNumber v-model="line.ordered_qty" :min="0.01" :maxFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                    <InputNumber 
+                                        v-model="line.ordered_qty" 
+                                        :min="0.01" 
+                                        :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
+                                        class="w-full" 
+                                        inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" 
+                                    />
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>
