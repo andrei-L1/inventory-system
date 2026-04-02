@@ -4,22 +4,23 @@ namespace App\Http\Controllers\Api\Procurement;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
+use App\Models\InventoryCostLayer;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
 use App\Models\ReplenishmentSuggestion;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
+use App\Models\UnitOfMeasure;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use App\Models\UnitOfMeasure;
-use App\Models\UomConversion;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderController extends Controller
@@ -109,6 +110,7 @@ class PurchaseOrderController extends Controller
                     'expected_delivery_date' => $data['expected_delivery_date'] ?? $purchaseOrder->expected_delivery_date,
                     'notes' => $data['notes'] ?? $purchaseOrder->notes,
                 ]);
+
                 return $purchaseOrder;
             }
 
@@ -217,7 +219,7 @@ class PurchaseOrderController extends Controller
             abort(400, "Purchase order is already {$purchaseOrder->status->name}.");
         }
 
-        $closedStatus = \App\Models\PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
+        $closedStatus = PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
 
         $purchaseOrder->update([
             'status_id' => $closedStatus->id,
@@ -275,8 +277,26 @@ class PurchaseOrderController extends Controller
                         abort(400, 'PO line does not belong to this purchase order.');
                     }
 
-                    $receivedQty = (float) $item['received_qty'];
+                    $receivedQtyRaw = (float) $item['received_qty'];
                     $receivedUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                    $receivedUom = UnitOfMeasure::find($receivedUomId);
+                    $productUom = $poLine->product->uom;
+
+                    // LOCK 1: Discrete units must be whole numbers
+                    if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
+                        if (floor($receivedQtyRaw) != $receivedQtyRaw) {
+                            abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
+                        }
+                    }
+
+                    // LOCK 2: Discrete products cannot be received in continuous units (No KG for Pieces)
+                    if ($productUom && UomHelper::isDiscrete($productUom->abbreviation)) {
+                        if ($receivedUom && ! UomHelper::isDiscrete($receivedUom->abbreviation)) {
+                            abort(422, "This product is discrete ({$productUom->abbreviation}). You cannot receive it in continuous units like {$receivedUom->abbreviation} to prevent piece integrity errors.");
+                        }
+                    }
+
+                    $receivedQty = $receivedQtyRaw;
                     $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
 
                     // 1. Convert received quantity to the PO line's UOM for validation and tracking
@@ -501,9 +521,9 @@ class PurchaseOrderController extends Controller
 
                 $totalAmount = 0.0;
                 foreach ($vendorSuggestions as $suggestion) {
-                    /** @var \App\Models\ReplenishmentSuggestion $suggestion */
+                    /** @var ReplenishmentSuggestion $suggestion */
                     // Try to get the last unit cost from cost layers (actual procurement cost)
-                    $lastCost = \App\Models\InventoryCostLayer::where('product_id', $suggestion->product_id)
+                    $lastCost = InventoryCostLayer::where('product_id', $suggestion->product_id)
                         ->latest('id')
                         ->value('unit_cost');
 
@@ -545,22 +565,10 @@ class PurchaseOrderController extends Controller
      */
     private function getUomConversionFactor(int $fromId, int $toId): float
     {
-        // 1. Try direct
-        $direct = UomConversion::where('from_uom_id', $fromId)
-            ->where('to_uom_id', $toId)
-            ->first();
-        if ($direct) {
-            return (float) $direct->conversion_factor;
+        try {
+            return UomHelper::getConversionFactor($fromId, $toId);
+        } catch (\Exception $e) {
+            throw new UomConversionException($e->getMessage());
         }
-
-        // 2. Try inverse
-        $inverse = UomConversion::where('from_uom_id', $toId)
-            ->where('to_uom_id', $fromId)
-            ->first();
-        if ($inverse) {
-            return 1 / (float) $inverse->conversion_factor;
-        }
-
-        throw new UomConversionException("No conversion defined between UOM #{$fromId} and #{$toId}.");
     }
 }
