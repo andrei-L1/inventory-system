@@ -175,6 +175,6 @@ class MultiUomProcurementTest extends TestCase
 
         // 5. Verify Inventory (20 pieces / 10 factor = 2 boxes)
         $inventory = Inventory::where('product_id', $product->id)->where('location_id', $location->id)->firstOrFail();
-        $this->assertEquals(2.0, (float) $inventory->quantity_on_hand);
+        $this->assertEquals(2.0, (float) $inventory->scaled_quantity_on_hand);
     }
 }

@@ -25,6 +25,7 @@ class StockIntegrityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \App\Helpers\UomHelper::clearCache();
         $this->seed(DatabaseSeeder::class);
         $this->seed(VendorSeeder::class);
     }

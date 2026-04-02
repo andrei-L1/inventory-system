@@ -3,15 +3,12 @@
 namespace Tests\Feature\Inventory;
 
 use App\Exceptions\InsufficientStockException;
-use App\Models\Category;
-use App\Models\CostingMethod;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Product;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
-use App\Models\UnitOfMeasure;
 use App\Services\Inventory\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -22,13 +19,16 @@ class StockReservationTest extends TestCase
     use RefreshDatabase;
 
     protected StockService $service;
+
     protected Product $product;
+
     protected Location $location;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->service = app(StockService::class);
+        \App\Helpers\UomHelper::clearCache();
 
         // 1. Setup Master Data using DB directly for speed & reliability
         DB::table('units_of_measure')->updateOrInsert(
@@ -96,7 +96,7 @@ class StockReservationTest extends TestCase
                 'location_id' => $this->location->id,
                 'quantity' => 10,
                 'unit_cost' => 50,
-            ]]
+            ]],
         ]);
 
         // 2. Reserve 4
@@ -125,7 +125,7 @@ class StockReservationTest extends TestCase
                 'location_id' => $this->location->id,
                 'quantity' => 10,
                 'unit_cost' => 50,
-            ]]
+            ]],
         ]);
 
         $this->expectException(InsufficientStockException::class);
@@ -147,7 +147,7 @@ class StockReservationTest extends TestCase
                 'location_id' => $this->location->id,
                 'quantity' => 10,
                 'unit_cost' => 50,
-            ]]
+            ]],
         ]);
 
         // 2. Reserve 7 (Available unreserved = 3)
@@ -155,7 +155,7 @@ class StockReservationTest extends TestCase
 
         // 3. Try to issue 4 (unreserved is only 3)
         $this->expectException(InsufficientStockException::class);
-        $this->expectExceptionMessage("Insufficient unreserved stock");
+        $this->expectExceptionMessage('Insufficient unreserved stock');
 
         $this->service->recordMovement([
             'header' => [
@@ -168,7 +168,7 @@ class StockReservationTest extends TestCase
                 'product_id' => $this->product->id,
                 'location_id' => $this->location->id,
                 'quantity' => -4,
-            ]]
+            ]],
         ]);
     }
 

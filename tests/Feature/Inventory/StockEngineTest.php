@@ -30,6 +30,9 @@ class StockEngineTest extends TestCase
     {
         parent::setUp();
         $this->service = app(StockService::class);
+        \App\Helpers\UomHelper::clearCache();
+
+        // Use the system's database seeder to set up lookups and locations
         $this->seed(DatabaseSeeder::class);
         $this->seed(VendorSeeder::class);
         $this->vendor = Vendor::where('vendor_code', 'VEND-001')->first();
@@ -43,6 +46,7 @@ class StockEngineTest extends TestCase
         $product = Product::create([
             'product_code' => 'P-AVG',
             'name' => 'Avg Product',
+            'uom_id' => \App\Models\UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => $avgMethod->id,
             'is_active' => true,
         ]);
@@ -70,7 +74,7 @@ class StockEngineTest extends TestCase
         ]);
 
         $inventory = Inventory::where('product_id', $product->id)->where('location_id', $location->id)->first();
-        $this->assertEquals(10.00, (float) $inventory->average_cost);
+        $this->assertEquals(10.00, (float) $inventory->getRawOriginal('average_cost'));
 
         // 2. Receive 10 more @ $20.00
         // Result should be: (10*10 + 10*20) / 20 = 300 / 20 = 15.00
@@ -95,9 +99,9 @@ class StockEngineTest extends TestCase
         $inventory->refresh();
         $product->refresh();
 
-        $this->assertEquals(20, (float) $inventory->quantity_on_hand);
-        $this->assertEquals(15.00, (float) $inventory->average_cost, 'Location Average Cost failed');
-        $this->assertEquals(15.00, (float) $product->average_cost, 'Product Catalog Average Cost failed');
+        $this->assertEquals(20, (float) $inventory->getRawOriginal('quantity_on_hand'));
+        $this->assertEquals(15.00, (float) $inventory->getRawOriginal('average_cost'), 'Location Average Cost failed');
+        $this->assertEquals(15.00, (float) $product->getRawOriginal('average_cost'), 'Product Catalog Average Cost failed');
     }
 
     public function test_it_throws_insufficient_stock_exception_on_overconsumption()
@@ -106,6 +110,7 @@ class StockEngineTest extends TestCase
         $product = Product::create([
             'product_code' => 'P-OOS',
             'name' => 'OOS Product',
+            'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => CostingMethod::where('name', 'fifo')->first()->id,
             'is_active' => true,
         ]);
@@ -138,6 +143,7 @@ class StockEngineTest extends TestCase
         $product = Product::create([
             'product_code' => 'P-TRFR',
             'name' => 'Transfer Product',
+            'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => CostingMethod::where('name', 'fifo')->first()->id,
             'is_active' => true,
         ]);
@@ -191,6 +197,7 @@ class StockEngineTest extends TestCase
         $product = Product::create([
             'product_code' => 'P-CONCUR',
             'name' => 'Concurrency Product',
+            'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => CostingMethod::where('name', 'fifo')->first()->id,
             'is_active' => true,
         ]);
@@ -293,9 +300,14 @@ class StockEngineTest extends TestCase
 
         // 4. Verify QOH is 12 Pieces
         $inventory = Inventory::where('product_id', $product->id)->where('location_id', $location->id)->first();
-        $this->assertEquals(12, (float) $inventory->quantity_on_hand);
+        
+        // Assert atomic database value (12 pieces)
+        $this->assertEquals(12, (float) $inventory->getRawOriginal('quantity_on_hand'));
+        
+        // Assert scaled display value (12 pieces) via the model accessor
+        $this->assertEquals(12.0, (float) $inventory->scaled_quantity_on_hand);
 
         // 5. Verify Unit Cost converted to $10/Piece
-        $this->assertEquals(10.00, (float) $inventory->average_cost);
+        $this->assertEquals(10.00, (float) $inventory->getRawOriginal('average_cost'));
     }
 }
