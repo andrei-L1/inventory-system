@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Helpers\UomHelper;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Location;
@@ -25,7 +26,7 @@ class StockIntegrityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        \App\Helpers\UomHelper::clearCache();
+        UomHelper::clearCache();
         $this->seed(DatabaseSeeder::class);
         $this->seed(VendorSeeder::class);
     }

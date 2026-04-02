@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Models\CostingMethod;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
@@ -9,6 +10,7 @@ use App\Models\Location;
 use App\Models\Product;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
+use App\Models\UnitOfMeasure;
 use App\Services\Inventory\StockService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,7 +26,7 @@ class StockConsumptionTest extends TestCase
     {
         parent::setUp();
         $this->service = app(StockService::class);
-        \App\Helpers\UomHelper::clearCache();
+        UomHelper::clearCache();
 
         // Use the system's database seeder to set up lookups and locations
         $this->seed(DatabaseSeeder::class);
@@ -34,7 +36,7 @@ class StockConsumptionTest extends TestCase
     {
         $location = Location::where('code', 'WH-A-Z1')->first();
         $fifoMethod = CostingMethod::where('name', 'fifo')->first();
-        $pcsUom = \App\Models\UnitOfMeasure::where('abbreviation', 'pcs')->first();
+        $pcsUom = UnitOfMeasure::where('abbreviation', 'pcs')->first();
 
         // Manual product creation as no factory exists
         $product = Product::create([
@@ -111,7 +113,7 @@ class StockConsumptionTest extends TestCase
         $product = Product::create([
             'product_code' => 'TEST-002',
             'name' => 'Test Product LIFO',
-            'uom_id' => \App\Models\UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
+            'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => $lifoMethod->id,
             'is_active' => true,
         ]);

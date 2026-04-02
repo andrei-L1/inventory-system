@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inventory;
 
 use App\Exceptions\InsufficientStockException;
+use App\Helpers\UomHelper;
 use App\Models\CostingMethod;
 use App\Models\Inventory;
 use App\Models\Location;
@@ -30,7 +31,7 @@ class StockEngineTest extends TestCase
     {
         parent::setUp();
         $this->service = app(StockService::class);
-        \App\Helpers\UomHelper::clearCache();
+        UomHelper::clearCache();
 
         // Use the system's database seeder to set up lookups and locations
         $this->seed(DatabaseSeeder::class);
@@ -46,7 +47,7 @@ class StockEngineTest extends TestCase
         $product = Product::create([
             'product_code' => 'P-AVG',
             'name' => 'Avg Product',
-            'uom_id' => \App\Models\UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
+            'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => $avgMethod->id,
             'is_active' => true,
         ]);
@@ -300,10 +301,10 @@ class StockEngineTest extends TestCase
 
         // 4. Verify QOH is 12 Pieces
         $inventory = Inventory::where('product_id', $product->id)->where('location_id', $location->id)->first();
-        
+
         // Assert atomic database value (12 pieces)
         $this->assertEquals(12, (float) $inventory->getRawOriginal('quantity_on_hand'));
-        
+
         // Assert scaled display value (12 pieces) via the model accessor
         $this->assertEquals(12.0, (float) $inventory->scaled_quantity_on_hand);
 

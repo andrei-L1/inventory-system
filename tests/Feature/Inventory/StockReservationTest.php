@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inventory;
 
 use App\Exceptions\InsufficientStockException;
+use App\Helpers\UomHelper;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\LocationType;
@@ -28,7 +29,7 @@ class StockReservationTest extends TestCase
     {
         parent::setUp();
         $this->service = app(StockService::class);
-        \App\Helpers\UomHelper::clearCache();
+        UomHelper::clearCache();
 
         // 1. Setup Master Data using DB directly for speed & reliability
         DB::table('units_of_measure')->updateOrInsert(
