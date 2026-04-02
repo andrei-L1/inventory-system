@@ -358,6 +358,7 @@ class PurchaseOrderController extends Controller
             'lines' => 'required|array',
             'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.return_qty' => 'required|numeric|min:0.01',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
             'lines.*.resolution' => 'required|in:replacement,credit',
             'lines.*.reason' => 'nullable|string',
         ]);
@@ -396,26 +397,41 @@ class PurchaseOrderController extends Controller
                         abort(400, 'Invalid PO line ID.');
                     }
 
-                    $returnQty = (float) $item['return_qty'];
-                    if ($returnQty > (float) $poLine->received_qty) {
-                        abort(422, 'Return quantity cannot exceed the quantity still recorded as received on this line.');
+                    $returnQtyRaw = (float) $item['return_qty'];
+                    $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                    $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
+
+                    // 1. Convert return quantity to the PO line's UOM for validation and tracking
+                    $qtyToUpdatePO = $returnQtyRaw;
+                    if ((int) $returnUomId !== (int) $lineUomId) {
+                        $factor = $this->getUomConversionFactor($returnUomId, $lineUomId);
+                        $qtyToUpdatePO = round($returnQtyRaw * $factor, 8);
+                    }
+
+                    if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00001)) {
+                        $receivedInReturnUnit = $poLine->received_qty;
+                        if ((int) $returnUomId !== (int) $lineUomId) {
+                            $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId);
+                            $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 4);
+                        }
+                        abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
                     }
 
                     // Negative quantity → issue path (consumes layers and reduces QOH).
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => -abs($returnQty),
+                        'quantity' => -abs($returnQtyRaw),
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
+                        'uom_id' => $returnUomId,
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
-                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $returnQty);
-                    $poLine->returned_qty = (float) $poLine->returned_qty + $returnQty;
+                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $qtyToUpdatePO);
+                    $poLine->returned_qty = (float) $poLine->returned_qty + $qtyToUpdatePO;
 
                     if ($item['resolution'] === 'credit') {
-                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $returnQty);
+                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $qtyToUpdatePO);
                     }
 
                     $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
