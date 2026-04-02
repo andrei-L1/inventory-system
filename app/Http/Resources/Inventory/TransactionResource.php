@@ -16,9 +16,13 @@ class TransactionResource extends JsonResource
         $line = $this->lines ? $this->lines->first() : null;
 
         // Enhanced type name for better ledger distinction
-        $typeName = $this->type->name ?? 'unknown';
-        if ($this->purchase_order_id && strtolower($typeName) === 'receipt') {
-            $typeName = 'good_receipt'; // Consistent identifier for frontend mapping
+        $typeName = strtolower($this->type->name ?? 'unknown');
+        $isReturn = ($line && (float)$line->quantity < 0 && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
+
+        if ($this->purchase_order_id && $typeName === 'receipt' && !$isReturn) {
+            $typeName = 'good_receipt'; 
+        } elseif ($isReturn) {
+            $typeName = 'purchase_return';
         }
 
         return [
@@ -29,7 +33,7 @@ class TransactionResource extends JsonResource
                 'name' => $this->type->name ?? 'unknown',
                 'display' => $typeName,
             ],
-            'display_type' => $this->purchase_order_id ? 'GOODS RECEIPT' : strtoupper($this->type->name ?? 'unknown'),
+            'display_type' => $isReturn ? 'PURCHASE RETURN' : ($this->purchase_order_id ? 'GOODS RECEIPT' : strtoupper($this->type->name ?? 'unknown')),
             'status' => [
                 'id' => $this->transaction_status_id,
                 'name' => $this->status->name ?? 'unknown',
@@ -63,7 +67,7 @@ class TransactionResource extends JsonResource
             'product_name' => $line->product->name ?? null,
             'quantity' => (float) ($line->quantity ?? null),
             'formatted_quantity' => $line->formatted_quantity ?? null,
-            'uom_abbreviation' => $line->uom->abbreviation ?? $line->product->uom->abbreviation ?? 'PCS',
+            'uom_abbreviation' => $line->uom->abbreviation ?? 'PCS',
             'unit_cost' => (float) ($line->unit_cost ?? 0),
             'unit_price' => (float) ($line->unit_price ?? 0),
             'total_cost' => (float) ($line->total_cost ?? 0),
