@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, onMounted, computed, watch } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -43,6 +43,38 @@ const uomConversions = ref([]);
 const loadingConversions = ref(false);
 const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
 
+const selectedLineForStock = ref(null);
+
+const fetchProductInventory = async (line) => {
+    if (!line.po_line_id) return;
+    const poLine = po.value.lines.find(l => l.id === line.po_line_id);
+    if (!poLine) return;
+    try {
+        const res = await axios.get(`/api/inventory/${poLine.product_id}/locations`);
+        line.inventories = res.data.data;
+    } catch (e) {
+        console.error('Failed to fetch inventories', e);
+    }
+};
+
+const getScaledQty = (line, rawPieces) => {
+    if (rawPieces === undefined || rawPieces === null) return '0';
+    const factor = getFactorToBase(line.uom_id).factor;
+    const scaled = (parseFloat(rawPieces) / factor);
+    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+};
+
+const getLocalStock = (line) => {
+    if (!line.inventories || !grnForm.value.location_id) return 0;
+    const inv = line.inventories.find(i => i.location_id === grnForm.value.location_id);
+    return inv ? inv.quantity_on_hand : 0;
+};
+
+const getUomAbbr = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? uom.abbreviation : '';
+};
+
 const isDiscrete = (abbr) => {
     return !continuousUnits.includes(abbr?.toUpperCase());
 };
@@ -60,24 +92,21 @@ const getFilteredUoms = (line) => {
 };
 
 const getFactorToBase = (uomId) => {
+    if (!uomId) return { factor: 1, baseId: null };
     let factor = 1.0;
-    let current = uomId;
+    let current = Number(uomId);
     let processed = [current];
     while (true) {
-        // We need uomConversions here, but it's not and ref. Wait.
-        // Actually, Show.vue doesn't have uomConversions ref!
-        // I need to add it.
-        const rule = uomConversions.value.find(c => c.from_uom_id === current);
-        if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
-        current = rule.to_uom_id;
+        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
+        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
+        factor *= Number(rule.conversion_factor);
+        current = Number(rule.to_uom_id);
         processed.push(current);
     }
     return { factor, baseId: current };
 };
 
 const onGrnUomChange = (line) => {
-    // We need the original PO line to know its base unit and pending qty in its unit
     const poLine = po.value.lines.find(l => l.id === line.po_line_id);
     if (!poLine) return;
 
@@ -87,6 +116,25 @@ const onGrnUomChange = (line) => {
     if (targetInfo.baseId === poBaseInfo.baseId) {
         const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
         line.received_qty = poLine.pending_qty * effectiveFactor;
+        return;
+    }
+
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
+};
+
+const onReturnUomChange = (line) => {
+    const poLine = po.value.lines.find(l => l.id === line.po_line_id);
+    if (!poLine) return;
+
+    const targetInfo = getFactorToBase(line.uom_id);
+    const poBaseInfo = getFactorToBase(poLine.uom_id);
+
+    if (targetInfo.baseId === poBaseInfo.baseId) {
+        const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
+        line.return_qty = line.received_qty_in_po_unit / (poBaseInfo.factor / targetInfo.factor); // Reset to max? or keep? 
+        // Actually, let's just use the factor to adjust the QTY RETURNED if it was already set, but here it's simpler to just reset or scale.
+        // Let's just scale it.
+        line.return_qty = (line.received_qty_in_po_unit * effectiveFactor);
         return;
     }
 
@@ -224,29 +272,48 @@ const submitShipment = async () => {
     }
 };
 
-const openGrnMode = () => {
-    grnForm.value.location_id = null;
-    grnForm.value.lines = po.value.lines
-        .filter(l => l.pending_qty > 0)
-        .map(l => ({
-            po_line_id: l.id,
-            sku: l.sku,
-            product_name: l.product_name,
-            product_code: l.product_code,
-            pending_qty: l.pending_qty,
-            formatted_pending_qty: l.formatted_pending_qty,
-            received_qty: l.pending_qty,
-            unit: l.uom || 'PCS',
-            uom_id: l.uom_id,
-            product_uom: l.uom || 'PCS'
-        }));
-    
-    if (grnForm.value.lines.length === 0) {
-        toast.add({ severity: 'info', summary: 'Completed', detail: 'All lines are fully received', life: 3000 });
-        return;
+const openGrnMode = async () => {
+    grnLoading.value = true;
+    try {
+        const productIds = po.value.lines.map(l => l.product_id);
+        const inventoryRes = await Promise.all(
+            productIds.map(id => axios.get(`/api/inventory/${id}/locations`))
+        );
+        
+        const invMap = {};
+        productIds.forEach((id, index) => {
+            invMap[id] = inventoryRes[index].data.data;
+        });
+
+        grnForm.value.location_id = null;
+        grnForm.value.lines = po.value.lines
+            .filter(l => l.pending_qty > 0)
+            .map(l => ({
+                po_line_id: l.id,
+                product_id: l.product_id,
+                sku: l.sku,
+                product_name: l.product_name,
+                product_code: l.product_code,
+                pending_qty: l.pending_qty,
+                formatted_pending_qty: l.formatted_pending_qty,
+                received_qty: l.pending_qty,
+                unit: l.uom || 'PCS',
+                uom_id: l.uom_id,
+                product_uom: l.uom || 'PCS',
+                inventories: invMap[l.product_id] || []
+            }));
+        
+        if (grnForm.value.lines.length === 0) {
+            toast.add({ severity: 'info', summary: 'Completed', detail: 'All lines are fully received', life: 3000 });
+            return;
+        }
+        
+        grnDialog.value = true;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not fetch inventory distribution', life: 3000 });
+    } finally {
+        grnLoading.value = false;
     }
-    
-    grnDialog.value = true;
 };
 
 const viewGrnDetails = (receipt) => {
@@ -311,7 +378,10 @@ const openReturnMode = async () => {
                 product_name: l.product_name,
                 sku: l.sku,
                 received_qty: l.received_qty,
+                received_qty_in_po_unit: l.received_qty, // Keep track of base received qty
                 uom: l.uom,
+                uom_id: l.uom_id,
+                product_uom: l.uom || 'PCS',
                 return_qty: 0,
                 resolution: 'replacement',
                 reason: ''
@@ -365,6 +435,7 @@ const postReturn = async () => {
             lines: payloadLines.map(l => ({ 
                 po_line_id: l.po_line_id, 
                 return_qty: l.return_qty,
+                uom_id: l.uom_id,
                 resolution: l.resolution,
                 reason: l.reason
             }))
@@ -708,6 +779,22 @@ const deletePO = async () => {
                                 <span class="text-amber-400 font-mono text-xs font-bold">{{ data.formatted_pending_qty || data.pending_qty }}</span>
                             </template>
                         </Column>
+                        <Column header="STOCK LEVEL" style="width: 10rem">
+                            <template #body="{ data }">
+                                <div class="flex flex-col items-start gap-1">
+                                    <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStockInfo($event, data)">
+                                        <div class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-orange-500/30">
+                                            <div class="w-1 h-1 rounded-full animate-pulse" :class="getLocalStock(data) > 0 ? 'bg-emerald-500' : 'bg-red-500'"></div>
+                                            <span class="text-[10px] font-mono font-bold" :class="getLocalStock(data) > 0 ? 'text-emerald-400' : 'text-zinc-500'">
+                                                {{ getScaledQty(data, getLocalStock(data)) }}
+                                            </span>
+                                        </div>
+                                        <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-orange-500/50 italic transition-colors"></i>
+                                    </div>
+                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Existing in Bin</span>
+                                </div>
+                            </template>
+                        </Column>
                         <Column field="received_qty" header="RECEIVE QTY" style="width: 14rem">
                             <template #body="{ data }">
                                 <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-orange-500/50 transition-all shadow-inner h-9 group">
@@ -812,7 +899,7 @@ const deletePO = async () => {
                                  class="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-zinc-950 items-center hover:bg-zinc-900/50 transition-colors"
                             >
                                 <!-- Product Identity -->
-                                <div class="lg:col-span-4 flex flex-col gap-1">
+                                <div class="lg:col-span-3 flex flex-col gap-1">
                                     <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
                                     <div class="flex items-center gap-3">
                                         <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest">{{ line.sku }}</span>
@@ -836,15 +923,38 @@ const deletePO = async () => {
                                 </div>
 
                                 <!-- Inputs -->
-                                <div class="lg:col-span-2">
-                                    <InputNumber 
-                                        v-model="line.return_qty" 
-                                        :min="0" 
-                                        :max="Math.min(line.received_qty, getStockInSelectedLocation(line.product_id))" 
-                                        class="!w-full !rounded-none !border-zinc-800 !bg-black" 
-                                        inputClass="!bg-black !text-center !font-mono !text-xs !py-1 !text-red-500 !border-zinc-800 !h-8"
-                                        placeholder="0"
-                                    />
+                                <div class="lg:col-span-3">
+                                    <div class="flex items-center bg-black border border-zinc-800 rounded-none focus-within:border-red-500/50 transition-all h-8 group">
+                                        <div class="flex-1 flex items-center px-1">
+                                            <InputNumber 
+                                                v-model="line.return_qty" 
+                                                :min="0" 
+                                                :minFractionDigits="0" 
+                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
+                                                class="p-inputtext-sm text-center font-mono font-bold text-red-500 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                                :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#ef4444', width: '100%', boxShadow: 'none', height: '1.75rem', fontSize: '0.75rem' }"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                        
+                                        <!-- Simple Divider -->
+                                        <div class="w-px h-4 bg-zinc-800 group-focus-within:bg-red-500/20"></div>
+                                        
+                                        <div class="w-20">
+                                            <Select 
+                                                v-model="line.uom_id" 
+                                                :options="getFilteredUoms(line)" 
+                                                optionLabel="abbreviation" 
+                                                optionValue="id" 
+                                                placeholder="Unit"
+                                                @change="onReturnUomChange(line)"
+                                                class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
+                                                pt:root:class="!border-0 !bg-transparent !shadow-none"
+                                                pt:label:class="!text-red-500 !p-1 !text-center !uppercase font-black !text-[9px]"
+                                                pt:dropdown:class="!text-zinc-600 !w-4"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="lg:col-span-2">
@@ -917,7 +1027,12 @@ const deletePO = async () => {
                 <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800">
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
-                        <span class="text-sm font-black text-sky-400 font-mono">{{ selectedGrn.reference_number }}</span>
+                        <span 
+                            class="text-sm font-black text-sky-400 font-mono cursor-pointer hover:underline"
+                            @click="router.visit(`/movements/${selectedGrn.id}`)"
+                        >
+                            {{ selectedGrn.reference_number }}
+                        </span>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Received At</label>
@@ -946,9 +1061,16 @@ const deletePO = async () => {
                                 <span class="text-xs font-bold">{{ data.product_name }}</span>
                             </template>
                         </Column>
-                        <Column field="quantity" header="RECEIVED">
+                        <Column field="quantity" header="RECEIVED" style="width: 100px">
                             <template #body="{ data }">
-                                <span class="text-white font-mono text-xs font-bold">{{ data.formatted_quantity || data.quantity }}</span>
+                                <span class="text-white font-mono text-xs font-bold">{{ Math.abs(data.quantity) }}</span>
+                            </template>
+                        </Column>
+                        <Column header="UNIT" style="width: 80px">
+                            <template #body="{ data }">
+                                <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                    {{ data.uom_abbreviation || 'PCS' }}
+                                </span>
                             </template>
                         </Column>
                     </DataTable>
@@ -966,7 +1088,12 @@ const deletePO = async () => {
                 <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800 border-l-4 border-l-red-600">
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
-                        <span class="text-sm font-black text-red-500 font-mono">{{ selectedReturn.reference_number }}</span>
+                        <span 
+                            class="text-sm font-black text-red-500 font-mono cursor-pointer hover:underline"
+                            @click="router.visit(`/movements/${selectedReturn.id}`)"
+                        >
+                            {{ selectedReturn.reference_number }}
+                        </span>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Returned At</label>
@@ -1007,9 +1134,16 @@ const deletePO = async () => {
                                 </span>
                             </template>
                         </Column>
-                        <Column field="quantity" header="QTY RETURNED">
+                        <Column field="quantity" header="QTY" style="width: 100px">
                             <template #body="{ data }">
-                                <span class="text-red-500 font-mono text-xs font-black">{{ data.formatted_quantity || data.quantity }}</span>
+                                <span class="text-red-500 font-mono text-xs font-black">{{ Math.abs(data.quantity) }}</span>
+                            </template>
+                        </Column>
+                        <Column header="UNIT" style="width: 80px">
+                            <template #body="{ data }">
+                                <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                    {{ data.uom_abbreviation || 'PCS' }}
+                                </span>
                             </template>
                         </Column>
                     </DataTable>

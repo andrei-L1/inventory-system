@@ -16,6 +16,7 @@ import InputNumber from 'primevue/inputnumber';
 import ToggleSwitch from 'primevue/toggleswitch';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
+import Popover from 'primevue/popover';
 
 const toast = useToast();
 const products = ref([]);
@@ -40,6 +41,80 @@ const ruleForm = ref({
     is_active: true
 });
 const savingRule = ref(false);
+
+const uoms = ref([]);
+const uomConversions = ref([]);
+const selectedViewUomId = ref(null);
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
+
+const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+
+const isDiscrete = (abbr) => {
+    return !continuousUnits.includes(abbr?.toUpperCase());
+};
+
+const getFactorToBase = (uomId) => {
+    if (!uomId) return { factor: 1, baseId: null };
+    let factor = 1.0;
+    let current = Number(uomId);
+    let processed = [current];
+    while (true) {
+        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
+        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
+        factor *= Number(rule.conversion_factor);
+        current = Number(rule.to_uom_id);
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
+
+const getScaledQty = (productUomId, rawPieces) => {
+    if (rawPieces === undefined || rawPieces === null) return '0';
+    
+    // Default to product's base UOM if no global switcher is selected
+    const targetUomId = selectedViewUomId.value || productUomId;
+    const targetUom = uoms.value.find(u => u.id == targetUomId);
+    const targetAbbr = targetUom ? targetUom.abbreviation : '';
+
+    const targetInfo = getFactorToBase(targetUomId);
+    const productBaseInfo = getFactorToBase(productUomId);
+
+    if (targetInfo.baseId !== productBaseInfo.baseId && selectedViewUomId.value) {
+        // Fallback to base if incompatible
+        const baseUom = uoms.value.find(u => u.id == productUomId);
+        return `${Number(rawPieces).toFixed(2)} ${baseUom?.abbreviation || ''} (No Conv)`;
+    }
+
+    const scaled = (Number(rawPieces) / targetInfo.factor);
+    const formatted = isDiscrete(targetAbbr) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    return `${formatted} ${targetAbbr}`;
+};
+
+const toggleStockInfo = async (event, product) => {
+    selectedLineForStock.value = product;
+    // We need to trigger loadIntelligenceData if it's not the currently selected product
+    if (selectedProduct.value?.id !== product.id) {
+        selectedProduct.value = product;
+        await loadIntelligenceData();
+    } else if (!locationBreakdown.value.length) {
+        await loadIntelligenceData();
+    }
+    stockOp.value.toggle(event);
+};
+
+const loadMasterData = async () => {
+    try {
+        const [uomRes, convRes] = await Promise.all([
+            axios.get('/api/uom'),
+            axios.get('/api/uom-conversions')
+        ]);
+        uoms.value = uomRes.data.data;
+        uomConversions.value = convRes.data.data;
+    } catch (e) {
+        console.error("Failed to load UOM data", e);
+    }
+};
 
 const loadProducts = async () => {
     loadingProducts.value = true;
@@ -185,7 +260,10 @@ const movementOptions = [
     }
 ];
 
-onMounted(loadProducts);
+onMounted(() => {
+    loadProducts();
+    loadMasterData();
+});
 
 const page = usePage();
 watch(() => page.url, () => {
@@ -299,6 +377,21 @@ const tablePt = {
                 </div>
                 
                 <div class="flex gap-4 items-center">
+                    <div class="flex flex-col gap-1 mr-4">
+                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono ml-1">View Unit</span>
+                        <Select 
+                            v-model="selectedViewUomId" 
+                            :options="uoms" 
+                            optionLabel="abbreviation" 
+                            optionValue="id" 
+                            placeholder="Native"
+                            showClear
+                            @change="loadProducts"
+                            class="!bg-zinc-900 !border-zinc-800 !h-10 !rounded-xl !text-[10px] font-mono font-black !w-24"
+                            pt:label:class="!text-emerald-500 !p-2 !text-center !uppercase font-black"
+                            pt:dropdown:class="!text-zinc-600 !w-6"
+                        />
+                    </div>
                     <button @click="toggleMenu" 
                             class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
                         <i class="pi pi-plus text-sm"></i>
@@ -344,13 +437,14 @@ const tablePt = {
                                 <div class="flex flex-col gap-2 w-full">
                                     <div class="flex justify-between items-center w-full">
                                         <span class="text-[9px] font-bold font-mono tracking-widest uppercase" :class="selectedProduct?.id === option.id ? 'text-emerald-400' : 'text-zinc-600'">{{ option.sku }}</span>
-                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none" 
+                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-emerald-500/50 transition-colors" 
+                                              @click.stop="toggleStockInfo($event, option)"
                                               :class="[
                                                   option.total_qoh === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
                                                   option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
                                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                               ]">
-                                            {{ option.formatted_total_qoh || option.total_qoh }}
+                                            {{ getScaledQty(option.uom_id, option.total_qoh) }}
                                         </span>
                                     </div>
                                     <span class="text-xs font-bold truncate tracking-tight">{{ option.name }}</span>
@@ -392,13 +486,14 @@ const tablePt = {
                                              'ring-1 ring-emerald-500/20'
                                          ]">
                                         <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-2 font-mono">Current Stock</span>
-                                        <span class="text-4xl font-bold tracking-tighter font-mono" 
+                                        <span class="text-4xl font-bold tracking-tighter font-mono cursor-help hover:opacity-80 transition-opacity" 
+                                              @click="toggleStockInfo($event, selectedProduct)"
                                               :class="[
                                                   selectedProduct.total_qoh === 0 ? 'text-red-400' : 
                                                   selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400' : 
                                                   'text-emerald-400'
                                               ]">
-                                            {{ selectedProduct.formatted_total_qoh || selectedProduct.total_qoh }}
+                                            {{ getScaledQty(selectedProduct.uom_id, selectedProduct.total_qoh) }}
                                         </span>
                                         <span class="text-[10px] font-bold font-mono mt-2" 
                                               :class="[
@@ -492,7 +587,7 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
                                             <div class="flex flex-col items-end">
-                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ loc.formatted_quantity_on_hand || loc.quantity_on_hand }}</span>
+                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
                                                 <span class="text-[9px] font-bold text-zinc-700 font-mono tracking-[0.2em] uppercase">Items at this area</span>
                                             </div>
                                         </div>
@@ -536,7 +631,7 @@ const tablePt = {
                                     </Column>
                                     <Column field="remaining_qty" header="Remaining" style="width: 160px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-zinc-200">{{ data.formatted_remaining_qty || data.remaining_qty }}</span>
+                                            <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty) }}</span>
                                         </template>
                                     </Column>
                                     <Column field="unit_cost" header="Unit Cost" style="width: 120px">
@@ -611,11 +706,25 @@ const tablePt = {
                                     </template>
                                 </Column>
                                 
-                                <Column field="quantity" header="Change Qty" style="width: 180px">
+                                <Column field="quantity" header="Change Qty" style="width: 150px">
                                     <template #body="{ data }">
-                                        <div class="font-mono font-bold text-xs tracking-tighter" :class="data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
-                                            {{ data.type.name.toLowerCase() === 'issue' || (data.type.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? '' : '+' }}{{ data.formatted_quantity || data.quantity }}
+                                        <div class="flex flex-col">
+                                            <div class="font-mono font-bold text-xs tracking-tighter" 
+                                                 :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
+                                                {{ data.quantity < 0 ? '' : '+' }}{{ data.quantity }}
+                                            </div>
+                                            <div v-if="data.uom_abbreviation !== (selectedProduct.uom?.abbreviation || 'pcs')" class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter mt-0.5">
+                                                Base: {{ getScaledQty(selectedProduct.uom_id, data.quantity) }}
+                                            </div>
                                         </div>
+                                    </template>
+                                </Column>
+
+                                <Column header="Unit" style="width: 100px">
+                                    <template #body="{ data }">
+                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                            {{ data.uom_abbreviation }}
+                                        </span>
                                     </template>
                                 </Column>
                                 
@@ -763,6 +872,35 @@ const tablePt = {
                 </div>
             </div>
         </Dialog>
+
+        <!-- Scattered Stock Breakdown Popover -->
+        <Popover ref="stockOp" class="!bg-zinc-900 !border-zinc-800 !shadow-2xl">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+                <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2 flex justify-between">
+                    <span>Location Breakdown</span>
+                    <span>{{ uoms.find(u => u.id == (selectedViewUomId || selectedLineForStock.uom_id))?.abbreviation }}</span>
+                </div>
+                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    <div v-for="loc in locationBreakdown" :key="loc.location_id" class="flex justify-between items-center text-[10px]">
+                        <span class="text-zinc-400 truncate pr-2 uppercase font-bold">
+                            {{ loc.location_name }}
+                        </span>
+                        <span class="font-mono text-zinc-200">
+                            {{ getScaledQty(selectedLineForStock.uom_id, loc.quantity_on_hand) }}
+                        </span>
+                    </div>
+                    <div v-if="!locationBreakdown.length" class="text-center py-2 text-zinc-600 text-[10px] italic">
+                        No stock available in any location
+                    </div>
+                </div>
+                <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono text-[9px]">
+                    <span class="font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
+                    <span class="font-black text-white px-2 py-0.5 bg-zinc-900 rounded">
+                        {{ getScaledQty(selectedLineForStock.uom_id, selectedLineForStock.total_qoh) }}
+                    </span>
+                </div>
+            </div>
+        </Popover>
     </AppLayout>
 </template>
 

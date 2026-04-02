@@ -33,11 +33,7 @@ const formatCurrency = (val) => {
 };
 
 const goBack = () => {
-    if (transaction.value?.lines?.[0]?.product_id) {
-        router.visit(`/inventory-center?product_id=${transaction.value.lines[0].product_id}`);
-    } else {
-        router.visit('/inventory-center');
-    }
+    window.history.back();
 };
 
 const jumpToPo = (poId) => {
@@ -89,7 +85,7 @@ const getTypeLabel = (type) => {
                     
                     <div class="flex items-center gap-4">
                         <button @click="goBack" class="px-6 h-12 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-500 hover:text-zinc-200 transition-all font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
-                            <i class="pi pi-arrow-left" /> Back to Ledger
+                            <i class="pi pi-arrow-left" /> Go Back
                         </button>
                         <button class="px-6 h-12 rounded-xl bg-sky-500 text-zinc-950 hover:bg-sky-400 transition-all font-bold text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-sky-500/10 active:scale-95">
                             <i class="pi pi-print" /> Print Slip
@@ -202,11 +198,17 @@ const getTypeLabel = (type) => {
                                 
                                 <Column header="Quantity" style="width: 140px">
                                     <template #body="{ data }">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-lg font-bold font-mono" :class="transaction.type?.name.toLowerCase() === 'issue' || (transaction.type?.name.toLowerCase() === 'adjustment' && data.quantity < 0) ? 'text-red-400' : 'text-emerald-400'">
-                                                {{ data.formatted_quantity || (Math.abs(data.quantity) + ' ' + (data.product?.uom?.abbreviation || 'PCS')) }}
-                                            </span>
-                                        </div>
+                                        <span class="text-lg font-bold font-mono" :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
+                                            {{ data.quantity < 0 ? '-' : '+' }}{{ Math.abs(data.quantity) }}
+                                        </span>
+                                    </template>
+                                </Column>
+
+                                <Column header="Unit" style="width: 100px">
+                                    <template #body="{ data }">
+                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                            {{ data.uom_abbreviation || 'PCS' }}
+                                        </span>
                                     </template>
                                 </Column>
 

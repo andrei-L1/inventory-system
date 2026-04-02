@@ -124,6 +124,11 @@ const handleLinkClick = (type, name, id) => {
         return;
     }
 
+    if (type === 'Movement' && id) {
+        router.visit(`/movements/${id}`);
+        return;
+    }
+
     toast.add({ 
         severity: id ? 'info' : 'warn', 
         summary: id ? `Navigating to ${type}` : 'Relation Missing', 
@@ -392,7 +397,10 @@ const formatCurrency = (val) => {
                                 
                                 <Column field="reference_number" header="Reference #" style="width: 200px">
                                     <template #body="{ data }">
-                                        <span class="font-mono text-[11px] bg-sky-500/5 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-tighter">{{ data.reference_number }}</span>
+                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)"
+                                              class="font-mono text-[11px] bg-sky-500/5 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-tighter cursor-pointer hover:bg-sky-500/10 hover:border-sky-500/30 transition-all">
+                                            {{ data.reference_number }}
+                                        </span>
                                     </template>
                                 </Column>
                                 
@@ -409,11 +417,30 @@ const formatCurrency = (val) => {
                                     </template>
                                 </Column>
                                 
-                                <Column header="Product" style="width: 250px">
+                                <Column header="Product" style="width: 200px">
                                     <template #body="{ data }">
                                         <div @click.stop="handleLinkClick('Product', data.product_name, data.product_id)" class="text-white hover:text-sky-400 cursor-pointer font-bold text-xs transition-colors">
                                             {{ data.product_name || 'N/A' }}
                                         </div>
+                                    </template>
+                                </Column>
+
+                                <Column header="Change Qty" style="width: 130px">
+                                    <template #body="{ data }">
+                                        <div class="flex flex-col">
+                                            <span class="font-mono font-bold text-xs tracking-tighter"
+                                                  :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
+                                                {{ data.quantity < 0 ? '' : '+' }}{{ data.quantity }}
+                                            </span>
+                                        </div>
+                                    </template>
+                                </Column>
+
+                                <Column header="Unit" style="width: 90px">
+                                    <template #body="{ data }">
+                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                            {{ data.uom_abbreviation || 'PCS' }}
+                                        </span>
                                     </template>
                                 </Column>
  
