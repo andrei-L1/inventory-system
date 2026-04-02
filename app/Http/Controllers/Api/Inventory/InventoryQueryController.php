@@ -55,6 +55,7 @@ class InventoryQueryController extends Controller
                     'category' => $product->category->name ?? 'N/A',
                     'uom' => $product->uom->abbreviation ?? 'pcs',
                     'quantity_on_hand' => (float) $product->total_qoh,
+                    'formatted_quantity_on_hand' => $product->formatted_total_qoh,
                     'reorder_point' => (float) $product->reorder_point,
                     'shortage' => (float) ($product->reorder_point - $product->total_qoh),
                     'preferred_vendor' => $product->preferredVendor->name ?? 'None',
@@ -80,6 +81,7 @@ class InventoryQueryController extends Controller
                     'location_name' => $inv->location->name ?? 'Unknown Location',
                     'location_code' => $inv->location->code ?? 'N/A',
                     'quantity_on_hand' => (float) $inv->quantity_on_hand,
+                    'formatted_quantity_on_hand' => $inv->formatted_quantity_on_hand,
                     'average_cost' => (float) $inv->average_cost,
                     'last_movement_date' => $inv->updated_at,
                 ];
@@ -106,7 +108,9 @@ class InventoryQueryController extends Controller
                     'receipt_date' => $layer->receipt_date,
                     'unit_cost' => (float) $layer->unit_cost,
                     'original_qty' => (float) $layer->received_qty,
+                    'formatted_original_qty' => $layer->formatted_received_qty,
                     'remaining_qty' => (float) $layer->remaining_qty,
+                    'formatted_remaining_qty' => $layer->formatted_remaining_qty,
                     'total_value' => (float) ($layer->remaining_qty * $layer->unit_cost),
                 ];
             });
