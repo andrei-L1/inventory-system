@@ -24,7 +24,7 @@ class ProductResource extends JsonResource
             'brand' => $this->brand,
             'selling_price' => (float) $this->selling_price,
             'average_cost' => (float) $this->average_cost,
-            'total_qoh' => (float) ($this->inventories_sum_quantity_on_hand ?? $this->inventories()->sum('quantity_on_hand')),
+            'total_qoh' => (float) ($this->inventories_sum_quantity_on_hand ?? ($this->relationLoaded('inventories') ? $this->inventories->sum('quantity_on_hand') : $this->inventories()->sum('quantity_on_hand'))),
             'formatted_total_qoh' => $this->formatted_total_qoh,
             'reorder_point' => (float) $this->reorder_point,
             'reorder_quantity' => (float) $this->reorder_quantity,
@@ -37,6 +37,7 @@ class ProductResource extends JsonResource
             'category' => new CategoryResource($this->whenLoaded('category')),
             'uom' => new UnitOfMeasureResource($this->whenLoaded('uom')),
             'preferred_vendor' => new VendorResource($this->whenLoaded('preferredVendor')),
+            'inventories' => InventoryResource::collection($this->whenLoaded('inventories')),
             'costing_method' => match ($this->costingMethod->name ?? '') {
                 'average' => 'Weighted Average (Layered)',
                 'fifo' => 'FIFO (First-In, First-Out)',

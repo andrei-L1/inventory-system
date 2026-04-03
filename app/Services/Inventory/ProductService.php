@@ -18,7 +18,7 @@ class ProductService
     public function search(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Product::query()
-            ->with(['category', 'uom', 'preferredVendor', 'costingMethod']);
+            ->with(['category', 'uom', 'preferredVendor', 'costingMethod', 'inventories.location']);
 
         if (! empty($filters['query'])) {
             $keyword = '%'.$filters['query'].'%';
