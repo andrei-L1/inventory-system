@@ -31,6 +31,7 @@ class TransactionLine extends Model
         'product_id',
         'location_id',
         'uom_id',
+        'base_uom_id',
         'quantity',
         'unit_cost',
         'total_cost',
@@ -88,10 +89,19 @@ class TransactionLine extends Model
     }
 
     /**
-     * Get the formatted quantity.
+     * Get the base UOM (pieces) used for storage.
+     */
+    public function baseUom(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasure::class, 'base_uom_id');
+    }
+
+    /**
+     * Get the formatted quantity using the original UOM.
      */
     public function getFormattedQuantityAttribute(): string
     {
+        // Re-scale the base quantity back to the original UOM for display
         return UomHelper::format($this->quantity, $this->uom_id ?? $this->product->uom_id);
     }
 }

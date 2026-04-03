@@ -159,33 +159,51 @@ class PurchaseOrderController extends Controller
 
     public function approve(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
-        if ($purchaseOrder->status->name !== 'draft') {
-            abort(400, 'Only draft purchase orders can be approved.');
-        }
+        // FIX [GAP 3]: Wrap in a transaction and re-fetch the PO row with a lock so
+        // the status check and the write are atomic. Without this, two concurrent
+        // approve requests can both pass the 'draft' guard and double-approve.
+        $purchaseOrder = DB::transaction(function () use ($purchaseOrder, $request) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing('status');
 
-        $openStatus = PurchaseOrderStatus::where('name', 'open')->firstOrFail();
+            if ($po->status->name !== 'draft') {
+                abort(400, 'Only draft purchase orders can be approved.');
+            }
 
-        $purchaseOrder->update([
-            'status_id' => $openStatus->id,
-            'approved_by' => $request->user()->id,
-            'approved_at' => now(),
-        ]);
+            $openStatus = PurchaseOrderStatus::where('name', 'open')->firstOrFail();
+
+            $po->update([
+                'status_id' => $openStatus->id,
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
+
+            return $po;
+        });
 
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
     public function send(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
-        if ($purchaseOrder->status->name !== 'open') {
-            abort(400, 'Only approved (open) purchase orders can be sent to vendors.');
-        }
+        // FIX [GAP 3]: Same atomic lock pattern — prevents double-sending.
+        $purchaseOrder = DB::transaction(function () use ($purchaseOrder) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing('status');
 
-        $sentStatus = PurchaseOrderStatus::where('name', 'sent')->firstOrFail();
+            if ($po->status->name !== 'open') {
+                abort(400, 'Only approved (open) purchase orders can be sent to vendors.');
+            }
 
-        $purchaseOrder->update([
-            'status_id' => $sentStatus->id,
-            'sent_at' => now(),
-        ]);
+            $sentStatus = PurchaseOrderStatus::where('name', 'sent')->firstOrFail();
+
+            $po->update([
+                'status_id' => $sentStatus->id,
+                'sent_at' => now(),
+            ]);
+
+            return $po;
+        });
 
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
@@ -197,34 +215,50 @@ class PurchaseOrderController extends Controller
             'tracking_number' => 'nullable|string|max:100',
         ]);
 
-        if (! in_array($purchaseOrder->status->name, ['open', 'sent'])) {
-            abort(400, 'Purchase order must be in open or sent status to be marked as shipped.');
-        }
+        // FIX [GAP 3]: Same atomic lock pattern — prevents concurrent ship requests.
+        $purchaseOrder = DB::transaction(function () use ($purchaseOrder, $request) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing('status');
 
-        $transitStatus = PurchaseOrderStatus::where('name', 'in_transit')->firstOrFail();
+            if (! in_array($po->status->name, ['open', 'sent'])) {
+                abort(400, 'Purchase order must be in open or sent status to be marked as shipped.');
+            }
 
-        $purchaseOrder->update([
-            'status_id' => $transitStatus->id,
-            'shipped_at' => now(),
-            'carrier' => $request->carrier,
-            'tracking_number' => $request->tracking_number,
-        ]);
+            $transitStatus = PurchaseOrderStatus::where('name', 'in_transit')->firstOrFail();
+
+            $po->update([
+                'status_id' => $transitStatus->id,
+                'shipped_at' => now(),
+                'carrier' => $request->carrier,
+                'tracking_number' => $request->tracking_number,
+            ]);
+
+            return $po;
+        });
 
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
     public function close(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
     {
-        if (in_array($purchaseOrder->status->name, ['closed', 'cancelled'])) {
-            abort(400, "Purchase order is already {$purchaseOrder->status->name}.");
-        }
+        // FIX [GAP 3]: Same atomic lock pattern — prevents concurrent close requests.
+        $purchaseOrder = DB::transaction(function () use ($purchaseOrder, $request) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing('status');
 
-        $closedStatus = PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
+            if (in_array($po->status->name, ['closed', 'cancelled'])) {
+                abort(400, "Purchase order is already {$po->status->name}.");
+            }
 
-        $purchaseOrder->update([
-            'status_id' => $closedStatus->id,
-            'notes' => trim(($purchaseOrder->notes ?? '').' | Manually closed by '.$request->user()->name.' on '.now()->toDateString()),
-        ]);
+            $closedStatus = PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
+
+            $po->update([
+                'status_id' => $closedStatus->id,
+                'notes' => trim(($po->notes ?? '').' | Manually closed by '.$request->user()->name.' on '.now()->toDateString()),
+            ]);
+
+            return $po;
+        });
 
         return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
@@ -264,7 +298,11 @@ class PurchaseOrderController extends Controller
                     'lines' => [],
                 ];
 
-                $poLines = $purchaseOrder->lines()->get()->keyBy('id');
+                // FIX [GAP 1]: Lock all PO lines for this order before reading
+                // received_qty so the over-receipt guard and the increment are atomic.
+                // Without this, two concurrent GRN requests can both read received_qty=0,
+                // both pass the guard, and both increment — exceeding ordered_qty.
+                $poLines = $purchaseOrder->lines()->lockForUpdate()->get()->keyBy('id');
 
                 foreach ($request->lines as $item) {
                     $poLine = $poLines->get($item['po_line_id']);
@@ -358,6 +396,7 @@ class PurchaseOrderController extends Controller
             'lines' => 'required|array',
             'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.return_qty' => 'required|numeric|min:0.01',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
             'lines.*.resolution' => 'required|in:replacement,credit',
             'lines.*.reason' => 'nullable|string',
         ]);
@@ -387,7 +426,11 @@ class PurchaseOrderController extends Controller
                     'lines' => [],
                 ];
 
-                $poLines = $purchaseOrder->lines()->get()->keyBy('id');
+                // FIX [GAP 2]: Lock all PO lines before reading received_qty so the
+                // "cannot exceed received stock" guard and the decrement are atomic.
+                // Without this, two concurrent return requests can both pass the guard
+                // and both decrement — causing received_qty to go negative.
+                $poLines = $purchaseOrder->lines()->lockForUpdate()->get()->keyBy('id');
 
                 foreach ($request->lines as $item) {
                     $poLine = $poLines->get($item['po_line_id']);
@@ -396,26 +439,41 @@ class PurchaseOrderController extends Controller
                         abort(400, 'Invalid PO line ID.');
                     }
 
-                    $returnQty = (float) $item['return_qty'];
-                    if ($returnQty > (float) $poLine->received_qty) {
-                        abort(422, 'Return quantity cannot exceed the quantity still recorded as received on this line.');
+                    $returnQtyRaw = (float) $item['return_qty'];
+                    $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                    $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
+
+                    // 1. Convert return quantity to the PO line's UOM for validation and tracking
+                    $qtyToUpdatePO = $returnQtyRaw;
+                    if ((int) $returnUomId !== (int) $lineUomId) {
+                        $factor = $this->getUomConversionFactor($returnUomId, $lineUomId);
+                        $qtyToUpdatePO = round($returnQtyRaw * $factor, 8);
+                    }
+
+                    if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00001)) {
+                        $receivedInReturnUnit = $poLine->received_qty;
+                        if ((int) $returnUomId !== (int) $lineUomId) {
+                            $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId);
+                            $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 4);
+                        }
+                        abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
                     }
 
                     // Negative quantity → issue path (consumes layers and reduces QOH).
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => -abs($returnQty),
+                        'quantity' => -abs($returnQtyRaw),
                         'unit_cost' => $poLine->unit_cost,
-                        'uom_id' => $poLine->uom_id ?? $poLine->product->uom_id,
+                        'uom_id' => $returnUomId,
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
-                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $returnQty);
-                    $poLine->returned_qty = (float) $poLine->returned_qty + $returnQty;
+                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $qtyToUpdatePO);
+                    $poLine->returned_qty = (float) $poLine->returned_qty + $qtyToUpdatePO;
 
                     if ($item['resolution'] === 'credit') {
-                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $returnQty);
+                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $qtyToUpdatePO);
                     }
 
                     $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');

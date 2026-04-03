@@ -1,3 +1,8 @@
+> [!WARNING]
+> **DEPRECATED** — This file is an older duplicate of [`DOCS.md`](./DOCS.md), which is the canonical technical reference. Please use `DOCS.md` going forward. This file is retained only for historical reference and will be removed in a future cleanup pass.
+
+---
+
 # Technical Documentation: Inventory Management System (ERP Core)
 
 This document provides a comprehensive overview of the technical architecture, implementation details, and development standards for the inventory management system.

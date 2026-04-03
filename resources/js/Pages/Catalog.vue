@@ -15,6 +15,7 @@ import ToggleSwitch from 'primevue/toggleswitch';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
+import Popover from 'primevue/popover';
 import axios from 'axios';
 import { useDebounceFn } from '@vueuse/core';
 
@@ -103,6 +104,21 @@ const loadMetadata = async () => {
     } catch (e) {
         console.error("Metadata load error", e);
     }
+};
+
+const stockOp = ref(null);
+const selectedProductForStock = ref(null);
+
+const toggleStock = (event, product) => {
+    selectedProductForStock.value = product;
+    stockOp.value.toggle(event);
+};
+
+const getScaledQty = (product, rawQty) => {
+    if (!product || !product.uom) return rawQty || 0;
+    const isDiscrete = product.uom.is_discrete;
+    const val = Number(rawQty || 0);
+    return isDiscrete ? Math.round(val) : val.toFixed(4).replace(/\.?0+$/, "");
 };
 
 onMounted(() => {
@@ -486,6 +502,26 @@ const stats = computed(() => ({
                         </template>
                     </Column>
 
+                    <Column header="Stock Level" style="width: 15rem">
+                        <template #body="{ data }">
+                            <div class="flex flex-col items-start gap-1" @click.stop>
+                                <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStock($event, data)">
+                                    <div class="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-sky-500/30">
+                                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="(data.total_stock || 0) > (data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
+                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="(data.total_stock || 0) > (data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
+                                            {{ getScaledQty(data, data.total_stock) }} <span class="text-[9px] text-zinc-600 ml-0.5">{{ data.uom?.abbreviation }}</span>
+                                        </span>
+                                    </div>
+                                    <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-sky-500/50 transition-colors"></i>
+                                </div>
+                                <div v-if="(data.total_stock || 0) <= (data.reorder_point || 0)" class="flex items-center gap-1">
+                                    <i class="pi pi-exclamation-triangle text-[8px] text-amber-600"></i>
+                                    <span class="text-[8px] font-bold text-amber-600/80 uppercase tracking-tighter">Below Reorder Point</span>
+                                </div>
+                            </div>
+                        </template>
+                    </Column>
+
                     <Column header="Status" style="width: 150px">
                         <template #body="{ data }">
                             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-widest transition-all font-mono"
@@ -738,6 +774,43 @@ const stats = computed(() => ({
                     </section>
                 </div>
             </Dialog>
+
+            <!-- Scattered Stock Popover -->
+            <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
+                <div v-if="selectedProductForStock" class="flex flex-col w-72">
+                    <div class="px-4 py-3 border-b border-zinc-900 bg-zinc-900/30 flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ selectedProductForStock.sku }}</span>
+                            <span class="text-[10px] font-bold text-white truncate max-w-[180px]">{{ selectedProductForStock.name }}</span>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-xs font-black text-white font-mono">{{ getScaledQty(selectedProductForStock, selectedProductForStock.total_stock) }}</span>
+                            <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Total On Hand</span>
+                        </div>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                        <div v-if="selectedProductForStock.inventories?.length > 0" class="flex flex-col">
+                            <div v-for="inv in selectedProductForStock.inventories" :key="inv.id" 
+                                 class="px-4 py-2.5 border-b border-zinc-900/50 flex justify-between items-center hover:bg-white/[0.02] transition-colors">
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-bold text-zinc-300 leading-none">{{ inv.location?.name }}</span>
+                                    <span class="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-tighter mt-1">{{ inv.location?.code }}</span>
+                                </div>
+                                <span class="text-[10px] font-mono font-bold text-emerald-400">
+                                    {{ getScaledQty(selectedProductForStock, inv.quantity_on_hand) }}
+                                </span>
+                            </div>
+                        </div>
+                        <div v-else class="p-8 text-center flex flex-col items-center gap-2 opacity-30">
+                            <i class="pi pi-exclamation-circle text-xl"></i>
+                            <span class="text-[9px] font-bold uppercase tracking-widest font-mono">No physical stock found</span>
+                        </div>
+                    </div>
+                    <div class="px-4 py-2 bg-zinc-900/10 flex justify-center border-t border-zinc-900">
+                        <button @click="goToInventory(selectedProductForStock)" class="text-[9px] font-bold text-zinc-500 hover:text-sky-400 transition-colors uppercase tracking-[0.2em] font-mono">View Inventory Ledger</button>
+                    </div>
+                </div>
+            </Popover>
 
         </div>
     </AppLayout>

@@ -20,6 +20,14 @@ This plan outlines the complete development cycle for the Sales Order (SO) domai
 - [x] UI: Built the **Customer Center** (`CustomerCenter.vue`) with a premium cyan-themed interface, searchable list, and sales history.
 - [x] Navigation: Integrated Customers into the sidebar.
 
+### 4. Inventory Ledger UOM Persistence (Step 4 - Complete) ✅
+- [x] **Schema**: Added `base_uom_id` to `transaction_lines` to preserve the original transaction unit.
+- [x] **Core Engine**: Updated `StockService` to decouple calculative base units from transactional units.
+- [x] **UI Standardization**: Added "Change Qty" and "Unit" columns to the Inventory Center ledger, Movement Receipts, and Vendor Center history.
+- [x] **Procurement Audit**: Integrated UOM display and navigation into PO audit modals (GRN/PRN).
+- [x] **RTV Flexibility**: Enabled UOM selection and automated conversion for Purchase Returns.
+- [x] **Navigation UX**: Implemented direct reference-to-movement navigation with browser history support ("Go Back").
+
 ---
 
 ## 🚧 Current Phase: Step 4 - Phase A: Quotation
@@ -31,6 +39,7 @@ This plan outlines the complete development cycle for the Sales Order (SO) domai
     - Real-time Subtotal, Tax, and Discount calculations.
     - Customer selection.
     - Product line item entry with UOM selection.
+
 
 ---
 
@@ -57,10 +66,12 @@ This plan outlines the complete development cycle for the Sales Order (SO) domai
 ## Verification Plan
 
 ### Automated Tests
-- [ ] `SalesOrderQuotationTest`: Verify SO creation and financial math.
-- [ ] `SalesOrderLifecycleTest`: Verify transition from Quotation → Confirmed (Stock Reservation) → Fulfilled (Inventory Move + COGS).
+- [x] `SalesOrderQuotationTest`: Verify SO creation and financial math.
+- [x] `SalesOrderLifecycleTest`: Verify transition from Quotation → Confirmed (Stock Reservation) → Fulfilled (Inventory Move + COGS).
+- [x] `UOMHistoryTest`: Post receipt with non-base UOM and verify ledger display. (Verified via StockEngineTest updates).
 
 ### Manual Verification
 - Create a quote for a customer.
 - Confirm the quote → check `inventories.reserved_qty` in the Inventory Center.
 - Fulfill the order → check `inventories.quantity_on_hand` and verify a transaction record was created.
+- Verify transaction history displays the correct UOM label.

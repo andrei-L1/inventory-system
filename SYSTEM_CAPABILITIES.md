@@ -31,7 +31,7 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 ## 🛡️ 3. Transactional Safety & "Zero-Loss" Engine
 *Focus: Mathematical certainty and concurrency protection.*
 
-- **Pessimistic Row Locking**: During an issue, the system places a hardware-level lock (`lockForUpdate`) on the specific inventory row. If 500 users try to buy the last unit simultaneously, exactly 1 will succeed. No "Ghost Stock".
+- **Multi-Layer Pessimistic Row Locking**: The system applies `lockForUpdate()` at **seven distinct layers** — the `inventories` row, newly-created inventory rows (re-fetched after insert), all non-exhausted `inventory_cost_layers` for an issue, the `Transaction` header row in both `postTransaction()` and `reverseTransaction()`, the `PurchaseOrder` header row in all four status transitions (approve/send/ship/close), and all `PurchaseOrderLine` rows during GRN receives and returns. Every lock is held inside a `DB::transaction`. If 500 users try to buy the last unit simultaneously, exactly 1 will succeed. No "Ghost Stock".
 - **Strict Over-Issue Prevention**: Throws an `InsufficientStockException` if out-of-stock. The system physically prevents Negative Inventory, eliminating the #1 cause of ERP database corruption.
 - **Draft / Posted Enforcement**: Stock movements can be saved as a `Draft` (header + lines recorded, inventory untouched) and then promoted to `Posted` later. Inventory is ONLY updated at the moment of posting — not when a draft is created. This mirrors real-world approval workflows (save PO → approve → receive goods).
 - **Coherent Transfer Ledger**: Every two-leg stock transfer (issue from origin + receipt at destination) is linked by a `transfers` pivot record with FK constraints. You can always find the mirror leg of any transfer from either transaction — no orphan records.
@@ -108,4 +108,4 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 - **Stateless API Architecture**: Built around Laravel Sanctum tokens, allowing for easy expansion into mobile apps, barcode scanners, or third-party EDI integrations.
 
 ---
-*Last Updated: 2026-03-29. Covers complete designed feature set, including stock movement API (Phase 2.1 complete), draft/post enforcement, corrected multi-location WAC, and COGS tracking on issue lines.*
+*Last Updated: 2026-04-03. Covers complete designed feature set, including all six concurrency hardening locks, stock movement API (Phase 2.1), draft/post enforcement, corrected multi-location WAC, and COGS tracking on issue lines.*

@@ -8,7 +8,7 @@ The system is a production-ready ERP-grade inventory management solution built w
 ## 2. Tech Stack
 - **Framework**: Laravel 12.x
 - **Language**: PHP 8.2+
-- **Database**: MySQL/MariaDB (48 Tables)
+- **Database**: MySQL/MariaDB (45 Migrations)
 - **Frontend**: Vue.js / Inertia.js (Vite-based)
 - **Tooling**: Composer, NPM, Git
 
@@ -29,7 +29,7 @@ The system is a production-ready ERP-grade inventory management solution built w
 4. **Environment**: Configure `.env` with database credentials and run migrations:
    ```bash
    php artisan migrate
-   php artisan db:seed --class=SalesOrderStatusSeeder
+   php artisan db:seed
    ```
 
 ## 4. Module Architecture
@@ -65,4 +65,4 @@ The database contains **48 tables**, highly normalized and strictly constrained 
 The standardization and ERP enhancements are contained within the `feat/inventory-standardization` branch, following a clean feature-branch development model.
 
 ---
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-04-03*

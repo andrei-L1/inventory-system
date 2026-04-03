@@ -78,6 +78,7 @@ class InventoryQueryController extends Controller
             ->map(function ($inv) {
                 return [
                     'id' => $inv->id,
+                    'location_id' => $inv->location_id,
                     'location_name' => $inv->location->name ?? 'Unknown Location',
                     'location_code' => $inv->location->code ?? 'N/A',
                     'quantity_on_hand' => (float) $inv->quantity_on_hand,

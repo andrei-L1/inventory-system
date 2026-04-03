@@ -148,6 +148,23 @@
                                      </template>
                                  </Column>
 
+                                 <Column field="stock_level" header="STOCK LEVEL" class="!py-6 !px-4">
+                                     <template #body="{ data }">
+                                        <div class="flex flex-col items-center gap-1">
+                                            <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-sky-500/50 transition-colors"
+                                                  @click="toggleStockInfo($event, data)"
+                                                  :class="[
+                                                      (data.product?.total_qoh || 0) === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                      (data.product?.total_qoh || 0) < (data.product?.reorder_point || 0) ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
+                                                      'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                                                  ]">
+                                                {{ getScaledAvailableStock(data) }}
+                                            </span>
+                                            <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Current Global</span>
+                                        </div>
+                                     </template>
+                                 </Column>
+
                                  <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
                                      <template #body="{ index }">
                                          <InputNumber 
@@ -201,6 +218,33 @@
                 </div>
             </div>
         </div>
+
+        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+                <div class="text-[9px] font-black text-sky-500 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2 flex justify-between">
+                    <span>Location Breakdown</span>
+                    <span>{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
+                </div>
+                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    <div v-for="loc in selectedLineForStock.inventories" :key="loc.location_id" class="flex justify-between items-center text-[10px]"
+                         :class="{'bg-sky-500/10 -mx-2 px-2 py-1 rounded': loc.location_id === form.to_location?.id}">
+                        <span class="text-zinc-400 truncate pr-2 uppercase font-bold flex items-center gap-2">
+                            {{ loc.location_name }}
+                            <Tag v-if="loc.location_id === form.to_location?.id" value="TARGET" class="!text-[7px] !bg-sky-500 !text-white !px-1 !h-3" />
+                        </span>
+                        <span class="font-mono text-zinc-200">
+                            {{ getScaledQty(selectedLineForStock.product.uom_id, loc.quantity_on_hand, selectedLineForStock.uom_id) }}
+                        </span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono text-[9px]">
+                    <span class="font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
+                    <span class="font-black text-white px-2 py-0.5 bg-zinc-900 rounded">
+                        {{ getScaledAvailableStock(selectedLineForStock) }}
+                    </span>
+                </div>
+            </div>
+        </Popover>
     </AppLayout>
 </template>
 
@@ -217,6 +261,8 @@ import ToggleSwitch from 'primevue/toggleswitch';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import axios from 'axios';
+import Popover from 'primevue/popover';
+import Tag from 'primevue/tag';
 
 const toast = useToast();
 const { props, url } = usePage();
@@ -231,6 +277,8 @@ const locations = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingProducts = ref(false);
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
 
 const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
 
@@ -255,6 +303,45 @@ const getFactorToBase = (uomId) => {
         processed.push(current);
     }
     return { factor, baseId: current };
+};
+
+const getScaledQty = (productUomId, rawPieces, targetUomId) => {
+    if (!productUomId || rawPieces === undefined || rawPieces === null) return '0';
+    
+    const targetUom = uoms.value.find(u => u.id == targetUomId);
+    const targetAbbr = targetUom ? targetUom.abbreviation : '';
+
+    const targetInfo = getFactorToBase(targetUomId);
+    const productBaseInfo = getFactorToBase(productUomId);
+
+    if (targetInfo.baseId !== productBaseInfo.baseId) {
+        return `${Number(rawPieces).toFixed(2)} (?)`;
+    }
+
+    const scaled = (Number(rawPieces) / targetInfo.factor);
+    const formatted = isDiscrete(targetAbbr) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    return `${formatted} ${targetAbbr}`;
+};
+
+const getScaledAvailableStock = (line) => {
+    if (!line.product || !line.uom_id) return '0';
+    return getScaledQty(line.product.uom_id, line.product.total_qoh, line.uom_id);
+};
+
+const toggleStockInfo = async (event, line) => {
+    if (!line.product) return;
+    
+    if (!line.inventories) {
+        try {
+            const res = await axios.get(`/api/inventory/${line.product.id}/locations`);
+            line.inventories = res.data.data;
+        } catch (e) {
+            console.error("Failed to fetch inventory breakdown", e);
+        }
+    }
+    
+    selectedLineForStock.value = line;
+    stockOp.value.toggle(event);
 };
 
 const form = useForm({
@@ -302,11 +389,19 @@ const submitForm = async () => {
     }
 };
 
-const onProductSelect = (line) => {
+const onProductSelect = async (line) => {
     const product = line.product;
     if (product) {
         line.uom_id = product.uom_id;
         line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        
+        // Fetch inventory breakdown immediately
+        try {
+            const res = await axios.get(`/api/inventory/${product.id}/locations`);
+            line.inventories = res.data.data;
+        } catch (e) {
+            console.error("Failed to fetch inventory breakdown", e);
+        }
     }
 };
 
