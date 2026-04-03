@@ -35,7 +35,7 @@ The system is a production-ready ERP-grade inventory management solution built w
 ## 4. Module Architecture
 
 ### A. Core Inventory & Costing
-- **Costing Engine**: Supports FIFO, LIFO, and Average Costing via `inventory_cost_layers`.
+- **Costing Engine**: Pluggable Strategy Pattern supporting **FIFO**, **LIFO**, and **Weighted Average Costing (WAC)**. Features automated **Layer Leveling** to maintain financial invariants across all receipt types.
 - **Traceability**: Multi-level tracking via **Batch/Lot Numbers** and **Serial Numbers**.
 - **Unit Management**: Support for base units and **UOM Conversions** (e.g., 1 Box = 12 Pieces).
 
