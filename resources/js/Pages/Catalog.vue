@@ -507,14 +507,14 @@ const stats = computed(() => ({
                             <div class="flex flex-col items-start gap-1" @click.stop>
                                 <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStock($event, data)">
                                     <div class="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-sky-500/30">
-                                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="(data.total_stock || 0) > (data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
-                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="(data.total_stock || 0) > (data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
-                                            {{ getScaledQty(data, data.total_stock) }} <span class="text-[9px] text-zinc-600 ml-0.5">{{ data.uom?.abbreviation }}</span>
+                                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
+                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
+                                            {{ getScaledQty(data, data.total_qoh) }} <span class="text-[9px] text-zinc-600 ml-0.5">{{ data.uom?.abbreviation }}</span>
                                         </span>
                                     </div>
                                     <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-sky-500/50 transition-colors"></i>
                                 </div>
-                                <div v-if="(data.total_stock || 0) <= (data.reorder_point || 0)" class="flex items-center gap-1">
+                                <div v-if="(data.total_qoh || 0) <= (data.reorder_point || 0)" class="flex items-center gap-1">
                                     <i class="pi pi-exclamation-triangle text-[8px] text-amber-600"></i>
                                     <span class="text-[8px] font-bold text-amber-600/80 uppercase tracking-tighter">Below Reorder Point</span>
                                 </div>
@@ -784,7 +784,7 @@ const stats = computed(() => ({
                             <span class="text-[10px] font-bold text-white truncate max-w-[180px]">{{ selectedProductForStock.name }}</span>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-xs font-black text-white font-mono">{{ getScaledQty(selectedProductForStock, selectedProductForStock.total_stock) }}</span>
+                            <span class="text-xs font-black text-white font-mono">{{ getScaledQty(selectedProductForStock, selectedProductForStock.total_qoh) }}</span>
                             <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Total On Hand</span>
                         </div>
                     </div>
