@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReorderRule;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,7 +39,9 @@ class ReorderRuleController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Prevent duplicate rules for the same product+location combination
+        // Fast pre-check: gives a cleaner error message before hitting the DB.
+        // The original migration already enforces UNIQUE(product_id, location_unique_key)
+        // via a COALESCE(location_id, 0) generated column, so this is already DB-backed.
         $exists = ReorderRule::where('product_id', $data['product_id'])
             ->where('location_id', $data['location_id'] ?? null)
             ->exists();
@@ -49,7 +52,19 @@ class ReorderRuleController extends Controller
             ], 422);
         }
 
-        $rule = ReorderRule::create($data);
+        try {
+            $rule = ReorderRule::create($data);
+        } catch (QueryException $e) {
+            // Unique constraint violation (race condition caught at DB level)
+            if (str_contains($e->getMessage(), 'reorder_rules_product_location_unique')
+                || $e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'A reorder rule for this product and location already exists.',
+                ], 422);
+            }
+            throw $e;
+        }
+
         $rule->load(['product', 'location']);
 
         return response()->json($this->format($rule), 201);

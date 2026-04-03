@@ -7,6 +7,27 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Full Concurrency & Locking Audit (Data Integrity Hardening)
+**Date**: 2026-04-03 | **Status**: 100% VERIFIED
+**Summary**: Conducted a comprehensive pessimistic-locking audit across the entire codebase. All critical race-condition windows in the workflow/state-machine layer have been closed. The core stock engine was already correctly locked; hardening targeted the procurement and transaction lifecycle controllers.
+
+#### Gaps Identified & Fixed
+- **GAP 1 — GRN Over-Receipt Race** (`PurchaseOrderController::receive`): PO lines now fetched with `->lockForUpdate()` before `received_qty` is read and incremented. Prevents two concurrent GRNs from both passing the over-receipt guard and inflating received quantity beyond `ordered_qty`.
+- **GAP 2 — Return Over-Decrement Race** (`PurchaseOrderController::processReturn`): Same `lockForUpdate` pattern on the PO lines query. Prevents concurrent returns from driving `received_qty` negative.
+- **GAP 3 — PO Status Transition Races** (approve / send / markAsShipped / close): All four methods now wrapped in `DB::transaction` with `PurchaseOrder::lockForUpdate()->findOrFail()`, making the status guard and write atomic.
+- **GAP 4 — Double-Post Race** (`StockService::postTransaction`): `Transaction::lockForUpdate()->findOrFail()` added at the start of the DB transaction so the "already posted?" guard and inventory write are atomic.
+- **GAP 5 — Double-Reverse Race** (`StockService::reverseTransaction`): Same transaction header lock added before the "is it posted?" guard.
+- **GAP 8 — ReorderRule Duplicate TOCTOU** (`ReorderRuleController::store`): Original migration already enforces `UNIQUE(product_id, location_unique_key)` via `COALESCE(location_id, 0)`. Added a `QueryException` catch so race-condition duplicates return a clean 422.
+
+#### Gaps Deferred (Low Risk, Logged)
+- **GAP 6** (`ProductService::createProduct`): DB-level `UNIQUE(product_id, location_id)` on `inventories` catches any race with a hard exception.
+- **GAP 7** (`ReplenishmentService::generateSuggestions`): Background scheduled job — low concurrency risk. Logged for future hardening.
+
+#### Verification
+- Full test suite: **33 tests, 113 assertions — 100% PASSING** after all changes.
+
+---
+
 ### 🎯 Milestone: Atomic Inventory Ledger & High-Precision Scaling
 **Date**: 2026-04-02 | **Status**: 100% VERIFIED
 **Summary**: Successfully re-engineered the core inventory ledger to use "Atomic Pieces" storage, combined with a recursive multi-level UOM conversion engine.
@@ -415,6 +436,6 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 
 ---
 
-*Last Updated: 2026-04-02 20:05:00*
+*Last Updated: 2026-04-03 10:30:00*
 
 

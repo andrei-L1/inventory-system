@@ -17,10 +17,10 @@ class TransactionResource extends JsonResource
 
         // Enhanced type name for better ledger distinction
         $typeName = strtolower($this->type->name ?? 'unknown');
-        $isReturn = ($line && (float)$line->quantity < 0 && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
+        $isReturn = ($line && (float) $line->quantity < 0 && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
 
-        if ($this->purchase_order_id && $typeName === 'receipt' && !$isReturn) {
-            $typeName = 'good_receipt'; 
+        if ($this->purchase_order_id && $typeName === 'receipt' && ! $isReturn) {
+            $typeName = 'good_receipt';
         } elseif ($isReturn) {
             $typeName = 'purchase_return';
         }

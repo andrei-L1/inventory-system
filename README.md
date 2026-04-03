@@ -1,58 +1,112 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/andrei-L1/inventory-system/actions/workflows/ci.yml"><img src="https://github.com/andrei-L1/inventory-system/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline Status"></a>
-<a href="https://github.com/andrei-L1/inventory-system/blob/main/.github/CODEOWNERS"><img src="https://img.shields.io/badge/maintained_by-andrei--L1-blue?logo=github" alt="Maintained by andrei-L1"></a>
-<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+  <strong>Nexus Inventory System</strong><br/>
+  Enterprise-grade ERP inventory management built on Laravel 12 + Vue 3
 </p>
 
-## About Laravel
+<p align="center">
+  <a href="https://github.com/andrei-L1/inventory-system/actions/workflows/ci.yml">
+    <img src="https://github.com/andrei-L1/inventory-system/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline Status"/>
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"/>
+  </a>
+  <img src="https://img.shields.io/badge/Tests-33%20passing-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/phase-4%20of%2010-blue" alt="Phase"/>
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## What is this?
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**Nexus** is a production-ready, ERP-grade inventory management system. It tracks every unit of stock from the moment it is ordered from a vendor to the moment it is sold to a customer — with mathematically guaranteed accuracy via ACID transactions, pessimistic row locking, real-time FIFO/LIFO/Weighted-Average costing, and a complete audit trail.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Tech Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Layer | Technology |
+|---|---|
+| Backend | PHP 8.2 · Laravel 12 |
+| Frontend | Vue 3 · Inertia.js · PrimeVue 4 |
+| Build | Vite |
+| Database | MySQL / MariaDB |
+| Auth | Laravel Sanctum · Google OAuth |
+| Testing | PHPUnit · Pest (33 tests, 113 assertions) |
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Quick Start
 
-### Premium Partners
+```bash
+# 1. Install dependencies
+composer install
+npm ci
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 2. Configure environment
+cp .env.example .env
+php artisan key:generate
+# Edit .env — set DB_* credentials
 
-## Contributing
+# 3. Migrate & seed
+php artisan migrate
+php artisan db:seed
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 4. Run locally
+php artisan serve       # Backend  → http://localhost:8000
+npm run dev             # Frontend → http://localhost:5173
+```
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Project Status
 
-## Security Vulnerabilities
+| Phase | Domain | Status |
+|---|---|---|
+| 0 | Core Stock Engine (FIFO/LIFO/WAC, Atomic Ledger, Locking) | ✅ Complete |
+| 1 | Master Data & Auth (Products, Vendors, Locations, UOM, RBAC) | ✅ Complete |
+| 2 | Warehouse Operations (Stock Movements, Intelligence Grid) | ✅ Complete |
+| 3 | Dashboard & KPIs | ✅ Complete |
+| 4 | Procurement (Purchase Orders, GRN, Returns, Replenishment) | ✅ Complete |
+| 5 | Sales Orders | 🚧 ~30% |
+| 6 | Logistics & Serial Tracking | ⬜ Not started |
+| 7 | Pricing & Discounts | ⬜ Not started |
+| 8 | Reporting & Financial Analysis | ⬜ Not started |
+| 9 | Admin & Security UI | 🚧 ~25% |
+| 10 | Production Hardening | ⬜ Not started |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
+
+## Key Design Decisions
+
+- **Atomic Piece Ledger** — All quantities stored in the absolute smallest unit (Pieces). UOM conversions (Box → Pieces) happen inside `StockService` before any DB write, eliminating floating-point drift.
+- **Layered Costing Engine** — Physical `inventory_cost_layers` rows are created on every receipt and consumed on every issue. FIFO, LIFO, and Weighted Average all consume layers for perfect ledger↔valuation synchronisation.
+- **Multi-Layer Pessimistic Locking** — Seven distinct `lockForUpdate()` targets cover inventory rows, cost layers, transaction headers, PO headers, and PO lines. Race conditions are structurally impossible within the service layer.
+- **Draft / Posted Enforcement** — Inventory is only touched when a transaction transitions to `posted`. Drafts are full records that leave stock untouched until approved.
+
+---
+
+## Documentation
+
+| File | Purpose |
+|---|---|
+| [`DOCS.md`](./DOCS.md) | Technical architecture overview |
+| [`DEVELOPMENT_PLAN_AND_ROADMAP.md`](./DEVELOPMENT_PLAN_AND_ROADMAP.md) | Full phase-by-phase roadmap with live status |
+| [`INVENTORY_ARCHITECTURE.md`](./INVENTORY_ARCHITECTURE.md) | Deep-dive: locking, costing engine, data lifecycle |
+| [`SYSTEM_CAPABILITIES.md`](./SYSTEM_CAPABILITIES.md) | Complete feature capability map |
+| [`PROGRESS_LOG.md`](./PROGRESS_LOG.md) | Chronological development log & milestones |
+| [`USER_GUIDE.md`](./USER_GUIDE.md) | End-user guide for the live UI modules |
+
+---
+
+## Running Tests
+
+```bash
+php artisan test
+# → 33 tests, 113 assertions, 0 failures
+```
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT

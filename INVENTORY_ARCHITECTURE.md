@@ -13,10 +13,19 @@ Every stock movement must be wrapped in a database transaction.
 - **Inventory Update**: Updates/Creates rows in the `inventories` table.
 - **Costing**: Creates or consumes `InventoryCostLayer` records.
 
-### B. Concurrency Control
-We use **Pessimistic Locking** (`lockForUpdate()`) on the `inventories` table row during posting. This prevents "Race Conditions" where two simultaneous sales might deduct stock from the same balance before it can be updated.
+### B. Concurrency Control — Pessimistic Locking (`lockForUpdate`)
+The system uses **pessimistic row locking** at six distinct layers to prevent race conditions across all concurrent request scenarios. Every lock is held inside a `DB::transaction`, so if any step fails the entire operation rolls back atomically.
 
----
+| Lock Target | Method | Protection |
+|---|---|---|
+| `inventories` row | `applyLineToInventory()` | Prevents two concurrent issues from reading the same QOH before either write completes ("ghost stock") |
+| `inventories` row (new) | Re-fetched with lock after `create()` | Ensures newly inserted inventory rows are immediately serialised for the creating request |
+| `inventory_cost_layers` rows | `consumeLayers()` | Locks all non-exhausted layers for the product+location so FIFO/LIFO consumption is serialised |
+| `Transaction` header row | `postTransaction()` | Makes the "already posted?" idempotency check and the inventory write atomic — prevents double-posting |
+| `Transaction` header row | `reverseTransaction()` | Makes the "is it posted?" check and the counter-transaction write atomic — prevents double-reversal |
+| `PurchaseOrder` header row | `approve / send / markAsShipped / close` | Each status transition re-fetches and locks the PO row so concurrent API calls cannot double-transition |
+| `PurchaseOrderLine` rows | `receive() / processReturn()` | Locks all PO lines before reading `received_qty` — prevents two concurrent GRNs from beating the over-receipt guard |
+
 
 ## 2. Costing Logic (FIFO / LIFO / Weighted Average)
 

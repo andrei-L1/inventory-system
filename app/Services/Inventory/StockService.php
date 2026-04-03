@@ -93,7 +93,11 @@ class StockService
     public function postTransaction(Transaction $transaction): Transaction
     {
         return DB::transaction(function () use ($transaction) {
-            // HYDRATION: Ensure status and all costing methods are available for the engine.
+            // FIX [GAP 4]: Lock the transaction header row first so the status check
+            // and the subsequent write are atomic. Without this, two concurrent POST
+            // requests can both read status='draft', both pass the guard, and both
+            // apply inventory — effectively double-posting the transaction.
+            $transaction = Transaction::lockForUpdate()->findOrFail($transaction->id);
             $transaction->loadMissing(['status', 'lines.product.costingMethod']);
 
             if ($transaction->status->name === 'posted') {
@@ -259,6 +263,11 @@ class StockService
     public function reverseTransaction(Transaction $transaction): Transaction
     {
         return DB::transaction(function () use ($transaction) {
+            // FIX [GAP 5]: Lock the transaction header row so the status check and
+            // reversal write are atomic. Without this, two concurrent cancel/reverse
+            // requests can both pass the 'posted' check and create two reversal
+            // counter-transactions, corrupting the ledger.
+            $transaction = Transaction::lockForUpdate()->findOrFail($transaction->id);
             $transaction->loadMissing(['lines', 'status']);
 
             if ($transaction->status->name !== 'posted') {

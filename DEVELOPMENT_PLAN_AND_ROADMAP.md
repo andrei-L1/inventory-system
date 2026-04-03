@@ -1,5 +1,5 @@
 # Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-03-31 (Stock Service Integrity Audit Phase). All status markers reflect actual codebase state.
+> Last audited: 2026-04-03 (Full Concurrency & Locking Audit). All status markers reflect actual codebase state.
 
 ---
 
@@ -62,10 +62,11 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Atomic Piece Ledger** — All inventory quantities (QOH, Cost Layers, Transactions) are stored as integers in the absolute smallest unit ("Pieces"), eliminating floating-point drift. ✅ NEW
 - [x] **Controller Exception Hardening** — `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` now catch operational exceptions and return clean 422 errors. ✅ NEW
 - [x] **Ledger UOM Persistence** — Refactored `transaction_lines` to store `base_uom_id`, decoupling calculative storage from original transaction UOM for 100% audit transparency. ✅ NEW
+- [x] **Full Concurrency & Locking Audit** — Comprehensive race-condition audit across all controllers and StockService. PO status transitions (approve/send/ship/close), GRN receive, and processReturn now use `DB::transaction` + `lockForUpdate`. `postTransaction()` and `reverseTransaction()` lock the Transaction header row before idempotency checks. `ReorderRuleController` catches `QueryException` for DB-level unique guard. 33 tests, 113 assertions — 100% passing. ✅ NEW
 
 
 ### 0.2 Database Schema
-- [x] 35 migrations covering every business domain
+- [x] 45 migrations covering every business domain
 - [x] 40 Eloquent models with full relationships, soft deletes, and fillables
 - [x] `inventories` — per-product per-location QOH cache + average cost
 - [x] `inventory_cost_layers` — FIFO/LIFO layers with `received_qty`, `issued_qty`, computed `remaining_qty`, `is_exhausted`
