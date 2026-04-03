@@ -162,6 +162,7 @@ const menuItems = [
     { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
     { label: 'Transfers', href: '/movements/transfer', icon: 'pi pi-arrow-right-arrow-left', color: 'text-indigo-400' },
     { label: 'Procurement', href: '/purchase-orders', icon: 'pi pi-shopping-bag', color: 'text-orange-400' },
+    { label: 'Sales', href: '/sales-orders', icon: 'pi pi-receipt', color: 'text-teal-400' },
     { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
     { label: 'Customers', href: '/customer-center', icon: 'pi pi-id-card', color: 'text-cyan-400' },
     { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },

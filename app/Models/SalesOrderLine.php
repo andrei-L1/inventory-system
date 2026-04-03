@@ -12,15 +12,32 @@ class SalesOrderLine extends Model
     protected $fillable = [
         'sales_order_id',
         'product_id',
+        'location_id',
         'uom_id',
         'ordered_qty',
         'shipped_qty',
+        'picked_qty',
+        'packed_qty',
+        'returned_qty',
         'unit_price',
         'tax_rate',
         'tax_amount',
         'discount_rate',
         'discount_amount',
         'notes',
+    ];
+
+    protected $casts = [
+        'ordered_qty' => 'decimal:4',
+        'shipped_qty' => 'decimal:4',
+        'picked_qty' => 'decimal:4',
+        'packed_qty' => 'decimal:4',
+        'returned_qty' => 'decimal:4',
+        'unit_price' => 'decimal:6',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:6',
+        'discount_rate' => 'decimal:2',
+        'discount_amount' => 'decimal:6',
     ];
 
     public function salesOrder()
@@ -33,8 +50,21 @@ class SalesOrderLine extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
+
     public function uom()
     {
-        return $this->belongsTo(UnitOfMeasure::class);
+        return $this->belongsTo(UnitOfMeasure::class, 'uom_id');
+    }
+
+    /**
+     * Get the remaining quantity to be picked/shipped.
+     */
+    public function getRemainingQtyAttribute(): float
+    {
+        return max(0, (float) $this->ordered_qty - (float) $this->shipped_qty);
     }
 }

@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             TransactionStatusSeeder::class,   // transaction_statuses
             PurchaseOrderStatusSeeder::class, // purchase_order_statuses
             CategorySeeder::class,            // categories
+            SalesOrderStatusSeeder::class,    // sales_order_statuses
         ]);
 
         // ────────────────────────────────────────────────────────────────────

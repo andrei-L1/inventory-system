@@ -37,6 +37,7 @@ class PermissionSeeder extends Seeder
             // Sales
             ['name' => 'View Customers', 'slug' => 'view-customers', 'description' => 'Can view customer list'],
             ['name' => 'Manage Customers', 'slug' => 'manage-customers', 'description' => 'Can create and edit customer data'],
+            ['name' => 'View Sales Orders', 'slug' => 'view-sales-orders', 'description' => 'Can view sales orders and related fulfillments'],
             ['name' => 'Manage Sales Orders', 'slug' => 'manage-sales-orders', 'description' => 'Can create and manage sales orders'],
 
             // Reports
@@ -68,6 +69,7 @@ class PermissionSeeder extends Seeder
                 'manage-purchase-orders',
                 'view-customers',
                 'manage-customers',
+                'view-sales-orders',
                 'manage-sales-orders',
                 'view-reports',
             ])->get();
@@ -82,6 +84,7 @@ class PermissionSeeder extends Seeder
                 'view-products',
                 'view-purchase-orders',
                 'view-customers',
+                'view-sales-orders',
                 'view-reports',
             ])->get();
             $userRole->permissions()->sync($userPermissions);
