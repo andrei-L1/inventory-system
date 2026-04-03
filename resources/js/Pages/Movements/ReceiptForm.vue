@@ -393,6 +393,7 @@ const onProductSelect = async (line) => {
     const product = line.product;
     if (product) {
         line.uom_id = product.uom_id;
+        line.prev_uom_id = product.uom_id;
         line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
         
         // Fetch inventory breakdown immediately
@@ -409,21 +410,34 @@ const onUomChange = (line) => {
     const product = line.product;
     if (!product || !line.uom_id) return;
 
-    const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
     const targetInfo = getFactorToBase(line.uom_id);
     const productBaseInfo = getFactorToBase(product.uom_id);
 
-    if (targetInfo.baseId === productBaseInfo.baseId) {
-        const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-        line.unit_cost = baseCost * effectiveFactor;
-        return;
+    // CASE A: Cost is ZERO - Suggest base cost scaled to this UOM
+    if (!line.unit_cost || line.unit_cost == 0) {
+        const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        if (targetInfo.baseId === productBaseInfo.baseId) {
+            const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+            line.unit_cost = baseCost * effectiveFactor;
+            line.prev_uom_id = line.uom_id;
+            return;
+        }
+    } 
+    
+    // CASE B: Cost exists - Scale relative to previous UOM
+    else if (line.prev_uom_id) {
+        const prevInfo = getFactorToBase(line.prev_uom_id);
+        if (targetInfo.baseId === prevInfo.baseId) {
+            const ratio = targetInfo.factor / prevInfo.factor;
+            line.unit_cost = line.unit_cost * ratio;
+        }
     }
 
-    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
+    line.prev_uom_id = line.uom_id;
 };
 
 const addLine = () => {
-    form.lines.push({ product: null, uom_id: null, quantity: 1, unit_cost: 0 });
+    form.lines.push({ product: null, uom_id: null, prev_uom_id: null, quantity: 1, unit_cost: 0 });
 };
 
 const removeLine = (index) => {

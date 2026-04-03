@@ -7,6 +7,14 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Sales Order Lifecycle & Intelligent Price Scaling (Phase 5)
+**Date**: 2026-04-03 | **Status**: 100% COMPLETE
+**Summary**: Successfully implemented the full Sales Order (SO) module and resolved a critical UX math discrepancy in UOM conversions.
+- **Atomic SO Fulfillment**: Created `SalesOrderController` with a strictly ordered backend state machine: Quotation → Confirm (Reserve) → Pick → Pack → Ship (Issue). Fulfillment logic utilizes the "Release-Before-Issue" pattern to ensure 100% stock accuracy.
+- **Intelligent Price Scaling**: Resolved the "math discrepancy" trap by implementing relative UOM price/cost scaling in the frontend. Changing from "Piece" to "Box" now automatically scales the unit price proportionally, preventing accounting errors while maintaining the total line value.
+- **Mission Control UI**: Launched the `SalesOrders/Show.vue` dashboard, providing warehouse staff with a stage-aware workflow for picking, packing, and shipping items.
+- **Standardized Movements**: Applied the same scaling logic to manual Receipts and Purchase Orders, ensuring system-wide consistency for bulk unit entries.
+
 ### 🎯 Milestone: Full Concurrency & Locking Audit (Data Integrity Hardening)
 **Date**: 2026-04-03 | **Status**: 100% VERIFIED
 **Summary**: Conducted a comprehensive pessimistic-locking audit across the entire codebase. All critical race-condition windows in the workflow/state-machine layer have been closed. The core stock engine was already correctly locked; hardening targeted the procurement and transaction lifecycle controllers.

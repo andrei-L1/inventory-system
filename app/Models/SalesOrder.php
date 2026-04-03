@@ -19,9 +19,38 @@ class SalesOrder extends Model
         'total_amount',
         'currency',
         'notes',
+        'carrier',
+        'tracking_number',
         'created_by',
         'approved_by',
         'approved_at',
+        'confirmed_at',
+        'sent_at',
+        'shipped_at',
+        'delivered_at',
+    ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function ($so) {
+            if (! $so->created_by && auth()->check()) {
+                $so->created_by = auth()->id();
+            }
+        });
+    }
+
+    protected $casts = [
+        'order_date' => 'date',
+        'requested_delivery_date' => 'date',
+        'approved_at' => 'datetime',
+        'confirmed_at' => 'datetime',
+        'sent_at' => 'datetime',
+        'shipped_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'total_amount' => 'decimal:2',
     ];
 
     public function customer()

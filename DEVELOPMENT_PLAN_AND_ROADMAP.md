@@ -1,5 +1,5 @@
 # Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-04-03 (Full Concurrency & Locking Audit). All status markers reflect actual codebase state.
+> Last audited: 2026-04-03 (Phase 5 Pre-Execution Workflow Audit). All status markers reflect actual codebase state.
 
 ---
 
@@ -301,29 +301,56 @@ Replenishment Suggestion (UOM-Aware)
 ### ✅ 4.4 Purchase Returns / RTV Core Engine — HARDENED
 - [x] Database: `returned_qty` column on PO lines.
 - [x] Core Transaction Type `PRET` defined.
-- [x] API Endpoint `POST /api/purchase-orders/{id}/return` running intelligent replacement (reopens PO) vs credit note (closes PO line) logic natively tied into the Stock Engine.
+- [x] API Endpoint `POST /api/purchase-orders/{id}/return` — intelligent replacement (reopens PO) vs credit note (closes PO line) logic, natively tied into the Stock Engine.
 - [x] **Financial Recalculation** — "Credit" resolutions automatically shrink the PO `total_amount` for accounting accuracy. ✅ NEW
 - [x] **Over-Return Prevention** — Validation logic to ensure return quantities do not exceed net physical receipts. ✅ NEW
 
 ---
 
 ## 🛒 Phase 5 — Sales: Sales Order Lifecycle
-> Status: 🚧 IN PROGRESS — Models/Schema exist, Backend Logic & UI being drafted.
+> Status: 🚧 IN PROGRESS — Schema & Stock Reservation Engine live; API & UI being built.
 
-### Sales Workflow
+> **Pre-Execution Audit Note (2026-04-03):** A full workflow audit before implementation
+> identified 5 critical blockers that are resolved as part of this phase:
+> 1. `sales_order_lines` missing `location_id` (required for reservation + fulfillment targeting)
+> 2. `StockService::reserveStock()` does not convert UOM (controller must pre-convert)
+> 3. Fulfillment atomicity: `releaseReservation()` MUST precede `recordMovement(Issue)`
+> 4. SO status names were Title Case — normalized to lowercase snake_case to match PO standard
+> 5. `sales_orders` missing standard fields (`carrier`, `tracking_number`, `sent_at`, `shipped_at`)
+
+### Sales Workflow (Enterprise-Grade)
 ```
 Customer Inquiry
        ↓
-  Sales Quotation  →  Confirmed SO  →  Picking List generated
-       ↓                                      ↓
-  SO Lines (product,                 Warehouse picks items
-   qty, agreed price)                        ↓
-       ↓                              StockService::recordMovement()
-  Shipment Created  →  Shipped  →    Transaction posted (Issue)
-       ↓                             Cost layers consumed (FIFO/LIFO)
-  Invoice / Billing  ←  Partial Ship?        ↓
-       ↓                                     ↓
-  Customer Payment   ←  Returns/RMA  ←  SO status: Fulfilled / Closed
+Quotation Created
+       ↓
+Confirmed SO  →  Stock Reserved (reserveStock)
+       ↓
+Picking List Created
+       ↓
+Items Picked (picked_qty updated)
+       ↓
+Packing (packed_qty updated)
+       ↓
+Shipment Created (carrier / tracking)
+       ↓
+DB Transaction:
+   - releaseReservation()
+   - recordMovement(Issue)
+   - consume cost layers (COGS)
+       ↓
+Partial?  →  Processing (Backorder) → repeat fulfillment
+       ↓
+Invoice (configurable timing)
+       ↓
+Payment Received
+       ↓
+SO Completed (closed)
+```
+
+### SO Status Lifecycle (Normalized — lowercase snake_case)
+```
+quotation → quotation_sent → confirmed → picked → packed → shipped → closed | cancelled
 ```
 
 ### 5.1 Customer Management API
@@ -334,42 +361,52 @@ Customer Inquiry
 - [x] Customer fields: name, code, email, phone, billing_address, shipping_address, tax_number, credit_limit, is_active.
 
 ### 5.2 Sales Order API
-- [ ] `SalesOrderController` — Full CRUD (`/api/sales-orders`) [🚧 IN PROGRESS]
-- [ ] `SalesOrderStoreRequest` + `SalesOrderResource`
-- [ ] SO Status lifecycle:
-  - `Quotation` → `Confirmed` → `Picked` → `Shipped` → `Delivered` → `Invoiced` → `Paid` → `Closed` | `Cancelled`
-- [ ] `PATCH /api/sales-orders/{id}/confirm` — Confirm a quotation
-- [ ] `POST /api/sales-orders/{id}/fulfill` — Post fulfillment:
-  - Creates a `Transaction` (type: Issue) via `StockService`
-  - Links `transaction.sales_order_id`
-  - Releases reserved stock in `inventories`
-  - Consumes FIFO/LIFO cost layers (cost of goods sold tracked)
-  - Transitions SO to Shipped/Closed
-- [x] **Multi-UOM Integration (Schema)**:
-  - [x] Add `uom_id` to `sales_order_lines`.
-  - [ ] Implement conversion logic (convert Sales UOM to Base UOM for stock movement).
-- [x] **Financial Precision Engine (Schema)**:
-  - [x] Add `tax_rate`, `tax_amount`, `discount_rate`, `discount_amount` to `sales_order_lines`.
-  - [ ] Automated tax resolution (apply tax_rate to lines).
-  - [ ] Discount resolution (apply prices from Phase 7 to lines).
-- [ ] Price lookup: apply price list if assigned to customer
+> Status: 🚧 IN PROGRESS
+
+- [ ] **Migration**: Add `location_id` (nullable FK → `locations`) to `sales_order_lines`.
+- [ ] **Migration**: Add `carrier`, `tracking_number`, `sent_at`, `shipped_at`, `delivered_at`, `approved_by` to `sales_orders`.
+- [ ] **Migration**: Add `picked_qty`, `packed_qty`, `shipped_qty`, `returned_qty` to `sales_order_lines`.
+- [ ] **Model**: Align `SalesOrder` and `SalesOrderLine` with PO standards (casts, booted logic, accessors).
+- [ ] **Seeder Fix**: Normalize `SalesOrderStatus` names to lowercase snake_case (`quotation`...`shipped`...`closed`).
+
+#### Controller & Routing
+- [ ] `SalesOrderController` — Mirroring PO action naming + WMS stages:
+  - `approve()` — Transition `quotation` → `confirmed` (Triggers `reserveStock`)
+  - `send()` — Transition `quotation` → `quotation_sent`
+  - `pick()` — Update `picked_qty` → Transition to `picked`
+  - `pack()` — Update `packed_qty` → Transition to `packed`
+  - `ship()` / `fulfill()` — Atomic release + issue transaction
+- [ ] `SalesOrderResource` — Full transformer with embedded lines + stage progress + fulfillment history
+- [x] **Multi-UOM Schema**: `uom_id` on `sales_order_lines`. ✅
+- [ ] **Multi-UOM Logic**: `confirm()` and `fulfill()` convert to base UOM before calling StockService.
+- [x] **Financial Precision Schema**: `tax_rate`, `tax_amount`, `discount_rate`, `discount_amount` on lines. ✅
+- [ ] **Financial Computation**: `store()` and `update()` compute line totals and `total_amount` header.
 
 ### 5.3 Sales Orders Frontend
-- [ ] **Sales Orders list page** (`/sales-orders`)
-  - DataTable: SO number, customer, date, status, total value, actions
-  - Filters: status, customer, date range
-- [ ] **SO Create/Edit form**
-  - Header: Customer, delivery date, shipping address, notes
-  - Lines: product search, qty, selling price (auto-filled from price list), UOM
-  - Stock availability indicator per line (available QOH vs. ordered qty)
-  - "Save Quote" and "Confirm Order" buttons
-- [ ] **SO Detail page**
-  - Lines with qty ordered vs. qty fulfilled
-  - "Fulfill / Ship" action button
-  - Linked transactions (issue postings)
-- [ ] Customers management page or embedded panel
+- [ ] **Sidebar nav entry**: "Sales" (`pi pi-receipt`, teal accent) → `/sales-orders`
+- [ ] **Web routes**: `/sales-orders`, `/sales-orders/create`, `/sales-orders/{id}`
+- [ ] **`SalesOrders/Index.vue`** — Premium dark index:
+  - DataTable: SO Number, Customer, Order Date, Status badge, Total Value, →
+  - Status badge colors (lowercase): quotation=warning, confirmed=info,
+    processing=help, shipped=success, cancelled=danger, closed=secondary
+  - Search field + "Draft SO" button (requires `manage-sales-orders`)
+- [ ] **`SalesOrders/Form.vue`** — Multi-section creation form:
+  - Header: Customer selector, delivery date, currency, notes
+  - Lines: Product, Location (shows QOH), UOM, Qty, Unit Price (auto-fill from `selling_price`),
+    Tax Rate %, Discount Rate %, computed line total
+  - QOH availability indicator per line (amber/red warnings)
+  - Financial summary footer: Subtotal, Discount, Tax, Grand Total
+  - "Save as Quotation" + "Discard" buttons
+- [ ] **`SalesOrders/Show.vue`** — Warehouse Mission Control:
+  - Sidebar: Order metadata + Fulfillment/Return History (mirrored after PO Show).
+  - Stage-aware Buttons: [Confirm] [Print Pick List] [Mark Picked] [Mark Packed] [Ship / Fulfill].
+  - Main table: ordered_qty, picked_qty, packed_qty, shipped_qty (status tracked).
+  - Status badge colors: `quotation`=warning, `confirmed`=info, `picked`=help, `packed`=help, `shipped`=success.
+  - Linked issue transactions panel (COGS tracking).
+  - Financial summary
 
 ### 5.4 Sales Returns (RMA) — Core Engine
+> Status: NOT STARTED
 - [ ] Core Transaction Type `SRET` (Sales Return) defined in `StockService`
 - [ ] `POST /api/sales-orders/{id}/return` — Post a Sales Return:
   - Creates a `Transaction` (type: Receipt) via `StockService`
@@ -379,16 +416,18 @@ Customer Inquiry
 - [ ] Credit Note generation (links to Invoicing)
 
 ### 5.5 Invoicing & Customer Payments
+> Status: NOT STARTED
 - [ ] `InvoiceController` — CRUD (`/api/invoices`)
 - [ ] Invoice linked to Sales Order (supports partial invoicing)
 - [ ] `PaymentController` — CRUD (`/api/payments`)
 - [ ] Payment allocation logic (Apply payment to one or more invoices)
 - [ ] Customer Statement generation
-- [ ] Credit Limit enforcement: prevent SO confirmation if customer exceeds limit
+- [ ] Credit Limit enforcement: block SO confirmation if customer total exposure exceeds limit
 
 ### 5.6 Backorder & Short-Fulfill Management
+> Status: NOT STARTED
 - [ ] **Backorder Tracking**: Flag orders where `ordered_qty > available_qty`.
-- [ ] **Split Fulfillment**: Allow shipping partial quantities and moving the remainder to a `Backordered` status.
+- [ ] **Split Fulfillment**: Allow shipping partial quantities; remainder → `processing` status.
 - [ ] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
 
 ---
@@ -546,7 +585,7 @@ Customer Inquiry
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, Atomic UOM, GRN, and Returns complete. |
-| 5 | Sales (Sales Orders) | 🚧 ~30% — Stock Reservation Engine & Customer Module LIVE |
+| 5 | Sales (Sales Orders) | 🚧 ~35% — Reservation Engine, Customer Module & Schema Audit LIVE; API + UI in progress |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — schema + models only |
@@ -557,7 +596,9 @@ Customer Inquiry
 
 ## Immediate Next Steps (Priority Order)
 
-1. **Sales Orders: Phase A (Quotation)** — Build `SalesOrderController`, `SalesOrderCenter.vue`, and the multi-line entry form.
-2. **Sales Orders: Phase B (Confirmation)** — Link the "Confirm" action to the `StockService::reserveStock()` engine.
-3. **Sales Orders: Phase C (Fulfillment)** — Complete the fulfillment logic (Physically issue inventory and record COGS).
+1. **SO Pre-Execution Fixes** — Run the `location_id` migration on `sales_order_lines`; fix SO status seeder (lowercase, remove `Draft`).
+2. **SO Backend API** — Build `SalesOrderController` (CRUD + confirm + fulfill + cancel), `SalesOrderStoreRequest`, and full `SalesOrderResource`.
+3. **SO Frontend** — Build `SalesOrders/Index.vue`, `Form.vue`, and `Show.vue`; wire sidebar and web routes.
+4. **Sales Returns (RMA)** — Phase 5.4: `SRET` transaction type + return endpoint + restocking logic.
+5. **Invoicing** — Phase 5.5: Invoice + Payment controllers and credit limit enforcement.
 

@@ -59,7 +59,7 @@ const form = ref({
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 }
+        { product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00 }
     ]
 });
 
@@ -90,6 +90,7 @@ const onProductSelect = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (product) {
         line.uom_id = product.uom_id;
+        line.prev_uom_id = product.uom_id;
         // Only suggest cost if current cost is zero or unset
         if (!line.unit_cost || line.unit_cost == 0) {
             line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
@@ -101,19 +102,30 @@ const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
-    // Only scale or suggest cost if current cost is zero or unset
+    const targetInfo = getFactorToBase(line.uom_id);
+    const productBaseInfo = getFactorToBase(product.uom_id); // The product's reference UOM
+    
+    // CASE A: Cost is ZERO - Suggest the corresponding cost for this UOM based on the Product's base Average Cost
     if (!line.unit_cost || line.unit_cost == 0) {
         const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
-        const targetInfo = getFactorToBase(line.uom_id);
-        const productBaseInfo = getFactorToBase(product.uom_id);
-
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
             line.unit_cost = baseCost * effectiveFactor;
+            line.prev_uom_id = line.uom_id;
             return;
         }
-        toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
+    } 
+    
+    // CASE B: Cost ALREADY EXISTS - Scale the existing cost relative to the PREVIOUS UOM factor to preserve line value
+    else if (line.prev_uom_id) {
+        const prevInfo = getFactorToBase(line.prev_uom_id);
+        if (targetInfo.baseId === prevInfo.baseId) {
+            const ratio = targetInfo.factor / prevInfo.factor;
+            line.unit_cost = line.unit_cost * ratio;
+        }
     }
+
+    line.prev_uom_id = line.uom_id;
 };
 
 onMounted(async () => {
@@ -141,7 +153,7 @@ onMounted(async () => {
 });
 
 const addLine = () => {
-    form.value.lines.push({ product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 });
+    form.value.lines.push({ product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00 });
 };
 
 const removeLine = (index) => {

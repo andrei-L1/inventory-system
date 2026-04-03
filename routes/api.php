@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Api\Sales\SalesOrderController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -113,6 +114,18 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:manage-purchase-orders');
+
+    // -----------------------------------------------------------------------
+    // Sales API (Phase 5)
+    // -----------------------------------------------------------------------
+    Route::apiResource('sales-orders', SalesOrderController::class)->only(['index', 'show'])->middleware('permission:view-sales-orders');
+    Route::apiResource('sales-orders', SalesOrderController::class)->except(['index', 'show'])->middleware('permission:manage-sales-orders');
+    Route::patch('sales-orders/{salesOrder}/approve', [SalesOrderController::class, 'approve'])->middleware('permission:manage-sales-orders');
+    Route::patch('sales-orders/{salesOrder}/send', [SalesOrderController::class, 'send'])->middleware('permission:manage-sales-orders');
+    Route::patch('sales-orders/{salesOrder}/pick', [SalesOrderController::class, 'pick'])->middleware('permission:manage-sales-orders');
+    Route::patch('sales-orders/{salesOrder}/pack', [SalesOrderController::class, 'pack'])->middleware('permission:manage-sales-orders');
+    Route::post('sales-orders/{salesOrder}/ship', [SalesOrderController::class, 'ship'])->middleware('permission:manage-sales-orders');
+    Route::patch('sales-orders/{salesOrder}/cancel', [SalesOrderController::class, 'cancel'])->middleware('permission:manage-sales-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

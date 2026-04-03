@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -90,4 +91,31 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
         return Inertia::render('PurchaseOrders/Show', ['id' => $id]);
     })->name('purchase-orders.show');
+
+    // --- Sales (Phase 5) ---
+    Route::get('/sales-orders', function () {
+        return Inertia::render('SalesOrders/Index');
+    })->name('sales-orders.index');
+
+    Route::get('/sales-orders/create', function () {
+        return Inertia::render('SalesOrders/Form');
+    })->name('sales-orders.create');
+
+    Route::get('/sales-orders/{id}/edit', function (Request $request, $id) {
+        // Fetch SO and pass as prop for edit mode
+        $so = SalesOrder::with('lines')->find($id);
+        if (! $so) {
+            abort(404);
+        }
+
+        return Inertia::render('SalesOrders/Form', ['salesOrder' => $so]);
+    })->name('sales-orders.edit');
+
+    Route::get('/sales-orders/{id}', function (Request $request, $id) {
+        if ($id === 'create') {
+            return redirect()->route('sales-orders.create');
+        }
+
+        return Inertia::render('SalesOrders/Show', ['id' => $id]);
+    })->name('sales-orders.show');
 });
