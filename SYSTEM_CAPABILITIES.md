@@ -17,14 +17,14 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 ## 💰 2. Advanced Costing Engine (Financial Integrity)
 *Focus: Professional-grade inventory valuation and margin analysis.*
 
-- **Triple-Method Costing**: Set valuation algorithms at the **Product Level**.
+- **Triple-Method Costing**: Set valuation algorithms at the **Product Level** via the pluggable **Strategy Pattern**.
   - **FIFO (First-In, First-Out)**: Consumes the oldest cost layers first. Perfect for standard retail.
   - **LIFO (Last-In, First-Out)**: Consumes the newest cost layers first. Useful in specialized commodities.
-  - **Weighted Average Cost (WAC)**: Creates a smoothed, moving average on every single inbound receipt.
+  - **Weighted Average Cost (WAC) (Layered)**: Recalculates a global moving average on every receipt and performs "Layer Leveling" to synchronize all on-hand layers with the new average instantly.
 - **Correct Multi-Location Global WAC**: The product-level average cost is computed as `SUM(location_QOH × location_avg_cost) / SUM(all_QOH)` across every warehouse simultaneously — not contaminated by a single location's last receipt.
 - **Atomic Piece Ledger**: All quantities are stored as integers in the absolute smallest base unit ("Pieces"). This eliminates floating-point rounding errors common in ERPs, ensuring that 1.0 Box and 24 Pieces are mathematically identical at the database level.
 - **Physical Cost Layers**: The system doesn't just calculate costs dynamically; it physically persists `InventoryCostLayers` in the database. You can drill down into a product and see exactly what receipts make up your current on-hand value.
-- **Cost of Goods Sold (COGS) Tracing**: Every outbound issue records the true weighted-average cost of the layers it consumed directly on the `transaction_lines.unit_cost` field. Gross Margin reports in Phase 8 will have accurate COGS data with zero back-calculation needed.
+- **Cost of Goods Sold (COGS) Tracing**: Every outbound issue records the true weighted-average cost of the layers it consumed directly on the `transaction_lines.unit_cost` field. This ensures that even for FIFO/LIFO products, the COGS is accurately tracked based on specific receipt batches.
 
 ---
 
@@ -108,4 +108,4 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 - **Stateless API Architecture**: Built around Laravel Sanctum tokens, allowing for easy expansion into mobile apps, barcode scanners, or third-party EDI integrations.
 
 ---
-*Last Updated: 2026-04-03. Covers complete designed feature set, including all six concurrency hardening locks, stock movement API (Phase 2.1), draft/post enforcement, corrected multi-location WAC, and COGS tracking on issue lines.*
+*Last Updated: 2026-04-03. Covers complete designed feature set, including Strategy Pattern costing engine, multi-location WAC, and COGS tracing.*

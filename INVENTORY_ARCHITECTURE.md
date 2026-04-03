@@ -2,16 +2,47 @@
 
 This document details the core logic governing stock movements, costing, and data integrity.
 
-## 1. The Inventory Engine (StockService)
 
-The heart of the system is `App\Services\Inventory\StockService`. It handles all physical stock movements to ensure that the balance in the `inventories` table always matches the sum of transactions.
+## THE STRATEGY PATTERN
 
-### A. The "Atomic Posting" Rule
-Every stock movement must be wrapped in a database transaction.
-- **Header**: Creates a `Transaction` (The "Why").
-- **Lines**: Creates `TransactionLine` records (The "What").
-- **Inventory Update**: Updates/Creates rows in the `inventories` table.
-- **Costing**: Creates or consumes `InventoryCostLayer` records.
+The Formal Definition
+
+Strategy Pattern is a behavioral design pattern that lets you define a family of algorithms, encapsulate each one, and make them interchangeable at runtime.
+
+Implementation in this project
+
+## 2. The Costing Engine (Strategy Pattern)
+
+The system delegates valuation logic to a family of interchangeable algorithms using the **Strategy Pattern**. This ensures that physical stock movement remains decoupled from the specific mathematical rules governing a product's value.
+
+### A. Core Architecture
+- **Context (`StockService`)**: The orchestrator that coordinates physical movement and locks.
+- **Strategy Interface (`CostingStrategy`)**: Defines the required hooks for `onReceipt` and `onIssue`.
+- **Factory (`CostingStrategyFactory`)**: Resolves the correct strategy based on the product's `costing_method_id` (FIFO, LIFO, or Weighted Average).
+
+### B. Concrete Strategies
+
+| Strategy | Methodology | `onIssue` Logic | `onReceipt` Logic |
+|---|---|---|---|
+| **FIFO** | First-In, First-Out | Consumes oldest layers (`receipt_date` ASC) | Updates Running Average + Creates Layer |
+| **LIFO** | Last-In, First-Out | Consumes newest layers (`receipt_date` DESC) | Updates Running Average + Creates Layer |
+| **Average** | Weighted Average | Consumes layers in FIFO order (all layers identical) | Updates Running Average + Creates Layer + **Levels Layers** |
+
+### C. The "Layer Leveling" Worker
+For Weighted Average Costing, the system implements a specialized mechanism called **Layer Leveling**:
+1. When a receipt occurs, the **Running Average** is recalculated globally for that inventory record.
+2. All existing (non-exhausted) `inventory_cost_layers` are then **leveled** — their `unit_cost` is updated to match the new global average.
+3. This ensures that any subsequent issue (Sales Order, Adjustment) correctly reflects the perpetual average value regardless of which underlying layer is consumed.
+
+### D. The Financial Invariant
+The system enforces a strict mathematical rule across all movement types:
+> **`Inventory.average_cost × Inventory.quantity_on_hand == SUM(InventoryCostLayers.remaining_qty × InventoryCostLayers.unit_cost)`**
+
+This invariant is verified by the automated test suite on every commit to prevent "valuation drift."
+
+---
+
+## 3. The Inventory Engine (StockService)
 
 ### B. Concurrency Control — Pessimistic Locking (`lockForUpdate`)
 The system uses **pessimistic row locking** at six distinct layers to prevent race conditions across all concurrent request scenarios. Every lock is held inside a `DB::transaction`, so if any step fails the entire operation rolls back atomically.

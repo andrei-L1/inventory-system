@@ -17,7 +17,7 @@ The platform provides a secure and accelerated login gateway.
 ## 2. Command Center (Dashboard)
 The Dashboard serves as the central control node of your warehouse, giving you a top-level telemetry view of your entire inventory status at a glance.
 
-* **KPI Modules:** Track your top-line statistics instantly, such as `Assets Managed`, total financial `Capital Deployed` (your total inventory value calculated via dynamic FIFO average costs), and `Today's Movements`.
+* **KPI Modules:** Track your top-line statistics instantly, such as `Assets Managed`, total financial `Capital Deployed` (your total inventory value calculated via the product's assigned costing method: FIFO, LIFO, or Weighted Average), and `Today's Movements`.
 * **Live Activity Feed:** Keep a pulse on all physical operations. Every single stock transaction (receipts, issues, transfers, or adjustments) appears here immediately as they are posted.
 * **Critical Low Stock Alerts:** The right-hand intelligence panel prominently monitors items whose current quantity on hand falls below their designated `Reorder Point`, and highlights the exact amount of the shortage. 
 
@@ -28,7 +28,7 @@ Before you move physical stock, the system requires foundational data.
 
 ### The Catalog (Product Management)
 Navigate to **Catalog** via the left-hand navigation sidebar to manage what items technically exist in your database.
-* **Listing Details:** Here you define the properties of items: Name, SKU code, Reorder Point, Unit Options (UOM), and the Costing Logic (e.g., FIFO).
+* **Listing Details:** Here you define the properties of items: Name, SKU code, Reorder Point, Unit Options (UOM), and the **Costing Method** (FIFO, LIFO, or Weighted Average).
 * **Categories:** Add detailed attributes by assigning items to groups like `Raw Materials`, `Components`, or `Finished Goods`.
 
 ### Vendor Center
@@ -64,7 +64,7 @@ When stock shifts physically or financially, you must log a transaction document
 The deepest analytical view available in the application for an individual asset. 
 * **Search & Select:** Find a specific product via the left lookup bar.
 * **Intelligence Grid:** Reviews the current status of that item, breaking down exactly where it physically sits across all locations (`Storage Breakdown`).
-* **FIFO Cost Layers:** Shows the remaining undepleted batches of that stock, their specific unit costs, and the original receipt dates.
+* **Cost Layers:** Shows the remaining undepleted batches of that stock, their specific unit costs, and the original receipt dates. For Weighted Average products, all active layers are automatically synchronized to the current moving average cost.
 * **Entity Ledger:** The unified transactional ledger showing every time this specific component was touched, where it went, and who authorized it.
 
 ---

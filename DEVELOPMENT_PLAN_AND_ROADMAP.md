@@ -63,6 +63,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Controller Exception Hardening** — `TransactionController`, `AdjustmentController`, and `PurchaseOrderController` now catch operational exceptions and return clean 422 errors. ✅ NEW
 - [x] **Ledger UOM Persistence** — Refactored `transaction_lines` to store `base_uom_id`, decoupling calculative storage from original transaction UOM for 100% audit transparency. ✅ NEW
 - [x] **Full Concurrency & Locking Audit** — Comprehensive race-condition audit across all controllers and StockService. PO status transitions (approve/send/ship/close), GRN receive, and processReturn now use `DB::transaction` + `lockForUpdate`. `postTransaction()` and `reverseTransaction()` lock the Transaction header row before idempotency checks. `ReorderRuleController` catches `QueryException` for DB-level unique guard. 33 tests, 113 assertions — 100% passing. ✅ NEW
+- [x] **Inventory Costing Engine Refactor (Strategy Pattern)** — Successfully refactored the engine to use pluggable FIFO, LIFO, and Weighted Average strategies. Decoupled valuation logic from physical movement and ensured the global `average_cost` invariant is maintained across all receipt types. ✅ NEW
 
 
 ### 0.2 Database Schema
@@ -580,7 +581,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 | Phase | Domain | Status |
 |-------|---------|--------|
-| 0 | Core Stock Engine | ✅ Complete (Atomic Piece Ledger, recursive UOMs, WAC, COGS) |
+| 0 | Core Stock Engine | ✅ Complete (Atomic Piece Ledger, Strategy Pattern, WAC, COGS) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
