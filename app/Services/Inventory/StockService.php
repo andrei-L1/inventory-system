@@ -6,7 +6,6 @@ use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
 use App\Helpers\UomHelper;
 use App\Models\Inventory;
-use App\Models\InventoryCostLayer;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Transaction;
@@ -15,7 +14,6 @@ use App\Models\TransactionStatus;
 use App\Models\Transfer;
 use App\Services\Inventory\Costing\CostingStrategyFactory;
 use App\Services\Inventory\Costing\Traits\ManagesCostLayers;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -362,7 +360,7 @@ class StockService
         if ($isReceipt) {
             // Receipt Path: Strategy handles averaging math, layer creation, and leveling.
             $strategy->onReceipt($inventory, $line, $qtyMove, (float) $lineData['unit_cost']);
-            
+
             // Increment physical stock
             $inventory->quantity_on_hand += $qtyMove;
             $inventory->save();

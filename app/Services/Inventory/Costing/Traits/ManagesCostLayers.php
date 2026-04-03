@@ -5,7 +5,6 @@ namespace App\Services\Inventory\Costing\Traits;
 use App\Exceptions\InsufficientStockException;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
-use Illuminate\Support\Facades\DB;
 
 trait ManagesCostLayers
 {
@@ -33,7 +32,7 @@ trait ManagesCostLayers
         $totalQtyConsumed = 0.0;
 
         foreach ($layers as $layer) {
-            /** @var \App\Models\InventoryCostLayer $layer */
+            /** @var InventoryCostLayer $layer */
             if ($remainingToConsume <= $qtyEpsilon) {
                 break;
             }

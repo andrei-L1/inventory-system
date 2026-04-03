@@ -19,9 +19,9 @@ class CostingStrategyFactory
         $method = strtolower($product->costingMethod->name ?? 'fifo');
 
         return match ($method) {
-            'fifo' => new FifoCostingStrategy(),
-            'lifo' => new LifoCostingStrategy(),
-            'average' => new AverageCostingStrategy(),
+            'fifo' => new FifoCostingStrategy,
+            'lifo' => new LifoCostingStrategy,
+            'average' => new AverageCostingStrategy,
             default => throw new LogicException("Unsupported costing method: {$method}"),
         };
     }

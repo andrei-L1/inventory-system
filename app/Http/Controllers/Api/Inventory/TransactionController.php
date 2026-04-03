@@ -37,7 +37,7 @@ class TransactionController extends Controller
             $header = $validated['header'];
 
             // Map user input to reference_doc (physical paperwork)
-            $header['reference_doc'] = $header['reference_number'] ?? null; 
+            $header['reference_doc'] = $header['reference_number'] ?? null;
 
             // Auto-generate a guaranteed unique system reference_number
             $typeMap = [1 => 'RCV', 2 => 'ISS', 3 => 'TRF', 4 => 'ADJ'];

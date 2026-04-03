@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
 use App\Models\UnitOfMeasure;
+use App\Models\Vendor;
 use App\Services\Inventory\StockService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -83,21 +84,21 @@ class CostingStrategyTest extends TestCase
         // ASSERT: All layers should be leveled to 150
         $layers = InventoryCostLayer::where('product_id', $product->id)->get();
         foreach ($layers as $layer) {
-            $this->assertEquals(150.0, (float) $layer->unit_cost, "Layer should be leveled to 150");
+            $this->assertEquals(150.0, (float) $layer->unit_cost, 'Layer should be leveled to 150');
         }
 
         // 3. Issue 5 -> Should use 150
         $issue = $this->postIssue($product, $location, 5);
         $this->assertEquals(150.0, (float) $issue->lines->first()->unit_cost);
-        
+
         // 4. Financial Invariant: Sum(Layers Value) == QOH * AvgCost
         $qoh = (float) $inventory->fresh()->quantity_on_hand;
         $avg = (float) $inventory->fresh()->average_cost;
         $totalLayerValue = InventoryCostLayer::where('product_id', $product->id)
             ->get()
-            ->sum(fn($l) => ($l->received_qty - $l->issued_qty) * $l->unit_cost);
-            
-        $this->assertEquals($qoh * $avg, $totalLayerValue, "Financial invariant failed");
+            ->sum(fn ($l) => ($l->received_qty - $l->issued_qty) * $l->unit_cost);
+
+        $this->assertEquals($qoh * $avg, $totalLayerValue, 'Financial invariant failed');
     }
 
     /** @test */
@@ -111,15 +112,15 @@ class CostingStrategyTest extends TestCase
 
         // Issue 15 (10 @ 100 + 5 @ 200) = 1000 + 1000 = 2000 / 15 = 133.333333
         $issue = $this->postIssue($product, $location, 15);
-        $this->assertEquals(round(2000/15, 8), round((float)$issue->lines->first()->unit_cost, 8));
+        $this->assertEquals(round(2000 / 15, 8), round((float) $issue->lines->first()->unit_cost, 8));
     }
 
     // Helpers
     protected function createProduct($methodName)
     {
         return Product::create([
-            'product_code' => "TEST-" . strtoupper($methodName),
-            'name' => "Test " . $methodName,
+            'product_code' => 'TEST-'.strtoupper($methodName),
+            'name' => 'Test '.$methodName,
             'uom_id' => UnitOfMeasure::where('abbreviation', 'pcs')->first()->id,
             'costing_method_id' => CostingMethod::where('name', $methodName)->first()->id,
             'is_active' => true,
@@ -128,17 +129,17 @@ class CostingStrategyTest extends TestCase
 
     protected function postReceipt($product, $location, $qty, $cost)
     {
-        $vendor = \App\Models\Vendor::firstOrCreate(
+        $vendor = Vendor::firstOrCreate(
             ['vendor_code' => 'TEST-VENDOR'],
             ['name' => 'Test Vendor', 'is_active' => true]
         );
-        
+
         $transactionType = TransactionType::where('code', 'RCPT')->first();
         $status = TransactionStatus::where('name', 'posted')->first();
-        
+
         return $this->service->recordMovement([
             'header' => [
-                'reference_number' => 'TEST-REC-' . uniqid(),
+                'reference_number' => 'TEST-REC-'.uniqid(),
                 'transaction_type_id' => $transactionType->id,
                 'transaction_status_id' => $status->id,
                 'transaction_date' => now()->toDateString(),
