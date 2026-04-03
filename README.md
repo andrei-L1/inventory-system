@@ -10,8 +10,8 @@
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"/>
   </a>
-  <img src="https://img.shields.io/badge/Tests-33%20passing-brightgreen" alt="Tests"/>
-  <img src="https://img.shields.io/badge/phase-4%20of%2010-blue" alt="Phase"/>
+  <img src="https://img.shields.io/badge/Tests-43%20passing-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/phase-5%20of%2010-blue" alt="Phase"/>
 </p>
 
 ---
@@ -31,7 +31,7 @@
 | Build | Vite |
 | Database | MySQL / MariaDB |
 | Auth | Laravel Sanctum · Google OAuth |
-| Testing | PHPUnit · Pest (33 tests, 113 assertions) |
+| Testing | PHPUnit · Pest (43 tests, 134 assertions) |
 
 ---
 
@@ -102,7 +102,7 @@ npm run dev             # Frontend → http://localhost:5173
 
 ```bash
 php artisan test
-# → 33 tests, 113 assertions, 0 failures
+# → 43 tests, 134 assertions, 0 failures
 ```
 
 ---

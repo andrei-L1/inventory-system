@@ -7,6 +7,17 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Inventory Costing Engine Refactor (Strategy Pattern)
+**Date**: 2026-04-03 | **Status**: 100% COMPLETE
+**Summary**: Successfully refactored the inventory costing engine to use a pluggable Strategy Pattern, decoupling valuation from physical movement logic.
+- **Pluggable Strategies**: Implemented `FifoCostingStrategy`, `LifoCostingStrategy`, and `AverageCostingStrategy` to handle specific valuation rules independently.
+- **Financial Invariant Preservation**: Integrated a `ManagesCostLayers` trait that maintains the global `average_cost` on the `Inventory` model during all receipt transactions, ensuring that `Sum(Layers) == QOH * AverageCost` remains true across the system.
+- **Layer Leveling**: Implemented a specialized "Leveling" worker for the Average Costing method, ensuring that all individual cost layers are synchronized with the running weighted average instantly upon receipt.
+- **UOM Awareness**: Synchronized the costing strategies with the multi-level UOM conversion engine, guaranteeing that bulk receipts (e.g., Boxes) are correctly valued at the base-unit level (e.g., Pieces).
+- **Test-Driven Verification**: Achieved 100% pass rate in a new dedicated costing test suite, verifying FIFO/LIFO ordering and Weighted Average math accuracy.
+
+---
+
 ### 🎯 Milestone: Sales Order Lifecycle & Intelligent Price Scaling (Phase 5)
 **Date**: 2026-04-03 | **Status**: 100% COMPLETE
 **Summary**: Successfully implemented the full Sales Order (SO) module and resolved a critical UX math discrepancy in UOM conversions.

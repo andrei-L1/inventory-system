@@ -13,6 +13,8 @@ use App\Models\Transaction;
 use App\Models\TransactionLine;
 use App\Models\TransactionStatus;
 use App\Models\Transfer;
+use App\Services\Inventory\Costing\CostingStrategyFactory;
+use App\Services\Inventory\Costing\Traits\ManagesCostLayers;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,8 @@ use LogicException;
 
 class StockService
 {
+    use ManagesCostLayers;
+
     private const QTY_EPSILON = 0.00001;
 
     protected TransactionValidator $validator;
@@ -352,133 +356,43 @@ class StockService
             );
         }
 
-        if ($isReceipt) {
-            // Receipt: update location-level weighted average cost first (before QOH changes).
-            $this->updateLocationAverageCost($inventory, $qtyMove, (float) $lineData['unit_cost']);
-        }
-
-        $inventory->quantity_on_hand += (float) $lineData['quantity'];
-        $inventory->save();
+        // Resolving the proper costing strategy for this specific product.
+        $strategy = CostingStrategyFactory::resolve($inventory->product);
 
         if ($isReceipt) {
-            // FIX [Global WAC]: Recalculate the product-level global average cost
-            // AFTER saving the updated location row, so the query sees correct data.
+            // Receipt Path: Strategy handles averaging math, layer creation, and leveling.
+            $strategy->onReceipt($inventory, $line, $qtyMove, (float) $lineData['unit_cost']);
+            
+            // Increment physical stock
+            $inventory->quantity_on_hand += $qtyMove;
+            $inventory->save();
+
+            // Refresh global cost after the location row is saved
             $this->updateProductGlobalAverageCost($inventory->product);
 
-            // FIX: Add total_cost to the line for receipts
+            // Ensure the transaction line records the final receipt value
             $line->unit_cost = (float) $lineData['unit_cost'];
-            $line->total_cost = (float) $lineData['quantity'] * (float) $lineData['unit_cost'];
+            $line->total_cost = $qtyMove * (float) $lineData['unit_cost'];
             $line->save();
-
-            InventoryCostLayer::create([
-                'product_id' => $lineData['product_id'],
-                'location_id' => $lineData['location_id'],
-                'transaction_line_id' => $line->id,
-                'received_qty' => $lineData['quantity'],
-                'unit_cost' => $lineData['unit_cost'],
-                'receipt_date' => now(),
-            ]);
         } else {
-            // ISSUE: All costing methods (FIFO, LIFO, Weighted Average) use layer consumption.
-            // This design ensures layers always stay perfectly synchronized with physical QOH,
-            // maintaining 100% audit integrity between the ledger and the valuation tiers.
-            $consumedUnitCost = $this->consumeLayers($inventory, abs((float) $lineData['quantity']));
+            // Issue Path: Strategy handles valuation for the issue (FIFO/LIFO/Average).
+            $unitCost = $strategy->onIssue($inventory, abs($qtyMove));
 
-            $line->unit_cost = $consumedUnitCost;
-            $line->total_cost = $consumedUnitCost * abs((float) $lineData['quantity']);
+            // Decrement physical stock
+            $inventory->quantity_on_hand += $qtyMove; // $qtyMove is negative
+            $inventory->save();
+
+            // Refresh global cost after the location row is saved
+            $this->updateProductGlobalAverageCost($inventory->product);
+
+            // Record the issue value and total COGS
+            $line->unit_cost = $unitCost;
+            $line->total_cost = $unitCost * abs($qtyMove);
             $line->save();
         }
     }
 
     /**
-     * Consumes cost layers using FIFO (default) or LIFO.
-     *
-     * Even Weighted Average products consume cost layers using FIFO ordering on issues.
-     * This design prioritizes ledger-layer consistency and auditability over a
-     * pure perpetual average calculation, ensuring the two tables never diverge.
-     *
-     * @return float The weighted-average unit cost of all layers consumed.
-     */
-    private function consumeLayers(Inventory $inventory, float $quantity): float
-    {
-        $product = $inventory->product;
-        $method = $product->costingMethod;
-
-        $direction = ($method && $method->matchesName('lifo')) ? 'desc' : 'asc';
-
-        /** @var Collection<int, InventoryCostLayer> $layers */
-        $layers = InventoryCostLayer::where('product_id', $inventory->product_id)
-            ->where('location_id', $inventory->location_id)
-            ->where('is_exhausted', false)
-            ->orderBy('receipt_date', $direction)
-            ->orderBy('id', $direction)
-            ->select('*') // Ensure we get all columns
-            ->selectRaw('(received_qty - issued_qty) as calc_remaining_qty') // Use raw for safety
-            ->lockForUpdate()
-            ->get();
-
-        $remainingToConsume = $quantity;
-        $totalCostConsumed = 0.0;
-        $totalQtyConsumed = 0.0;
-
-        foreach ($layers as $layer) {
-            if ($remainingToConsume <= 0) {
-                break;
-            }
-
-            $availableInLayer = (float) $layer->calc_remaining_qty;
-            $consumeAmount = min($availableInLayer, $remainingToConsume);
-
-            $totalCostConsumed += $consumeAmount * (float) $layer->unit_cost;
-            $totalQtyConsumed += $consumeAmount;
-
-            /** @var InventoryCostLayer $layer */
-            $layer->issued_qty = (float) $layer->issued_qty + $consumeAmount;
-            $remainingToConsume -= $consumeAmount;
-
-            if (($layer->received_qty - $layer->issued_qty) <= self::QTY_EPSILON) {
-                $layer->is_exhausted = true;
-            }
-
-            $layer->save();
-        }
-
-        if ($remainingToConsume > self::QTY_EPSILON) {
-            throw new InsufficientStockException(
-                "Insufficient stock to consume {$quantity} for product ID: {$inventory->product_id} "
-                ."at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
-            );
-        }
-
-        // Return the true weighted-average unit cost of what was consumed.
-        return $totalQtyConsumed > 0 ? round($totalCostConsumed / $totalQtyConsumed, 6) : 0.0;
-    }
-
-    // -------------------------------------------------------------------------
-    // PRIVATE: Update the location-level weighted average cost.
-    //
-    // Only touches $inventory->average_cost (in-memory — caller must save()).
-    // Global product-level average is handled separately by updateProductGlobalAverageCost().
-    // -------------------------------------------------------------------------
-    private function updateLocationAverageCost(Inventory $inventory, float $newQty, float $newUnitCost): void
-    {
-        $currentQty = (float) $inventory->quantity_on_hand;
-        $currentAvgCost = (float) $inventory->average_cost;
-
-        $totalValueBefore = $currentQty * $currentAvgCost;
-        $newValueInbound = $newQty * $newUnitCost;
-        $totalQtyAfter = $currentQty + $newQty;
-
-        if ($totalQtyAfter > 0) {
-            $inventory->average_cost = ($totalValueBefore + $newValueInbound) / $totalQtyAfter;
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // PRIVATE: Recalculate the product's global average cost across ALL locations.
-    //
-    // FIX [Global WAC formula]:
-    //   The old code set product.average_cost from a single location's computation,
     //   which is mathematically wrong when stock exists at multiple locations at
     //   different costs. The correct formula aggregates every location:
     //     global_avg = SUM(location_QOH × location_avg_cost) / SUM(location_QOH)
