@@ -104,7 +104,7 @@ class SalesOrder extends Model
             SalesOrderStatus::CONFIRMED,
             SalesOrderStatus::PICKED,
             SalesOrderStatus::PACKED,
-            SalesOrderStatus::PARTIALLY_SHIPPED
+            SalesOrderStatus::PARTIALLY_SHIPPED,
         ]);
     }
 }

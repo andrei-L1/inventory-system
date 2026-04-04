@@ -12,7 +12,7 @@ class UnitOfMeasureFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->unique()->word() . '_' . $this->faker->unique()->numberBetween(1, 9999),
+            'name' => $this->faker->unique()->word().'_'.$this->faker->unique()->numberBetween(1, 9999),
             'abbreviation' => strtoupper($this->faker->unique()->lexify('??')),
             'is_active' => true,
         ];

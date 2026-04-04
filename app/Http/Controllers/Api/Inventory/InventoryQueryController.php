@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\InventoryResource;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Product;
 use App\Models\UnitOfMeasure;
-use App\Helpers\UomHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -133,7 +133,7 @@ class InventoryQueryController extends Controller
         ]);
 
         $product = Product::findOrFail($request->product_id);
-        
+
         $inventory = Inventory::where('product_id', $product->id)
             ->where('location_id', $request->location_id)
             ->first();
@@ -144,7 +144,7 @@ class InventoryQueryController extends Controller
 
         $targetUomId = $request->uom_id ?? $product->uom_id;
         $targetUom = UnitOfMeasure::find($targetUomId);
-        
+
         $availableTarget = $availableBase;
         if ($targetUomId != $product->uom_id) {
             try {

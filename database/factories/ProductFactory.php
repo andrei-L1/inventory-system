@@ -2,11 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\Product;
 use App\Models\Category;
-use App\Models\UnitOfMeasure;
 use App\Models\CostingMethod;
-use App\Models\Vendor;
+use App\Models\Product;
+use App\Models\UnitOfMeasure;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ProductFactory extends Factory

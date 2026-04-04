@@ -9,6 +9,7 @@ use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\LocationType;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
 use App\Models\SalesOrderStatus;
@@ -19,7 +20,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use App\Services\Inventory\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SalesOrderTest extends TestCase
@@ -27,18 +27,19 @@ class SalesOrderTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected StockService $stockService;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->stockService = app(StockService::class);
-        
+
         // Setup lookup data first
         $this->seedLookupData();
 
         // Create user with admin role to bypass permission checks
-        $adminRole = \App\Models\Role::firstOrCreate(['name' => 'admin'], ['is_active' => true]);
+        $adminRole = Role::firstOrCreate(['name' => 'admin'], ['is_active' => true]);
         $this->user = User::factory()->create(['role_id' => $adminRole->id]);
     }
 
@@ -99,8 +100,8 @@ class SalesOrderTest extends TestCase
                     'ordered_qty' => 10,
                     'unit_price' => 100,
                     'tax_rate' => 12,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->user)
@@ -113,10 +114,10 @@ class SalesOrderTest extends TestCase
             'ordered_qty' => 10,
             'unit_price' => 100,
         ]);
-        
+
         $so = SalesOrder::first();
         // Check subtotal calculation: 10 * 100 * 1.12 = 1120
-        $this->assertEquals(1120, (float)$so->total_amount);
+        $this->assertEquals(1120, (float) $so->total_amount);
     }
 
     public function test_can_confirm_sales_order_and_reserve_stock()
@@ -143,7 +144,7 @@ class SalesOrderTest extends TestCase
         ]);
 
         $so = SalesOrder::factory()->create([
-            'status_id' => SalesOrderStatus::where('name', SalesOrderStatus::QUOTATION)->value('id')
+            'status_id' => SalesOrderStatus::where('name', SalesOrderStatus::QUOTATION)->value('id'),
         ]);
         $line = SalesOrderLine::factory()->create([
             'sales_order_id' => $so->id,
@@ -157,14 +158,14 @@ class SalesOrderTest extends TestCase
             ->patchJson("/api/sales-orders/{$so->id}/approve");
 
         $response->assertStatus(200);
-        
+
         $inventory = Inventory::where('product_id', $product->id)
             ->where('location_id', $location->id)
             ->first();
 
-        $this->assertEquals(10, (float)$inventory->reserved_qty);
-        $this->assertEquals(50, (float)$inventory->quantity_on_hand);
-        
+        $this->assertEquals(10, (float) $inventory->reserved_qty);
+        $this->assertEquals(50, (float) $inventory->quantity_on_hand);
+
         $so->refresh();
         $this->assertEquals(SalesOrderStatus::CONFIRMED, $so->status->name);
     }
@@ -209,10 +210,10 @@ class SalesOrderTest extends TestCase
                 [
                     'so_line_id' => $line->id,
                     'shipped_qty' => 10,
-                ]
+                ],
             ],
             'carrier' => 'FedEx',
-            'tracking_number' => 'TRK123456'
+            'tracking_number' => 'TRK123456',
         ];
 
         $response = $this->actingAs($this->user)
@@ -225,17 +226,17 @@ class SalesOrderTest extends TestCase
             ->first();
 
         // 4. Verify Stock: 50 - 10 = 40
-        $this->assertEquals(40, (float)$inventory->quantity_on_hand);
+        $this->assertEquals(40, (float) $inventory->quantity_on_hand);
         // 5. Verify Reservation: 10 - 10 = 0
-        $this->assertEquals(0, (float)$inventory->reserved_qty);
+        $this->assertEquals(0, (float) $inventory->reserved_qty);
 
         // 6. Verify Transaction created
         $this->assertDatabaseHas('transactions', [
             'sales_order_id' => $so->id,
-            'transaction_type_id' => TransactionType::where('name', 'issue')->value('id')
+            'transaction_type_id' => TransactionType::where('name', 'issue')->value('id'),
         ]);
-        
+
         $transaction = Transaction::where('sales_order_id', $so->id)->first();
-        $this->assertEquals(40, (float)$transaction->lines->first()->unit_cost); // COGS should be 40
+        $this->assertEquals(40, (float) $transaction->lines->first()->unit_cost); // COGS should be 40
     }
 }

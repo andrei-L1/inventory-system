@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\SalesOrder;
 use App\Models\Customer;
+use App\Models\SalesOrder;
 use App\Models\SalesOrderStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

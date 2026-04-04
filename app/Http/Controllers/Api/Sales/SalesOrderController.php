@@ -10,16 +10,13 @@ use App\Http\Requests\Sales\SalesOrderStoreRequest;
 use App\Http\Requests\Sales\SalesOrderUpdateRequest;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\SalesOrder;
-use App\Models\SalesOrderLine;
 use App\Models\SalesOrderStatus;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
-use App\Models\UnitOfMeasure;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SalesOrderController extends Controller
@@ -113,6 +110,7 @@ class SalesOrderController extends Controller
                     'expected_shipping_date' => $data['expected_shipping_date'] ?? $salesOrder->expected_shipping_date,
                     'notes' => $data['notes'] ?? $salesOrder->notes,
                 ]);
+
                 return $salesOrder;
             }
 
@@ -180,7 +178,7 @@ class SalesOrderController extends Controller
             foreach ($so->lines as $line) {
                 $product = $line->product;
                 $location = $line->location;
-                
+
                 // Convert ordered qty to base UOM for reservation
                 $baseQty = $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
@@ -205,7 +203,7 @@ class SalesOrderController extends Controller
 
     public function pick(Request $request, SalesOrder $salesOrder): SalesOrderResource
     {
-        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
+        $salesOrder = DB::transaction(function () use ($salesOrder) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
             if ($so->status->name !== SalesOrderStatus::CONFIRMED) {
                 abort(400, 'Only confirmed sales orders can be picked.');
@@ -222,7 +220,7 @@ class SalesOrderController extends Controller
 
     public function pack(Request $request, SalesOrder $salesOrder): SalesOrderResource
     {
-        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
+        $salesOrder = DB::transaction(function () use ($salesOrder) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
             if ($so->status->name !== SalesOrderStatus::PICKED) {
                 abort(400, 'Only picked sales orders can be packed.');
@@ -308,7 +306,7 @@ class SalesOrderController extends Controller
                 // 5. Update SO Status
                 $salesOrder->refresh();
                 $shippedStatus = SalesOrderStatus::where('name', SalesOrderStatus::SHIPPED)->firstOrFail();
-                
+
                 $salesOrder->update([
                     'status_id' => $shippedStatus->id,
                     'shipped_at' => now(),
@@ -335,7 +333,7 @@ class SalesOrderController extends Controller
     {
         $salesOrder = DB::transaction(function () use ($salesOrder, $stockService) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
-            
+
             if (in_array($so->status->name, [SalesOrderStatus::SHIPPED, SalesOrderStatus::CANCELLED, SalesOrderStatus::CLOSED])) {
                 abort(400, "Cannot cancel sales order in {$so->status->name} status.");
             }
@@ -345,7 +343,7 @@ class SalesOrderController extends Controller
                 foreach ($so->lines as $line) {
                     $product = $line->product;
                     $location = $line->location;
-                    
+
                     $baseQty = $line->ordered_qty;
                     if ($line->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);

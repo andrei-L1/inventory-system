@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\SalesOrderLine;
-use App\Models\SalesOrder;
-use App\Models\Product;
 use App\Models\Location;
+use App\Models\Product;
+use App\Models\SalesOrder;
+use App\Models\SalesOrderLine;
 use App\Models\UnitOfMeasure;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
