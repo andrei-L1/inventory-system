@@ -315,11 +315,14 @@ class SalesOrderController extends Controller
     public function ship(Request $request, SalesOrder $salesOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'lines' => 'required|array',
+            'lines' => 'required|array|min:1',
             'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
             'lines.*.shipped_qty' => 'required|numeric|min:0.0001',
-            'carrier' => 'nullable|string|max:100',
+            'carrier' => 'required|string|max:100',
             'tracking_number' => 'nullable|string|max:100',
+        ], [
+            'lines.min' => 'Please select at least one item to ship.',
+            'carrier.required' => 'A carrier service is required for fulfillment.',
         ]);
 
         if (! $salesOrder->canBeShipped()) {
@@ -347,8 +350,7 @@ class SalesOrderController extends Controller
                     'lines' => [],
                 ];
 
-                $soLines = $salesOrder->lines()->lockForUpdate()->get()->keyBy('id');
-                $allShipped = true;
+                $soLines = $salesOrder->lines()->with(['product', 'location'])->lockForUpdate()->get()->keyBy('id');
 
                 foreach ($request->lines as $item) {
                     $soLine = $soLines->get($item['so_line_id']);
@@ -370,7 +372,7 @@ class SalesOrderController extends Controller
                     if ($soLine->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id);
                     }
-                    $baseShippedQty = $shippedQtyRaw * $factor;
+                    $baseShippedQty = round($shippedQtyRaw * $factor, 8);
 
                     $stockService->releaseReservation($product, $soLine->location, $baseShippedQty);
 
@@ -385,7 +387,9 @@ class SalesOrderController extends Controller
                     $soLine->save();
                 }
 
-                // Global fulfillment check
+                // Global fulfillment check (Refresh relationship to see the saves from $soLine->save() above)
+                $salesOrder->unsetRelation('lines');
+                $allShipped = true;
                 foreach ($salesOrder->lines as $line) {
                     if ($line->shipped_qty < $line->ordered_qty) {
                         $allShipped = false;

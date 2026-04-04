@@ -12,6 +12,9 @@ class SalesOrderLineResource extends JsonResource
             'id' => $this->id,
             'sales_order_id' => $this->sales_order_id,
             'product_id' => $this->product_id,
+            'product_name' => $this->product->name,
+            'sku' => $this->product->sku,
+            'location_name' => $this->location?->name,
             'product' => [
                 'id' => $this->product->id,
                 'name' => $this->product->name,
@@ -41,6 +44,9 @@ class SalesOrderLineResource extends JsonResource
             'subtotal' => (float) $this->subtotal,
             'notes' => $this->notes,
             'remaining_qty' => (float) $this->remaining_qty,
+            'remaining_pick_qty' => (float) $this->remaining_pick_qty,
+            'remaining_pack_qty' => (float) $this->remaining_pack_qty,
+            'remaining_ship_qty' => (float) $this->remaining_ship_qty,
             'availability' => $this->product->inventories->map(fn ($inv) => [
                 'location_name' => $inv->location->name,
                 'quantity_on_hand' => (float) $inv->scaled_quantity_on_hand,
