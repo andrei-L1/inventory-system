@@ -23,6 +23,7 @@ class StockService
     use ManagesCostLayers;
 
     private const QTY_EPSILON = 0.00001;
+    public const TYPE_SALES_RETURN = 'SRET';
 
     protected TransactionValidator $validator;
 

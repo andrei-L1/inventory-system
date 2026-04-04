@@ -172,6 +172,17 @@ class SalesOrderController extends Controller
                 abort(400, 'Only draft sales orders can be approved.');
             }
 
+            // CREDIT LIMIT ENFORCEMENT
+            $customer = $so->customer;
+            if ($customer->credit_limit > 0) {
+                $exposure = $customer->exposure;
+                $newTotal = $exposure + (float) $so->total_amount;
+                
+                if ($newTotal > ($customer->credit_limit + 0.01)) {
+                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
+                }
+            }
+
             $confirmedStatus = SalesOrderStatus::where('name', SalesOrderStatus::CONFIRMED)->firstOrFail();
 
             // RESERVE STOCK
