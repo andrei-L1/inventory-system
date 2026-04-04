@@ -4,7 +4,7 @@ namespace App\Http\Requests\Sales;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class SalesOrderStoreRequest extends FormRequest
+class SalesOrderUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,6 +20,7 @@ class SalesOrderStoreRequest extends FormRequest
             'currency' => ['required', 'string', 'max:3'],
             'notes' => ['nullable', 'string'],
             'lines' => ['required', 'array', 'min:1'],
+            'lines.*.id' => ['nullable', 'exists:sales_order_lines,id'],
             'lines.*.product_id' => ['required', 'exists:products,id'],
             'lines.*.location_id' => ['required', 'exists:locations,id'],
             'lines.*.uom_id' => ['required', 'exists:units_of_measure,id'],

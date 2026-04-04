@@ -73,6 +73,11 @@ class SalesOrder extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
@@ -81,5 +86,25 @@ class SalesOrder extends Model
     public function shipments()
     {
         return $this->hasMany(Shipment::class);
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status?->name === SalesOrderStatus::QUOTATION;
+    }
+
+    public function isConfirmed(): bool
+    {
+        return $this->status?->name === SalesOrderStatus::CONFIRMED;
+    }
+
+    public function canBeShipped(): bool
+    {
+        return in_array($this->status?->name, [
+            SalesOrderStatus::CONFIRMED,
+            SalesOrderStatus::PICKED,
+            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_SHIPPED
+        ]);
     }
 }
