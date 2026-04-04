@@ -16,7 +16,6 @@ return new class extends Migration
             $table->decimal('picked_qty', 18, 4)->default(0)->after('shipped_qty');
             $table->decimal('packed_qty', 18, 4)->default(0)->after('picked_qty');
             $table->decimal('returned_qty', 18, 4)->default(0)->after('packed_qty');
-            $table->decimal('subtotal', 18, 4)->default(0)->after('returned_qty');
         });
     }
 
@@ -27,7 +26,7 @@ return new class extends Migration
     {
         Schema::table('sales_order_lines', function (Blueprint $table) {
             $table->dropConstrainedForeignId('location_id');
-            $table->dropColumn(['picked_qty', 'packed_qty', 'returned_qty', 'subtotal']);
+            $table->dropColumn(['picked_qty', 'packed_qty', 'returned_qty']);
         });
     }
 };

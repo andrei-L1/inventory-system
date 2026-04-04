@@ -9,7 +9,6 @@ import Textarea from 'primevue/textarea';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
-import Toast from 'primevue/toast';
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
 
@@ -56,32 +55,13 @@ const getFactorToBase = (uomId) => {
 
 const form = ref({
     customer_id: null,
-    order_date: new Date(),
+    requested_delivery_date: null,
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null }
+        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0 }
     ]
 });
-
-const checkStock = async (line) => {
-    if (!line.product_id || !line.location_id) {
-        line.stock = null;
-        return;
-    }
-    try {
-        const res = await axios.get(`/api/inventory/stock-check`, {
-            params: {
-                product_id: line.product_id,
-                location_id: line.location_id,
-                uom_id: line.uom_id
-            }
-        });
-        line.stock = res.data;
-    } catch (e) {
-        console.error("Stock check failed:", e);
-    }
-};
 
 const loadLookups = async () => {
     try {
@@ -108,7 +88,11 @@ const onProductSelect = (line) => {
         line.uom_id = product.uom_id;
         line.prev_uom_id = product.uom_id;
         if (!line.unit_price || line.unit_price == 0) {
-            line.unit_price = product.selling_price || 0;
+            line.unit_price = product.selling_price;
+        }
+        // Auto-select first location for simplicity if not already set
+        if (!line.location_id && locations.value.length > 0) {
+            line.location_id = locations.value[0].id;
         }
     }
 };
@@ -119,9 +103,10 @@ const onUomChange = (line) => {
 
     const targetInfo = getFactorToBase(line.uom_id);
     const productBaseInfo = getFactorToBase(product.uom_id);
-    
+
+    // CASE A: Price is ZERO or Unset - Suggest the corresponding price for this UOM based on the Product's base Selling Price
     if (!line.unit_price || line.unit_price == 0) {
-        const basePrice = product.selling_price || 0;
+        const basePrice = product.selling_price;
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
             line.unit_price = basePrice * effectiveFactor;
@@ -129,6 +114,8 @@ const onUomChange = (line) => {
             return;
         }
     } 
+    
+    // CASE B: Price ALREADY EXISTS - Scale the existing price relative to the PREVIOUS UOM factor to preserve line value
     else if (line.prev_uom_id) {
         const prevInfo = getFactorToBase(line.prev_uom_id);
         if (targetInfo.baseId === prevInfo.baseId) {
@@ -136,7 +123,7 @@ const onUomChange = (line) => {
             line.unit_price = line.unit_price * ratio;
         }
     }
-
+    
     line.prev_uom_id = line.uom_id;
 };
 
@@ -150,7 +137,7 @@ onMounted(async () => {
     if (isEdit.value) {
         form.value = {
             customer_id: props.salesOrder.customer_id,
-            order_date: props.salesOrder.order_date ? new Date(props.salesOrder.order_date) : new Date(),
+            requested_delivery_date: props.salesOrder.requested_delivery_date ? new Date(props.salesOrder.requested_delivery_date) : null,
             currency: props.salesOrder.currency || 'PHP',
             notes: props.salesOrder.notes || '',
             lines: props.salesOrder.lines.map(l => ({
@@ -167,7 +154,7 @@ onMounted(async () => {
 });
 
 const addLine = () => {
-    form.value.lines.push({ product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null });
+    form.value.lines.push({ product_id: null, location_id: locations.value[0]?.id || null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0 });
 };
 
 const removeLine = (index) => {
@@ -176,38 +163,21 @@ const removeLine = (index) => {
     }
 };
 
-const lineSubtotal = (line) => {
-    const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-    const discount = base * ((line.discount_rate || 0) / 100);
-    const tax = (base - discount) * ((line.tax_rate || 0) / 100);
-    return base - discount + tax;
+const calculateLineSubtotal = (line) => {
+    return line.ordered_qty * line.unit_price;
 };
 
-const untaxedSubtotal = computed(() => {
-    return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
-        return sum + (base - discount);
-    }, 0);
-});
-
-const totalTax = computed(() => {
-    return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
-        return sum + ((base - discount) * ((line.tax_rate || 0) / 100));
-    }, 0);
-});
-
-const totalDiscount = computed(() => {
-    return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        return sum + (base * ((line.discount_rate || 0) / 100));
-    }, 0);
-});
+const calculateLineTotal = (line) => {
+    const subtotal = calculateLineSubtotal(line);
+    const tax = (subtotal * (line.tax_rate || 0)) / 100;
+    const discount = (subtotal * (line.discount_rate || 0)) / 100;
+    return subtotal + tax - discount;
+};
 
 const grandTotal = computed(() => {
-    return untaxedSubtotal.value + totalTax.value;
+    return form.value.lines.reduce((sum, line) => {
+        return sum + calculateLineTotal(line);
+    }, 0);
 });
 
 const submit = async () => {
@@ -219,17 +189,6 @@ const submit = async () => {
     loading.value = true;
     try {
         const payload = { ...form.value };
-        payload.order_date = payload.order_date.toISOString().split('T')[0];
-        
-        // Filter out empty lines
-        payload.lines = payload.lines.filter(l => l.product_id && l.location_id && l.uom_id);
-        
-        if (payload.lines.length === 0) {
-            toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please add at least one complete line item', life: 3000 });
-            loading.value = false;
-            return;
-        }
-
         const res = isEdit.value 
             ? await axios.put(`/api/sales-orders/${props.salesOrder.id}`, payload)
             : await axios.post('/api/sales-orders', payload);
@@ -249,7 +208,7 @@ const cancel = () => {
 </script>
 
 <template>
-    <Head :title="isEdit ? 'Edit SO' : 'New Sales Order'" />
+    <Head :title="isEdit ? 'Edit SO' : 'Draft Sales Order'" />
     <AppLayout>
         <div class="h-full max-w-6xl mx-auto flex flex-col gap-6">
             
@@ -261,15 +220,15 @@ const cancel = () => {
                         <i class="pi pi-arrow-left"></i>
                     </button>
                     <div>
-                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Sales Order' : 'New Sales Order' }}</h1>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Draft Quotation for Customer</p>
+                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Sales Order' : 'Draft Sales Order' }}</h1>
+                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Create New Quotation / Order</p>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3 z-10">
                     <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-zinc-400 hover:!text-white" @click="cancel" />
                     <Button 
-                        label="Create Quotation" 
+                        label="Save Draft" 
                         icon="pi pi-save" 
                         :loading="loading" 
                         @click="submit"
@@ -283,7 +242,7 @@ const cancel = () => {
                 <!-- Header Info -->
                 <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Customer Context</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Client Details</span>
                         
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Customer</label>
@@ -299,9 +258,9 @@ const cancel = () => {
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Order Date</label>
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Delivery Date</label>
                             <DatePicker 
-                                v-model="form.order_date" 
+                                v-model="form.requested_delivery_date" 
                                 dateFormat="yy-mm-dd" 
                                 placeholder="YYYY-MM-DD"
                                 class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50"
@@ -309,8 +268,13 @@ const cancel = () => {
                         </div>
 
                         <div class="flex flex-col gap-2">
+                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Currency</label>
+                            <InputText v-model="form.currency" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50" />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
                             <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Notes</label>
-                            <Textarea v-model="form.notes" rows="4" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50 resize-none" placeholder="Special requirements..." />
+                            <Textarea v-model="form.notes" rows="4" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50 resize-none" placeholder="Internal or client notes..." />
                         </div>
                     </div>
                 </div>
@@ -319,138 +283,105 @@ const cancel = () => {
                 <div class="col-span-12 lg:col-span-9 flex flex-col gap-6">
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
                         <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-2">
-                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Invoice Lines</span>
-                            <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                                Grand Total: ₱{{ grandTotal.toFixed(2) }}
-                            </span>
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Invoiceable Items</span>
+                            <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/10">Order Total: ₱{{ grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
                         </div>
                         
+                        <!-- Line Items -->
                         <div class="flex flex-col gap-4">
-                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/30 border border-zinc-800/50 rounded-xl flex flex-col gap-4 relative group transition-all hover:border-zinc-700 hover:shadow-lg hover:bg-zinc-950/50">
-                                <div class="grid grid-cols-12 gap-4 items-end">
-                                    <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product Selection</label>
-                                        <Select 
-                                            v-model="line.product_id" 
-                                            :options="products" 
-                                            optionLabel="name" 
-                                            optionValue="id" 
-                                            placeholder="Select product" 
-                                            filter
-                                            @change="() => { onProductSelect(line); checkStock(line); }"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
-                                        >
-                                            <template #option="slotProps">
-                                                <div class="flex flex-col">
-                                                    <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="text-[9px] font-mono text-teal-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
-                                                        <span class="text-zinc-700 font-mono text-[9px]">| ₱{{ Number(slotProps.option.selling_price).toFixed(2) }}</span>
-                                                    </div>
+                            <div v-for="(line, index) in form.lines" :key="index" class="p-5 bg-zinc-950/50 border border-zinc-800/50 rounded-xl grid grid-cols-12 gap-4 relative group transition-all hover:border-zinc-700">
+                                <div class="col-span-12 md:col-span-4 flex flex-col gap-2 relative">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product Selection</label>
+                                    <Select 
+                                        v-model="line.product_id" 
+                                        :options="products" 
+                                        optionLabel="name" 
+                                        optionValue="id" 
+                                        placeholder="Select product" 
+                                        filter
+                                        @change="onProductSelect(line)"
+                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                    >
+                                        <template #option="slotProps">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-mono text-teal-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
+                                                    <span class="text-zinc-600 font-mono text-[9px]">| ₱{{ Number(slotProps.option.selling_price).toFixed(2) }}</span>
                                                 </div>
-                                            </template>
-                                        </Select>
-                                        <div v-if="line.stock" class="mt-1 flex items-center gap-2">
-                                            <span :class="line.stock.available_qty < line.ordered_qty ? 'text-red-400' : 'text-emerald-400'" class="text-[9px] font-bold font-mono tracking-tighter uppercase px-1.5 py-0.5 bg-zinc-950 rounded border border-zinc-800">
-                                                Avail: {{ line.stock.available_qty }} {{ line.stock.uom_abbr }}
-                                            </span>
-                                            <span v-if="line.stock.available_qty < line.ordered_qty" class="text-[8px] text-red-500 font-bold animate-pulse">Insufficient Stock!</span>
-                                        </div>
-                                    </div>
+                                            </div>
+                                        </template>
+                                    </Select>
+                                </div>
 
-                                    <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Storage Source</label>
-                                        <Select 
-                                            v-model="line.location_id" 
-                                            :options="locations" 
-                                            optionLabel="name" 
-                                            optionValue="id" 
-                                            placeholder="Location" 
-                                            @change="checkStock(line)"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
-                                        />
-                                    </div>
+                                <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Reservation Loc.</label>
+                                    <Select 
+                                        v-model="line.location_id" 
+                                        :options="locations" 
+                                        optionLabel="name" 
+                                        optionValue="id" 
+                                        placeholder="Location" 
+                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                    />
+                                </div>
 
-                                    <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM / Qty</label>
+                                    <div class="flex items-center gap-2">
                                         <Select 
                                             v-model="line.uom_id" 
                                             :options="uoms" 
                                             optionLabel="abbreviation" 
                                             optionValue="id" 
-                                            placeholder="UOM" 
+                                            placeholder="U" 
                                             @change="onUomChange(line)"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                            class="w-20 bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
                                         />
-                                    </div>
-
-                                    <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
                                         <InputNumber 
                                             v-model="line.ordered_qty" 
                                             :min="0.01" 
                                             :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
-                                            inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50 outline-none" 
-                                        />
-                                    </div>
-
-                                    <div class="col-span-6 md:col-span-1 flex items-center justify-end">
-                                        <Button 
-                                            icon="pi pi-trash" 
-                                            class="p-button-rounded p-button-danger p-button-text !text-zinc-600 hover:!text-red-400" 
-                                            @click="removeLine(index)"
-                                            v-if="form.lines.length > 1"
+                                            class="flex-1" 
+                                            inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50 outline-none transition-colors" 
                                         />
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-12 gap-4 items-end bg-zinc-900/40 p-3 rounded-lg border border-zinc-800/30">
-                                    <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Price</label>
-                                        <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-teal-500/50" />
-                                    </div>
-                                    <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Tax (%)</label>
-                                        <InputNumber v-model="line.tax_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50" />
-                                    </div>
-                                    <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Disc (%)</label>
-                                        <InputNumber v-model="line.discount_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50" />
-                                    </div>
-                                    <div class="col-span-12 md:col-span-3 flex flex-col gap-2 items-end">
-                                        <label class="text-[9px] font-bold text-teal-500/70 tracking-[0.2em] font-mono uppercase">Subtotal</label>
-                                        <span class="text-sm font-mono font-bold text-white pr-2">₱{{ lineSubtotal(line).toFixed(2) }}</span>
-                                    </div>
+                                <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase text-right">Unit Price (PHP)</label>
+                                    <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-teal-500/50 outline-none transition-colors" />
                                 </div>
+
+                                <!-- Tax / Discount Row -->
+                                <div class="col-span-4 flex flex-col gap-2">
+                                    <label class="text-[9px] font-bold text-zinc-600 tracking-[0.2em] font-mono uppercase">Tax (%)</label>
+                                    <InputNumber v-model="line.tax_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-900 border border-zinc-800 text-center text-zinc-400 p-1.5 rounded focus:border-teal-500/50 outline-none transition-colors text-xs" />
+                                </div>
+                                <div class="col-span-4 flex flex-col gap-2">
+                                    <label class="text-[9px] font-bold text-zinc-600 tracking-[0.2em] font-mono uppercase">Discount (%)</label>
+                                    <InputNumber v-model="line.discount_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-900 border border-zinc-800 text-center text-zinc-400 p-1.5 rounded focus:border-teal-500/50 outline-none transition-colors text-xs" />
+                                </div>
+                                <div class="col-span-4 flex flex-col gap-2 text-right">
+                                    <label class="text-[9px] font-bold text-zinc-600 tracking-[0.2em] font-mono uppercase">Line Total</label>
+                                    <span class="text-zinc-300 font-mono text-sm font-bold pt-1">₱{{ calculateLineTotal(line).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
+                                </div>
+
+                                <Button 
+                                    icon="pi pi-trash" 
+                                    class="p-button-rounded p-button-danger p-button-text !text-zinc-600 hover:!text-red-400 absolute top-2 right-2" 
+                                    @click="removeLine(index)"
+                                    v-if="form.lines.length > 1"
+                                />
                             </div>
                         </div>
 
                         <Button 
                             icon="pi pi-plus" 
-                            label="Append Line Item" 
-                            class="p-button-outlined p-button-sm w-full mt-2 !text-teal-400 !border-teal-500/20 hover:!bg-teal-500/10 border-dashed font-bold font-mono tracking-widest uppercase hover:!border-teal-500/50 transition-all border-2" 
+                            label="Add Line Item" 
+                            class="p-button-outlined p-button-sm w-full mt-2 !text-teal-400 !border-teal-500/20 hover:!bg-teal-500/10 border-dashed font-bold font-mono tracking-widest uppercase hover:!border-teal-500/50 transition-all" 
                             @click="addLine" 
                         />
-
-                        <!-- Financial Summary Footer -->
-                        <div class="mt-6 p-6 bg-zinc-950/50 border border-zinc-800/80 rounded-2xl flex flex-col gap-3 shadow-inner">
-                            <div class="flex justify-between items-center text-zinc-500">
-                                <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Untaxed Subtotal</span>
-                                <span class="text-xs font-mono font-bold">₱{{ untaxedSubtotal.toFixed(2) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-zinc-500">
-                                <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Total Discount</span>
-                                <span class="text-xs font-mono font-bold text-red-500/70">- ₱{{ totalDiscount.toFixed(2) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-zinc-500 border-b border-zinc-800/50 pb-3">
-                                <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Estimated Tax</span>
-                                <span class="text-xs font-mono font-bold">₱{{ totalTax.toFixed(2) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center pt-1">
-                                <span class="text-xs font-bold text-white uppercase tracking-widest font-mono">Grand Total</span>
-                                <span class="text-lg font-black text-emerald-400 font-mono shadow-emerald-500/20 drop-shadow-md">₱{{ grandTotal.toFixed(2) }}</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

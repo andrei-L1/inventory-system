@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
-use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\InventoryResource;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 use App\Models\Product;
-use App\Models\UnitOfMeasure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -119,48 +117,5 @@ class InventoryQueryController extends Controller
             });
 
         return response()->json(['data' => $layers]);
-    }
-
-    /**
-     * Get available stock for a product at a specific location, considering reservations.
-     */
-    public function getStockCheck(Request $request): JsonResponse
-    {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'location_id' => 'required|exists:locations,id',
-            'uom_id' => 'nullable|exists:units_of_measure,id',
-        ]);
-
-        $product = Product::findOrFail($request->product_id);
-
-        $inventory = Inventory::where('product_id', $product->id)
-            ->where('location_id', $request->location_id)
-            ->first();
-
-        $qoh = $inventory ? (float) $inventory->quantity_on_hand : 0;
-        $reserved = $inventory ? (float) $inventory->reserved_qty : 0;
-        $availableBase = max(0, $qoh - $reserved);
-
-        $targetUomId = $request->uom_id ?? $product->uom_id;
-        $targetUom = UnitOfMeasure::find($targetUomId);
-
-        $availableTarget = $availableBase;
-        if ($targetUomId != $product->uom_id) {
-            try {
-                $factor = UomHelper::getConversionFactor($product->uom_id, $targetUomId);
-                $availableTarget *= $factor;
-            } catch (\Exception $e) {
-                // Fallback to base if conversion fails
-            }
-        }
-
-        return response()->json([
-            'qoh' => $qoh,
-            'reserved_qty' => $reserved,
-            'available_qty' => round($availableTarget, 4),
-            'uom_id' => $targetUomId,
-            'uom_abbr' => $targetUom->abbreviation ?? 'pcs',
-        ]);
     }
 }

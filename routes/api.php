@@ -90,8 +90,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         ->middleware('permission:view-inventory');
     Route::get('inventory/{product}/cost-layers', [InventoryQueryController::class, 'getCostLayers'])
         ->middleware('permission:view-inventory');
-    Route::get('inventory/stock-check', [InventoryQueryController::class, 'getStockCheck'])
-        ->middleware('permission:view-inventory');
 
     // Dashboard Stats
     Route::get('dashboard/stats', [DashboardController::class, 'getStats'])->middleware('permission:view-products');

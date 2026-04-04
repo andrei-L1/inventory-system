@@ -7,17 +7,6 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
-### 🎯 Milestone: Sales Order Lifecycle & Intelligent Fulfillment (Phase 5)
-**Date**: 2026-04-03 | **Status**: 100% COMPLETE
-**Summary**: Successfully implemented the full Sales Order (SO) module, integrating it with the core reservation engine and stock movement ledger.
-- **Atomic SO Fulfillment**: Created `SalesOrderController` with a strictly ordered backend state machine: Quotation → Confirm (Reserve) → Pick → Pack → Ship (Issue). Fulfillment logic utilizes the "Release-Before-Issue" pattern to ensure 100% stock accuracy.
-- **Mission Control UI**: Launched the `SalesOrders/Index.vue`, `Form.vue`, and `Show.vue` dashboard, providing warehouse staff with a stage-aware workflow for picking, packing, and shipping items with teal-accented premium UI.
-- **Reservation Integration**: Integrated `StockService::reserveStock()` and `releaseReservation()` into the SO lifecycle, ensuring that stock is protected the moment a quotation is confirmed.
-- **Financial Precision**: Implemented tax and discount calculations at the line level, ensuring accurate total valuation for customer orders.
-- **Verification**: Validated the entire lifecycle (Create -> Approve -> Ship) with a new automated test suite (`SalesOrderTest.php`) achieving 100% pass rate.
-
----
-
 ### 🎯 Milestone: Inventory Costing Engine Refactor (Strategy Pattern)
 **Date**: 2026-04-03 | **Status**: 100% COMPLETE
 **Summary**: Successfully refactored the inventory costing engine to use a pluggable Strategy Pattern, decoupling valuation from physical movement logic.

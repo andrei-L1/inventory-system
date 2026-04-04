@@ -25,7 +25,6 @@ class SalesOrderLine extends Model
         'discount_rate',
         'discount_amount',
         'notes',
-        'subtotal',
     ];
 
     protected $casts = [
@@ -39,7 +38,6 @@ class SalesOrderLine extends Model
         'tax_amount' => 'decimal:6',
         'discount_rate' => 'decimal:2',
         'discount_amount' => 'decimal:6',
-        'subtotal' => 'decimal:6',
     ];
 
     public function salesOrder()
