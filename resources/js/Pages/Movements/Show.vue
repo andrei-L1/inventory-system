@@ -31,50 +31,8 @@ onMounted(() => {
 });
 
 const printSlip = () => {
-    const slipEl = document.querySelector('.print-slip');
-    if (!slipEl) return;
-
-    const win = window.open('', '_blank', 'width=900,height=700');
-    win.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Stock Movement Receipt</title>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html, body {
-                    background: #ffffff !important;
-                    color: #000 !important;
-                    font-family: Arial, sans-serif;
-                    font-size: 12px;
-                    line-height: 1.5;
-                }
-                body {
-                    padding: 48px 56px;
-                    max-width: 860px;
-                    margin: 0 auto;
-                }
-                table { border-collapse: collapse; }
-                @page { margin: 12mm 10mm; }
-                @media print {
-                    body { padding: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            ${slipEl.innerHTML}
-        </body>
-        </html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => {
-        win.print();
-        win.close();
-    }, 400);
+    window.open(`/movements/${transaction.value.id}/print`, '_blank');
 };
-
 
 const getStatusSeverity = (status) => {
     switch (status?.toLowerCase()) {
@@ -108,7 +66,6 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
     <AppLayout>
         <Head title="Stock Movement Receipt" />
 
-        <!-- ═══════════ SCREEN UI ═══════════ -->
         <div class="main-content-wrapper p-8 bg-zinc-950 min-h-screen">
             <div class="max-w-6xl mx-auto">
 
@@ -259,197 +216,9 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                 </div>
             </div>
         </div>
-
-        <!-- ═══════════ PRINT-ONLY RECEIPT ═══════════ -->
-        <div v-if="transaction" class="print-slip">
-
-            <!-- HEADER -->
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #111; padding-bottom:18px; margin-bottom:22px;">
-                <div>
-                    <div style="font-size:22px; font-weight:900; letter-spacing:-0.5px; text-transform:uppercase; color:#111; line-height:1.1; margin-bottom:4px;">
-                        Inventory Management System
-                    </div>
-                    <div style="font-size:9px; font-weight:700; color:#777; text-transform:uppercase; letter-spacing:2.5px;">
-                        Warehouse Operations &amp; Logistics Division
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#555; margin-bottom:8px;">
-                        {{ getTypeLabel(transaction.type?.name) }}
-                    </div>
-                    <div style="border:2px solid #111; display:inline-block; padding:8px 16px;">
-                        <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:#888; margin-bottom:3px;">Reference No.</div>
-                        <div style="font-size:13px; font-weight:900; font-family:monospace; color:#111; letter-spacing:0.5px;">{{ transaction.reference_number }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DOCUMENT INFO GRID -->
-            <table style="width:100%; border-collapse:collapse; margin-bottom:22px; font-size:11px;">
-                <tbody>
-                    <tr>
-                        <td style="border:1px solid #ddd; padding:9px 12px; width:22%; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">Transaction Date</div>
-                            <div style="font-weight:700; font-family:monospace; font-size:12px;">{{ transaction.transaction_date }}</div>
-                        </td>
-                        <td style="border:1px solid #ddd; padding:9px 12px; width:18%; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">Status</div>
-                            <div style="font-weight:900; text-transform:uppercase; font-size:11px;">✓ {{ (transaction.status?.name || 'POSTED').toUpperCase() }}</div>
-                        </td>
-                        <td style="border:1px solid #ddd; padding:9px 12px; width:30%; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">From / Origin</div>
-                            <div style="font-weight:700;">{{ transaction.from_location_name || '—' }}</div>
-                        </td>
-                        <td style="border:1px solid #ddd; padding:9px 12px; width:30%; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">To / Destination</div>
-                            <div style="font-weight:700;">{{ transaction.to_location_name || '—' }}</div>
-                        </td>
-                    </tr>
-                    <tr v-if="transaction.vendor_name || transaction.purchase_order_number">
-                        <td colspan="2" style="border:1px solid #ddd; padding:9px 12px; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">Affiliated Vendor</div>
-                            <div style="font-weight:700;">{{ transaction.vendor_name || '—' }}</div>
-                        </td>
-                        <td colspan="2" style="border:1px solid #ddd; padding:9px 12px; background:#f7f7f7; vertical-align:top;">
-                            <div style="font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#999; margin-bottom:4px;">Related Purchase Order</div>
-                            <div style="font-weight:700; font-family:monospace;">{{ transaction.purchase_order_number || '—' }}</div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- SECTION LABEL -->
-            <div style="font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#444; margin-bottom:6px; padding-left:10px; border-left:4px solid #111;">
-                Items Manifest — {{ transaction.lines?.length || 0 }} Line(s)
-            </div>
-
-            <!-- ITEMS TABLE -->
-            <table style="width:100%; border-collapse:collapse; margin-bottom:28px; font-size:11px;">
-                <thead>
-                    <tr style="background:#111; color:#fff;">
-                        <th style="padding:10px; text-align:left; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; width:36px;">#</th>
-                        <th style="padding:10px; text-align:left; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px;">Product Description</th>
-                        <th style="padding:10px; text-align:center; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; width:110px;">SKU</th>
-                        <th style="padding:10px; text-align:right; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; width:80px;">Qty</th>
-                        <th style="padding:10px; text-align:center; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; width:65px;">Unit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(line, i) in transaction.lines" :key="line.id"
-                        :style="{ background: i % 2 === 0 ? '#ffffff' : '#f9f9f9', borderBottom: '1px solid #e5e7eb' }">
-                        <td style="padding:11px 10px; color:#bbb; font-family:monospace; font-size:10px;">{{ i + 1 }}</td>
-                        <td style="padding:11px 10px; font-weight:700; color:#111;">
-                            {{ line.product_name }}
-                            <span v-if="line.product?.product_code" style="display:block; font-size:9px; color:#aaa; font-weight:400; margin-top:1px;">{{ line.product.product_code }}</span>
-                        </td>
-                        <td style="padding:11px 10px; text-align:center; font-family:monospace; font-size:10px; color:#666;">{{ line.product?.sku || '—' }}</td>
-                        <td style="padding:11px 10px; text-align:right; font-family:monospace; font-weight:900; font-size:15px;"
-                            :style="{ color: line.quantity < 0 ? '#b91c1c' : '#166534' }">
-                            {{ line.quantity < 0 ? '−' : '+' }}{{ Math.abs(line.quantity) }}
-                        </td>
-                        <td style="padding:11px 10px; text-align:center; font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#555;">
-                            {{ line.uom_abbreviation || 'PCS' }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- NOTES -->
-            <div v-if="transaction.reference_doc" style="border:1px dashed #ccc; padding:12px 16px; margin-bottom:28px; font-size:11px; color:#555; line-height:1.7;">
-                <span style="display:block; font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#aaa; margin-bottom:5px;">Document Reference / Notes</span>
-                {{ transaction.reference_doc }}
-            </div>
-
-            <!-- SIGNATURES -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:36px; margin-top:56px;">
-                <div style="text-align:center;">
-                    <div style="height:72px; border-bottom:1.5px solid #222; margin-bottom:10px;"></div>
-                    <div style="font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#333;">Prepared By</div>
-                    <div style="font-size:7.5px; color:#bbb; margin-top:3px;">Name / Signature / Date</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="height:72px; border-bottom:1.5px solid #222; margin-bottom:10px;"></div>
-                    <div style="font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#333;">Authorized By</div>
-                    <div style="font-size:7.5px; color:#bbb; margin-top:3px;">Name / Signature / Date</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="height:72px; border-bottom:1.5px solid #222; margin-bottom:10px;"></div>
-                    <div style="font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:#333;">Received By</div>
-                    <div style="font-size:7.5px; color:#bbb; margin-top:3px;">Name / Signature / Date</div>
-                </div>
-            </div>
-
-            <!-- FOOTER -->
-            <div style="margin-top:36px; padding-top:10px; border-top:1px solid #eee; display:flex; justify-content:space-between; font-size:8px; font-family:monospace; color:#ccc; text-transform:uppercase; letter-spacing:1px;">
-                <span>System Automated Audit &bull; Doc ID: {{ transaction.id }}</span>
-                <span>Printed: {{ new Date().toLocaleString() }}</span>
-            </div>
-        </div>
-
     </AppLayout>
 </template>
 
 <style scoped>
-/* Screen: hide print slip */
-.print-slip {
-    display: none;
-}
-
-@media print {
-    /* ── Kill ALL dark backgrounds from AppLayout ── */
-    :deep(body),
-    :deep(html),
-    :deep(#app),
-    :deep([class*="bg-zinc"]),
-    :deep([class*="bg-gray"]),
-    :deep(aside),
-    :deep(nav),
-    :deep(header),
-    :deep(.p-breadcrumb) {
-        display: none !important;
-    }
-
-    /* Force the root document white */
-    html, body {
-        background: #ffffff !important;
-        background-color: #ffffff !important;
-        color: #000 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Hide the entire dark screen UI wrapper */
-    .main-content-wrapper {
-        display: none !important;
-    }
-
-    /* Show and center the receipt */
-    .print-slip {
-        display: block !important;
-        background: #ffffff !important;
-        background-color: #ffffff !important;
-        color: #000 !important;
-        font-family: Arial, sans-serif;
-        font-size: 12px;
-        line-height: 1.5;
-        /* Center on page */
-        width: 740px;
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 48px 56px;
-        box-sizing: border-box;
-    }
-
-    /* Ensure ALL elements print with their backgrounds */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    /* Page margins */
-    @page {
-        margin: 12mm 10mm;
-        background: white;
-    }
-}
+/* Scoped styles for screen display only */
 </style>

@@ -29,17 +29,17 @@ class SalesOrderLine extends Model
     ];
 
     protected $casts = [
-        'ordered_qty' => 'decimal:4',
-        'shipped_qty' => 'decimal:4',
-        'picked_qty' => 'decimal:4',
-        'packed_qty' => 'decimal:4',
-        'returned_qty' => 'decimal:4',
-        'unit_price' => 'decimal:6',
+        'ordered_qty' => 'decimal:8',
+        'shipped_qty' => 'decimal:8',
+        'picked_qty' => 'decimal:8',
+        'packed_qty' => 'decimal:8',
+        'returned_qty' => 'decimal:8',
+        'unit_price' => 'decimal:8',
         'tax_rate' => 'decimal:2',
         'tax_amount' => 'decimal:6',
         'discount_rate' => 'decimal:2',
         'discount_amount' => 'decimal:6',
-        'subtotal' => 'decimal:6',
+        'subtotal' => 'decimal:8',
     ];
 
     public function salesOrder()

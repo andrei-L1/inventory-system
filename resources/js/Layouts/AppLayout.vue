@@ -18,7 +18,7 @@
                     </div>
                     <div v-if="!collapsed" class="flex flex-col whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-500">
                         <span class="text-[10px] font-black text-sky-400 font-mono tracking-[0.3em] leading-none mb-1">SYSTEM</span>
-                        <span class="text-white font-bold text-sm tracking-tighter">Inventory Core</span>
+                        <span class="text-white font-bold text-sm tracking-tighter">Nexus</span>
                     </div>
                 </div>
             </div>

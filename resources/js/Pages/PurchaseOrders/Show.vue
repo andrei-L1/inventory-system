@@ -467,6 +467,10 @@ const deletePO = async () => {
         }
     });
 };
+
+const openPrint = () => {
+    window.open(`/purchase-orders/${po.value.id}/print`, '_blank');
+};
 </script>
 
 <template>
@@ -540,6 +544,14 @@ const deletePO = async () => {
                         icon="pi pi-replay" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="openReturnMode"
+                    />
+
+                    <Button 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && can('manage-purchase-orders')" 
+                        label="Print PO" 
+                        icon="pi pi-print" 
+                        class="p-button-sm !bg-white/5 hover:!bg-white/10 !text-white !border-white/10 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openPrint"
                     />
 
                     <Button 

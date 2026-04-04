@@ -209,4 +209,35 @@ class TransactionController extends Controller
 
         return TransactionResource::collection($transactions);
     }
+
+    /**
+     * Generate a printable voucher for the Stock Movement.
+     */
+    public function print(Transaction $transaction)
+    {
+        $transaction->load([
+            'type',
+            'status',
+            'fromLocation',
+            'toLocation',
+            'vendor',
+            'customer',
+            'purchaseOrder',
+            'salesOrder',
+            'lines.product.uom',
+            'lines.uom',
+            'createdBy',
+        ]);
+
+        return view('inventory.transaction-print', [
+            'trx' => $transaction,
+            'company' => [
+                'name' => 'Nexus Logistics',
+                'address' => '123 Logistics Way, Suite 100, Tech City, TC 54321',
+                'phone' => '+1 (555) 123-4567',
+                'email' => 'logistics@nexus.com',
+                'website' => 'www.nexus.com',
+            ],
+        ]);
+    }
 }
