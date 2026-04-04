@@ -40,6 +40,13 @@ class TransactionLine extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'quantity' => 'decimal:8',
+        'unit_cost' => 'decimal:8',
+        'total_cost' => 'decimal:8',
+        'unit_price' => 'decimal:8',
+    ];
+
     /**
      * Get the UOM used for this transaction line.
      */

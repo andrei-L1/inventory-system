@@ -20,11 +20,11 @@ class PurchaseOrderLine extends Model
     ];
 
     protected $casts = [
-        'ordered_qty' => 'decimal:4',
-        'received_qty' => 'decimal:4',
-        'returned_qty' => 'decimal:4',
-        'unit_cost' => 'decimal:6',
-        'total_cost' => 'decimal:6', // Virtual column from DB
+        'ordered_qty' => 'decimal:8',
+        'received_qty' => 'decimal:8',
+        'returned_qty' => 'decimal:8',
+        'unit_cost' => 'decimal:8',
+        'total_cost' => 'decimal:8', // Virtual column from DB
     ];
 
     /**

@@ -320,11 +320,12 @@ class PurchaseOrderController extends Controller
                     $receivedUom = UnitOfMeasure::find($receivedUomId);
                     $productUom = $poLine->product->uom;
 
-                    // LOCK 1: Discrete units must be whole numbers
+                    // LOCK 1: Discrete units must be whole numbers (with epsilon for precision drift)
                     if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
-                        if (floor($receivedQtyRaw) != $receivedQtyRaw) {
+                        if (abs($receivedQtyRaw - round($receivedQtyRaw)) > 0.000001) {
                             abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
                         }
+                        $receivedQtyRaw = round($receivedQtyRaw);
                     }
 
                     // LOCK 2: Discrete products cannot be received in continuous units (No KG for Pieces)
@@ -628,5 +629,30 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             throw new UomConversionException($e->getMessage());
         }
+    }
+
+    /**
+     * Generate a printable view for the Purchase Order.
+     */
+    public function print(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->load([
+            'vendor',
+            'status',
+            'lines.product.uom',
+            'creator',
+            'approver',
+        ]);
+
+        return view('procurement.purchase-order-print', [
+            'po' => $purchaseOrder,
+            'company' => [
+                'name' => 'Nexus Logistics',
+                'address' => '123 Logistics Way, Suite 100, Tech City, TC 54321',
+                'phone' => '+1 (555) 123-4567',
+                'email' => 'procurement@nexus.com',
+                'website' => 'www.nexus.com',
+            ],
+        ]);
     }
 }

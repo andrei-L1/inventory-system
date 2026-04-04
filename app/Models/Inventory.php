@@ -36,6 +36,12 @@ class Inventory extends Model
         'average_cost',
     ];
 
+    protected $casts = [
+        'quantity_on_hand' => 'decimal:8',
+        'reserved_qty' => 'decimal:8',
+        'average_cost' => 'decimal:8',
+    ];
+
     protected $appends = [
         'scaled_quantity_on_hand',
         'scaled_average_cost',

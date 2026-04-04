@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Inventory\TransactionController;
+use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -71,6 +73,8 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         return Inertia::render('Movements/AdjustmentForm');
     })->name('movements.adjustment');
 
+    Route::get('/movements/{transaction}/print', [TransactionController::class, 'print'])->name('movements.print');
+
     Route::get('/movements/{id}', function ($id) {
         return Inertia::render('Movements/Show', ['id' => $id]);
     })->name('movements.show');
@@ -83,6 +87,8 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/purchase-orders/create', function () {
         return Inertia::render('PurchaseOrders/Form');
     })->name('purchase-orders.create');
+
+    Route::get('/purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->name('purchase-orders.print');
 
     Route::get('/purchase-orders/{id}', function (Request $request, $id) {
         if ($id === 'create') {
