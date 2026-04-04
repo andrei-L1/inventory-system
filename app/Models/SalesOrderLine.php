@@ -63,7 +63,31 @@ class SalesOrderLine extends Model
     }
 
     /**
-     * Get the remaining quantity to be picked/shipped.
+     * Quantity to be picked (Ordered - Picked)
+     */
+    public function getRemainingPickQtyAttribute(): float
+    {
+        return max(0, (float) $this->ordered_qty - (float) $this->picked_qty);
+    }
+
+    /**
+     * Quantity to be packed (Picked - Packed)
+     */
+    public function getRemainingPackQtyAttribute(): float
+    {
+        return max(0, (float) $this->picked_qty - (float) $this->packed_qty);
+    }
+
+    /**
+     * Quantity to be shipped (Packed - Shipped)
+     */
+    public function getRemainingShipQtyAttribute(): float
+    {
+        return max(0, (float) $this->packed_qty - (float) $this->shipped_qty);
+    }
+
+    /**
+     * Legacy accessor for total remaining to ship (Ordered - Shipped)
      */
     public function getRemainingQtyAttribute(): float
     {

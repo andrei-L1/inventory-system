@@ -82,6 +82,16 @@ class Inventory extends Model
     }
 
     /**
+     * Get the scaled reserved quantity based on the product's UOM.
+     */
+    public function getScaledReservedQtyAttribute(): float
+    {
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+
+        return $multiplier > 0 ? (float) $this->getRawOriginal('reserved_qty') / $multiplier : (float) $this->getRawOriginal('reserved_qty');
+    }
+
+    /**
      * Get the formatted quantity on hand.
      */
     public function getFormattedQuantityOnHandAttribute(): string

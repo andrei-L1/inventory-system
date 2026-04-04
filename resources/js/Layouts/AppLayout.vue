@@ -24,39 +24,42 @@
             </div>
             
             <!-- Navigation Links -->
-            <nav class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1.5 py-8">
-                <template v-for="item in menuItems" :key="item.href">
-                     <Link 
-                        :href="item.href"
-                        :class="[
-                            page.url.startsWith(item.href) 
-                                ? 'bg-zinc-900 text-white border-zinc-700 shadow-[inset_0_1px_10px_rgba(0,0,0,0.2)]' 
-                                : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 border-transparent',
-                            'group flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all duration-300 no-underline'
-                        ]"
-                        :title="item.label"
-                    >
-                        <div class="min-w-[20px] flex items-center justify-center">
-                            <i :class="[
-                                item.icon, 
-                                item.color,
-                                page.url.startsWith(item.href) ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
-                            ]" class="text-base transition-all duration-300"></i>
-                        </div>
-                        
-                        <span v-if="!collapsed" :class="[page.url.startsWith(item.href) ? 'text-zinc-100' : 'text-zinc-500']" class="text-[11px] font-bold tracking-[0.15em] uppercase font-mono transition-all duration-300">
-                            {{ item.label }}
+            <nav class="flex-1 overflow-y-auto custom-scrollbar p-4 py-8">
+                <div v-for="(section, sIndex) in navSections" :key="section.label" :class="{ 'mt-8': sIndex > 0 }">
+                    <!-- Section Header -->
+                    <div v-if="!collapsed" class="px-4 mb-3">
+                        <span class="text-[9px] font-black text-zinc-700 uppercase tracking-[0.3em] font-mono leading-none">
+                            {{ section.label }}
                         </span>
-                    </Link>
-                </template>
+                    </div>
+                    <div v-else class="h-px bg-zinc-900/50 mb-4 mx-4"></div>
 
-                <div v-if="!collapsed" class="pt-8 px-4">
-                    <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] mb-4 block font-mono">Operations</span>
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-4 opacity-30 grayscale cursor-not-allowed">
-                             <div class="w-1 h-1 rounded-full bg-zinc-800"></div>
-                             <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reporting</span>
-                        </div>
+                    <!-- Section Items -->
+                    <div class="space-y-1.5">
+                        <template v-for="item in section.items" :key="item.href">
+                             <Link 
+                                :href="item.href"
+                                :class="[
+                                    page.url.startsWith(item.href) 
+                                        ? 'bg-zinc-900 text-white border-zinc-700' 
+                                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 border-transparent',
+                                    'group flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all duration-300 no-underline'
+                                ]"
+                                :title="item.label"
+                            >
+                                <div class="min-w-[20px] flex items-center justify-center">
+                                    <i :class="[
+                                        item.icon, 
+                                        item.color,
+                                        page.url.startsWith(item.href) ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'
+                                    ]" class="text-base transition-all duration-300"></i>
+                                </div>
+                                
+                                <span v-if="!collapsed" :class="[page.url.startsWith(item.href) ? 'text-zinc-100' : 'text-zinc-500']" class="text-[11px] font-bold tracking-[0.15em] uppercase font-mono transition-all duration-300">
+                                    {{ item.label }}
+                                </span>
+                            </Link>
+                        </template>
                     </div>
                 </div>
             </nav>
@@ -155,17 +158,37 @@ const toggleSidebar = () => {
     localStorage.setItem('sidebar-collapsed', collapsed.value);
 };
 
-const menuItems = [
-    { label: 'Overview', href: '/dashboard', icon: 'pi pi-compass', color: 'text-sky-400' },
-    { label: 'Catalog', href: '/catalog', icon: 'pi pi-box', color: 'text-emerald-400' },
-    { label: 'Inventory', href: '/inventory-center', icon: 'pi pi-database', color: 'text-amber-400' },
-    { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
-    { label: 'Transfers', href: '/movements/transfer', icon: 'pi pi-arrow-right-arrow-left', color: 'text-indigo-400' },
-    { label: 'Procurement', href: '/purchase-orders', icon: 'pi pi-shopping-bag', color: 'text-orange-400' },
-    { label: 'Sales', href: '/sales-orders', icon: 'pi pi-receipt', color: 'text-teal-400' },
-    { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
-    { label: 'Customers', href: '/customer-center', icon: 'pi pi-id-card', color: 'text-cyan-400' },
-    { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
+const navSections = [
+    {
+        label: 'Analytics',
+        items: [
+            { label: 'Overview', href: '/dashboard', icon: 'pi pi-compass', color: 'text-sky-400' },
+        ]
+    },
+    {
+        label: 'Commerce',
+        items: [
+            { label: 'Procurement', href: '/purchase-orders', icon: 'pi pi-shopping-bag', color: 'text-orange-400' },
+            { label: 'Sales', href: '/sales-orders', icon: 'pi pi-receipt', color: 'text-teal-400' },
+            { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
+            { label: 'Customers', href: '/customer-center', icon: 'pi pi-id-card', color: 'text-cyan-400' },
+        ]
+    },
+    {
+        label: 'Logistics',
+        items: [
+            { label: 'Catalog', href: '/catalog', icon: 'pi pi-box', color: 'text-emerald-400' },
+            { label: 'Inventory', href: '/inventory-center', icon: 'pi pi-database', color: 'text-amber-400' },
+            { label: 'Transfers', href: '/movements/transfer', icon: 'pi pi-arrow-right-arrow-left', color: 'text-indigo-400' },
+            { label: 'Locations', href: '/location-center', icon: 'pi pi-map-marker', color: 'text-violet-400' },
+        ]
+    },
+    {
+        label: 'System',
+        items: [
+            { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
+        ]
+    }
 ];
 
 onMounted(() => {
