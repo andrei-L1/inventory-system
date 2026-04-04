@@ -308,8 +308,8 @@ Replenishment Suggestion (UOM-Aware)
 
 ---
 
-## 🛒 Phase 5 — Sales: Sales Order Lifecycle
-> Status: 🚧 IN PROGRESS — Schema & Stock Reservation Engine live; API & UI being built.
+## ✅ Phase 5 — Sales: Sales Order Lifecycle
+> Status: COMPLETE — Schema, Stock Reservation Engine, API & UI fully integrated.
 
 > **Pre-Execution Audit Note (2026-04-03):** A full workflow audit before implementation
 > identified 5 critical blockers that are resolved as part of this phase:
@@ -362,43 +362,43 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] Customer fields: name, code, email, phone, billing_address, shipping_address, tax_number, credit_limit, is_active.
 
 ### 5.2 Sales Order API
-> Status: 🚧 IN PROGRESS
+> Status: ✅ COMPLETE
 
-- [ ] **Migration**: Add `location_id` (nullable FK → `locations`) to `sales_order_lines`.
-- [ ] **Migration**: Add `carrier`, `tracking_number`, `sent_at`, `shipped_at`, `delivered_at`, `approved_by` to `sales_orders`.
-- [ ] **Migration**: Add `picked_qty`, `packed_qty`, `shipped_qty`, `returned_qty` to `sales_order_lines`.
-- [ ] **Model**: Align `SalesOrder` and `SalesOrderLine` with PO standards (casts, booted logic, accessors).
-- [ ] **Seeder Fix**: Normalize `SalesOrderStatus` names to lowercase snake_case (`quotation`...`shipped`...`closed`).
+- [x] **Migration**: Add `location_id` (nullable FK → `locations`) to `sales_order_lines`. ✅
+- [x] **Migration**: Add `carrier`, `tracking_number`, `sent_at`, `shipped_at`, `delivered_at`, `approved_by` to `sales_orders`. ✅
+- [x] **Migration**: Add `picked_qty`, `packed_qty`, `shipped_qty`, `returned_qty` to `sales_order_lines`. ✅
+- [x] **Model**: Align `SalesOrder` and `SalesOrderLine` with PO standards (casts, booted logic, helpers). ✅
+- [x] **Seeder Fix**: Normalize `SalesOrderStatus` names to lowercase snake_case + add constants. ✅
 
 #### Controller & Routing
-- [ ] `SalesOrderController` — Mirroring PO action naming + WMS stages:
+- [x] `SalesOrderController` — Mirroring PO action naming + WMS stages:
   - `approve()` — Transition `quotation` → `confirmed` (Triggers `reserveStock`)
   - `send()` — Transition `quotation` → `quotation_sent`
   - `pick()` — Update `picked_qty` → Transition to `picked`
   - `pack()` — Update `packed_qty` → Transition to `packed`
   - `ship()` / `fulfill()` — Atomic release + issue transaction
-- [ ] `SalesOrderResource` — Full transformer with embedded lines + stage progress + fulfillment history
+- [x] `SalesOrderResource` — Full transformer with embedded lines + stage progress + fulfillment history
 - [x] **Multi-UOM Schema**: `uom_id` on `sales_order_lines`. ✅
-- [ ] **Multi-UOM Logic**: `confirm()` and `fulfill()` convert to base UOM before calling StockService.
+- [x] **Multi-UOM Logic**: `confirm()` and `fulfill()` convert to base UOM before calling StockService.
 - [x] **Financial Precision Schema**: `tax_rate`, `tax_amount`, `discount_rate`, `discount_amount` on lines. ✅
-- [ ] **Financial Computation**: `store()` and `update()` compute line totals and `total_amount` header.
+- [x] **Financial Computation**: `store()` and `update()` compute line totals and `total_amount` header.
 
-### 5.3 Sales Orders Frontend
-- [ ] **Sidebar nav entry**: "Sales" (`pi pi-receipt`, teal accent) → `/sales-orders`
-- [ ] **Web routes**: `/sales-orders`, `/sales-orders/create`, `/sales-orders/{id}`
-- [ ] **`SalesOrders/Index.vue`** — Premium dark index:
+### 5.3 Sales Orders Frontend ✅ NOW LIVE
+- [x] **Sidebar nav entry**: "Sales" (`pi pi-receipt`, teal accent) → `/sales-orders`
+- [x] **Web routes**: `/sales-orders`, `/sales-orders/create`, `/sales-orders/{id}`
+- [x] **`SalesOrders/Index.vue`** — Premium dark index:
   - DataTable: SO Number, Customer, Order Date, Status badge, Total Value, →
   - Status badge colors (lowercase): quotation=warning, confirmed=info,
     processing=help, shipped=success, cancelled=danger, closed=secondary
   - Search field + "Draft SO" button (requires `manage-sales-orders`)
-- [ ] **`SalesOrders/Form.vue`** — Multi-section creation form:
+- [x] **`SalesOrders/Form.vue`** — Multi-section creation form:
   - Header: Customer selector, delivery date, currency, notes
   - Lines: Product, Location (shows QOH), UOM, Qty, Unit Price (auto-fill from `selling_price`),
     Tax Rate %, Discount Rate %, computed line total
   - QOH availability indicator per line (amber/red warnings)
   - Financial summary footer: Subtotal, Discount, Tax, Grand Total
   - "Save as Quotation" + "Discard" buttons
-- [ ] **`SalesOrders/Show.vue`** — Warehouse Mission Control:
+- [x] **`SalesOrders/Show.vue`** — Warehouse Mission Control:
   - Sidebar: Order metadata + Fulfillment/Return History (mirrored after PO Show).
   - Stage-aware Buttons: [Confirm] [Print Pick List] [Mark Picked] [Mark Packed] [Ship / Fulfill].
   - Main table: ordered_qty, picked_qty, packed_qty, shipped_qty (status tracked).
@@ -585,8 +585,8 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
-| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle, Atomic UOM, GRN, and Returns complete. |
-| 5 | Sales (Sales Orders) | 🚧 ~35% — Reservation Engine, Customer Module & Schema Audit LIVE; API + UI in progress |
+| 4 | Procurement (Purchase Orders) | ✅ 100% |
+| 5 | Sales (Sales Orders) | ✅ 100% |
 | 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
 | 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — schema + models only |

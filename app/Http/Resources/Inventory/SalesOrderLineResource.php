@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Resources\Sales;
+namespace App\Http\Resources\Inventory;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,8 +19,8 @@ class SalesOrderLineResource extends JsonResource
             ],
             'location_id' => $this->location_id,
             'location' => [
-                'id' => $this->location?->id,
-                'name' => $this->location?->name,
+                'id' => $this->location->id,
+                'name' => $this->location->name,
             ],
             'uom_id' => $this->uom_id,
             'uom' => [
@@ -28,19 +28,19 @@ class SalesOrderLineResource extends JsonResource
                 'name' => $this->uom->name,
                 'abbreviation' => $this->uom->abbreviation,
             ],
-            'ordered_qty' => (float) $this->ordered_qty,
-            'shipped_qty' => (float) $this->shipped_qty,
-            'picked_qty' => (float) $this->picked_qty,
-            'packed_qty' => (float) $this->packed_qty,
-            'returned_qty' => (float) $this->returned_qty,
-            'unit_price' => (float) $this->unit_price,
-            'tax_rate' => (float) $this->tax_rate,
-            'tax_amount' => (float) $this->tax_amount,
-            'discount_rate' => (float) $this->discount_rate,
-            'discount_amount' => (float) $this->discount_amount,
-            'subtotal' => (float) $this->subtotal,
+            'ordered_qty' => $this->ordered_qty,
+            'shipped_qty' => $this->shipped_qty,
+            'picked_qty' => $this->picked_qty,
+            'packed_qty' => $this->packed_qty,
+            'returned_qty' => $this->returned_qty,
+            'unit_price' => $this->unit_price,
+            'tax_rate' => $this->tax_rate,
+            'tax_amount' => $this->tax_amount,
+            'discount_rate' => $this->discount_rate,
+            'discount_amount' => $this->discount_amount,
+            'subtotal' => $this->subtotal,
             'notes' => $this->notes,
-            'remaining_qty' => (float) $this->remaining_qty,
+            'remaining_qty' => $this->remaining_qty,
         ];
     }
 }

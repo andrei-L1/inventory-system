@@ -6,10 +6,10 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
-import Select from 'primevue/select';
-import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
+import InputNumber from 'primevue/inputnumber';
+import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
@@ -23,17 +23,14 @@ const toast = useToast();
 const so = ref(null);
 const loading = ref(true);
 
-const approveLoading = ref(false);
-const sendLoading = ref(false);
 const pickLoading = ref(false);
 const packLoading = ref(false);
-const shipLoading = ref(false);
-
+const approveLoading = ref(false);
+const fulfillLoading = ref(false);
 const shipDialog = ref(false);
 const shipForm = ref({
     carrier: '',
-    tracking_number: '',
-    lines: []
+    tracking_number: ''
 });
 
 const loadSO = async () => {
@@ -56,33 +53,29 @@ onMounted(() => {
 const getStatusColor = (statusName) => {
     const map = {
         'quotation': 'warning',
-        'quotation_sent': 'warning',
+        'quotation_sent': 'info',
         'confirmed': 'info',
         'picked': 'help',
         'packed': 'help',
-        'partially_shipped': 'help',
         'shipped': 'success',
+        'partially_shipped': 'help',
         'closed': 'success',
         'cancelled': 'danger'
     };
     return map[statusName] || 'info';
 };
 
-const formatStatus = (status) => {
-    return status ? status.replace(/_/g, ' ').toUpperCase() : 'UNKNOWN';
-}
-
 const approve = async () => {
     confirm.require({
-        message: 'Confirming this order will RESERVE the required stock from inventory. Proceed?',
-        header: 'Confirm Order',
+        message: 'Confirm this order? This will reserve stock at the designated locations.',
+        header: 'Confirm Sales Order',
         icon: 'pi pi-check-circle',
         acceptClass: 'p-button-success',
         accept: async () => {
             try {
                 approveLoading.value = true;
                 await axios.patch(`/api/sales-orders/${so.value.id}/approve`);
-                toast.add({ severity: 'success', summary: 'Confirmed', detail: 'Stock has been reserved.', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Confirmed', detail: 'Stock has been reserved', life: 3000 });
                 loadSO();
             } catch (e) {
                 toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Confirmation failed', life: 3000 });
@@ -93,27 +86,14 @@ const approve = async () => {
     });
 };
 
-const sendQuote = async () => {
-    try {
-        sendLoading.value = true;
-        await axios.patch(`/api/sales-orders/${so.value.id}/send`);
-        toast.add({ severity: 'success', summary: 'Sent', detail: 'Quotation marked as sent.', life: 3000 });
-        loadSO();
-    } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to mark as sent.', life: 3000 });
-    } finally {
-        sendLoading.value = false;
-    }
-};
-
 const markPicked = async () => {
     try {
         pickLoading.value = true;
         await axios.patch(`/api/sales-orders/${so.value.id}/pick`);
-        toast.add({ severity: 'success', summary: 'Picked', detail: 'Items marked as picked.', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Picked', detail: 'Items marked as picked', life: 3000 });
         loadSO();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Pick failed', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Update failed', life: 3000 });
     } finally {
         pickLoading.value = false;
     }
@@ -123,65 +103,59 @@ const markPacked = async () => {
     try {
         packLoading.value = true;
         await axios.patch(`/api/sales-orders/${so.value.id}/pack`);
-        toast.add({ severity: 'success', summary: 'Packed', detail: 'Items marked as packed.', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Packed', detail: 'Items marked as packed', life: 3000 });
         loadSO();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Pack failed', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Update failed', life: 3000 });
     } finally {
         packLoading.value = false;
     }
 };
 
+const printPickList = () => {
+    window.print();
+};
+
 const openShipDialog = () => {
-    shipForm.value.lines = so.value.lines
-        .filter(l => l.pending_qty > 0)
-        .map(l => ({
-            so_line_id: l.id,
-            product_name: l.product_name,
-            sku: l.sku,
-            pending_qty: l.pending_qty,
-            fulfill_qty: l.pending_qty,
-            uom: l.uom
-        }));
     shipDialog.value = true;
 };
 
-const submitShipment = async () => {
+const fulfill = async () => {
     if (!shipForm.value.carrier) {
-        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Carrier is required', life: 3000 });
+        toast.add({ severity: 'warn', summary: 'Required', detail: 'Please specify a carrier', life: 3000 });
         return;
     }
 
-    shipLoading.value = true;
     try {
+        fulfillLoading.value = true;
         await axios.post(`/api/sales-orders/${so.value.id}/ship`, shipForm.value);
-        toast.add({ severity: 'success', summary: 'Shipped', detail: 'Order fulfilled and shipped.', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Shipped', detail: 'Order fulfilled and stock issued', life: 3000 });
         shipDialog.value = false;
         loadSO();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Fulfillment failed', life: 5000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Fulfillment failed', life: 3000 });
     } finally {
-        shipLoading.value = false;
+        fulfillLoading.value = false;
     }
 };
 
-const cancelOrder = async () => {
-    confirm.require({
-        message: 'Are you sure you want to cancel this order? All active stock reservations will be released.',
-        header: 'Cancel Order',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClass: 'p-button-danger',
-        accept: async () => {
-            try {
-                await axios.patch(`/api/sales-orders/${so.value.id}/cancel`);
-                toast.add({ severity: 'success', summary: 'Cancelled', detail: 'Order cancelled.', life: 3000 });
-                loadSO();
-            } catch (e) {
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Cancellation failed.', life: 3000 });
-            }
-        }
-    });
-};
+const canApprove = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
+const canPick = computed(() => so.value?.status?.name === 'confirmed');
+const canPack = computed(() => so.value?.status?.name === 'picked');
+const canShip = computed(() => so.value?.status?.name === 'packed' || so.value?.status?.name === 'confirmed' || so.value?.status?.name === 'picked');
+
+const subtotal = computed(() => {
+    return so.value?.lines?.reduce((sum, line) => sum + (line.ordered_qty * line.unit_price), 0) || 0;
+});
+
+const totalTax = computed(() => {
+    return so.value?.lines?.reduce((sum, line) => sum + (line.tax_amount || 0), 0) || 0;
+});
+
+const totalDiscount = computed(() => {
+    return so.value?.lines?.reduce((sum, line) => sum + (line.discount_amount || 0), 0) || 0;
+});
+
 </script>
 
 <template>
@@ -201,309 +175,281 @@ const cancelOrder = async () => {
                         <div class="flex items-center gap-3 mb-1">
                             <h1 class="text-white text-2xl font-black tracking-tight font-mono">{{ so.so_number }}</h1>
                             <Tag 
-                                :severity="getStatusColor(so.status)" 
-                                :value="formatStatus(so.status)" 
+                                :severity="getStatusColor(so.status.name)" 
+                                :value="so.status.name.replace('_', ' ').toUpperCase()" 
                                 class="text-[9px] font-bold tracking-widest font-mono uppercase px-2 py-0.5 rounded shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)]"
                             />
                         </div>
                         <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
                             <span @click="router.visit(`/customer-center?customer_id=${so.customer_id}`)" class="text-zinc-500 hover:text-teal-400 cursor-pointer transition-colors">{{ so.customer_name }}</span>
                             <span class="text-zinc-700 mx-2">&bull;</span>
-                            <span class="text-zinc-500">Total: ₱{{ Number(so.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
+                            <span class="text-zinc-500">₱{{ Number(so.total_amount).toFixed(2) }}</span>
                         </p>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 z-10">
-                    <!-- Workflow Actions -->
+                <div class="flex items-center gap-3 z-10 no-print">
                     <Button 
-                        v-if="so.status === 'quotation' && can('manage-sales-orders')" 
-                        label="Send Quotation" 
-                        icon="pi pi-envelope" 
-                        :loading="sendLoading"
-                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
-                        @click="sendQuote"
-                    />
-
-                    <Button 
-                        v-if="['quotation', 'quotation_sent'].includes(so.status) && can('manage-sales-orders')" 
+                        v-if="canApprove && can('manage-sales-orders')" 
                         label="Confirm Order" 
-                        icon="pi pi-check" 
+                        icon="pi pi-check-circle" 
                         :loading="approveLoading"
-                        class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-teal-500/20 hover:!bg-teal-500/30 !text-teal-400 !border-teal-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="approve"
                     />
 
                     <Button 
-                        v-if="so.status === 'confirmed' && can('manage-sales-orders')" 
+                        v-if="so.status?.name !== 'quotation' && so.status?.name !== 'cancelled'"
+                        label="Print" 
+                        icon="pi pi-print" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="printPickList"
+                    />
+
+                    <Button 
+                        v-if="canPick && can('manage-sales-orders')" 
                         label="Mark Picked" 
                         icon="pi pi-box" 
                         :loading="pickLoading"
-                        class="p-button-sm !bg-zinc-800 hover:!bg-teal-900/40 !text-teal-400 !border-teal-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-help-500/20 hover:!bg-help-500/30 !text-help-400 !border-help-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="markPicked"
                     />
 
                     <Button 
-                        v-if="so.status === 'picked' && can('manage-sales-orders')" 
+                        v-if="canPack && can('manage-sales-orders')" 
                         label="Mark Packed" 
-                        icon="pi pi-shopping-bag" 
+                        icon="pi pi-gift" 
                         :loading="packLoading"
-                        class="p-button-sm !bg-zinc-800 hover:!bg-teal-900/40 !text-teal-400 !border-teal-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-help-500/20 hover:!bg-help-500/30 !text-help-400 !border-help-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="markPacked"
                     />
 
                     <Button 
-                        v-if="['confirmed', 'picked', 'packed', 'partially_shipped'].includes(so.status) && can('manage-sales-orders')" 
+                        v-if="canShip && can('manage-sales-orders')" 
                         label="Ship / Fulfill" 
                         icon="pi pi-truck" 
                         class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openShipDialog"
                     />
-
-                    <Button 
-                        v-if="!['shipped', 'closed', 'cancelled'].includes(so.status) && can('manage-sales-orders')" 
-                        icon="pi pi-times" 
-                        class="p-button-danger p-button-text p-button-sm !font-bold" 
-                        @click="cancelOrder"
-                        title="Cancel Order"
-                    />
                 </div>
             </div>
 
-            <!-- Dashboard / Details -->
+            <!-- Details Board -->
             <div class="grid grid-cols-12 gap-6">
-                <!-- Sidebar Info -->
+                <!-- Meta Info Side -->
                 <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Logistics & Identity</span>
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Sales Metadata</span>
                         
                         <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Created By</span>
-                            <span class="text-xs font-bold text-white">{{ so.created_by_name || 'System' }}</span>
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Order Date</span>
+                            <span class="text-xs font-bold text-white">{{ so.order_date }}</span>
                         </div>
-                        <div v-if="so.confirmed_at" class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Confirmed At</span>
-                            <span class="text-xs font-bold text-teal-400">{{ so.confirmed_at }}</span>
+                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Customer Code</span>
+                            <span class="text-xs font-bold text-teal-400">{{ so.customer_code }}</span>
                         </div>
                         <div v-if="so.shipped_at" class="flex flex-col gap-2 py-2 border-b border-zinc-800/30">
-                            <div class="flex justify-between items-center text-orange-400 font-bold">
-                                <span class="text-[10px] font-mono tracking-widest uppercase">Latest Shipment</span>
-                                <span class="text-xs">{{ so.shipped_at }}</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Shipped On</span>
+                                <span class="text-xs font-bold text-teal-400">{{ so.shipped_at }}</span>
                             </div>
-                            <div class="flex flex-col gap-1 p-2 bg-zinc-950 rounded border border-zinc-800">
-                                <div class="flex justify-between text-[10px]">
-                                    <span class="text-zinc-600 uppercase tracking-tighter">Carrier:</span>
-                                    <span class="text-zinc-300">{{ so.carrier }}</span>
+                            <div class="mt-1 p-2 bg-zinc-950 rounded border border-zinc-800">
+                                <div class="flex justify-between text-[10px] mb-1">
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Carrier:</span>
+                                    <span class="text-zinc-300 font-bold">{{ so.carrier }}</span>
                                 </div>
                                 <div class="flex justify-between text-[10px]">
-                                    <span class="text-zinc-600 uppercase tracking-tighter">Tracking:</span>
+                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Tracking:</span>
                                     <span class="text-sky-500 font-mono">{{ so.tracking_number }}</span>
                                 </div>
                             </div>
                         </div>
                         <div v-if="so.notes" class="flex flex-col gap-2 pt-2">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Notes / Instructions</span>
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Notes</span>
                             <p class="text-xs text-zinc-400 leading-relaxed bg-zinc-950/50 p-3 rounded-lg border border-zinc-800/50">{{ so.notes }}</p>
                         </div>
                     </div>
 
-                    <!-- Shipment History -->
-                    <div v-if="so.shipments && so.shipments.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-white/5 pb-3">Shipment Log</span>
-                        <div v-for="shipment in so.shipments" :key="shipment.id" class="p-3 bg-zinc-950 border border-zinc-800 rounded-xl relative group overflow-hidden">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-[10px] font-mono font-bold text-teal-400">{{ shipment.tracking_number || 'N/A' }}</span>
-                                <Tag severity="info" :value="shipment.status.toUpperCase()" class="text-[8px] font-mono" />
+                    <!-- Financial Summary -->
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Financial Summary</span>
+                        
+                        <div class="flex justify-between items-center py-1">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">Untaxed Amount</span>
+                            <span class="text-xs font-bold text-white">₱{{ Number(so.subtotal || 0).toFixed(2) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1">
+                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">Tax Amount</span>
+                            <span class="text-xs font-bold text-white">₱{{ Number(so.total_tax || 0).toFixed(2) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1 text-emerald-400">
+                            <span class="text-[10px] font-bold font-mono uppercase">Total</span>
+                            <span class="text-sm font-black">₱{{ Number(so.total_amount || 0).toFixed(2) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Fulfillment History -->
+                    <div v-if="so.transactions && so.transactions.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Fulfillment History</span>
+                        
+                        <div v-for="tx in so.transactions" :key="tx.id" class="flex flex-col gap-2 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group transition-all hover:border-sky-500/30">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-mono text-sky-400 font-bold uppercase">{{ tx.reference_number }}</span>
+                                <span class="text-[9px] font-mono text-zinc-600">{{ tx.transaction_date }}</span>
                             </div>
-                            <div class="flex flex-col gap-1 text-[10px]">
-                                <div class="flex justify-between">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Carrier:</span>
-                                    <span class="text-zinc-400">{{ shipment.carrier }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Date:</span>
-                                    <span class="text-zinc-400">{{ shipment.shipped_at }}</span>
-                                </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-bold text-zinc-500 uppercase">Status</span>
+                                <Tag :severity="tx.status.name === 'posted' ? 'success' : 'warning'" :value="tx.status.name.toUpperCase()" class="text-[8px] font-bold px-1.5 py-0.5" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Mission Control (Lines) -->
+                <!-- Lines Data -->
                 <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-6">
-                        <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-4">
-                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Fulfillment Status</span>
-                            <div class="flex gap-4">
-                                <div class="flex flex-col items-end">
-                                    <span class="text-[9px] font-bold text-zinc-600 uppercase font-mono">Picked</span>
-                                    <span class="text-xs font-black text-white">{{ so.lines.reduce((acc, l) => acc + Number(l.picked_qty), 0) }} / {{ so.lines.reduce((acc, l) => acc + Number(l.ordered_qty), 0) }}</span>
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="text-[9px] font-bold text-zinc-600 uppercase font-mono">Packed</span>
-                                    <span class="text-xs font-black text-white">{{ so.lines.reduce((acc, l) => acc + Number(l.packed_qty), 0) }} / {{ so.lines.reduce((acc, l) => acc + Number(l.ordered_qty), 0) }}</span>
-                                </div>
-                            </div>
-                        </div>
-
+                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-6">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3 mb-4 block">Fulfillment Lines</span>
+                        
                         <DataTable :value="so.lines" class="p-datatable-sm w-full" stripedRows>
-                            <Column field="sku" header="SKU" style="width: 10rem">
-                                <template #body="{ data }">
-                                    <span class="text-teal-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
-                                </template>
-                            </Column>
-                            <Column field="product_name" header="PRODUCT">
+                            <Column field="product_name" header="PRODUCT/ID">
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
                                         <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
-                                        <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Target: {{ data.location_name }}</span>
+                                        <span class="text-[9px] font-bold text-teal-500/70 font-mono tracking-widest uppercase">{{ data.sku }}</span>
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="PLAN">
+                            <Column field="location_name" header="SOURCE">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ data.formatted_ordered_qty }}</span>
+                                    <span class="text-zinc-500 text-[10px] font-bold uppercase">{{ data.location?.name || 'N/A' }}</span>
                                 </template>
                             </Column>
-                            <Column header="PICKED">
+                            <Column field="ordered_qty" header="ORDERED">
                                 <template #body="{ data }">
-                                    <span :class="[data.picked_qty >= data.ordered_qty ? 'text-teal-400' : 'text-amber-500', 'font-mono text-xs font-bold']">{{ data.picked_qty }}</span>
+                                    <span class="text-white font-mono text-xs font-bold">{{ data.ordered_qty }} {{ data.uom?.abbreviation }}</span>
                                 </template>
                             </Column>
-                            <Column header="PACKED">
+                            <Column field="picked_qty" header="PICKED">
                                 <template #body="{ data }">
-                                    <span :class="[data.packed_qty >= data.ordered_qty ? 'text-teal-400' : 'text-amber-500', 'font-mono text-xs font-bold']">{{ data.packed_qty }}</span>
+                                    <span :class="data.picked_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
+                                        {{ data.picked_qty }}
+                                    </span>
                                 </template>
                             </Column>
-                            <Column header="SHIPPED">
+                            <Column field="packed_qty" header="PACKED">
                                 <template #body="{ data }">
-                                    <span :class="[data.shipped_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-zinc-600', 'font-mono text-xs font-bold']">{{ data.shipped_qty }}</span>
+                                    <span :class="data.packed_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
+                                        {{ data.packed_qty }}
+                                    </span>
                                 </template>
                             </Column>
-                            <Column header="TOTAL VALUE">
+                            <Column field="shipped_qty" header="FULFILLED">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-300 font-mono text-xs font-bold">₱{{ Number(data.total_line_amount).toFixed(2) }}</span>
+                                    <span :class="data.shipped_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400'" class="font-mono text-xs font-bold">
+                                        {{ data.shipped_qty }}
+                                    </span>
+                                </template>
+                            </Column>
+                            <Column field="subtotal" header="LINE TOTAL">
+                                <template #body="{ data }">
+                                    <span class="text-white font-mono text-xs font-bold">₱{{ Number(data.subtotal || 0).toFixed(2) }}</span>
                                 </template>
                             </Column>
                         </DataTable>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Issue History (ISS) -->
-                    <div v-if="so.transactions && so.transactions.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3 mb-4 block">Stock Issue Details (ISS)</span>
-                        <div class="flex flex-col gap-4">
-                            <div v-for="tx in so.transactions" :key="tx.id" class="p-4 bg-zinc-950 border border-zinc-900 rounded-xl">
-                                <div class="flex justify-between items-center mb-3">
-                                    <span class="text-[10px] font-mono font-bold text-sky-400">{{ tx.reference_number }}</span>
-                                    <span class="text-[9px] font-mono text-zinc-600">{{ tx.transaction_date }}</span>
-                                </div>
-                                <DataTable :value="tx.lines" class="p-datatable-sm w-full" :size="'small'">
-                                    <Column field="product_name" header="PRODUCT" headerClass="!text-[8px] !p-2" bodyClass="!text-[10px] !p-2"></Column>
-                                    <Column field="quantity" header="QTY" headerClass="!text-[8px] !p-2" bodyClass="!text-[10px] !p-2">
-                                        <template #body="{ data }">
-                                            <span class="text-orange-400 font-bold">{{ Math.abs(data.quantity) }}</span>
-                                        </template>
-                                    </Column>
-                                    <Column field="uom" header="UOM" headerClass="!text-[8px] !p-2" bodyClass="!text-[10px] !p-2"></Column>
-                                </DataTable>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Linked Transactions (COGS) -->
+            <div v-if="so.transactions && so.transactions.length > 0" class="flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="h-px flex-1 bg-zinc-800"></div>
+                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] font-mono whitespace-nowrap">Audit Ledger & Stock Movements</span>
+                    <div class="h-px flex-1 bg-zinc-800"></div>
+                </div>
+
+                <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-xl">
+                    <DataTable :value="so.transactions" class="p-datatable-sm w-full">
+                        <Column field="reference_number" header="MOVEMENT REF">
+                            <template #body="{ data }">
+                                <span class="text-sky-400 font-mono text-[10px] font-bold uppercase">{{ data.reference_number }}</span>
+                            </template>
+                        </Column>
+                        <Column field="transaction_date" header="DATE" />
+                        <Column field="display_type" header="TYPE">
+                            <template #body="{ data }">
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase">{{ data.display_type }}</span>
+                            </template>
+                        </Column>
+                        <Column field="from_location_name" header="EXPORT FROM" />
+                        <Column field="notes" header="MEMO">
+                            <template #body="{ data }">
+                                <span class="text-[10px] text-zinc-500 italic">{{ data.notes }}</span>
+                            </template>
+                        </Column>
+                        <Column header="COGS AUDIT">
+                            <template #body>
+                                <span class="text-[10px] text-zinc-600 font-mono font-bold tracking-tighter uppercase px-2 py-0.5 bg-zinc-950 rounded border border-zinc-800/50">Ledger Recorded</span>
+                            </template>
+                        </Column>
+                    </DataTable>
                 </div>
             </div>
         </div>
 
         <!-- Ship Dialog -->
-        <Dialog v-model:visible="shipDialog" modal header="Fulfill & Ship Order" :style="{ width: '50rem' }">
-            <div class="flex flex-col gap-6 py-2">
-                <div class="bg-teal-500/10 border border-teal-500/20 p-4 rounded-xl flex items-start gap-4">
-                    <i class="pi pi-info-circle text-teal-400 mt-0.5"></i>
-                    <p class="text-[11px] text-teal-400 leading-relaxed font-bold">
-                        Fulfilling items will RELEASE the stock reservation and issue an 'ISS' movement from your inventory. This action calculates COGS and updates stock integrity.
+        <Dialog v-model:visible="shipDialog" modal header="Order Fulfillment & Shipment" :style="{ width: '30rem' }">
+            <div class="flex flex-col gap-4 py-4">
+                <div class="p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl mb-2">
+                    <p class="text-xs text-teal-400 font-medium leading-relaxed">
+                        Completing fulfillment will release the reserved stock and create an <strong>Issue Transaction</strong> to deduct items from inventory.
                     </p>
                 </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Carrier</label>
-                        <InputText v-model="shipForm.carrier" placeholder="DHL, FedEx, Lalamove..." class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50 h-10" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Tracking Number</label>
-                        <InputText v-model="shipForm.tracking_number" placeholder="Enter tracking ID" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50 h-10" />
-                    </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Logistics Carrier</label>
+                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, Internal Fleet" class="w-full bg-zinc-950 border-zinc-700" />
                 </div>
-
-                <div class="border border-zinc-800 rounded-xl overflow-hidden">
-                    <DataTable :value="shipForm.lines" class="p-datatable-sm w-full">
-                        <Column field="sku" header="SKU">
-                            <template #body="{ data }">
-                                <span class="text-teal-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
-                            </template>
-                        </Column>
-                        <Column field="product_name" header="PRODUCT">
-                            <template #body="{ data }">
-                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
-                            </template>
-                        </Column>
-                        <Column field="pending_qty" header="REMAINING">
-                            <template #body="{ data }">
-                                <span class="text-zinc-500 font-mono text-xs font-bold">{{ data.pending_qty }}</span>
-                            </template>
-                        </Column>
-                        <Column header="FULFILL QTY" style="width: 12rem">
-                            <template #body="{ data }">
-                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-teal-500/50">
-                                    <InputNumber v-model="data.fulfill_qty" :min="0" :max="data.pending_qty" class="w-full" inputClass="w-full bg-transparent border-none text-center text-white p-2 text-xs outline-none" />
-                                    <span class="px-3 text-[10px] bg-zinc-900 text-zinc-500 border-l border-zinc-800 font-bold uppercase">{{ data.uom }}</span>
-                                </div>
-                            </template>
-                        </Column>
-                    </DataTable>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Tracking Number</label>
+                    <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking reference" class="w-full bg-zinc-950 border-zinc-700" />
                 </div>
-
-                <div class="flex justify-end gap-3 pt-2">
+                <div class="flex justify-end gap-3 mt-4">
                     <Button label="Cancel" class="p-button-text !text-zinc-500" @click="shipDialog = false" />
-                    <Button label="Post Fulfillment" icon="pi pi-truck" :loading="shipLoading" @click="submitShipment" class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase" />
+                    <Button label="Process Shipment" :loading="fulfillLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold" @click="fulfill" />
                 </div>
             </div>
         </Dialog>
+
+        <ConfirmDialog />
     </AppLayout>
 </template>
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #18181b;
+    background: #09090b;
     border-bottom: 1px solid rgba(39, 39, 42, 0.8);
-    color: #a1a1aa;
-    font-size: 10px;
+    color: #52525b;
+    font-size: 9px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    padding: 0.75rem 1rem;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
     border-bottom: 1px solid rgba(39, 39, 42, 0.5);
-    color: #e4e4e7;
-    padding: 0.75rem 1rem;
+    padding: 1rem;
 }
-:deep(.p-dialog-header), :deep(.p-dialog-content) {
+:deep(.p-dialog) {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 20px;
+}
+:deep(.p-dialog-header) {
     background: #18181b;
     color: white;
+    border-bottom: 1px solid #27272a;
 }
-:deep(.p-dialog-header-title) {
-    font-size: 1.1rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-family: monospace;
+:deep(.p-dialog-content) {
+    background: #18181b;
 }
-:deep(.p-tag) {
-    background: rgba(39, 39, 42, 0.8);
-}
-:deep(.p-tag.p-tag-warning) { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
-:deep(.p-tag.p-tag-info) { background: rgba(14, 165, 233, 0.1); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.2); }
-:deep(.p-tag.p-tag-success) { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
-:deep(.p-tag.p-tag-danger) { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
-:deep(.p-tag.p-tag-help) { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
 </style>

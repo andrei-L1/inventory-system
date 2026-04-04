@@ -17,7 +17,8 @@ window.axios.defaults.withCredentials = true;
 createInertiaApp({
     resolve: name => {
         const pages = import.meta.glob('./Pages/**/*.vue', { eager: true });
-        return pages[`./Pages/${name}.vue`];
+        const page = pages[`./Pages/${name}.vue`];
+        return page?.default || page;
     },
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) });

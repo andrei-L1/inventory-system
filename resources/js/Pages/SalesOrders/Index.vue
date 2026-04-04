@@ -18,7 +18,7 @@ const search = ref('');
 const loadSalesOrders = async () => {
     loading.value = true;
     try {
-        const res = await axios.get('/api/sales-orders', { params: { search: search.value } });
+        const res = await axios.get('/api/sales-orders', { params: { query: search.value } });
         salesOrders.value = res.data.data;
     } catch (e) {
         console.error("Failed to load SOs:", e);
@@ -34,25 +34,21 @@ onMounted(() => {
 const getStatusColor = (statusName) => {
     const map = {
         'quotation': 'warning',
-        'quotation_sent': 'warning',
+        'quotation_sent': 'info',
         'confirmed': 'info',
         'picked': 'help',
         'packed': 'help',
-        'partially_shipped': 'help',
         'shipped': 'success',
+        'partially_shipped': 'help',
         'closed': 'success',
         'cancelled': 'danger'
     };
     return map[statusName] || 'info';
 };
-
-const formatStatus = (status) => {
-    return status ? status.replace(/_/g, ' ').toUpperCase() : 'UNKNOWN';
-}
 </script>
 
 <template>
-    <Head title="Sales - Orders & Quotations" />
+    <Head title="Sales - Sales Orders" />
     <AppLayout>
         <div class="flex flex-col gap-6 h-full">
             <!-- Header -->
@@ -66,7 +62,7 @@ const formatStatus = (status) => {
                     <div>
                         <h1 class="text-white text-xl font-bold tracking-tight mb-1">Sales Orders</h1>
                         <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
-                            Order & Quotation Ledger
+                            Order-to-Fulfillment Ledger
                         </p>
                     </div>
                 </div>
@@ -85,7 +81,7 @@ const formatStatus = (status) => {
                         <Button 
                             v-if="can('manage-sales-orders')" 
                             icon="pi pi-plus" 
-                            label="Create SO" 
+                            label="New Quotation" 
                             class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all"
                         />
                     </Link>
@@ -132,8 +128,8 @@ const formatStatus = (status) => {
                     <Column field="status" header="STATUS">
                         <template #body="{ data }">
                             <Tag 
-                                :severity="getStatusColor(data.status)" 
-                                :value="formatStatus(data.status)" 
+                                :severity="getStatusColor(data.status.name)" 
+                                :value="data.status.name.replace('_', ' ').toUpperCase()" 
                                 class="text-[9px] font-bold tracking-widest font-mono uppercase px-2 py-0.5 rounded"
                             />
                         </template>
@@ -141,7 +137,7 @@ const formatStatus = (status) => {
 
                     <Column field="total_amount" header="TOTAL VALUE">
                         <template #body="{ data }">
-                            <span class="text-emerald-400 font-mono text-xs font-bold">₱{{ Number(data.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                            <span class="text-emerald-400 font-mono text-xs font-bold">₱{{ Number(data.total_amount).toFixed(2) }}</span>
                         </template>
                     </Column>
 
@@ -163,7 +159,7 @@ const formatStatus = (status) => {
 <style scoped>
 /* ─── DataTable ────────────────────────────────────────────────── */
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #18181b; /* zinc-950 */
+    background: #09090b; /* zinc-950 */
     border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
     color: #a1a1aa; /* zinc-400 */
     font-size: 10px;
