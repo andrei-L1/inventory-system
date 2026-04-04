@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -116,6 +117,8 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
         return Inertia::render('SalesOrders/Form', ['salesOrder' => $so]);
     })->name('sales-orders.edit');
+
+    Route::get('/sales-orders/{salesOrder}/print', [SalesOrderController::class, 'print'])->name('sales-orders.print');
 
     Route::get('/sales-orders/{id}', function (Request $request, $id) {
         if ($id === 'create') {

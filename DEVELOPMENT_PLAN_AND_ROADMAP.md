@@ -1,5 +1,5 @@
-# Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-04-03 (Phase 5 Pre-Execution Workflow Audit). All status markers reflect actual codebase state.
+# Nexus Inventory System — Full Lifecycle Development Plan & Roadmap
+> Last audited: 2026-04-04 (Nexus Rebranding & Printing Audit). All status markers reflect actual codebase state.
 
 ---
 
@@ -582,24 +582,23 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | Phase | Domain | Status |
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (Atomic Piece Ledger, Strategy Pattern, WAC, COGS) |
-| 1 | System Setup: Master Data & Auth | ✅ Complete (UOM UI + Conversion Controller implemented) |
-| 2 | Warehouse Operations (Stock Movements) | ✅ 100% — All 4 movement forms built, wired, and routed. Intelligence Grid live. |
+| 1 | System Setup: Master Data & Auth | ✅ Complete (Nexus Branding & Sidebar Hierarchy Optimized) |
+| 2 | Warehouse Operations (Stock Movements) | ✅ 100% — Movement Forms + Intelligence Grid + Printable Vouchers live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
-| 4 | Procurement (Purchase Orders) | ✅ 100% |
-| 5 | Sales (Sales Orders) | ✅ 100% |
-| 6 | Logistics (Shipments & Serials) | ⬜ 0% — schema + models only |
-| 7 | Pricing & Discounts | ⬜ 0% — schema + models only |
-| 8 | Reporting & Financial Analysis | ⬜ 0% — schema + models only |
-| 9 | Administration & Security | 🚧 ~25% — middleware + models + location UI done, no user/role admin UI |
+| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
+| 5 | Sales (Sales Orders) | ✅ 100% — Lifecycle + Fulfillment + Customer Center live. |
+| 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema in place; Serial/Batch tracking pending. |
+| 7 | Pricing & Discounts | ⬜ 0% — Schema + models only |
+| 8 | Reporting & Financial Analysis | ⬜ 0% — Schema + models only |
+| 9 | Administration & Security | 🚧 ~25% — Middleware + models + location UI done. |
 | 10 | Production Hardening | ⬜ 0% |
 
 ---
 
 ## Immediate Next Steps (Priority Order)
 
-1. **SO Pre-Execution Fixes** — Run the `location_id` migration on `sales_order_lines`; fix SO status seeder (lowercase, remove `Draft`).
-2. **SO Backend API** — Build `SalesOrderController` (CRUD + confirm + fulfill + cancel), `SalesOrderStoreRequest`, and full `SalesOrderResource`.
-3. **SO Frontend** — Build `SalesOrders/Index.vue`, `Form.vue`, and `Show.vue`; wire sidebar and web routes.
-4. **Sales Returns (RMA)** — Phase 5.4: `SRET` transaction type + return endpoint + restocking logic.
-5. **Invoicing** — Phase 5.5: Invoice + Payment controllers and credit limit enforcement.
+1. **Reporting Engine (Phase 8)** — Develop the asynchronous valuation engine to calculate Total Inventory Value and Gross Margin historicals.
+2. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
+3. **Sales Returns (RMA) & Invoicing (Phase 5.4-5.5)** — Close the final gaps in the Sales module by implementing restock logic and credit notes.
+4. **User Management UI (Phase 9.1)** — Create the admin dashboard for managing staff roles and access permissions.
 

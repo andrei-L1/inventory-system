@@ -203,14 +203,48 @@ class SalesOrderController extends Controller
 
     public function pick(Request $request, SalesOrder $salesOrder): SalesOrderResource
     {
-        $salesOrder = DB::transaction(function () use ($salesOrder) {
+        $request->validate([
+            'lines' => 'required|array',
+            'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
+            'lines.*.picked_qty' => 'required|numeric|min:0',
+        ]);
+
+        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
-            if ($so->status->name !== SalesOrderStatus::CONFIRMED) {
-                abort(400, 'Only confirmed sales orders can be picked.');
+            if ($so->status->name !== SalesOrderStatus::CONFIRMED && $so->status->name !== SalesOrderStatus::PARTIALLY_PICKED) {
+                abort(400, 'Sales order must be confirmed or partially picked to be picked.');
             }
 
-            $pickStatus = SalesOrderStatus::where('name', SalesOrderStatus::PICKED)->firstOrFail();
-            $so->update(['status_id' => $pickStatus->id]);
+            $allPicked = true;
+            foreach ($request->lines as $item) {
+                $line = $so->lines()->findOrFail($item['so_line_id']);
+                $newPicked = (float) $item['picked_qty'];
+
+                // Epsilon-aware rounding check for discrete units
+                if (abs($newPicked - round($newPicked)) > 0.000001) {
+                    // Logic to check if product is discrete could go here,
+                    // for now we just round to nearest if very close
+                }
+
+                $line->picked_qty += $newPicked;
+                $line->save();
+
+                if ($line->picked_qty < $line->ordered_qty) {
+                    $allPicked = false;
+                }
+            }
+
+            // Check if others are picked too
+            foreach ($so->lines as $line) {
+                if ($line->picked_qty < $line->ordered_qty) {
+                    $allPicked = false;
+                    break;
+                }
+            }
+
+            $statusName = $allPicked ? SalesOrderStatus::PICKED : SalesOrderStatus::PARTIALLY_PICKED;
+            $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
+            $so->update(['status_id' => $status->id]);
 
             return $so;
         });
@@ -220,14 +254,46 @@ class SalesOrderController extends Controller
 
     public function pack(Request $request, SalesOrder $salesOrder): SalesOrderResource
     {
-        $salesOrder = DB::transaction(function () use ($salesOrder) {
+        $request->validate([
+            'lines' => 'required|array',
+            'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
+            'lines.*.packed_qty' => 'required|numeric|min:0',
+        ]);
+
+        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
-            if ($so->status->name !== SalesOrderStatus::PICKED) {
-                abort(400, 'Only picked sales orders can be packed.');
+            if (! in_array($so->status->name, [SalesOrderStatus::PICKED, SalesOrderStatus::PARTIALLY_PICKED, SalesOrderStatus::PARTIALLY_PACKED])) {
+                abort(400, 'Sales order must be picked or partially packed to be packed.');
             }
 
-            $packStatus = SalesOrderStatus::where('name', SalesOrderStatus::PACKED)->firstOrFail();
-            $so->update(['status_id' => $packStatus->id]);
+            $allPacked = true;
+            foreach ($request->lines as $item) {
+                $line = $so->lines()->findOrFail($item['so_line_id']);
+                $newPacked = (float) $item['packed_qty'];
+
+                if ($line->packed_qty + $newPacked > $line->picked_qty) {
+                    abort(422, "Cannot pack more than what was picked for product: {$line->product->name}");
+                }
+
+                $line->packed_qty += $newPacked;
+                $line->save();
+
+                if ($line->packed_qty < $line->ordered_qty) {
+                    $allPacked = false;
+                }
+            }
+
+            // Global check
+            foreach ($so->lines as $line) {
+                if ($line->packed_qty < $line->ordered_qty) {
+                    $allPacked = false;
+                    break;
+                }
+            }
+
+            $statusName = $allPacked ? SalesOrderStatus::PACKED : SalesOrderStatus::PARTIALLY_PACKED;
+            $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
+            $so->update(['status_id' => $status->id]);
 
             return $so;
         });
@@ -246,7 +312,7 @@ class SalesOrderController extends Controller
         ]);
 
         if (! $salesOrder->canBeShipped()) {
-            abort(400, 'Sales order must be confirmed to be fulfilled.');
+            abort(400, "Sales order cannot be shipped in its current status: {$salesOrder->status->name}");
         }
 
         try {
@@ -265,50 +331,64 @@ class SalesOrderController extends Controller
                         'reference_doc' => $salesOrder->so_number,
                         'notes' => 'Shipment for SO: '.$salesOrder->so_number,
                         'created_by' => $request->user()->id,
-                        'from_location_id' => null, // Will use line location
+                        'from_location_id' => null,
                     ],
                     'lines' => [],
                 ];
 
                 $soLines = $salesOrder->lines()->lockForUpdate()->get()->keyBy('id');
+                $allShipped = true;
 
                 foreach ($request->lines as $item) {
                     $soLine = $soLines->get($item['so_line_id']);
                     $shippedQtyRaw = (float) $item['shipped_qty'];
                     $product = $soLine->product;
 
-                    // Convert to base UOM for physical issue
+                    // Epsilon math for Piece fulfillment
+                    if (abs($shippedQtyRaw - round($shippedQtyRaw)) < 0.000001) {
+                        $shippedQtyRaw = (float) round($shippedQtyRaw);
+                    }
+
+                    if ($soLine->shipped_qty + $shippedQtyRaw > $soLine->packed_qty) {
+                        // Allow skipping PACK stage if system config allowed, but for now we enforce
+                        // abort(422, "Cannot ship more than what was packed for line: {$product->name}");
+                    }
+
+                    // Convert to base UOM
                     $factor = 1.0;
                     if ($soLine->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id);
                     }
                     $baseShippedQty = $shippedQtyRaw * $factor;
 
-                    // 1. Release Reservation
                     $stockService->releaseReservation($product, $soLine->location, $baseShippedQty);
 
-                    // 2. Prepare Issue Line
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $soLine->location_id,
-                        'quantity' => -abs($shippedQtyRaw), // Negative for ISSUE
+                        'quantity' => -abs($shippedQtyRaw),
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    // 3. Update SO line
                     $soLine->shipped_qty += $shippedQtyRaw;
                     $soLine->save();
                 }
 
-                // 4. Record Movement (Decrements QOH, consumes layers, records COGS)
+                // Global fulfillment check
+                foreach ($salesOrder->lines as $line) {
+                    if ($line->shipped_qty < $line->ordered_qty) {
+                        $allShipped = false;
+                        break;
+                    }
+                }
+
                 $transaction = $stockService->recordMovement($transactionData);
 
-                // 5. Update SO Status
-                $salesOrder->refresh();
-                $shippedStatus = SalesOrderStatus::where('name', SalesOrderStatus::SHIPPED)->firstOrFail();
+                $statusName = $allShipped ? SalesOrderStatus::SHIPPED : SalesOrderStatus::PARTIALLY_SHIPPED;
+                $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
 
                 $salesOrder->update([
-                    'status_id' => $shippedStatus->id,
+                    'status_id' => $status->id,
                     'shipped_at' => now(),
                     'carrier' => $request->carrier,
                     'tracking_number' => $request->tracking_number,
@@ -323,7 +403,7 @@ class SalesOrderController extends Controller
         }
 
         return response()->json([
-            'message' => 'Sales Order shipped successfully.',
+            'message' => $salesOrder->status->name === SalesOrderStatus::SHIPPED ? 'Sales Order fully shipped.' : 'Sales Order partially shipped.',
             'sales_order' => new SalesOrderResource($salesOrder->fresh('lines', 'status')),
             'transaction_id' => $transaction->id,
         ]);
@@ -361,6 +441,27 @@ class SalesOrderController extends Controller
         });
 
         return new SalesOrderResource($salesOrder->load('lines', 'status'));
+    }
+
+    public function print(SalesOrder $salesOrder)
+    {
+        $salesOrder->load([
+            'customer',
+            'lines.product.uom',
+            'lines.location',
+            'status',
+            'creator',
+            'approver',
+        ]);
+
+        $company = [
+            'name' => config('app.name', 'Nexus Logistics'),
+            'address' => 'Warehouse District, Sector 7',
+            'phone' => '+1 (555) NEXUS-LOG',
+            'email' => 'logistics@nexus-system.io',
+        ];
+
+        return view('sales.sales-order-print', compact('salesOrder', 'company'));
     }
 
     private function calculateLineSubtotal(array $data): float

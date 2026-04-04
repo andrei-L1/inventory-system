@@ -10,6 +10,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import ConfirmDialog from 'primevue/confirmdialog';
+import Popover from 'primevue/popover';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
@@ -27,11 +28,37 @@ const pickLoading = ref(false);
 const packLoading = ref(false);
 const approveLoading = ref(false);
 const fulfillLoading = ref(false);
+
+const pickDialog = ref(false);
+const pickForm = ref({ lines: [] });
+
+const packDialog = ref(false);
+const packForm = ref({ lines: [] });
+
 const shipDialog = ref(false);
-const shipForm = ref({
-    carrier: '',
-    tracking_number: ''
+const shipForm = ref({ 
+    lines: [],
+    carrier: '', 
+    tracking_number: '' 
 });
+
+const opRefs = ref({});
+const toggleAvailability = (event, id) => {
+    opRefs.value[id].toggle(event);
+};
+
+const isQuotation = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
+
+const getTotalAvailable = (line) => {
+    return line.availability?.reduce((sum, loc) => sum + loc.available_qty, 0) || 0;
+};
+
+const getAvailabilityStatus = (line) => {
+    const total = getTotalAvailable(line);
+    if (total >= line.ordered_qty) return { severity: 'success', label: 'In Stock' };
+    if (total > 0) return { severity: 'warn', label: 'Limited' };
+    return { severity: 'danger', label: 'Out of Stock' };
+};
 
 const loadSO = async () => {
     loading.value = true;
@@ -55,10 +82,12 @@ const getStatusColor = (statusName) => {
         'quotation': 'warning',
         'quotation_sent': 'info',
         'confirmed': 'info',
+        'partially_picked': 'help',
         'picked': 'help',
+        'partially_packed': 'help',
         'packed': 'help',
-        'shipped': 'success',
         'partially_shipped': 'help',
+        'shipped': 'success',
         'closed': 'success',
         'cancelled': 'danger'
     };
@@ -86,37 +115,96 @@ const approve = async () => {
     });
 };
 
-const markPicked = async () => {
+const openPickDialog = () => {
+    pickForm.value.lines = so.value.lines
+        .filter(l => l.picked_qty < l.ordered_qty)
+        .map(l => ({
+            so_line_id: l.id,
+            product_name: l.product_name,
+            sku: l.sku,
+            ordered_qty: l.ordered_qty,
+            picked_qty: l.picked_qty, // already picked
+            to_pick: l.remaining_pick_qty, // from accessor
+            uom: l.uom?.abbreviation
+        }));
+    pickDialog.value = true;
+};
+
+const submitPick = async () => {
     try {
         pickLoading.value = true;
-        await axios.patch(`/api/sales-orders/${so.value.id}/pick`);
-        toast.add({ severity: 'success', summary: 'Picked', detail: 'Items marked as picked', life: 3000 });
+        const payload = {
+            lines: pickForm.value.lines.filter(l => l.to_pick > 0).map(l => ({
+                so_line_id: l.so_line_id,
+                picked_qty: l.to_pick
+            }))
+        };
+        if (payload.lines.length === 0) {
+            toast.add({ severity: 'warn', summary: 'Input Required', detail: 'Specify at least one item to pick', life: 3000 });
+            return;
+        }
+        await axios.patch(`/api/sales-orders/${so.value.id}/pick`, payload);
+        toast.add({ severity: 'success', summary: 'Pick Registered', detail: 'Items moved to staging', life: 3000 });
+        pickDialog.value = false;
         loadSO();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Update failed', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Pick failed', life: 3000 });
     } finally {
         pickLoading.value = false;
     }
 };
 
-const markPacked = async () => {
+const openPackDialog = () => {
+    packForm.value.lines = so.value.lines
+        .filter(l => l.packed_qty < l.picked_qty)
+        .map(l => ({
+            so_line_id: l.id,
+            product_name: l.product_name,
+            sku: l.sku,
+            picked_qty: l.picked_qty,
+            packed_qty: l.packed_qty,
+            to_pack: l.remaining_pack_qty,
+            uom: l.uom?.abbreviation
+        }));
+    packDialog.value = true;
+};
+
+const submitPack = async () => {
     try {
         packLoading.value = true;
-        await axios.patch(`/api/sales-orders/${so.value.id}/pack`);
-        toast.add({ severity: 'success', summary: 'Packed', detail: 'Items marked as packed', life: 3000 });
+        const payload = {
+            lines: packForm.value.lines.filter(l => l.to_pack > 0).map(l => ({
+                so_line_id: l.so_line_id,
+                packed_qty: l.to_pack
+            }))
+        };
+        await axios.patch(`/api/sales-orders/${so.value.id}/pack`, payload);
+        toast.add({ severity: 'success', summary: 'Pack Registered', detail: 'Items verified and boxed', life: 3000 });
+        packDialog.value = false;
         loadSO();
     } catch (e) {
-        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Update failed', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Pack failed', life: 3000 });
     } finally {
         packLoading.value = false;
     }
 };
 
-const printPickList = () => {
-    window.print();
+const printVoucher = () => {
+    window.open(`/sales-orders/${so.value.id}/print`, '_blank');
 };
 
 const openShipDialog = () => {
+    shipForm.value.lines = so.value.lines
+        .filter(l => l.shipped_qty < l.packed_qty)
+        .map(l => ({
+            so_line_id: l.id,
+            product_name: l.product_name,
+            sku: l.sku,
+            packed_qty: l.packed_qty,
+            shipped_qty: l.shipped_qty,
+            to_ship: l.remaining_ship_qty,
+            uom: l.uom?.abbreviation
+        }));
     shipDialog.value = true;
 };
 
@@ -128,8 +216,16 @@ const fulfill = async () => {
 
     try {
         fulfillLoading.value = true;
-        await axios.post(`/api/sales-orders/${so.value.id}/ship`, shipForm.value);
-        toast.add({ severity: 'success', summary: 'Shipped', detail: 'Order fulfilled and stock issued', life: 3000 });
+        const payload = {
+            carrier: shipForm.value.carrier,
+            tracking_number: shipForm.value.tracking_number,
+            lines: shipForm.value.lines.filter(l => l.to_ship > 0).map(l => ({
+                so_line_id: l.so_line_id,
+                shipped_qty: l.to_ship
+            }))
+        };
+        await axios.post(`/api/sales-orders/${so.value.id}/ship`, payload);
+        toast.add({ severity: 'success', summary: 'Shipped', detail: 'Order fulfilled and stock movements recorded', life: 3000 });
         shipDialog.value = false;
         loadSO();
     } catch (e) {
@@ -140,9 +236,9 @@ const fulfill = async () => {
 };
 
 const canApprove = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
-const canPick = computed(() => so.value?.status?.name === 'confirmed');
-const canPack = computed(() => so.value?.status?.name === 'picked');
-const canShip = computed(() => so.value?.status?.name === 'packed' || so.value?.status?.name === 'confirmed' || so.value?.status?.name === 'picked');
+const canPick = computed(() => so.value?.status?.name === 'confirmed' || so.value?.status?.name === 'partially_picked');
+const canPack = computed(() => ['picked', 'partially_picked', 'partially_packed'].includes(so.value?.status?.name));
+const canShip = computed(() => ['packed', 'partially_packed', 'partially_shipped'].includes(so.value?.status?.name));
 
 const subtotal = computed(() => {
     return so.value?.lines?.reduce((sum, line) => sum + (line.ordered_qty * line.unit_price), 0) || 0;
@@ -203,25 +299,25 @@ const totalDiscount = computed(() => {
                         label="Print" 
                         icon="pi pi-print" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
-                        @click="printPickList"
+                        @click="printVoucher"
                     />
 
                     <Button 
                         v-if="canPick && can('manage-sales-orders')" 
-                        label="Mark Picked" 
+                        label="Pick Lines" 
                         icon="pi pi-box" 
                         :loading="pickLoading"
-                        class="p-button-sm !bg-help-500/20 hover:!bg-help-500/30 !text-help-400 !border-help-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
-                        @click="markPicked"
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-help-400 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openPickDialog"
                     />
 
                     <Button 
                         v-if="canPack && can('manage-sales-orders')" 
-                        label="Mark Packed" 
+                        label="Pack Lines" 
                         icon="pi pi-gift" 
                         :loading="packLoading"
-                        class="p-button-sm !bg-help-500/20 hover:!bg-help-500/30 !text-help-400 !border-help-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
-                        @click="markPacked"
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-help-400 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openPackDialog"
                     />
 
                     <Button 
@@ -316,31 +412,75 @@ const totalDiscount = computed(() => {
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
                                         <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
-                                        <span class="text-[9px] font-bold text-teal-500/70 font-mono tracking-widest uppercase">{{ data.sku }}</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[9px] font-bold text-teal-500/70 font-mono tracking-widest uppercase">{{ data.sku }}</span>
+                                            <span class="text-[8px] text-zinc-600 font-mono">/ {{ data.uom?.abbreviation }}</span>
+                                        </div>
                                     </div>
                                 </template>
                             </Column>
                             <Column field="location_name" header="SOURCE">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-500 text-[10px] font-bold uppercase">{{ data.location?.name || 'N/A' }}</span>
+                                    <span class="text-zinc-500 text-[10px] font-bold uppercase font-mono tracking-tighter">{{ data.location?.name || 'N/A' }}</span>
+                                </template>
+                            </Column>
+
+                            <!-- Stock Visibility for Quotations -->
+                            <Column v-if="isQuotation" header="AVAILABILITY">
+                                <template #body="{ data }">
+                                    <div class="flex items-center gap-2">
+                                        <Tag 
+                                            :severity="getAvailabilityStatus(data).severity" 
+                                            :value="getAvailabilityStatus(data).label" 
+                                            class="text-[8px] font-bold cursor-pointer hover:opacity-80 transition-opacity"
+                                            @click="toggleAvailability($event, data.id)"
+                                        />
+                                        
+                                        <Popover :ref="(el) => opRefs[data.id] = el" class="NexusPopover">
+                                            <div class="p-3 flex flex-col gap-3 min-w-[200px]">
+                                                <span class="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] font-mono border-b border-zinc-800 pb-2">inventory Breakdown</span>
+                                                <div v-for="loc in data.availability" :key="loc.location_name" class="flex flex-col gap-1 py-1 border-b border-zinc-800/40 last:border-0">
+                                                    <div class="flex justify-between items-center text-[10px]">
+                                                        <span class="text-zinc-400 font-bold uppercase tracking-tighter">{{ loc.location_name }}</span>
+                                                        <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="font-mono font-bold">{{ loc.available_qty }}</span>
+                                                    </div>
+                                                    <div class="flex justify-between text-[8px] text-zinc-600 font-mono">
+                                                        <span>QOH: {{ loc.quantity_on_hand }}</span>
+                                                        <span>RSV: {{ loc.reserved_qty }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex justify-between pt-2 border-t border-zinc-800 mt-1">
+                                                    <span class="text-[9px] font-bold text-zinc-400 uppercase font-mono">Total Available</span>
+                                                    <span class="text-xs font-black text-white font-mono">{{ getTotalAvailable(data) }}</span>
+                                                </div>
+                                            </div>
+                                        </Popover>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="LIFECYCLE STATUS">
+                                <template #body="{ data }">
+                                    <div class="flex flex-col gap-1 w-24">
+                                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden flex">
+                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-help-500/40"></div>
+                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-teal-500/60"></div>
+                                        </div>
+                                        <div class="flex justify-between text-[8px] font-mono text-zinc-600 uppercase tracking-tighter">
+                                            <span>Pick</span>
+                                            <span>Ship</span>
+                                        </div>
+                                    </div>
                                 </template>
                             </Column>
                             <Column field="ordered_qty" header="ORDERED">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ data.ordered_qty }} {{ data.uom?.abbreviation }}</span>
+                                    <span class="text-zinc-300 font-mono text-xs font-bold">{{ data.ordered_qty }}</span>
                                 </template>
                             </Column>
                             <Column field="picked_qty" header="PICKED">
                                 <template #body="{ data }">
                                     <span :class="data.picked_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
                                         {{ data.picked_qty }}
-                                    </span>
-                                </template>
-                            </Column>
-                            <Column field="packed_qty" header="PACKED">
-                                <template #body="{ data }">
-                                    <span :class="data.packed_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
-                                        {{ data.packed_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -398,25 +538,119 @@ const totalDiscount = computed(() => {
             </div>
         </div>
 
-        <!-- Ship Dialog -->
-        <Dialog v-model:visible="shipDialog" modal header="Order Fulfillment & Shipment" :style="{ width: '30rem' }">
+        <!-- Pick Dialog -->
+        <Dialog v-model:visible="pickDialog" modal header="Inventory Picking Control" :style="{ width: '50rem' }">
             <div class="flex flex-col gap-4 py-4">
-                <div class="p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl mb-2">
-                    <p class="text-xs text-teal-400 font-medium leading-relaxed">
-                        Completing fulfillment will release the reserved stock and create an <strong>Issue Transaction</strong> to deduct items from inventory.
+                <div class="p-4 bg-help-500/10 border border-help-500/20 rounded-xl mb-2">
+                    <p class="text-xs text-help-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
+                        Mission: Move items from storage locations to the staging area for packing.
                     </p>
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Logistics Carrier</label>
-                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, Internal Fleet" class="w-full bg-zinc-950 border-zinc-700" />
+                
+                <DataTable :value="pickForm.lines" class="p-datatable-sm overflow-hidden" scrollable scrollHeight="300px">
+                    <Column field="product_name" header="PRODUCT">
+                        <template #body="{ data }">
+                            <div class="flex flex-col">
+                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
+                            </div>
+                        </template>
+                    </Column>
+                    <Column header="PROGRESS">
+                        <template #body="{ data }">
+                            <span class="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
+                                {{ data.picked_qty }} / {{ data.ordered_qty }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column header="QTY TO PICK">
+                        <template #body="{ data }">
+                            <InputNumber v-model="data.to_pick" :min="0" :max="data.ordered_qty - data.picked_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
+                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="pickDialog = false" />
+                    <Button label="Complete Pick Selection" :loading="pickLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitPick" />
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Tracking Number</label>
-                    <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking reference" class="w-full bg-zinc-950 border-zinc-700" />
+            </div>
+        </Dialog>
+
+        <!-- Pack Dialog -->
+        <Dialog v-model:visible="packDialog" modal header="Packing & Quality Verification" :style="{ width: '50rem' }">
+            <div class="flex flex-col gap-4 py-4">
+                <div class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-2">
+                    <p class="text-xs text-indigo-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
+                        Mission: Verify picked items and box them for final shipment.
+                    </p>
                 </div>
-                <div class="flex justify-end gap-3 mt-4">
-                    <Button label="Cancel" class="p-button-text !text-zinc-500" @click="shipDialog = false" />
-                    <Button label="Process Shipment" :loading="fulfillLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold" @click="fulfill" />
+                
+                <DataTable :value="packForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
+                    <Column field="product_name" header="PRODUCT">
+                        <template #body="{ data }">
+                            <div class="flex flex-col">
+                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
+                            </div>
+                        </template>
+                    </Column>
+                    <Column header="PICKED">
+                        <template #body="{ data }">
+                            <span class="text-[10px] font-mono text-zinc-400">{{ data.picked_qty }} {{ data.uom }}</span>
+                        </template>
+                    </Column>
+                    <Column header="QTY TO PACK">
+                        <template #body="{ data }">
+                            <InputNumber v-model="data.to_pack" :min="0" :max="data.picked_qty - data.packed_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
+                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="packDialog = false" />
+                    <Button label="Verify & Pack" :loading="packLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitPack" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- Ship Dialog -->
+        <Dialog v-model:visible="shipDialog" modal header="Final Fulfillment & Logistics" :style="{ width: '55rem' }">
+            <div class="flex flex-col gap-4 py-4">
+                <div class="p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl mb-2">
+                    <p class="text-xs text-teal-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
+                        Mission: Handover packed boxes to carrier and finalize stock issue.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Carrier Service</label>
+                        <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, Internal" class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Tracking Reference</label>
+                        <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking #" class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+                    </div>
+                </div>
+                
+                <DataTable :value="shipForm.lines" class="p-datatable-sm" scrollable scrollHeight="250px">
+                    <Column field="product_name" header="PRODUCT" />
+                    <Column header="PACKED">
+                        <template #body="{ data }">
+                            <span class="text-[10px] font-mono text-zinc-400">{{ data.packed_qty }} {{ data.uom }}</span>
+                        </template>
+                    </Column>
+                    <Column header="QTY TO SHIP">
+                        <template #body="{ data }">
+                            <InputNumber v-model="data.to_ship" :min="0" :max="data.packed_qty - data.shipped_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
+                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="shipDialog = false" />
+                    <Button label="Dispatch Shipment" :loading="fulfillLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="fulfill" />
                 </div>
             </div>
         </Dialog>

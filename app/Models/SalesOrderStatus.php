@@ -17,7 +17,11 @@ class SalesOrderStatus extends Model
 
     public const PICKED = 'picked';
 
+    public const PARTIALLY_PICKED = 'partially_picked';
+
     public const PACKED = 'packed';
+
+    public const PARTIALLY_PACKED = 'partially_packed';
 
     public const SHIPPED = 'shipped';
 

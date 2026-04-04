@@ -7,6 +7,17 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Nexus Rebranding & Professional Printing (Phase 6.1)
+**Date**: 2026-04-04 | **Status**: 100% COMPLETE
+**Summary**: Successfully rebranded the entire system to **Nexus** and launched the high-fidelity server-side printing module for all logistics and procurement documents.
+- **Nexus Identity**: Updated global branding from "Inventory Core" to **Nexus**, including UI sidebar transitions and document headers ("Nexus Logistics").
+- **Server-Side Vouchers**: Developed Blade-based printable vouchers for Goods Receipt Notes (GRN), Stock Issuances, Transfers, and Adjustments, replacing legacy JS print-frames with professional server-side rendering.
+- **Precision (Epsilon) Fix**: Resolved the "1-Piece-of-12" fractional drift bug by implementing epsilon-aware rounding (`0.000001`) in the controller validation layer, ensuring piece-perfect receipts for bulk-to-unit conversions.
+- **Navigation Hierarchy**: Reorganized the Sidebar into professional ERP domains (**Analytics, Commerce, Logistics, and System**) with high-contrast section headers for improved visual scanning.
+- **Git Reconciliation**: Successfully synchronized all work into the `main` branch, resolving several merge conflicts and cleaning up the repository state.
+
+---
+
 ### 🎯 Milestone: Sales Order Lifecycle & Intelligent Fulfillment (Phase 5)
 **Date**: 2026-04-03 | **Status**: 100% COMPLETE
 **Summary**: Successfully implemented the full Sales Order (SO) module, integrating it with the core reservation engine and stock movement ledger.

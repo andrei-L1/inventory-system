@@ -350,12 +350,6 @@ const cancel = () => {
                                                 </div>
                                             </template>
                                         </Select>
-                                        <div v-if="line.stock" class="mt-1 flex items-center gap-2">
-                                            <span :class="line.stock.available_qty < line.ordered_qty ? 'text-red-400' : 'text-emerald-400'" class="text-[9px] font-bold font-mono tracking-tighter uppercase px-1.5 py-0.5 bg-zinc-950 rounded border border-zinc-800">
-                                                Avail: {{ line.stock.available_qty }} {{ line.stock.uom_abbr }}
-                                            </span>
-                                            <span v-if="line.stock.available_qty < line.ordered_qty" class="text-[8px] text-red-500 font-bold animate-pulse">Insufficient Stock!</span>
-                                        </div>
                                     </div>
 
                                     <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
@@ -385,13 +379,21 @@ const cancel = () => {
                                     </div>
 
                                     <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
+                                            <div v-if="line.stock" class="flex items-center">
+                                                <span :class="line.stock.available_qty < line.ordered_qty ? 'text-red-400' : 'text-emerald-400'" class="text-[8px] font-black font-mono tracking-tighter uppercase">
+                                                    {{ line.stock.available_qty }}
+                                                </span>
+                                            </div>
+                                        </div>
                                         <InputNumber 
                                             v-model="line.ordered_qty" 
                                             :min="0.01" 
                                             :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
                                             inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50 outline-none" 
                                         />
+                                        <div v-if="line.stock && line.stock.available_qty < line.ordered_qty" class="text-[7px] text-red-500 font-bold uppercase tracking-tighter text-right animate-pulse">Shortage!</div>
                                     </div>
 
                                     <div class="col-span-6 md:col-span-1 flex items-center justify-end">

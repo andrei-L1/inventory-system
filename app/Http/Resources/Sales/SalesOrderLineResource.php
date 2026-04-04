@@ -41,6 +41,12 @@ class SalesOrderLineResource extends JsonResource
             'subtotal' => (float) $this->subtotal,
             'notes' => $this->notes,
             'remaining_qty' => (float) $this->remaining_qty,
+            'availability' => $this->product->inventories->map(fn ($inv) => [
+                'location_name' => $inv->location->name,
+                'quantity_on_hand' => (float) $inv->scaled_quantity_on_hand,
+                'reserved_qty' => (float) $inv->scaled_reserved_qty,
+                'available_qty' => (float) ($inv->scaled_quantity_on_hand - $inv->scaled_reserved_qty),
+            ]),
         ];
     }
 }
