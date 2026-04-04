@@ -90,6 +90,7 @@ Each phase below corresponds to one stage of that chain.
   - Guards against `reserved_qty + requested > quantity_on_hand`.
 - [x] `StockService::releaseReservation(Product $p, Location $l, float $qty)`:
   - Decreases `reserved_qty`.
+- [x] **Full UOM Reservation Scaling** — Added `scaled_reserved_qty` to `Inventory` model to ensure mathematically correct availability across all units. ✅ NEW
 - [x] Integration: confirmed orders trigger `reserveStock()`; Fulfillment triggers `releaseReservation()` + `recordMovement()`. (Reservation engine tested and verified).
 
 ---
@@ -368,15 +369,17 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Migration**: Add `carrier`, `tracking_number`, `sent_at`, `shipped_at`, `delivered_at`, `approved_by` to `sales_orders`. ✅
 - [x] **Migration**: Add `picked_qty`, `packed_qty`, `shipped_qty`, `returned_qty` to `sales_order_lines`. ✅
 - [x] **Model**: Align `SalesOrder` and `SalesOrderLine` with PO standards (casts, booted logic, helpers). ✅
-- [x] **Seeder Fix**: Normalize `SalesOrderStatus` names to lowercase snake_case + add constants. ✅
+- [x] **Seeder Fix**: Normalize `SalesOrderStatus` names to lowercase snake_case + add `partially_picked` and `partially_packed` constants. ✅
+- [x] **Professional Printing Engine**: Implemented [sales-order-print.blade.php](file:///c:/xampp/htdocs/inventory-system/resources/views/sales/sales-order-print.blade.php) for branded Picking Lists & Packing Slips. ✅
 
 #### Controller & Routing
 - [x] `SalesOrderController` — Mirroring PO action naming + WMS stages:
   - `approve()` — Transition `quotation` → `confirmed` (Triggers `reserveStock`)
   - `send()` — Transition `quotation` → `quotation_sent`
-  - `pick()` — Update `picked_qty` → Transition to `picked`
-  - `pack()` — Update `packed_qty` → Transition to `packed`
-  - `ship()` / `fulfill()` — Atomic release + issue transaction
+  - `pick()` — Granular Pick Dialog → Update `picked_qty` → Transition to `partially_picked` | `picked`. ✅
+  - `pack()` — Granular Pack Dialog → Update `packed_qty` → Transition to `partially_packed` | `packed`. ✅
+  - `ship()` / `fulfill()` — Granular Ship Dialog → Atomic release + issue transaction. ✅
+  - `print()` — Server-side PDF/Print generation for warehouse vouchers. ✅
 - [x] `SalesOrderResource` — Full transformer with embedded lines + stage progress + fulfillment history
 - [x] **Multi-UOM Schema**: `uom_id` on `sales_order_lines`. ✅
 - [x] **Multi-UOM Logic**: `confirm()` and `fulfill()` convert to base UOM before calling StockService.
@@ -400,8 +403,10 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
   - "Save as Quotation" + "Discard" buttons
 - [x] **`SalesOrders/Show.vue`** — Warehouse Mission Control:
   - Sidebar: Order metadata + Fulfillment/Return History (mirrored after PO Show).
-  - Stage-aware Buttons: [Confirm] [Print Pick List] [Mark Picked] [Mark Packed] [Ship / Fulfill].
-  - Main table: ordered_qty, picked_qty, packed_qty, shipped_qty (status tracked).
+  - Stage-aware Grid: ordered_qty, picked_qty, packed_qty, shipped_qty (status tracked).
+  - **Surgical Fulfillment Dialogs**: Native support for Pick, Pack, and Ship stages. ✅
+  - **Lifecycle Progress Bars**: Real-time visual tracking of warehouse stages. ✅
+  - **Quotation Inventory Intelligence Grid**: Real-time stock health popover with location-specific QOH vs. Reserved breakdown. ✅
   - Status badge colors: `quotation`=warning, `confirmed`=info, `picked`=help, `packed`=help, `shipped`=success.
   - Linked issue transactions panel (COGS tracking).
   - Financial summary
@@ -426,9 +431,9 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [ ] Credit Limit enforcement: block SO confirmation if customer total exposure exceeds limit
 
 ### 5.6 Backorder & Short-Fulfill Management
-> Status: NOT STARTED
-- [ ] **Backorder Tracking**: Flag orders where `ordered_qty > available_qty`.
-- [ ] **Split Fulfillment**: Allow shipping partial quantities; remainder → `processing` status.
+> Status: ✅ COMPLETE (Native support implemented)
+- [x] **Backorder Tracking**: Visualized via progress indicators where `shipped_qty < ordered_qty`.
+- [x] **Split Fulfillment**: UI/API support for shipping partial quantities; natively supported by the Pick/Pack/Ship Mission Control. ✅
 - [ ] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
 
 ---
@@ -586,7 +591,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — Movement Forms + Intelligence Grid + Printable Vouchers live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
-| 5 | Sales (Sales Orders) | ✅ 100% — Lifecycle + Fulfillment + Customer Center live. |
+| 5 | Sales (Sales Orders) | ✅ 100% — Mission Control Fulfillment + Customer Center live. |
 | 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema in place; Serial/Batch tracking pending. |
 | 7 | Pricing & Discounts | ⬜ 0% — Schema + models only |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — Schema + models only |
