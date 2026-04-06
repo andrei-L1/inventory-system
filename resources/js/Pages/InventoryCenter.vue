@@ -29,6 +29,23 @@ const loadingHistory = ref(false);
 const loadingIntelligence = ref(false);
 const search = ref('');
 
+// Transaction History Filters & Pagination
+const historyFilters = ref({
+    date_from: null,
+    date_to: null,
+    type: 'all',
+});
+const historyMeta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 25 });
+const historyCurrentPage = ref(1);
+
+const historyTypeOptions = [
+    { label: 'All Types', value: 'all' },
+    { label: 'Receipt', value: 'receipt' },
+    { label: 'Issue', value: 'issue' },
+    { label: 'Transfer', value: 'transfer' },
+    { label: 'Adjustment', value: 'adjustment' },
+];
+
 const rulesDialogVisible = ref(false);
 const reorderRules = ref([]);
 const loadingRules = ref(false);
@@ -137,17 +154,36 @@ const loadProducts = async () => {
     }
 };
 
-const loadHistory = async () => {
+const loadHistory = async (page = 1) => {
     if (!selectedProduct.value) return;
     loadingHistory.value = true;
+    historyCurrentPage.value = page;
     try {
-        const res = await axios.get(`/api/products/${selectedProduct.value.id}/transactions`);
+        const params = {
+            page,
+            per_page: historyMeta.value.per_page,
+        };
+        if (historyFilters.value.date_from) params.date_from = historyFilters.value.date_from;
+        if (historyFilters.value.date_to) params.date_to = historyFilters.value.date_to;
+        if (historyFilters.value.type && historyFilters.value.type !== 'all') params.type = historyFilters.value.type;
+
+        const res = await axios.get(`/api/products/${selectedProduct.value.id}/transactions`, { params });
         history.value = res.data.data;
+        historyMeta.value = res.data.meta ?? { current_page: 1, last_page: 1, total: res.data.data.length, per_page: 25 };
     } catch (e) {
         console.error(e);
     } finally {
         loadingHistory.value = false;
     }
+};
+
+const applyHistoryFilters = () => {
+    loadHistory(1);
+};
+
+const resetHistoryFilters = () => {
+    historyFilters.value = { date_from: null, date_to: null, type: 'all' };
+    loadHistory(1);
 };
 
 const loadIntelligenceData = async () => {
@@ -275,7 +311,9 @@ watch(() => page.url, () => {
 });
 
 watch(selectedProduct, () => {
-    loadHistory();
+    historyFilters.value = { date_from: null, date_to: null, type: 'all' };
+    historyCurrentPage.value = 1;
+    loadHistory(1);
     loadIntelligenceData();
 });
 
@@ -472,7 +510,9 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold px-3 py-1 bg-zinc-800/80 border border-zinc-700 rounded-full text-zinc-400 uppercase tracking-widest font-mono">{{ selectedProduct.category?.name || 'PRODUCT' }}</span>
                                                 <span v-if="selectedProduct.preferred_vendor" class="text-[9px] font-bold px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-sky-400 uppercase tracking-widest font-mono">OWNED BY: {{ selectedProduct.preferred_vendor.name }}</span>
                                                 <span v-else class="text-[9px] font-bold px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 uppercase tracking-widest font-mono">STOCK: INTERNAL</span>
-                                                <span class="text-[10px] font-bold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 uppercase tracking-widest font-mono">STATUS: ACTIVE</span>
+                                                <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest font-mono border"
+                                                      :class="selectedProduct.is_active !== false ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-zinc-800/80 border-zinc-700 text-zinc-500'"
+                                                >STATUS: {{ selectedProduct.is_active !== false ? 'ACTIVE' : 'INACTIVE' }}</span>
                                             </div>
                                         </div>
                                         <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed italic">{{ selectedProduct.description || 'No description provided for this catalog item.' }}</p>
@@ -506,7 +546,7 @@ const tablePt = {
                                     </div>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-5 gap-x-12 gap-y-8">
+                                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-8 gap-y-8">
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Internal ID</label>
                                         <code class="text-sky-400 font-mono text-sm tracking-widest bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
@@ -518,6 +558,14 @@ const tablePt = {
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
                                         <span class="text-sky-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.average_cost) }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
+                                        <span class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency((selectedProduct.total_qoh ?? 0) * (selectedProduct.average_cost ?? 0)) }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reorder Point</label>
+                                        <span class="text-zinc-300 font-mono font-bold text-lg tracking-tight">{{ selectedProduct.reorder_point ?? '—' }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Unit of Measure</label>
@@ -629,7 +677,12 @@ const tablePt = {
                                             <span class="font-mono text-[10px] text-zinc-500">{{ data.receipt_date }}</span>
                                         </template>
                                     </Column>
-                                    <Column field="remaining_qty" header="Remaining" style="width: 160px">
+                                    <Column header="Location" style="width: 160px">
+                                        <template #body="{ data }">
+                                            <span class="font-mono text-[10px] text-zinc-400 uppercase tracking-wide">{{ data.location_name }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column field="remaining_qty" header="Remaining" style="width: 140px">
                                         <template #body="{ data }">
                                             <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty) }}</span>
                                         </template>
@@ -639,9 +692,24 @@ const tablePt = {
                                             <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ formatCurrency(data.unit_cost) }}</span>
                                         </template>
                                     </Column>
-                                    <Column header="Status" class="!text-right">
+                                    <Column header="Layer Value" style="width: 130px">
                                         <template #body="{ data }">
-                                            <div class="inline-flex items-center gap-2 group-hover:px-2 transition-all">
+                                            <span class="font-mono font-bold text-amber-400 tracking-tighter text-[11px]">{{ formatCurrency(data.total_value) }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column header="Source PO" style="width: 160px">
+                                        <template #body="{ data }">
+                                            <span v-if="data.po_number"
+                                                  @click="handleLinkClick('PO', data.po_number, data.po_id)"
+                                                  class="font-mono text-[10px] text-emerald-400 cursor-pointer hover:underline tracking-wider">
+                                                {{ data.po_number }}
+                                            </span>
+                                            <span v-else class="text-zinc-700 font-mono text-[10px]">Manual Entry</span>
+                                        </template>
+                                    </Column>
+                                    <Column header="Status" style="width: 100px">
+                                        <template #body="{ data }">
+                                            <div class="inline-flex items-center gap-2">
                                                 <span class="w-1 h-1 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></span>
                                                 <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ data.remaining_qty > 0 ? 'ACTIVE' : 'DEPLETED' }}</span>
                                             </div>
@@ -657,17 +725,59 @@ const tablePt = {
                         <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Recent Transaction History</span>
+                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History</span>
                             </div>
-                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ history.length }} RECORDS FOUND</span>
+                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
                         </div>
-                        
+
+                        <!-- Filter Bar -->
+                        <div class="px-8 py-4 border-b border-zinc-800/40 bg-zinc-900/40 flex flex-wrap items-end gap-4">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">From</span>
+                                <input
+                                    type="date"
+                                    v-model="historyFilters.date_from"
+                                    class="h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">To</span>
+                                <input
+                                    type="date"
+                                    v-model="historyFilters.date_to"
+                                    class="h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Type</span>
+                                <Select
+                                    v-model="historyFilters.type"
+                                    :options="historyTypeOptions"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    class="!bg-zinc-950 !border-zinc-800 !h-9 !rounded-lg !text-[11px] font-mono !w-40"
+                                    pt:label:class="!text-zinc-300 !p-2 !text-[11px]"
+                                    pt:dropdown:class="!text-zinc-600 !w-6"
+                                />
+                            </div>
+                            <div class="flex gap-2 pb-0.5">
+                                <button @click="applyHistoryFilters"
+                                        class="h-9 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-zinc-950 transition-all active:scale-95">
+                                    Apply
+                                </button>
+                                <button @click="resetHistoryFilters"
+                                        class="h-9 px-4 rounded-lg bg-zinc-800/60 border border-zinc-700 text-zinc-500 text-[10px] font-bold uppercase tracking-widest hover:text-white hover:border-zinc-500 transition-all">
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="flex-1 overflow-hidden">
-                            <DataTable 
-                                :value="history" 
-                                :loading="loadingHistory" 
-                                scrollable 
-                                scrollHeight="flex" 
+                            <DataTable
+                                :value="history"
+                                :loading="loadingHistory"
+                                scrollable
+                                scrollHeight="flex"
                                 class="gh-table border-none"
                                 :pt="tablePt"
                             >
@@ -677,39 +787,39 @@ const tablePt = {
                                         <p class="font-mono text-xs tracking-[0.2em] uppercase">No transaction history found for this product</p>
                                     </div>
                                 </template>
-                                
-                                <Column field="transaction_date" header="Date / Time" style="width: 160px">
+
+                                <Column field="transaction_date" header="Date" style="width: 130px">
                                     <template #body="{ data }">
                                         <span class="font-mono text-[11px] text-zinc-400">{{ data.transaction_date }}</span>
                                     </template>
                                 </Column>
-                                
+
                                 <Column field="reference_number" header="Reference #" style="width: 180px">
                                     <template #body="{ data }">
-                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)" 
+                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)"
                                               class="font-mono text-[11px] bg-zinc-950 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-widest cursor-pointer hover:bg-sky-500/10 hover:border-sky-500/30 transition-all shadow-[0_0_15px_rgba(56,189,248,0.05)] uppercase">
                                             {{ data.reference_number }}
                                         </span>
                                     </template>
                                 </Column>
-                                
+
                                 <Column field="type" header="Type" style="width: 150px">
                                     <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
                                              :class="[
-                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
+                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' :
+                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' :
                                                  'bg-sky-500/5 text-sky-400 border-sky-500/20'
                                              ]">
                                             {{ data.display_type || data.type.name.toUpperCase() }}
                                         </div>
                                     </template>
                                 </Column>
-                                
-                                <Column field="quantity" header="Change Qty" style="width: 150px">
+
+                                <Column field="quantity" header="Change Qty" style="width: 130px">
                                     <template #body="{ data }">
                                         <div class="flex flex-col">
-                                            <div class="font-mono font-bold text-xs tracking-tighter" 
+                                            <div class="font-mono font-bold text-xs tracking-tighter"
                                                  :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
                                                 {{ data.quantity < 0 ? '' : '+' }}{{ data.quantity }}
                                             </div>
@@ -720,15 +830,32 @@ const tablePt = {
                                     </template>
                                 </Column>
 
-                                <Column header="Unit" style="width: 100px">
+                                <Column header="Unit" style="width: 80px">
                                     <template #body="{ data }">
                                         <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
                                             {{ data.uom_abbreviation }}
                                         </span>
                                     </template>
                                 </Column>
-                                
-                                <Column header="Entity / Vendor">
+
+                                <Column header="Unit Cost" style="width: 120px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] font-bold text-sky-400">
+                                            {{ data.unit_cost > 0 ? formatCurrency(data.unit_cost) : '—' }}
+                                        </span>
+                                    </template>
+                                </Column>
+
+                                <Column header="Total Value" style="width: 130px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] font-bold"
+                                              :class="data.quantity < 0 ? 'text-rose-400' : 'text-amber-400'">
+                                            {{ data.total_cost > 0 ? formatCurrency(data.total_cost) : '—' }}
+                                        </span>
+                                    </template>
+                                </Column>
+
+                                <Column header="Entity">
                                     <template #body="{ data }">
                                         <div class="flex items-center gap-3">
                                             <div v-if="data.vendor_name" @click.stop="handleLinkClick('Vendor', data.vendor_name, data.vendor_id)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
@@ -737,20 +864,20 @@ const tablePt = {
                                             <div v-else-if="data.customer_name" @click.stop="handleLinkClick('Customer', data.customer_name, data.customer_id)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-user text-[10px]"></i> {{ data.customer_name }}
                                             </div>
-                                            <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal movement</span>
+                                            <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal</span>
                                         </div>
                                     </template>
                                 </Column>
-                                
-                                <Column header="Linked Document" style="width: 200px">
+
+                                <Column header="Linked Doc" style="width: 180px">
                                     <template #body="{ data }">
-                                        <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
-                                            @click.stop="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)" 
+                                        <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))"
+                                            @click.stop="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)"
                                             class="text-emerald-400/80 hover:text-emerald-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-paperclip text-[10px]"></i> {{ data.po_number || data.reference_doc }}
                                         </div>
-                                        <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
-                                            @click.stop="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)" 
+                                        <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))"
+                                            @click.stop="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)"
                                             class="text-amber-400/80 hover:text-amber-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-send text-[10px]"></i> {{ data.so_number || data.reference_doc }}
                                         </div>
@@ -758,8 +885,8 @@ const tablePt = {
                                         <span v-else class="text-zinc-800 font-mono text-[11px]">Internal</span>
                                     </template>
                                 </Column>
-                                
-                                <Column field="status" header="Status" style="width: 140px">
+
+                                <Column field="status" header="Status" style="width: 110px">
                                      <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2">
                                             <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
@@ -768,6 +895,25 @@ const tablePt = {
                                     </template>
                                 </Column>
                             </DataTable>
+                        </div>
+
+                        <!-- Paginator -->
+                        <div v-if="historyMeta.last_page > 1" class="px-8 py-4 border-t border-zinc-800/40 bg-zinc-900/60 flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-zinc-600 font-mono uppercase tracking-widest">
+                                Page {{ historyMeta.current_page }} of {{ historyMeta.last_page }} &nbsp;·&nbsp; {{ historyMeta.total }} records
+                            </span>
+                            <div class="flex gap-2">
+                                <button
+                                    @click="loadHistory(historyMeta.current_page - 1)"
+                                    :disabled="historyMeta.current_page <= 1"
+                                    class="h-8 px-4 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                ><i class="pi pi-chevron-left text-[9px]"></i> Prev</button>
+                                <button
+                                    @click="loadHistory(historyMeta.current_page + 1)"
+                                    :disabled="historyMeta.current_page >= historyMeta.last_page"
+                                    class="h-8 px-4 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                >Next <i class="pi pi-chevron-right text-[9px]"></i></button>
+                            </div>
                         </div>
                     </section>
                 </main>

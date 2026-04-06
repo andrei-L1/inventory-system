@@ -161,10 +161,11 @@ class TransactionController extends Controller
     // -------------------------------------------------------------------------
     // GET /api/products/{product}/transactions
     // Transaction history for a specific product (Inventory Center ledger).
+    // Supports: ?date_from=YYYY-MM-DD &date_to=YYYY-MM-DD &type=receipt|issue|transfer|adjustment &page=1 &per_page=25
     // -------------------------------------------------------------------------
-    public function forProduct(Product $product): AnonymousResourceCollection
+    public function forProduct(Product $product, \Illuminate\Http\Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
-        $transactions = Transaction::whereHas('lines', function ($q) use ($product) {
+        $query = Transaction::whereHas('lines', function ($q) use ($product) {
             $q->where('product_id', $product->id);
         })
             ->with([
@@ -175,10 +176,26 @@ class TransactionController extends Controller
                 },
             ])
             ->orderBy('transaction_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
+            ->orderBy('id', 'desc');
 
-        return TransactionResource::collection($transactions);
+        // --- Date range filter ---
+        if ($request->filled('date_from')) {
+            $query->whereDate('transaction_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('transaction_date', '<=', $request->date_to);
+        }
+
+        // --- Transaction type filter ---
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->whereHas('type', function ($q) use ($request) {
+                $q->where('name', strtolower($request->type));
+            });
+        }
+
+        $perPage = min((int) $request->get('per_page', 25), 100);
+
+        return TransactionResource::collection($query->paginate($perPage));
     }
 
     // -------------------------------------------------------------------------
