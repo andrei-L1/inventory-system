@@ -320,9 +320,10 @@ class PurchaseOrderController extends Controller
                     $receivedUom = UnitOfMeasure::find($receivedUomId);
                     $productUom = $poLine->product->uom;
 
-                    // LOCK 1: Discrete units must be whole numbers (with epsilon for precision drift)
+                    // LOCK 1: Discrete units must be whole numbers
+                    // Threshold matches the 8-decimal DB standard (1e-8)
                     if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
-                        if (abs($receivedQtyRaw - round($receivedQtyRaw)) > 0.000001) {
+                        if (abs($receivedQtyRaw - round($receivedQtyRaw)) > 0.00000001) {
                             abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
                         }
                         $receivedQtyRaw = round($receivedQtyRaw);
@@ -346,7 +347,8 @@ class PurchaseOrderController extends Controller
                     }
 
                     // VALIDATION: Prevent over-receipt (measured in PO Line UOM)
-                    if (($poLine->received_qty + $qtyToUpdatePO) > ($poLine->ordered_qty + 0.00001)) {
+                    // Threshold matches the 8-decimal DB standard (1e-8)
+                    if (($poLine->received_qty + $qtyToUpdatePO) > ($poLine->ordered_qty + 0.00000001)) {
                         $remaining = max(0, $poLine->ordered_qty - $poLine->received_qty);
                         abort(422, "Cannot receive {$receivedQty} units (equiv. to {$qtyToUpdatePO} in PO unit) for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
                     }
@@ -451,7 +453,8 @@ class PurchaseOrderController extends Controller
                         $qtyToUpdatePO = round($returnQtyRaw * $factor, 8);
                     }
 
-                    if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00001)) {
+                    // Threshold matches the 8-decimal DB standard (1e-8)
+                    if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00000001)) {
                         $receivedInReturnUnit = $poLine->received_qty;
                         if ((int) $returnUomId !== (int) $lineUomId) {
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId);
@@ -513,9 +516,12 @@ class PurchaseOrderController extends Controller
      */
     private function recalculatePurchaseOrderTotal(PurchaseOrder $purchaseOrder): void
     {
+        // Aggregate line costs at full 8-decimal precision first to prevent
+        // "penny bleeding" when summing many lines. The final total_amount
+        // (shown to users on headers/invoices) is then rounded to 2 decimals.
         $total = PurchaseOrderLine::where('purchase_order_id', $purchaseOrder->id)
             ->get()
-            ->sum(fn ($line) => (float) $line->ordered_qty * (float) $line->unit_cost);
+            ->sum(fn ($line) => round((float) $line->ordered_qty * (float) $line->unit_cost, 8));
 
         $purchaseOrder->update(['total_amount' => round($total, 2)]);
     }

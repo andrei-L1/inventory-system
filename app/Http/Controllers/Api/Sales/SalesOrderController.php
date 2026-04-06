@@ -191,10 +191,11 @@ class SalesOrderController extends Controller
                 $location = $line->location;
 
                 // Convert ordered qty to base UOM for reservation
-                $baseQty = $line->ordered_qty;
+                // round(..., 8) prevents floating-point dust from UOM chain multiplication
+                $baseQty = (float) $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
                     $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
-                    $baseQty *= $factor;
+                    $baseQty = round($baseQty * $factor, 8);
                 }
 
                 $stockService->reserveStock($product, $location, $baseQty);
@@ -232,7 +233,8 @@ class SalesOrderController extends Controller
                 $newPicked = (float) $item['picked_qty'];
 
                 // Epsilon-aware rounding check for discrete units
-                if (abs($newPicked - round($newPicked)) > 0.000001) {
+                // Threshold matches the 8-decimal DB standard (1e-8)
+                if (abs($newPicked - round($newPicked)) > 0.00000001) {
                     // Logic to check if product is discrete could go here,
                     // for now we just round to nearest if very close
                 }
@@ -358,7 +360,8 @@ class SalesOrderController extends Controller
                     $product = $soLine->product;
 
                     // Epsilon math for Piece fulfillment
-                    if (abs($shippedQtyRaw - round($shippedQtyRaw)) < 0.000001) {
+                    // Threshold matches the 8-decimal DB standard (1e-8)
+                    if (abs($shippedQtyRaw - round($shippedQtyRaw)) < 0.00000001) {
                         $shippedQtyRaw = (float) round($shippedQtyRaw);
                     }
 
@@ -439,10 +442,10 @@ class SalesOrderController extends Controller
                     $product = $line->product;
                     $location = $line->location;
 
-                    $baseQty = $line->ordered_qty;
+                    $baseQty = (float) $line->ordered_qty;
                     if ($line->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
-                        $baseQty *= $factor;
+                        $baseQty = round($baseQty * $factor, 8);
                     }
 
                     $stockService->releaseReservation($product, $location, $baseQty);
@@ -486,12 +489,15 @@ class SalesOrderController extends Controller
         $taxRate = (float) ($data['tax_rate'] ?? 0);
         $discountRate = (float) ($data['discount_rate'] ?? 0);
 
+        // All intermediate values are kept at full float precision.
+        // Only the final result is rounded to 8 decimals to prevent drift
+        // when summing many lines into a total_amount.
         $base = $qty * $price;
         $discount = $base * ($discountRate / 100);
         $taxable = $base - $discount;
         $tax = $taxable * ($taxRate / 100);
 
-        return round($taxable + $tax, 6);
+        return round($taxable + $tax, 8);
     }
 
     private function calculateTaxAmount(array $data): float
@@ -505,7 +511,8 @@ class SalesOrderController extends Controller
         $discount = $base * ($discountRate / 100);
         $taxable = $base - $discount;
 
-        return round($taxable * ($taxRate / 100), 6);
+        // round to 8 to match the 8-decimal DB standard
+        return round($taxable * ($taxRate / 100), 8);
     }
 
     private function calculateDiscountAmount(array $data): float
@@ -514,6 +521,7 @@ class SalesOrderController extends Controller
         $price = (float) $data['unit_price'];
         $discountRate = (float) ($data['discount_rate'] ?? 0);
 
-        return round(($qty * $price) * ($discountRate / 100), 6);
+        // round to 8 to match the 8-decimal DB standard
+        return round(($qty * $price) * ($discountRate / 100), 8);
     }
 }

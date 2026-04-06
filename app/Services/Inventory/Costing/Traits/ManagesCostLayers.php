@@ -15,7 +15,8 @@ trait ManagesCostLayers
     protected function consumeLayers(Inventory $inventory, float $quantity, string $direction = 'asc'): float
     {
         $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-        $qtyEpsilon = 0.00001;
+        $qtyEpsilon = 0.00000001;
+        $costEpsilon = 0.00000001;
 
         $layers = InventoryCostLayer::where('product_id', $inventory->product_id)
             ->where('location_id', $inventory->location_id)
@@ -43,7 +44,7 @@ trait ManagesCostLayers
             $totalCostConsumed += $consumeAmount * (float) $layer->unit_cost;
             $totalQtyConsumed += $consumeAmount;
 
-            $layer->issued_qty = (float) $layer->issued_qty + $consumeAmount;
+            $layer->issued_qty = round((float) $layer->issued_qty + $consumeAmount, 8);
             $remainingToConsume -= $consumeAmount;
 
             if (($layer->received_qty - $layer->issued_qty) <= $qtyEpsilon) {
@@ -93,7 +94,7 @@ trait ManagesCostLayers
         $totalQtyAfter = $currentQty + $newQty;
 
         if ($totalQtyAfter > 0) {
-            $inventory->average_cost = ($totalValueBefore + $newValueInbound) / $totalQtyAfter;
+            $inventory->average_cost = round(($totalValueBefore + $newValueInbound) / $totalQtyAfter, 8);
         }
     }
 }

@@ -22,7 +22,7 @@ class StockService
 {
     use ManagesCostLayers;
 
-    private const QTY_EPSILON = 0.00001;
+    private const QTY_EPSILON = 0.00000001;
     public const TYPE_SALES_RETURN = 'SRET';
 
     protected TransactionValidator $validator;
@@ -370,8 +370,8 @@ class StockService
             $this->updateProductGlobalAverageCost($inventory->product);
 
             // Ensure the transaction line records the final receipt value
-            $line->unit_cost = (float) $lineData['unit_cost'];
-            $line->total_cost = $qtyMove * (float) $lineData['unit_cost'];
+            $line->unit_cost = round((float) $lineData['unit_cost'], 8);
+            $line->total_cost = round($qtyMove * (float) $lineData['unit_cost'], 8);
             $line->save();
         } else {
             // Issue Path: Strategy handles valuation for the issue (FIFO/LIFO/Average).
@@ -385,8 +385,8 @@ class StockService
             $this->updateProductGlobalAverageCost($inventory->product);
 
             // Record the issue value and total COGS
-            $line->unit_cost = $unitCost;
-            $line->total_cost = $unitCost * abs($qtyMove);
+            $line->unit_cost = round($unitCost, 8);
+            $line->total_cost = round($unitCost * abs($qtyMove), 8);
             $line->save();
         }
     }

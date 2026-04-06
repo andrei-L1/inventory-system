@@ -28,7 +28,7 @@ class AverageCostingStrategy implements CostingStrategy
             'location_id' => $inventory->location_id,
             'transaction_line_id' => $line->id,
             'received_qty' => $qty,
-            'unit_cost' => $unitCost,
+            'unit_cost' => round($unitCost, 8),
             'receipt_date' => Carbon::now(),
         ]);
 
