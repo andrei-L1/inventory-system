@@ -415,8 +415,8 @@ const tablePt = {
                 </div>
                 
                 <div class="flex gap-4 items-center">
-                    <div class="flex flex-col gap-1 mr-4">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono ml-1">View Unit</span>
+                    <div class="flex items-center gap-3 border border-zinc-800/50 bg-zinc-900/40 rounded-xl px-4 h-12">
+                        <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">View Unit</span>
                         <Select 
                             v-model="selectedViewUomId" 
                             :options="uoms" 
@@ -425,9 +425,9 @@ const tablePt = {
                             placeholder="Native"
                             showClear
                             @change="loadProducts"
-                            class="!bg-zinc-900 !border-zinc-800 !h-10 !rounded-xl !text-[10px] font-mono font-black !w-24"
-                            pt:label:class="!text-emerald-500 !p-2 !text-center !uppercase font-black"
-                            pt:dropdown:class="!text-zinc-600 !w-6"
+                            class="!bg-transparent !border-none !h-full !text-[10px] font-mono font-black !w-24 !shadow-none !flex !items-center"
+                            pt:label:class="!text-emerald-500 !p-0 !text-left !uppercase font-black !flex !items-center !h-full"
+                            pt:dropdown:class="!text-zinc-600 !w-4 !flex !items-center"
                         />
                     </div>
                     <button @click="toggleMenu" 
