@@ -89,11 +89,11 @@ class PaymentController extends Controller
 
                     // Update invoice paid amount and status
                     $invoice->paid_amount += $amountToAllocate;
-                    
+
                     if ($invoice->paid_amount >= ($invoice->total_amount - 0.000001)) {
                         $invoice->status = Invoice::STATUS_PAID;
                     }
-                    
+
                     $invoice->save();
                 }
             });

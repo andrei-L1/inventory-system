@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Finance;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
-use App\Models\InvoiceLine;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderLine;
 use Illuminate\Http\JsonResponse;
@@ -68,7 +67,7 @@ class InvoiceController extends Controller
                     $soLine = SalesOrderLine::findOrFail($item['so_line_id']);
                     $qty = (float) $item['quantity'];
 
-                    // Validation: cannot invoice more than was shipped? 
+                    // Validation: cannot invoice more than was shipped?
                     // Actually, business rules vary, but usually you invoice what was shipped.
                     // For now, we'll allow it but maybe add a warning later.
 

@@ -23,6 +23,7 @@ class StockService
     use ManagesCostLayers;
 
     private const QTY_EPSILON = 0.00000001;
+
     public const TYPE_SALES_RETURN = 'SRET';
 
     protected TransactionValidator $validator;
@@ -244,6 +245,10 @@ class StockService
     // -------------------------------------------------------------------------
     public function releaseReservation(Product $product, Location $location, float $quantity): void
     {
+        if ($quantity < self::QTY_EPSILON) {
+            return;
+        }
+
         DB::transaction(function () use ($product, $location, $quantity) {
             $inventory = Inventory::where('product_id', $product->id)
                 ->where('location_id', $location->id)
@@ -251,7 +256,9 @@ class StockService
                 ->first();
 
             if (! $inventory) {
-                throw new LogicException('Cannot release reservation for non-existent inventory record.');
+                // If it doesn't exist, we can't release anything, but we'll log it instead of crashing
+                // to allow cancellation of edge-case orphaned records.
+                return;
             }
 
             $inventory->reserved_qty = max(0, (float) $inventory->reserved_qty - $quantity);

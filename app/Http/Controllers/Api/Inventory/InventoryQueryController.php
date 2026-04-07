@@ -106,18 +106,19 @@ class InventoryQueryController extends Controller
             ->get()
             ->map(function ($layer) {
                 $po = $layer->transactionLine?->transaction?->purchaseOrder;
+
                 return [
-                    'id'                     => $layer->id,
-                    'location_name'          => $layer->location?->name ?? 'Unknown Location',
-                    'receipt_date'           => $layer->receipt_date,
-                    'unit_cost'              => (float) $layer->unit_cost,
-                    'original_qty'           => (float) $layer->received_qty,
+                    'id' => $layer->id,
+                    'location_name' => $layer->location?->name ?? 'Unknown Location',
+                    'receipt_date' => $layer->receipt_date,
+                    'unit_cost' => (float) $layer->unit_cost,
+                    'original_qty' => (float) $layer->received_qty,
                     'formatted_original_qty' => $layer->formatted_received_qty,
-                    'remaining_qty'          => (float) $layer->remaining_qty,
-                    'formatted_remaining_qty'=> $layer->formatted_remaining_qty,
-                    'total_value'            => round((float) $layer->remaining_qty * (float) $layer->unit_cost, 8),
-                    'po_number'              => $po?->po_number ?? null,
-                    'po_id'                  => $po?->id ?? null,
+                    'remaining_qty' => (float) $layer->remaining_qty,
+                    'formatted_remaining_qty' => $layer->formatted_remaining_qty,
+                    'total_value' => round((float) $layer->remaining_qty * (float) $layer->unit_cost, 8),
+                    'po_number' => $po?->po_number ?? null,
+                    'po_id' => $po?->id ?? null,
                 ];
             });
 

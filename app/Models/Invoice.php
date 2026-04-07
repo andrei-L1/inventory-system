@@ -13,11 +13,15 @@ class Invoice extends Model
     use HasFactory, SoftDeletes;
 
     const STATUS_DRAFT = 'DRAFT';
+
     const STATUS_OPEN = 'OPEN';
+
     const STATUS_PAID = 'PAID';
+
     const STATUS_VOID = 'VOID';
 
     const TYPE_INVOICE = 'INVOICE';
+
     const TYPE_CREDIT_NOTE = 'CREDIT_NOTE';
 
     protected $fillable = [

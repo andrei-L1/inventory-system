@@ -11,7 +11,6 @@ import Select from 'primevue/select';
 import Dialog from 'primevue/dialog';
 import Tag from 'primevue/tag';
 import Toast from 'primevue/toast';
-import ConfirmDialog from 'primevue/confirmdialog';
 import ToggleSwitch from 'primevue/toggleswitch';
 import { usePermissions } from '@/Composables/usePermissions';
 import { useToast } from "primevue/usetoast";
@@ -164,20 +163,15 @@ const deleteLocation = (loc) => {
     <AppLayout>
         <Head title="Warehouse Locations" />
         <Toast />
-        <ConfirmDialog />
+        <!-- Global ConfirmDialog is provided by AppLayout -->
 
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+        <div class="p-4 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Header Section -->
-            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
+            <div class="max-w-[1600px] w-full mx-auto mb-6 flex justify-between items-end">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Manage Storage & Warehouses</span>
+                    <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Operations Hub</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Location Center</h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
-                        {{ viewMode === 'grid' 
-                            ? 'Overview of physical warehouses, sections, and storage zones.' 
-                            : 'Detailed view and settings for this location.' 
-                        }}
-                    </p>
+                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">Manage your warehouse organizational hierarchy, bins, and storage zones across the global infrastructure.</p>
                 </div>
                 <div class="flex items-center gap-4">
                     <Button v-if="viewMode === 'details'" 
@@ -193,132 +187,49 @@ const deleteLocation = (loc) => {
                 </div>
             </div>
 
-            <!-- View Mode: GRID OVERVIEW -->
-            <div v-if="viewMode === 'grid'" class="max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="relative w-full max-w-md">
-                        <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
-                        <InputText 
-                            v-model="search" 
-                            placeholder="Filter by name or code..." 
-                            @input="loadLocations" 
-                            class="!w-full !pl-11 !pr-4 !bg-zinc-900/40 !border-zinc-800 !text-white !h-12 !text-xs !rounded-xl focus:!border-sky-500/30 transition-all font-mono"
-                        />
-                    </div>
-                </div>
+            <!-- Primary Workspace Grid -->
+            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-4 items-start flex-1 min-h-0">
+                 
+                 <aside class="col-span-12 lg:col-span-4 lg:sticky lg:top-[100px] lg:h-[calc(100vh-120px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                     <div class="p-4 border-b border-zinc-800 bg-zinc-900/60">
+                         <div class="flex items-center gap-3 mb-3">
+                             <div class="w-2 h-2 rounded-full bg-sky-500"></div>
+                             <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono leading-none">Nodal Hierarchy</span>
+                         </div>
+                         <div class="relative">
+                             <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                             <InputText 
+                                 v-model="search" 
+                                 placeholder="Search entities..." 
+                                 @input="loadLocations"
+                                 class="!w-full !pl-11 !pr-4 !bg-zinc-950 !border-zinc-800 !text-white !h-10 !text-xs !rounded-xl focus:!border-sky-500/30 transition-all font-mono"
+                             />
+                         </div>
+                     </div>
 
-                <div v-if="loading" class="flex-1 flex items-center justify-center">
-                    <i class="pi pi-spin pi-spinner text-sky-500/20 text-5xl"></i>
-                </div>
-                
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 overflow-y-auto custom-scrollbar pr-2 pb-10">
-                    <div v-for="loc in locations" :key="loc.id" 
-                         @click="selectLocation(loc)"
-                         class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 hover:bg-zinc-800/40 cursor-pointer transition-all duration-500 overflow-hidden shadow-xl">
-                        
-                        <!-- Background Accent -->
-                        <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
-                        
-                        <div class="relative z-10">
-                            <div class="flex justify-between items-start mb-6">
-                                <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                                    <i :class="[
-                                        loc.location_type?.name?.toLowerCase().includes('warehouse') ? 'pi-home' : 
-                                        loc.location_type?.name?.toLowerCase().includes('store') ? 'pi-shopping-cart' : 'pi-box'
-                                    ]" class="pi text-zinc-500 group-hover:text-sky-400 text-sm transition-colors"></i>
-                                </div>
-                                <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">{{ loc.code }}</span>
-                            </div>
-                            
-                            <h3 class="text-white font-bold text-lg mb-1 group-hover:text-sky-400 transition-colors tracking-tight">{{ loc.name }}</h3>
-                            <div class="flex items-center gap-2 mb-8">
-                                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">{{ loc.location_type?.name }}</span>
-                                <div class="w-1 h-1 rounded-full bg-zinc-700"></div>
-                                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">{{ loc.city || 'GLOBAL' }}</span>
-                            </div>
-                            
-                            <div class="pt-6 border-t border-zinc-800/50 flex justify-between items-center">
-                                <div class="flex flex-col">
-                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-1">Sub-locations</span>
-                                    <span class="text-xs font-bold text-zinc-300">{{ locations.filter(l => l.parent_id === loc.id).length }} Areas</span>
-                                </div>
-                                <div class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center group-hover:bg-sky-500 group-hover:border-sky-500 transition-all">
-                                    <i class="pi pi-arrow-up-right text-[10px] text-zinc-600 group-hover:text-white transition-colors"></i>
-                                </div>
+                     <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
+                        <div v-if="loading" class="flex items-center justify-center p-10">
+                            <i class="pi pi-spin pi-spinner text-sky-500/20 text-2xl"></i>
+                        </div>
+                        <div v-else class="space-y-2">
+                            <div v-for="loc in locations" :key="loc.id" 
+                                 @click="selectLocation(loc)"
+                                 class="p-3 rounded-xl border border-transparent hover:bg-zinc-800/50 hover:border-zinc-700 cursor-pointer transition-all flex items-center justify-between group">
+                                 <div class="flex flex-col">
+                                     <span class="text-xs font-bold text-zinc-300">{{ loc.name }}</span>
+                                     <span class="text-[9px] text-zinc-500 font-mono uppercase">{{ loc.code }}</span>
+                                 </div>
+                                 <i class="pi pi-chevron-right text-[10px] text-zinc-700 group-hover:text-sky-500"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- View Mode: DEEP TOPOLOGY DETAILS -->
-            <div v-if="viewMode === 'details'" class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 flex-1 min-h-0">
-                
-                <!-- Left Sector: Nodal Hierarchy Path (Anchor) -->
-                <aside class="col-span-12 lg:col-span-4 xl:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></div>
-                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Location Tree</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                        <!-- Parent Location -->
-                        <div v-if="locationForm.parent" class="flex items-start gap-4 mb-4 group/parent">
-                            <div class="flex flex-col items-center pt-1.5 min-w-[12px]">
-                                <div @click="selectLocation(locationForm.parent)" 
-                                     class="w-3 h-3 rounded-full border-2 border-zinc-700 bg-zinc-950 hover:border-sky-500 cursor-pointer transition-all z-10 shadow-lg group-hover/parent:scale-125"></div>
-                                <div class="w-0.5 h-12 bg-zinc-800"></div>
-                            </div>
-                            <div class="flex flex-col gap-0.5 opacity-40 hover:opacity-100 transition-opacity cursor-pointer mb-6" @click="selectLocation(locationForm.parent)">
-                                <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase leading-none">PARENT_LOCATION</span>
-                                <span class="text-zinc-400 font-bold text-xs leading-none group-hover/parent:text-white transition-colors">{{ locationForm.parent.name }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Selected Node Root (Current Context) -->
-                        <div class="flex items-start gap-4 mb-2">
-                            <div class="flex flex-col items-center pt-1 min-w-[20px]">
-                                <div class="w-5 h-5 rounded-full bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.6)] ring-4 ring-sky-500/10 z-20 flex items-center justify-center">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                                </div>
-                                <div v-if="childLocations.length > 0" class="w-0.5 h-10 bg-gradient-to-b from-sky-500 to-zinc-800"></div>
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <span class="text-[9px] font-bold text-sky-400 font-mono tracking-[0.2em] uppercase leading-none">CURRENT_VIEW</span>
-                                <span class="text-white font-bold text-base leading-none tracking-tight">{{ locationForm.name }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Sub-areas -->
-                        <div v-if="childLocations.length > 0" class="flex flex-col">
-                            <div v-for="(child, index) in childLocations" :key="child.id" class="flex items-start gap-4 group">
-                                <div class="flex flex-col items-center min-w-[20px]">
-                                    <div class="flex relative">
-                                        <div class="absolute -left-0 top-3 w-4 h-0.5 bg-zinc-800 group-hover:bg-sky-500/40 transition-colors"></div>
-                                        <div class="absolute left-4 top-[0.7rem] w-1 h-1 rounded-full bg-zinc-800 group-hover:bg-sky-500 z-10 transition-all"></div>
-                                        <div class="w-0.5 h-14 bg-zinc-800" :class="{'bg-transparent': index === childLocations.length - 1}"></div>
-                                    </div>
-                                </div>
-                                <div @click="selectLocation(child)" 
-                                     class="flex-1 mt-0.5 p-3 bg-zinc-950/50 border border-zinc-800/80 rounded-xl hover:border-sky-500/40 hover:bg-zinc-900/80 cursor-pointer transition-all duration-300 flex justify-between items-center group/card ml-2">
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="text-[10px] font-bold text-zinc-400 group-hover/card:text-white transition-colors tracking-tight">{{ child.name }}</span>
-                                        <span class="text-[8px] text-zinc-600 font-mono uppercase tracking-widest">{{ child.code }}</span>
-                                    </div>
-                                    <i class="pi pi-chevron-right text-[8px] text-zinc-700 group-hover/card:text-sky-500 transition-all transform group-hover/card:translate-x-1"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                     </div>
                 </aside>
 
-                <!-- Right Sector: Main Data Area -->
-                <main class="col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-8 min-h-0 overflow-y-auto custom-scrollbar pr-2">
-                    
-                    <!-- Information Manifest -->
-                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl relative overflow-hidden group">
+                <!-- Right Sector: Control Plane -->
+                 <main class="col-span-12 lg:col-span-8 flex flex-col gap-4 min-h-0">
+                     
+                     <!-- Selection View -->
+                     <section v-if="viewMode === 'details' && selectedLocation" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
                         <div class="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 blur-[120px] -mr-48 -mt-48 rounded-full opacity-50"></div>
                         
                         <div class="relative z-10">

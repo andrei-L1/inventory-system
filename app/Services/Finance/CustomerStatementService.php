@@ -4,7 +4,6 @@ namespace App\Services\Finance;
 
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\Payment;
 use Illuminate\Support\Collection;
 
 class CustomerStatementService
@@ -15,8 +14,8 @@ class CustomerStatementService
     public function getStatement(Customer $customer, $startDate = null, $endDate = null): Collection
     {
         $invoices = $customer->invoices()
-            ->when($startDate, fn($q) => $q->where('invoice_date', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->where('invoice_date', '<=', $endDate))
+            ->when($startDate, fn ($q) => $q->where('invoice_date', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('invoice_date', '<=', $endDate))
             ->get()
             ->map(function ($inv) {
                 return [
@@ -29,8 +28,8 @@ class CustomerStatementService
             });
 
         $payments = $customer->payments()
-            ->when($startDate, fn($q) => $q->where('payment_date', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->where('payment_date', '<=', $endDate))
+            ->when($startDate, fn ($q) => $q->where('payment_date', '>=', $startDate))
+            ->when($endDate, fn ($q) => $q->where('payment_date', '<=', $endDate))
             ->get()
             ->map(function ($pay) {
                 return [

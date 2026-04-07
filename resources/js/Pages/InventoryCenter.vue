@@ -385,7 +385,7 @@ const listboxPt = {
     listContainer: { class: '!max-h-none flex-1 overflow-y-auto custom-scrollbar' },
     item: (options) => ({
         class: [
-            '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
+            '!p-2.5 !mb-1 !rounded-xl !transition-all !duration-300 !border',
             options.context.selected 
                 ? '!bg-emerald-500/10 !border-emerald-500/20 !text-white shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
                 : '!bg-transparent !border-transparent !text-zinc-500 hover:!bg-zinc-800/40 hover:!text-zinc-200'
@@ -405,9 +405,9 @@ const tablePt = {
         <Head title="Inventory Center" />
         <Toast />
 
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
+        <div class="p-4 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Header Section -->
-            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
+            <div class="max-w-[1600px] w-full mx-auto mb-6 flex justify-between items-end">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em] block mb-2 font-mono">Stock Monitoring</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Inventory Center</h1>
@@ -444,10 +444,10 @@ const tablePt = {
             </div>
 
             <!-- Primary Workspace Grid -->
-            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 items-start flex-1 min-h-0">
+            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-4 items-start flex-1 min-h-0">
                 
-                <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-[140px] lg:h-[calc(100vh-160px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/60">
+                <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-[100px] lg:h-[calc(100vh-120px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                    <div class="p-4 border-b border-zinc-800 bg-zinc-900/60">
                         <div class="flex items-center gap-3 mb-5">
                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
                             <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Product List</span>
@@ -493,16 +493,16 @@ const tablePt = {
                 </aside>
 
                 <!-- Right Sector: Product History & Insights -->
-                <main class="col-span-12 lg:col-span-9 flex flex-col gap-8 min-h-0">
+                <main class="col-span-12 lg:col-span-9 flex flex-col gap-4 min-h-0">
                     
                     <!-- Top Section: Product Details -->
-                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
+                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
                         <!-- Background Accent -->
                         <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -mr-32 -mt-32 rounded-full transition-opacity group-hover:opacity-100 opacity-50"></div>
                         
                         <template v-if="selectedProduct">
                             <div class="relative z-10 flex flex-col">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-10 border-b border-zinc-800/60">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6 pb-6 border-b border-zinc-800/60">
                                     <div class="flex flex-col flex-1">
                                         <div class="flex items-center gap-4 mb-3">
                                             <h1 class="text-3xl font-bold text-white tracking-tighter m-0">{{ selectedProduct.name }}</h1>
@@ -519,7 +519,7 @@ const tablePt = {
                                     </div>
 
                                     <!-- Stock Status Summary -->
-                                    <div class="p-6 bg-zinc-950/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center min-w-[200px] shadow-lg"
+                                    <div class="p-4 bg-zinc-950/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center min-w-[180px] shadow-lg"
                                          :class="[
                                              selectedProduct.total_qoh === 0 ? 'ring-1 ring-red-500/20' : 
                                              selectedProduct.total_qoh < selectedProduct.reorder_point ? 'ring-1 ring-amber-500/20' : 
@@ -546,7 +546,7 @@ const tablePt = {
                                     </div>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-8 gap-y-8">
+                                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Internal ID</label>
                                         <code class="text-sky-400 font-mono text-sm tracking-widest bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
@@ -578,7 +578,7 @@ const tablePt = {
                                 </div>
 
                                 <!-- Quick Actions Toolbar -->
-                                <div class="mt-10 pt-8 border-t border-zinc-900 flex items-center gap-8 animate-in fade-in slide-in-from-left-4 duration-1000">
+                                <div class="mt-6 pt-6 border-t border-zinc-900 flex items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-1000">
                                     <div class="flex flex-col">
                                         <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
                                         <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">Post Movement</span>
@@ -616,7 +616,7 @@ const tablePt = {
                     </section>
 
                     <!-- Intelligence Grid: Location Breakdown & Cost Layers -->
-                    <div v-if="selectedProduct" class="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                    <div v-if="selectedProduct" class="grid grid-cols-12 gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700">
                         <!-- Location Distribution Sector -->
                         <aside class="col-span-12 lg:col-span-5 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col min-h-0">
                             <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
@@ -626,17 +626,16 @@ const tablePt = {
                                 </div>
                                 <span class="text-[9px] font-bold text-emerald-500 font-mono tracking-tighter uppercase">Available in these areas</span>
                             </div>
-                            <div class="p-6 flex-1">
-                                <template v-if="locationBreakdown.length > 0">
-                                    <div class="space-y-3">
-                                        <div v-for="loc in locationBreakdown" :key="loc.id" class="flex items-center justify-between p-4 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
+                            <div class="p-4 flex-1">
+                                <template v-if="locationBreakdown.length > 0 && locationBreakdown.some(l => l.quantity_on_hand > 0)">
+                                    <div class="space-y-2">
+                                        <div v-for="loc in locationBreakdown.filter(l => l.quantity_on_hand > 0)" :key="loc.id" class="flex items-center justify-between p-3 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
                                             <div class="flex flex-col">
-                                                <span class="text-white font-bold text-xs tracking-tight uppercase">{{ loc.location_name }}</span>
+                                                <span class="text-white font-bold text-[11px] tracking-tight uppercase">{{ loc.location_name }}</span>
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
-                                            <div class="flex flex-col items-end">
-                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
-                                                <span class="text-[9px] font-bold text-zinc-700 font-mono tracking-[0.2em] uppercase">Items at this area</span>
+                                            <div class="flex items-end gap-3">
+                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -722,7 +721,7 @@ const tablePt = {
 
                     <!-- Bottom Section: Transactional Ledger -->
                     <section class="flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm">
-                        <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
+                        <div class="px-5 py-4 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
                                 <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History</span>
@@ -731,7 +730,7 @@ const tablePt = {
                         </div>
 
                         <!-- Filter Bar -->
-                        <div class="px-8 py-4 border-b border-zinc-800/40 bg-zinc-900/40 flex flex-wrap items-end gap-4">
+                        <div class="px-5 py-3 border-b border-zinc-800/40 bg-zinc-900/40 flex flex-wrap items-end gap-3">
                             <div class="flex flex-col gap-1">
                                 <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">From</span>
                                 <input

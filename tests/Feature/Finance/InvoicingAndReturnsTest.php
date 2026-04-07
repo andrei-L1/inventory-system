@@ -5,14 +5,13 @@ namespace Tests\Feature\Finance;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
+use App\Models\Inventory;
 use App\Models\Invoice;
 use App\Models\Location;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SalesOrder;
-use App\Models\SalesOrderLine;
 use App\Models\SalesOrderStatus;
-use App\Models\Transaction;
-use App\Models\TransactionStatus;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -96,7 +95,7 @@ class InvoicingAndReturnsTest extends TestCase
         $this->assertEquals(4, (float) $soLine->returned_qty);
 
         // 5. Verify Stock increased (Inventory QOH)
-        $inventory = \App\Models\Inventory::where('product_id', $product->id)
+        $inventory = Inventory::where('product_id', $product->id)
             ->where('location_id', $location->id)
             ->first();
         $this->assertEquals(4, (float) $inventory->quantity_on_hand);
@@ -136,8 +135,8 @@ class InvoicingAndReturnsTest extends TestCase
         $response->assertStatus(422);
         // Flexible check for message content
         $response->assertJsonPath('message', function ($message) {
-            return str_contains($message, 'Credit Limit Exceeded') && 
-                   str_contains($message, '500') && 
+            return str_contains($message, 'Credit Limit Exceeded') &&
+                   str_contains($message, '500') &&
                    str_contains($message, '1000');
         });
     }
@@ -202,7 +201,7 @@ class InvoicingAndReturnsTest extends TestCase
         Sanctum::actingAs($admin, ['*']);
 
         $customer = Customer::create(['name' => 'Payer', 'customer_code' => 'PAYER1']);
-        
+
         // 1. Create Posted Invoice
         $invoice = Invoice::create([
             'invoice_number' => 'INV-PAY-1',
@@ -241,7 +240,7 @@ class InvoicingAndReturnsTest extends TestCase
         $this->assertEquals('PAID', $invoice->status);
 
         // 5. Verify Payment balance
-        $payment = \App\Models\Payment::findOrFail($paymentId);
+        $payment = Payment::findOrFail($paymentId);
         $this->assertEquals(200, (float) $payment->unallocated_amount);
     }
 }

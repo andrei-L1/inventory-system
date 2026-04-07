@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Sales;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Invoice;
-use App\Models\InvoiceLine;
 use App\Models\SalesOrder;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
@@ -18,7 +17,7 @@ class SalesOrderReturnController extends Controller
 {
     /**
      * Post a Sales Return (RMA).
-     * 
+     *
      * Logic:
      * 1. Validate returns don't exceed shipped qty.
      * 2. Create SRET transaction (Receipt) to increase stock.
@@ -49,7 +48,7 @@ class SalesOrderReturnController extends Controller
                         'customer_id' => $salesOrder->customer_id,
                         'sales_order_id' => $salesOrder->id,
                         'reference_doc' => $salesOrder->so_number,
-                        'notes' => 'Return for SO: '.$salesOrder->so_number . '. ' . ($request->notes ?? ''),
+                        'notes' => 'Return for SO: '.$salesOrder->so_number.'. '.($request->notes ?? ''),
                         'created_by' => $request->user()->id,
                         'return_reason' => $request->lines[0]['reason'] ?? null, // Primary reason
                     ],
@@ -102,7 +101,7 @@ class SalesOrderReturnController extends Controller
                     'total_amount' => collect($creditNoteLines)->sum('subtotal'),
                     'status' => Invoice::STATUS_DRAFT,
                     'type' => Invoice::TYPE_CREDIT_NOTE,
-                    'notes' => 'Generated from Return: ' . $transaction->reference_number,
+                    'notes' => 'Generated from Return: '.$transaction->reference_number,
                 ]);
 
                 foreach ($creditNoteLines as $lineData) {

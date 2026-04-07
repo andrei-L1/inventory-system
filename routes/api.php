@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Finance\InvoiceController;
+use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentReasonController;
 use App\Http\Controllers\Api\Inventory\CategoryController;
@@ -15,10 +17,9 @@ use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
-use App\Http\Controllers\Api\Finance\InvoiceController;
-use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
+use App\Http\Controllers\Api\Sales\SalesOrderReturnController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -129,7 +130,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('sales-orders/{salesOrder}/pick', [SalesOrderController::class, 'pick'])->middleware('permission:manage-sales-orders');
     Route::patch('sales-orders/{salesOrder}/pack', [SalesOrderController::class, 'pack'])->middleware('permission:manage-sales-orders');
     Route::post('sales-orders/{salesOrder}/ship', [SalesOrderController::class, 'ship'])->middleware('permission:manage-sales-orders');
-    Route::post('sales-orders/{salesOrder}/return', [\App\Http\Controllers\Api\Sales\SalesOrderReturnController::class, 'store'])->middleware('permission:manage-sales-orders');
+    Route::post('sales-orders/{salesOrder}/return', [SalesOrderReturnController::class, 'store'])->middleware('permission:manage-sales-orders');
     Route::patch('sales-orders/{salesOrder}/cancel', [SalesOrderController::class, 'cancel'])->middleware('permission:manage-sales-orders');
 
     // -----------------------------------------------------------------------

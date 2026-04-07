@@ -177,7 +177,7 @@ class SalesOrderController extends Controller
             if ($customer->credit_limit > 0) {
                 $exposure = $customer->exposure;
                 $newTotal = $exposure + (float) $so->total_amount;
-                
+
                 if ($newTotal > ($customer->credit_limit + 0.01)) {
                     abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
                 }
@@ -232,11 +232,10 @@ class SalesOrderController extends Controller
                 $line = $so->lines()->findOrFail($item['so_line_id']);
                 $newPicked = (float) $item['picked_qty'];
 
-                // Epsilon-aware rounding check for discrete units
-                // Threshold matches the 8-decimal DB standard (1e-8)
-                if (abs($newPicked - round($newPicked)) > 0.00000001) {
-                    // Logic to check if product is discrete could go here,
-                    // for now we just round to nearest if very close
+                // Enforce cap: cannot pick more than ordered
+                $remainingToPick = (float) $line->ordered_qty - (float) $line->picked_qty;
+                if ($newPicked > ($remainingToPick + 0.00000001)) {
+                    abort(422, "Cannot pick more than ordered for product: {$line->product->name}. Remaining to pick: {$remainingToPick}");
                 }
 
                 $line->picked_qty += $newPicked;
@@ -284,8 +283,10 @@ class SalesOrderController extends Controller
                 $line = $so->lines()->findOrFail($item['so_line_id']);
                 $newPacked = (float) $item['packed_qty'];
 
-                if ($line->packed_qty + $newPacked > $line->picked_qty) {
-                    abort(422, "Cannot pack more than what was picked for product: {$line->product->name}");
+                // Enforce cap: cannot pack more than picked
+                $remainingToPack = (float) $line->picked_qty - (float) $line->packed_qty;
+                if ($newPacked > ($remainingToPack + 0.00000001)) {
+                    abort(422, "Cannot pack more than picked for product: {$line->product->name}. Remaining to pack: {$remainingToPack}");
                 }
 
                 $line->packed_qty += $newPacked;
@@ -359,15 +360,9 @@ class SalesOrderController extends Controller
                     $shippedQtyRaw = (float) $item['shipped_qty'];
                     $product = $soLine->product;
 
-                    // Epsilon math for Piece fulfillment
-                    // Threshold matches the 8-decimal DB standard (1e-8)
-                    if (abs($shippedQtyRaw - round($shippedQtyRaw)) < 0.00000001) {
-                        $shippedQtyRaw = (float) round($shippedQtyRaw);
-                    }
-
-                    if ($soLine->shipped_qty + $shippedQtyRaw > $soLine->packed_qty) {
-                        // Allow skipping PACK stage if system config allowed, but for now we enforce
-                        // abort(422, "Cannot ship more than what was packed for line: {$product->name}");
+                    if ($shippedQtyRaw > ($soLine->packed_qty - $soLine->shipped_qty + 0.00000001)) {
+                        $remaining = $soLine->packed_qty - $soLine->shipped_qty;
+                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remaining}");
                     }
 
                     // Convert to base UOM
@@ -436,19 +431,29 @@ class SalesOrderController extends Controller
                 abort(400, "Cannot cancel sales order in {$so->status->name} status.");
             }
 
-            // If confirmed/picked/packed, release reservations
-            if (in_array($so->status->name, [SalesOrderStatus::CONFIRMED, SalesOrderStatus::PICKED, SalesOrderStatus::PACKED])) {
+            // If confirmed/picked/packed or partially fulfilled, release remaining reservations
+            $reservableStatuses = [
+                SalesOrderStatus::CONFIRMED,
+                SalesOrderStatus::PICKED,
+                SalesOrderStatus::PARTIALLY_PICKED,
+                SalesOrderStatus::PACKED,
+                SalesOrderStatus::PARTIALLY_PACKED,
+                SalesOrderStatus::PARTIALLY_SHIPPED,
+            ];
+
+            if (in_array($so->status->name, $reservableStatuses)) {
                 foreach ($so->lines as $line) {
                     $product = $line->product;
                     $location = $line->location;
 
-                    $baseQty = (float) $line->ordered_qty;
-                    if ($line->uom_id !== $product->uom_id) {
-                        $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
-                        $baseQty = round($baseQty * $factor, 8);
+                    $baseQty = (float) $line->ordered_qty - (float) $line->shipped_qty;
+                    if ($baseQty > 0.00000001) {
+                        if ($line->uom_id !== $product->uom_id) {
+                            $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
+                            $baseQty = round($baseQty * $factor, 8);
+                        }
+                        $stockService->releaseReservation($product, $location, $baseQty);
                     }
-
-                    $stockService->releaseReservation($product, $location, $baseQty);
                 }
             }
 

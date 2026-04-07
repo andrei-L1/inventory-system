@@ -14,6 +14,7 @@ use App\Models\TransactionStatus;
 use App\Models\Vendor;
 use App\Services\Inventory\StockService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -163,7 +164,7 @@ class TransactionController extends Controller
     // Transaction history for a specific product (Inventory Center ledger).
     // Supports: ?date_from=YYYY-MM-DD &date_to=YYYY-MM-DD &type=receipt|issue|transfer|adjustment &page=1 &per_page=25
     // -------------------------------------------------------------------------
-    public function forProduct(Product $product, \Illuminate\Http\Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function forProduct(Product $product, Request $request): AnonymousResourceCollection
     {
         $query = Transaction::whereHas('lines', function ($q) use ($product) {
             $q->where('product_id', $product->id);
