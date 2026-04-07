@@ -60,27 +60,42 @@ const form = ref({
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null }
+        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null, inventories: [] }
     ]
 });
 
-const checkStock = async (line) => {
-    if (!line.product_id || !line.location_id) {
+const fetchProductInventory = async (line) => {
+    if (!line.product_id) {
+        line.inventories = [];
         line.stock = null;
         return;
     }
     try {
-        const res = await axios.get(`/api/inventory/stock-check`, {
-            params: {
-                product_id: line.product_id,
-                location_id: line.location_id,
-                uom_id: line.uom_id
-            }
-        });
-        line.stock = res.data;
+        const [invRes, stockRes] = await Promise.all([
+            axios.get(`/api/inventory/${line.product_id}/locations`),
+            line.location_id ? axios.get('/api/inventory/stock-check', {
+                params: { product_id: line.product_id, location_id: line.location_id, uom_id: line.uom_id }
+            }) : Promise.resolve(null)
+        ]);
+        line.inventories = invRes.data.data;
+        line.stock = stockRes ? stockRes.data : null;
     } catch (e) {
-        console.error("Stock check failed:", e);
+        console.error('Failed to fetch inventory data', e);
     }
+};
+
+const checkStock = async (line) => {
+    await fetchProductInventory(line);
+};
+
+const getLocalStock = (line) => {
+    if (!line.inventories?.length || !line.location_id) return 0;
+    const inv = line.inventories.find(i => i.location_id === line.location_id);
+    return inv ? inv.quantity_on_hand : 0;
+};
+
+const getLocationName = (id) => {
+    return locations.value.find(l => l.id === id)?.name || '';
 };
 
 const loadLookups = async () => {
@@ -110,6 +125,7 @@ const onProductSelect = (line) => {
         if (!line.unit_price || line.unit_price == 0) {
             line.unit_price = product.selling_price || 0;
         }
+        fetchProductInventory(line);
     }
 };
 
@@ -167,7 +183,7 @@ onMounted(async () => {
 });
 
 const addLine = () => {
-    form.value.lines.push({ product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null });
+    form.value.lines.push({ product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null, inventories: [] });
 };
 
 const removeLine = (index) => {
@@ -325,6 +341,7 @@ const cancel = () => {
                             </span>
                         </div>
                         
+
                         <div class="flex flex-col gap-4">
                             <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/30 border border-zinc-800/50 rounded-xl flex flex-col gap-4 relative group transition-all hover:border-zinc-700 hover:shadow-lg hover:bg-zinc-950/50">
                                 <div class="grid grid-cols-12 gap-4 items-end">
@@ -379,21 +396,14 @@ const cancel = () => {
                                     </div>
 
                                     <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <div class="flex justify-between items-center">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
-                                            <div v-if="line.stock" class="flex items-center">
-                                                <span :class="line.stock.available_qty < line.ordered_qty ? 'text-red-400' : 'text-emerald-400'" class="text-[8px] font-black font-mono tracking-tighter uppercase">
-                                                    {{ line.stock.available_qty }}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
                                         <InputNumber 
                                             v-model="line.ordered_qty" 
                                             :min="0.01" 
                                             :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
-                                            inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50 outline-none" 
+                                            :inputClass="'w-full bg-zinc-950 border text-center text-white p-2 rounded-lg outline-none ' + (line.product_id && line.location_id && getLocalStock(line) < line.ordered_qty ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-800 focus:border-teal-500/50')"
                                         />
-                                        <div v-if="line.stock && line.stock.available_qty < line.ordered_qty" class="text-[7px] text-red-500 font-bold uppercase tracking-tighter text-right animate-pulse">Shortage!</div>
+                                        <div v-if="line.product_id && line.location_id && getLocalStock(line) < line.ordered_qty" class="text-[7px] text-red-500 font-bold uppercase tracking-tighter text-right animate-pulse">Shortage!</div>
                                     </div>
 
                                     <div class="col-span-6 md:col-span-1 flex items-center justify-end">
@@ -422,6 +432,47 @@ const cancel = () => {
                                     <div class="col-span-12 md:col-span-3 flex flex-col gap-2 items-end">
                                         <label class="text-[9px] font-bold text-teal-500/70 tracking-[0.2em] font-mono uppercase">Subtotal</label>
                                         <span class="text-sm font-mono font-bold text-white pr-2">₱{{ lineSubtotal(line).toFixed(2) }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Enhanced location breakdown for better readability -->
+                                <div v-if="line.product_id" class="rounded-xl border border-zinc-800 bg-zinc-900/20 overflow-hidden mt-2">
+                                    <div class="flex items-center justify-between px-4 py-2.5 bg-zinc-900/40 border-b border-zinc-800">
+                                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-[0.2em] font-mono">Location Breakdown</span>
+                                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono whitespace-nowrap ml-4">Qty on Hand</span>
+                                    </div>
+                                    <div v-if="line.inventories && line.inventories.length" class="divide-y divide-zinc-800/50">
+                                        <div 
+                                            v-for="inv in line.inventories" 
+                                            :key="inv.id" 
+                                            class="flex items-center justify-between px-4 py-2.5 transition-colors"
+                                            :class="inv.location_id === line.location_id ? 'bg-teal-500/10' : 'hover:bg-white/[0.02]'"
+                                        >
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-1.5 h-1.5 rounded-full" :class="inv.location_id === line.location_id ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.4)]' : 'bg-zinc-700'"></div>
+                                                <span 
+                                                    class="text-xs font-bold uppercase tracking-wide font-mono"
+                                                    :class="inv.location_id === line.location_id ? 'text-teal-100' : 'text-zinc-400'"
+                                                >{{ inv.location_name }}</span>
+                                            </div>
+                                            <span 
+                                                class="text-xs font-black font-mono"
+                                                :class="inv.location_id === line.location_id ? 'text-teal-400' : 'text-zinc-200'"
+                                            >{{ Number(inv.quantity_on_hand).toFixed(2) }}</span>
+                                        </div>
+                                    </div>
+                                    <div v-else class="px-4 py-6 text-center text-xs text-zinc-600 italic font-mono bg-zinc-950/20">
+                                        <i class="pi pi-exclamation-triangle block mb-2 text-zinc-800 text-lg"></i>
+                                        No stock records found for this product
+                                    </div>
+                                    <div class="flex items-center justify-between px-4 py-3 bg-zinc-900/60 border-t border-zinc-800">
+                                        <div class="flex items-center gap-2">
+                                            <i class="pi pi-globe text-zinc-600 text-[10px]"></i>
+                                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.15em] font-mono">Total Global Stock</span>
+                                        </div>
+                                        <span class="text-xs font-black text-white font-mono px-3 py-1 bg-zinc-800 rounded-lg border border-zinc-700/50 shadow-inner">
+                                            {{ (line.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0).toFixed(2) }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

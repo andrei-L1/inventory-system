@@ -77,36 +77,7 @@
                     </aside>
 
                     <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                        <!-- Scattered Stock Breakdown Popover -->
-                        <Popover ref="stockOp" class="!bg-zinc-900 !border-zinc-800 !shadow-2xl">
-                            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
-                                <div class="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2 flex justify-between">
-                                    <span>Location Breakdown</span>
-                                    <span>{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
-                                </div>
-                                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                    <div v-for="inv in selectedLineForStock.inventories" :key="inv.id" class="flex justify-between items-center text-[10px]">
-                                        <span class="text-zinc-400 truncate pr-2 uppercase font-bold" :class="{'text-rose-400': inv.location_id === form.from_location?.id}">
-                                            {{ inv.location_name }}
-                                        </span>
-                                        <span class="font-mono text-zinc-200">
-                                            {{ getScaledQty(selectedLineForStock, inv.quantity_on_hand) }}
-                                        </span>
-                                    </div>
-                                    <div v-if="!selectedLineForStock.inventories?.length" class="text-center py-2 text-zinc-600 text-[10px] italic">
-                                        No stock available in any location
-                                    </div>
-                                </div>
-                                <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono">
-                                    <span class="text-[9px] font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
-                                    <span class="text-[10px] font-black text-white px-2 py-0.5 bg-zinc-800 rounded">
-                                        {{ getScaledQty(selectedLineForStock, selectedLineForStock.product?.total_qoh) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </Popover>
-
-                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
+                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Items to Issue</span>
@@ -117,105 +88,103 @@
                             </button>
                         </div>
 
-                        <div class="flex-1 overflow-y-auto custom-scrollbar">
-                            <DataTable :value="form.lines" class="issue-grid border-none" :pt="{
-                                header: { class: 'hidden' },
-                                bodyrow: { class: 'hover:!bg-white/[0.02] border-b border-zinc-800/50 transition-all duration-200' }
-                            }">
-                                <Column field="product" header="PRODUCT" class="!py-6 !px-8">
-                                    <template #body="{ index }">
-                                        <div class="flex flex-col gap-2 min-w-[300px]">
+                        <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                            <div class="flex flex-col gap-4">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-6 bg-zinc-950/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-5 relative group transition-all hover:border-zinc-700/50 hover:shadow-2xl hover:bg-zinc-950/60">
+                                    <div class="grid grid-cols-12 gap-5 items-end">
+                                        <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product</label>
                                             <Select 
-                                                v-model="form.lines[index].product" 
+                                                v-model="line.product" 
                                                 :options="products" 
                                                 optionLabel="name" 
                                                 placeholder="Search products..." 
                                                 filter 
-                                                @change="onProductSelect(form.lines[index])"
-                                                class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                                @change="onProductSelect(line)"
+                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-rose-500/50"
                                             />
                                         </div>
-                                    </template>
-                                </Column>
 
-                                <Column field="uom" header="UNIT" class="!py-6 !px-4">
-                                     <template #body="{ index }">
-                                         <Select 
-                                             v-model="form.lines[index].uom_id" 
-                                             :options="uoms" 
-                                             optionLabel="abbreviation" 
-                                             optionValue="id"
-                                             placeholder="UOM" 
-                                             class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
-                                         />
-                                     </template>
-                                 </Column>
-
-                                 <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
-                                     <template #body="{ index, data }">
-                                         <div class="flex flex-col gap-1">
-                                            <InputNumber 
-                                                v-model="form.lines[index].quantity" 
-                                                :min="0"
-                                                :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
-                                                placeholder="0" 
-                                                class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                                :inputStyle="{ 
-                                                    background: '#09090b', 
-                                                    border: '1px solid ' + (isInsufficient(data) ? '#f43f5e' : '#27272a'), 
-                                                    textAlign: 'center', 
-                                                    color: isInsufficient(data) ? '#f43f5e' : 'white', 
-                                                    width: '100%', 
-                                                    borderRadius: '0.75rem', 
-                                                    height: '3rem' 
-                                                }"
+                                        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
+                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit</label>
+                                            <Select 
+                                                v-model="line.uom_id" 
+                                                :options="uoms" 
+                                                optionLabel="abbreviation" 
+                                                optionValue="id"
+                                                placeholder="UOM" 
+                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-rose-500/50"
                                             />
-                                            <div v-if="isInsufficient(data)" class="text-[8px] text-rose-500 font-bold uppercase text-center animate-pulse">
-                                                Exceeds local stock
-                                            </div>
-                                         </div>
-                                     </template>
-                                 </Column>
+                                        </div>
 
-                                <Column header="AVAILABILITY" class="!py-6 !px-8 text-right">
-                                    <template #body="{ index, data }">
-                                        <div class="flex items-center justify-end gap-5 font-mono">
-                                            <div class="flex flex-col items-end gap-1">
-                                                <span class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest">Active Stock</span>
-                                                <div class="flex items-center gap-2">
-                                                    <span 
-                                                        class="text-xs font-bold transition-colors"
-                                                        :class="getLocalStock(data) > 0 ? 'text-white' : 'text-zinc-600'"
-                                                    >
-                                                        {{ getScaledQty(data, getLocalStock(data)) }}
-                                                        <span class="text-[10px] text-zinc-600 font-medium ml-1">{{ getUomAbbr(data.uom_id) }}</span>
-                                                    </span>
-                                                    
-                                                    <button 
-                                                        v-if="data.product"
-                                                        @click="toggleStockInfo($event, data)"
-                                                        class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-rose-500/20 text-zinc-600 hover:text-rose-400 transition-all border border-zinc-800"
-                                                        title="View all locations"
-                                                    >
-                                                        <i class="pi pi-info-circle text-[10px]" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="w-px h-8 bg-zinc-800 mx-2"></div>
-                                            <button @click="removeLine(index)" class="w-10 h-10 rounded-xl hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20">
-                                                <i class="pi pi-trash text-[11px]" />
+                                        <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
+                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty to Issue</label>
+                                            <InputNumber 
+                                                v-model="line.quantity" 
+                                                :min="0" 
+                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
+                                                :inputClass="'w-full bg-zinc-950 border text-center text-white p-2 rounded-lg outline-none ' + (isInsufficient(line) ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-800 focus:border-rose-500/50')"
+                                            />
+                                        </div>
+
+                                        <div class="col-span-12 md:col-span-1 flex items-center justify-end">
+                                            <button 
+                                                @click="removeLine(index)" 
+                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500/40 hover:text-red-400 hover:bg-red-500/20 transition-all border border-red-500/0 hover:border-red-500/20"
+                                                title="Remove Line"
+                                            >
+                                                <i class="pi pi-trash text-xs" />
                                             </button>
                                         </div>
-                                    </template>
-                                </Column>
-
-                                <template #empty>
-                                    <div class="py-32 flex flex-col items-center justify-center opacity-10 filter grayscale">
-                                        <i class="pi pi-truck text-5xl mb-4" />
-                                        <p class="text-[9px] font-black uppercase tracking-[0.4em] font-mono">No items added to issue</p>
                                     </div>
-                                </template>
-                            </DataTable>
+
+                                    <!-- Always-visible location breakdown -->
+                                    <div v-if="line.product" class="rounded-xl border border-zinc-800 bg-zinc-900/20 overflow-hidden">
+                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/40 border-b border-zinc-800">
+                                            <span class="text-[9px] font-bold text-rose-400 uppercase tracking-[0.2em] font-mono">Location Availability</span>
+                                            <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono whitespace-nowrap ml-4">Qty on Hand</span>
+                                        </div>
+                                        <div v-if="line.inventories && line.inventories.length" class="divide-y divide-zinc-800/40 max-h-48 overflow-y-auto custom-scrollbar">
+                                            <div 
+                                                v-for="inv in line.inventories" 
+                                                :key="inv.id" 
+                                                class="flex items-center justify-between px-4 py-2 transition-colors"
+                                                :class="inv.location_id === form.from_location?.id ? 'bg-rose-500/10' : 'hover:bg-white/[0.01]'"
+                                            >
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-1 h-1 rounded-full" :class="inv.location_id === form.from_location?.id ? 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'bg-zinc-700'"></div>
+                                                    <span 
+                                                        class="text-[11px] font-bold uppercase tracking-wide font-mono"
+                                                        :class="inv.location_id === form.from_location?.id ? 'text-rose-300' : 'text-zinc-500'"
+                                                    >{{ inv.location_name }}</span>
+                                                </div>
+                                                <span 
+                                                    class="text-[11px] font-black font-mono"
+                                                    :class="inv.location_id === form.from_location?.id ? 'text-rose-400' : 'text-zinc-500'"
+                                                >{{ getScaledQty(line, inv.quantity_on_hand) }}</span>
+                                            </div>
+                                        </div>
+                                        <div v-else class="px-4 py-4 text-center text-[10px] text-zinc-600 italic font-mono bg-zinc-950/10">
+                                            No stock records found for this product
+                                        </div>
+                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/60 border-t border-zinc-800">
+                                            <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono italic">Total Global Stock</span>
+                                            <span class="text-[10px] font-black text-white font-mono px-2 py-0.5 bg-zinc-800 rounded border border-zinc-700/50 shadow-inner">
+                                                {{ getScaledQty(line, line.product?.total_qoh) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="isInsufficient(line)" class="text-[8px] text-rose-500 font-bold uppercase animate-pulse absolute top-4 right-16">
+                                        Shortage in selected location!
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="form.lines.length === 0" class="py-32 flex flex-col items-center justify-center opacity-10 filter grayscale">
+                                <i class="pi pi-truck text-5xl mb-4" />
+                                <p class="text-[9px] font-black uppercase tracking-[0.4em] font-mono">No items added to issue</p>
+                            </div>
                         </div>
                     </main>
                 </div>
@@ -229,12 +198,9 @@ import { ref, computed, onMounted } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Popover from 'primevue/popover';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 
@@ -294,8 +260,9 @@ const loadData = async () => {
         if (productId && products.value.length > 0) {
             const preselected = products.value.find(p => p.id == productId);
             if (preselected) {
-                const line = { product: preselected, uom_id: preselected.uom_id, quantity: 1 };
+                const line = { product: preselected, uom_id: preselected.uom_id, quantity: 1, inventories: [] };
                 form.lines.push(line);
+                fetchProductInventory(line);
             }
         }
     } catch (e) {
@@ -322,7 +289,6 @@ const submitForm = async () => {
     isSubmitting.value = true;
     
     // Frontend validation for real-time stock checks
-    // We need to check stock in BASE UNITS
     for (const line of form.lines) {
         if (!line.product) continue;
         
@@ -386,9 +352,6 @@ const onProductSelect = (line) => {
     }
 };
 
-const stockOp = ref(null);
-const selectedLineForStock = ref(null);
-
 const fetchProductInventory = async (line) => {
     if (!line.product) return;
     try {
@@ -397,11 +360,6 @@ const fetchProductInventory = async (line) => {
     } catch (e) {
         console.error('Failed to fetch inventories', e);
     }
-};
-
-const toggleStockInfo = (event, line) => {
-    selectedLineForStock.value = line;
-    stockOp.value.toggle(event);
 };
 
 const getScaledQty = (line, rawPieces) => {
@@ -446,19 +404,3 @@ const removeLine = (index) => {
 
 const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
 </script>
-
-<style scoped>
-.issue-grid :deep(.p-datatable-thead) {
-    display: table-header-group !important;
-}
-.issue-grid :deep(.p-datatable-thead > tr > th) {
-    background: rgba(24, 24, 27, 0.4) !important;
-    border-color: rgba(39, 39, 42, 0.5) !important;
-    color: rgba(113, 113, 122, 1) !important;
-    font-size: 8px !important;
-    text-transform: uppercase !important;
-    font-weight: 900 !important;
-    letter-spacing: 0.3em !important;
-    padding: 1rem 2rem !important;
-}
-</style>
