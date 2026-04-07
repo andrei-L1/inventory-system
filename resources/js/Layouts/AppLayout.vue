@@ -186,6 +186,7 @@ const navSections = [
     {
         label: 'System',
         items: [
+            { label: 'Categories', href: '/category-center', icon: 'pi pi-tags', color: 'text-orange-400' },
             { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
         ]
     }

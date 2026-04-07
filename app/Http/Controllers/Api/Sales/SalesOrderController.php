@@ -172,6 +172,17 @@ class SalesOrderController extends Controller
                 abort(400, 'Only draft sales orders can be approved.');
             }
 
+            // CREDIT LIMIT ENFORCEMENT
+            $customer = $so->customer;
+            if ($customer->credit_limit > 0) {
+                $exposure = $customer->exposure;
+                $newTotal = $exposure + (float) $so->total_amount;
+
+                if ($newTotal > ($customer->credit_limit + 0.01)) {
+                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
+                }
+            }
+
             $confirmedStatus = SalesOrderStatus::where('name', SalesOrderStatus::CONFIRMED)->firstOrFail();
 
             // RESERVE STOCK
@@ -180,10 +191,11 @@ class SalesOrderController extends Controller
                 $location = $line->location;
 
                 // Convert ordered qty to base UOM for reservation
-                $baseQty = $line->ordered_qty;
+                // round(..., 8) prevents floating-point dust from UOM chain multiplication
+                $baseQty = (float) $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
                     $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
-                    $baseQty *= $factor;
+                    $baseQty = round($baseQty * $factor, 8);
                 }
 
                 $stockService->reserveStock($product, $location, $baseQty);
@@ -220,10 +232,10 @@ class SalesOrderController extends Controller
                 $line = $so->lines()->findOrFail($item['so_line_id']);
                 $newPicked = (float) $item['picked_qty'];
 
-                // Epsilon-aware rounding check for discrete units
-                if (abs($newPicked - round($newPicked)) > 0.000001) {
-                    // Logic to check if product is discrete could go here,
-                    // for now we just round to nearest if very close
+                // Enforce cap: cannot pick more than ordered
+                $remainingToPick = (float) $line->ordered_qty - (float) $line->picked_qty;
+                if ($newPicked > ($remainingToPick + 0.00000001)) {
+                    abort(422, "Cannot pick more than ordered for product: {$line->product->name}. Remaining to pick: {$remainingToPick}");
                 }
 
                 $line->picked_qty += $newPicked;
@@ -271,8 +283,10 @@ class SalesOrderController extends Controller
                 $line = $so->lines()->findOrFail($item['so_line_id']);
                 $newPacked = (float) $item['packed_qty'];
 
-                if ($line->packed_qty + $newPacked > $line->picked_qty) {
-                    abort(422, "Cannot pack more than what was picked for product: {$line->product->name}");
+                // Enforce cap: cannot pack more than picked
+                $remainingToPack = (float) $line->picked_qty - (float) $line->packed_qty;
+                if ($newPacked > ($remainingToPack + 0.00000001)) {
+                    abort(422, "Cannot pack more than picked for product: {$line->product->name}. Remaining to pack: {$remainingToPack}");
                 }
 
                 $line->packed_qty += $newPacked;
@@ -304,11 +318,14 @@ class SalesOrderController extends Controller
     public function ship(Request $request, SalesOrder $salesOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'lines' => 'required|array',
+            'lines' => 'required|array|min:1',
             'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
             'lines.*.shipped_qty' => 'required|numeric|min:0.0001',
-            'carrier' => 'nullable|string|max:100',
+            'carrier' => 'required|string|max:100',
             'tracking_number' => 'nullable|string|max:100',
+        ], [
+            'lines.min' => 'Please select at least one item to ship.',
+            'carrier.required' => 'A carrier service is required for fulfillment.',
         ]);
 
         if (! $salesOrder->canBeShipped()) {
@@ -336,22 +353,16 @@ class SalesOrderController extends Controller
                     'lines' => [],
                 ];
 
-                $soLines = $salesOrder->lines()->lockForUpdate()->get()->keyBy('id');
-                $allShipped = true;
+                $soLines = $salesOrder->lines()->with(['product', 'location'])->lockForUpdate()->get()->keyBy('id');
 
                 foreach ($request->lines as $item) {
                     $soLine = $soLines->get($item['so_line_id']);
                     $shippedQtyRaw = (float) $item['shipped_qty'];
                     $product = $soLine->product;
 
-                    // Epsilon math for Piece fulfillment
-                    if (abs($shippedQtyRaw - round($shippedQtyRaw)) < 0.000001) {
-                        $shippedQtyRaw = (float) round($shippedQtyRaw);
-                    }
-
-                    if ($soLine->shipped_qty + $shippedQtyRaw > $soLine->packed_qty) {
-                        // Allow skipping PACK stage if system config allowed, but for now we enforce
-                        // abort(422, "Cannot ship more than what was packed for line: {$product->name}");
+                    if ($shippedQtyRaw > ($soLine->packed_qty - $soLine->shipped_qty + 0.00000001)) {
+                        $remaining = $soLine->packed_qty - $soLine->shipped_qty;
+                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remaining}");
                     }
 
                     // Convert to base UOM
@@ -359,7 +370,7 @@ class SalesOrderController extends Controller
                     if ($soLine->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id);
                     }
-                    $baseShippedQty = $shippedQtyRaw * $factor;
+                    $baseShippedQty = round($shippedQtyRaw * $factor, 8);
 
                     $stockService->releaseReservation($product, $soLine->location, $baseShippedQty);
 
@@ -374,7 +385,9 @@ class SalesOrderController extends Controller
                     $soLine->save();
                 }
 
-                // Global fulfillment check
+                // Global fulfillment check (Refresh relationship to see the saves from $soLine->save() above)
+                $salesOrder->unsetRelation('lines');
+                $allShipped = true;
                 foreach ($salesOrder->lines as $line) {
                     if ($line->shipped_qty < $line->ordered_qty) {
                         $allShipped = false;
@@ -418,19 +431,29 @@ class SalesOrderController extends Controller
                 abort(400, "Cannot cancel sales order in {$so->status->name} status.");
             }
 
-            // If confirmed/picked/packed, release reservations
-            if (in_array($so->status->name, [SalesOrderStatus::CONFIRMED, SalesOrderStatus::PICKED, SalesOrderStatus::PACKED])) {
+            // If confirmed/picked/packed or partially fulfilled, release remaining reservations
+            $reservableStatuses = [
+                SalesOrderStatus::CONFIRMED,
+                SalesOrderStatus::PICKED,
+                SalesOrderStatus::PARTIALLY_PICKED,
+                SalesOrderStatus::PACKED,
+                SalesOrderStatus::PARTIALLY_PACKED,
+                SalesOrderStatus::PARTIALLY_SHIPPED,
+            ];
+
+            if (in_array($so->status->name, $reservableStatuses)) {
                 foreach ($so->lines as $line) {
                     $product = $line->product;
                     $location = $line->location;
 
-                    $baseQty = $line->ordered_qty;
-                    if ($line->uom_id !== $product->uom_id) {
-                        $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
-                        $baseQty *= $factor;
+                    $baseQty = (float) $line->ordered_qty - (float) $line->shipped_qty;
+                    if ($baseQty > 0.00000001) {
+                        if ($line->uom_id !== $product->uom_id) {
+                            $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
+                            $baseQty = round($baseQty * $factor, 8);
+                        }
+                        $stockService->releaseReservation($product, $location, $baseQty);
                     }
-
-                    $stockService->releaseReservation($product, $location, $baseQty);
                 }
             }
 
@@ -471,12 +494,15 @@ class SalesOrderController extends Controller
         $taxRate = (float) ($data['tax_rate'] ?? 0);
         $discountRate = (float) ($data['discount_rate'] ?? 0);
 
+        // All intermediate values are kept at full float precision.
+        // Only the final result is rounded to 8 decimals to prevent drift
+        // when summing many lines into a total_amount.
         $base = $qty * $price;
         $discount = $base * ($discountRate / 100);
         $taxable = $base - $discount;
         $tax = $taxable * ($taxRate / 100);
 
-        return round($taxable + $tax, 6);
+        return round($taxable + $tax, 8);
     }
 
     private function calculateTaxAmount(array $data): float
@@ -490,7 +516,8 @@ class SalesOrderController extends Controller
         $discount = $base * ($discountRate / 100);
         $taxable = $base - $discount;
 
-        return round($taxable * ($taxRate / 100), 6);
+        // round to 8 to match the 8-decimal DB standard
+        return round($taxable * ($taxRate / 100), 8);
     }
 
     private function calculateDiscountAmount(array $data): float
@@ -499,6 +526,7 @@ class SalesOrderController extends Controller
         $price = (float) $data['unit_price'];
         $discountRate = (float) ($data['discount_rate'] ?? 0);
 
-        return round(($qty * $price) * ($discountRate / 100), 6);
+        // round to 8 to match the 8-decimal DB standard
+        return round(($qty * $price) * ($discountRate / 100), 8);
     }
 }

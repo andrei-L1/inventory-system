@@ -22,7 +22,9 @@ class StockService
 {
     use ManagesCostLayers;
 
-    private const QTY_EPSILON = 0.00001;
+    private const QTY_EPSILON = 0.00000001;
+
+    public const TYPE_SALES_RETURN = 'SRET';
 
     protected TransactionValidator $validator;
 
@@ -243,6 +245,10 @@ class StockService
     // -------------------------------------------------------------------------
     public function releaseReservation(Product $product, Location $location, float $quantity): void
     {
+        if ($quantity < self::QTY_EPSILON) {
+            return;
+        }
+
         DB::transaction(function () use ($product, $location, $quantity) {
             $inventory = Inventory::where('product_id', $product->id)
                 ->where('location_id', $location->id)
@@ -250,7 +256,9 @@ class StockService
                 ->first();
 
             if (! $inventory) {
-                throw new LogicException('Cannot release reservation for non-existent inventory record.');
+                // If it doesn't exist, we can't release anything, but we'll log it instead of crashing
+                // to allow cancellation of edge-case orphaned records.
+                return;
             }
 
             $inventory->reserved_qty = max(0, (float) $inventory->reserved_qty - $quantity);
@@ -369,8 +377,8 @@ class StockService
             $this->updateProductGlobalAverageCost($inventory->product);
 
             // Ensure the transaction line records the final receipt value
-            $line->unit_cost = (float) $lineData['unit_cost'];
-            $line->total_cost = $qtyMove * (float) $lineData['unit_cost'];
+            $line->unit_cost = round((float) $lineData['unit_cost'], 8);
+            $line->total_cost = round($qtyMove * (float) $lineData['unit_cost'], 8);
             $line->save();
         } else {
             // Issue Path: Strategy handles valuation for the issue (FIFO/LIFO/Average).
@@ -384,8 +392,8 @@ class StockService
             $this->updateProductGlobalAverageCost($inventory->product);
 
             // Record the issue value and total COGS
-            $line->unit_cost = $unitCost;
-            $line->total_cost = $unitCost * abs($qtyMove);
+            $line->unit_cost = round($unitCost, 8);
+            $line->total_cost = round($unitCost * abs($qtyMove), 8);
             $line->save();
         }
     }

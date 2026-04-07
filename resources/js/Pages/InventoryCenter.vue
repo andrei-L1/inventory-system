@@ -29,6 +29,23 @@ const loadingHistory = ref(false);
 const loadingIntelligence = ref(false);
 const search = ref('');
 
+// Transaction History Filters & Pagination
+const historyFilters = ref({
+    date_from: null,
+    date_to: null,
+    type: 'all',
+});
+const historyMeta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 25 });
+const historyCurrentPage = ref(1);
+
+const historyTypeOptions = [
+    { label: 'All Types', value: 'all' },
+    { label: 'Receipt', value: 'receipt' },
+    { label: 'Issue', value: 'issue' },
+    { label: 'Transfer', value: 'transfer' },
+    { label: 'Adjustment', value: 'adjustment' },
+];
+
 const rulesDialogVisible = ref(false);
 const reorderRules = ref([]);
 const loadingRules = ref(false);
@@ -137,17 +154,36 @@ const loadProducts = async () => {
     }
 };
 
-const loadHistory = async () => {
+const loadHistory = async (page = 1) => {
     if (!selectedProduct.value) return;
     loadingHistory.value = true;
+    historyCurrentPage.value = page;
     try {
-        const res = await axios.get(`/api/products/${selectedProduct.value.id}/transactions`);
+        const params = {
+            page,
+            per_page: historyMeta.value.per_page,
+        };
+        if (historyFilters.value.date_from) params.date_from = historyFilters.value.date_from;
+        if (historyFilters.value.date_to) params.date_to = historyFilters.value.date_to;
+        if (historyFilters.value.type && historyFilters.value.type !== 'all') params.type = historyFilters.value.type;
+
+        const res = await axios.get(`/api/products/${selectedProduct.value.id}/transactions`, { params });
         history.value = res.data.data;
+        historyMeta.value = res.data.meta ?? { current_page: 1, last_page: 1, total: res.data.data.length, per_page: 25 };
     } catch (e) {
         console.error(e);
     } finally {
         loadingHistory.value = false;
     }
+};
+
+const applyHistoryFilters = () => {
+    loadHistory(1);
+};
+
+const resetHistoryFilters = () => {
+    historyFilters.value = { date_from: null, date_to: null, type: 'all' };
+    loadHistory(1);
 };
 
 const loadIntelligenceData = async () => {
@@ -275,7 +311,9 @@ watch(() => page.url, () => {
 });
 
 watch(selectedProduct, () => {
-    loadHistory();
+    historyFilters.value = { date_from: null, date_to: null, type: 'all' };
+    historyCurrentPage.value = 1;
+    loadHistory(1);
     loadIntelligenceData();
 });
 
@@ -347,7 +385,7 @@ const listboxPt = {
     listContainer: { class: '!max-h-none flex-1 overflow-y-auto custom-scrollbar' },
     item: (options) => ({
         class: [
-            '!p-4 !mb-1 !rounded-xl !transition-all !duration-300 !border',
+            '!p-2.5 !mb-1 !rounded-xl !transition-all !duration-300 !border',
             options.context.selected 
                 ? '!bg-emerald-500/10 !border-emerald-500/20 !text-white shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
                 : '!bg-transparent !border-transparent !text-zinc-500 hover:!bg-zinc-800/40 hover:!text-zinc-200'
@@ -367,9 +405,9 @@ const tablePt = {
         <Head title="Inventory Center" />
         <Toast />
 
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
+        <div class="p-4 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Header Section -->
-            <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
+            <div class="max-w-[1600px] w-full mx-auto mb-6 flex justify-between items-end">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-[0.2em] block mb-2 font-mono">Stock Monitoring</span>
                     <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Inventory Center</h1>
@@ -377,8 +415,8 @@ const tablePt = {
                 </div>
                 
                 <div class="flex gap-4 items-center">
-                    <div class="flex flex-col gap-1 mr-4">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono ml-1">View Unit</span>
+                    <div class="flex items-center gap-3 border border-zinc-800/50 bg-zinc-900/40 rounded-xl px-4 h-12">
+                        <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">View Unit</span>
                         <Select 
                             v-model="selectedViewUomId" 
                             :options="uoms" 
@@ -387,9 +425,9 @@ const tablePt = {
                             placeholder="Native"
                             showClear
                             @change="loadProducts"
-                            class="!bg-zinc-900 !border-zinc-800 !h-10 !rounded-xl !text-[10px] font-mono font-black !w-24"
-                            pt:label:class="!text-emerald-500 !p-2 !text-center !uppercase font-black"
-                            pt:dropdown:class="!text-zinc-600 !w-6"
+                            class="!bg-transparent !border-none !h-full !text-[10px] font-mono font-black !w-24 !shadow-none !flex !items-center"
+                            pt:label:class="!text-emerald-500 !p-0 !text-left !uppercase font-black !flex !items-center !h-full"
+                            pt:dropdown:class="!text-zinc-600 !w-4 !flex !items-center"
                         />
                     </div>
                     <button @click="toggleMenu" 
@@ -406,10 +444,10 @@ const tablePt = {
             </div>
 
             <!-- Primary Workspace Grid -->
-            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-8 items-start flex-1 min-h-0">
+            <div class="max-w-[1600px] w-full mx-auto grid grid-cols-12 gap-4 items-start flex-1 min-h-0">
                 
-                <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-[140px] lg:h-[calc(100vh-160px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/60">
+                <aside class="col-span-12 lg:col-span-3 lg:sticky lg:top-[100px] lg:h-[calc(100vh-120px)] flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                    <div class="p-4 border-b border-zinc-800 bg-zinc-900/60">
                         <div class="flex items-center gap-3 mb-5">
                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
                             <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Product List</span>
@@ -455,16 +493,16 @@ const tablePt = {
                 </aside>
 
                 <!-- Right Sector: Product History & Insights -->
-                <main class="col-span-12 lg:col-span-9 flex flex-col gap-8 min-h-0">
+                <main class="col-span-12 lg:col-span-9 flex flex-col gap-4 min-h-0">
                     
                     <!-- Top Section: Product Details -->
-                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
+                    <section class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 backdrop-blur-sm shadow-2xl transition-all duration-500 group overflow-hidden relative">
                         <!-- Background Accent -->
                         <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -mr-32 -mt-32 rounded-full transition-opacity group-hover:opacity-100 opacity-50"></div>
                         
                         <template v-if="selectedProduct">
                             <div class="relative z-10 flex flex-col">
-                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-10 border-b border-zinc-800/60">
+                                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6 pb-6 border-b border-zinc-800/60">
                                     <div class="flex flex-col flex-1">
                                         <div class="flex items-center gap-4 mb-3">
                                             <h1 class="text-3xl font-bold text-white tracking-tighter m-0">{{ selectedProduct.name }}</h1>
@@ -472,14 +510,16 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold px-3 py-1 bg-zinc-800/80 border border-zinc-700 rounded-full text-zinc-400 uppercase tracking-widest font-mono">{{ selectedProduct.category?.name || 'PRODUCT' }}</span>
                                                 <span v-if="selectedProduct.preferred_vendor" class="text-[9px] font-bold px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-sky-400 uppercase tracking-widest font-mono">OWNED BY: {{ selectedProduct.preferred_vendor.name }}</span>
                                                 <span v-else class="text-[9px] font-bold px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 uppercase tracking-widest font-mono">STOCK: INTERNAL</span>
-                                                <span class="text-[10px] font-bold px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 uppercase tracking-widest font-mono">STATUS: ACTIVE</span>
+                                                <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest font-mono border"
+                                                      :class="selectedProduct.is_active !== false ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-zinc-800/80 border-zinc-700 text-zinc-500'"
+                                                >STATUS: {{ selectedProduct.is_active !== false ? 'ACTIVE' : 'INACTIVE' }}</span>
                                             </div>
                                         </div>
                                         <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed italic">{{ selectedProduct.description || 'No description provided for this catalog item.' }}</p>
                                     </div>
 
                                     <!-- Stock Status Summary -->
-                                    <div class="p-6 bg-zinc-950/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center min-w-[200px] shadow-lg"
+                                    <div class="p-4 bg-zinc-950/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center min-w-[180px] shadow-lg"
                                          :class="[
                                              selectedProduct.total_qoh === 0 ? 'ring-1 ring-red-500/20' : 
                                              selectedProduct.total_qoh < selectedProduct.reorder_point ? 'ring-1 ring-amber-500/20' : 
@@ -506,10 +546,12 @@ const tablePt = {
                                     </div>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-5 gap-x-12 gap-y-8">
+                                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                                     <div class="flex flex-col gap-2">
-                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Internal ID</label>
-                                        <code class="text-sky-400 font-mono text-sm tracking-widest bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">SKU</label>
+                                        <div class="h-10 bg-zinc-950 border border-zinc-900 rounded-lg flex items-center px-4">
+                                            <span class="text-zinc-500 font-mono text-xs font-bold">{{ selectedProduct.sku }}</span>
+                                        </div>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
@@ -518,6 +560,14 @@ const tablePt = {
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
                                         <span class="text-sky-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.average_cost) }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
+                                        <span class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency((selectedProduct.total_qoh ?? 0) * (selectedProduct.average_cost ?? 0)) }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reorder Point</label>
+                                        <span class="text-zinc-300 font-mono font-bold text-lg tracking-tight">{{ selectedProduct.reorder_point ?? '—' }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Unit of Measure</label>
@@ -530,7 +580,7 @@ const tablePt = {
                                 </div>
 
                                 <!-- Quick Actions Toolbar -->
-                                <div class="mt-10 pt-8 border-t border-zinc-900 flex items-center gap-8 animate-in fade-in slide-in-from-left-4 duration-1000">
+                                <div class="mt-6 pt-6 border-t border-zinc-900 flex items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-1000">
                                     <div class="flex flex-col">
                                         <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
                                         <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">Post Movement</span>
@@ -568,7 +618,7 @@ const tablePt = {
                     </section>
 
                     <!-- Intelligence Grid: Location Breakdown & Cost Layers -->
-                    <div v-if="selectedProduct" class="grid grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                    <div v-if="selectedProduct" class="grid grid-cols-12 gap-4 animate-in fade-in slide-in-from-bottom-6 duration-700">
                         <!-- Location Distribution Sector -->
                         <aside class="col-span-12 lg:col-span-5 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col min-h-0">
                             <div class="px-8 py-4 border-b border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
@@ -578,17 +628,16 @@ const tablePt = {
                                 </div>
                                 <span class="text-[9px] font-bold text-emerald-500 font-mono tracking-tighter uppercase">Available in these areas</span>
                             </div>
-                            <div class="p-6 flex-1">
-                                <template v-if="locationBreakdown.length > 0">
-                                    <div class="space-y-3">
-                                        <div v-for="loc in locationBreakdown" :key="loc.id" class="flex items-center justify-between p-4 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
+                            <div class="p-4 flex-1">
+                                <template v-if="locationBreakdown.length > 0 && locationBreakdown.some(l => l.quantity_on_hand > 0)">
+                                    <div class="space-y-2">
+                                        <div v-for="loc in locationBreakdown.filter(l => l.quantity_on_hand > 0)" :key="loc.id" class="flex items-center justify-between p-3 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
                                             <div class="flex flex-col">
-                                                <span class="text-white font-bold text-xs tracking-tight uppercase">{{ loc.location_name }}</span>
+                                                <span class="text-white font-bold text-[11px] tracking-tight uppercase">{{ loc.location_name }}</span>
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
-                                            <div class="flex flex-col items-end">
-                                                <span class="text-emerald-400 font-mono font-bold text-sm tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
-                                                <span class="text-[9px] font-bold text-zinc-700 font-mono tracking-[0.2em] uppercase">Items at this area</span>
+                                            <div class="flex items-end gap-3">
+                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -629,7 +678,12 @@ const tablePt = {
                                             <span class="font-mono text-[10px] text-zinc-500">{{ data.receipt_date }}</span>
                                         </template>
                                     </Column>
-                                    <Column field="remaining_qty" header="Remaining" style="width: 160px">
+                                    <Column header="Location" style="width: 160px">
+                                        <template #body="{ data }">
+                                            <span class="font-mono text-[10px] text-zinc-400 uppercase tracking-wide">{{ data.location_name }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column field="remaining_qty" header="Remaining" style="width: 140px">
                                         <template #body="{ data }">
                                             <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty) }}</span>
                                         </template>
@@ -639,9 +693,24 @@ const tablePt = {
                                             <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ formatCurrency(data.unit_cost) }}</span>
                                         </template>
                                     </Column>
-                                    <Column header="Status" class="!text-right">
+                                    <Column header="Layer Value" style="width: 130px">
                                         <template #body="{ data }">
-                                            <div class="inline-flex items-center gap-2 group-hover:px-2 transition-all">
+                                            <span class="font-mono font-bold text-amber-400 tracking-tighter text-[11px]">{{ formatCurrency(data.total_value) }}</span>
+                                        </template>
+                                    </Column>
+                                    <Column header="Source PO" style="width: 160px">
+                                        <template #body="{ data }">
+                                            <span v-if="data.po_number"
+                                                  @click="handleLinkClick('PO', data.po_number, data.po_id)"
+                                                  class="font-mono text-[10px] text-emerald-400 cursor-pointer hover:underline tracking-wider">
+                                                {{ data.po_number }}
+                                            </span>
+                                            <span v-else class="text-zinc-700 font-mono text-[10px]">Manual Entry</span>
+                                        </template>
+                                    </Column>
+                                    <Column header="Status" style="width: 100px">
+                                        <template #body="{ data }">
+                                            <div class="inline-flex items-center gap-2">
                                                 <span class="w-1 h-1 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></span>
                                                 <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ data.remaining_qty > 0 ? 'ACTIVE' : 'DEPLETED' }}</span>
                                             </div>
@@ -654,20 +723,62 @@ const tablePt = {
 
                     <!-- Bottom Section: Transactional Ledger -->
                     <section class="flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm">
-                        <div class="px-8 py-5 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
+                        <div class="px-5 py-4 border-b border-zinc-800/60 bg-zinc-900/80 flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Recent Transaction History</span>
+                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History</span>
                             </div>
-                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ history.length }} RECORDS FOUND</span>
+                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
                         </div>
-                        
+
+                        <!-- Filter Bar -->
+                        <div class="px-5 py-3 border-b border-zinc-800/40 bg-zinc-900/40 flex flex-wrap items-end gap-3">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">From</span>
+                                <input
+                                    type="date"
+                                    v-model="historyFilters.date_from"
+                                    class="h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">To</span>
+                                <input
+                                    type="date"
+                                    v-model="historyFilters.date_to"
+                                    class="h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                />
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Type</span>
+                                <Select
+                                    v-model="historyFilters.type"
+                                    :options="historyTypeOptions"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    class="!bg-zinc-950 !border-zinc-800 !h-9 !rounded-lg !text-[11px] font-mono !w-40"
+                                    pt:label:class="!text-zinc-300 !p-2 !text-[11px]"
+                                    pt:dropdown:class="!text-zinc-600 !w-6"
+                                />
+                            </div>
+                            <div class="flex gap-2 pb-0.5">
+                                <button @click="applyHistoryFilters"
+                                        class="h-9 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-zinc-950 transition-all active:scale-95">
+                                    Apply
+                                </button>
+                                <button @click="resetHistoryFilters"
+                                        class="h-9 px-4 rounded-lg bg-zinc-800/60 border border-zinc-700 text-zinc-500 text-[10px] font-bold uppercase tracking-widest hover:text-white hover:border-zinc-500 transition-all">
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="flex-1 overflow-hidden">
-                            <DataTable 
-                                :value="history" 
-                                :loading="loadingHistory" 
-                                scrollable 
-                                scrollHeight="flex" 
+                            <DataTable
+                                :value="history"
+                                :loading="loadingHistory"
+                                scrollable
+                                scrollHeight="flex"
                                 class="gh-table border-none"
                                 :pt="tablePt"
                             >
@@ -677,39 +788,39 @@ const tablePt = {
                                         <p class="font-mono text-xs tracking-[0.2em] uppercase">No transaction history found for this product</p>
                                     </div>
                                 </template>
-                                
-                                <Column field="transaction_date" header="Date / Time" style="width: 160px">
+
+                                <Column field="transaction_date" header="Date" style="width: 130px">
                                     <template #body="{ data }">
                                         <span class="font-mono text-[11px] text-zinc-400">{{ data.transaction_date }}</span>
                                     </template>
                                 </Column>
-                                
+
                                 <Column field="reference_number" header="Reference #" style="width: 180px">
                                     <template #body="{ data }">
-                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)" 
+                                        <span @click.stop="handleLinkClick('Movement', data.reference_number, data.id)"
                                               class="font-mono text-[11px] bg-zinc-950 text-sky-400 px-2 py-0.5 border border-sky-500/10 rounded tracking-widest cursor-pointer hover:bg-sky-500/10 hover:border-sky-500/30 transition-all shadow-[0_0_15px_rgba(56,189,248,0.05)] uppercase">
                                             {{ data.reference_number }}
                                         </span>
                                     </template>
                                 </Column>
-                                
+
                                 <Column field="type" header="Type" style="width: 150px">
                                     <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-[0.1em] font-mono"
                                              :class="[
-                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 
-                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' : 
+                                                 data.type.name.toLowerCase() === 'receipt' || data.type.name.toLowerCase() === 'good_receipt' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' :
+                                                 data.type.name.toLowerCase() === 'issue' ? 'bg-red-500/5 text-red-400 border-red-500/20' :
                                                  'bg-sky-500/5 text-sky-400 border-sky-500/20'
                                              ]">
                                             {{ data.display_type || data.type.name.toUpperCase() }}
                                         </div>
                                     </template>
                                 </Column>
-                                
-                                <Column field="quantity" header="Change Qty" style="width: 150px">
+
+                                <Column field="quantity" header="Change Qty" style="width: 130px">
                                     <template #body="{ data }">
                                         <div class="flex flex-col">
-                                            <div class="font-mono font-bold text-xs tracking-tighter" 
+                                            <div class="font-mono font-bold text-xs tracking-tighter"
                                                  :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
                                                 {{ data.quantity < 0 ? '' : '+' }}{{ data.quantity }}
                                             </div>
@@ -720,15 +831,32 @@ const tablePt = {
                                     </template>
                                 </Column>
 
-                                <Column header="Unit" style="width: 100px">
+                                <Column header="Unit" style="width: 80px">
                                     <template #body="{ data }">
                                         <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
                                             {{ data.uom_abbreviation }}
                                         </span>
                                     </template>
                                 </Column>
-                                
-                                <Column header="Entity / Vendor">
+
+                                <Column header="Unit Cost" style="width: 120px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] font-bold text-sky-400">
+                                            {{ data.unit_cost > 0 ? formatCurrency(data.unit_cost) : '—' }}
+                                        </span>
+                                    </template>
+                                </Column>
+
+                                <Column header="Total Value" style="width: 130px">
+                                    <template #body="{ data }">
+                                        <span class="font-mono text-[11px] font-bold"
+                                              :class="data.quantity < 0 ? 'text-rose-400' : 'text-amber-400'">
+                                            {{ data.total_cost > 0 ? formatCurrency(data.total_cost) : '—' }}
+                                        </span>
+                                    </template>
+                                </Column>
+
+                                <Column header="Entity">
                                     <template #body="{ data }">
                                         <div class="flex items-center gap-3">
                                             <div v-if="data.vendor_name" @click.stop="handleLinkClick('Vendor', data.vendor_name, data.vendor_id)" class="text-sky-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
@@ -737,20 +865,20 @@ const tablePt = {
                                             <div v-else-if="data.customer_name" @click.stop="handleLinkClick('Customer', data.customer_name, data.customer_id)" class="text-amber-400 cursor-pointer hover:underline flex items-center gap-2 font-bold text-xs tracking-tight">
                                                 <i class="pi pi-user text-[10px]"></i> {{ data.customer_name }}
                                             </div>
-                                            <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal movement</span>
+                                            <span v-else class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">internal</span>
                                         </div>
                                     </template>
                                 </Column>
-                                
-                                <Column header="Linked Document" style="width: 200px">
+
+                                <Column header="Linked Doc" style="width: 180px">
                                     <template #body="{ data }">
-                                        <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))" 
-                                            @click.stop="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)" 
+                                        <div v-if="data.po_number || (data.reference_doc && data.reference_doc.includes('PO'))"
+                                            @click.stop="handleLinkClick('PO', data.po_number || data.reference_doc, data.po_id)"
                                             class="text-emerald-400/80 hover:text-emerald-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-paperclip text-[10px]"></i> {{ data.po_number || data.reference_doc }}
                                         </div>
-                                        <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))" 
-                                            @click.stop="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)" 
+                                        <div v-else-if="data.so_number || (data.reference_doc && data.reference_doc.includes('SO'))"
+                                            @click.stop="handleLinkClick('SO', data.so_number || data.reference_doc, data.so_id)"
                                             class="text-amber-400/80 hover:text-amber-400 cursor-pointer flex items-center gap-2 font-mono text-[11px] transition-colors">
                                             <i class="pi pi-send text-[10px]"></i> {{ data.so_number || data.reference_doc }}
                                         </div>
@@ -758,8 +886,8 @@ const tablePt = {
                                         <span v-else class="text-zinc-800 font-mono text-[11px]">Internal</span>
                                     </template>
                                 </Column>
-                                
-                                <Column field="status" header="Status" style="width: 140px">
+
+                                <Column field="status" header="Status" style="width: 110px">
                                      <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2">
                                             <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
@@ -768,6 +896,25 @@ const tablePt = {
                                     </template>
                                 </Column>
                             </DataTable>
+                        </div>
+
+                        <!-- Paginator -->
+                        <div v-if="historyMeta.last_page > 1" class="px-8 py-4 border-t border-zinc-800/40 bg-zinc-900/60 flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-zinc-600 font-mono uppercase tracking-widest">
+                                Page {{ historyMeta.current_page }} of {{ historyMeta.last_page }} &nbsp;·&nbsp; {{ historyMeta.total }} records
+                            </span>
+                            <div class="flex gap-2">
+                                <button
+                                    @click="loadHistory(historyMeta.current_page - 1)"
+                                    :disabled="historyMeta.current_page <= 1"
+                                    class="h-8 px-4 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                ><i class="pi pi-chevron-left text-[9px]"></i> Prev</button>
+                                <button
+                                    @click="loadHistory(historyMeta.current_page + 1)"
+                                    :disabled="historyMeta.current_page >= historyMeta.last_page"
+                                    class="h-8 px-4 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                >Next <i class="pi pi-chevron-right text-[9px]"></i></button>
+                            </div>
                         </div>
                     </section>
                 </main>

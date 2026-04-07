@@ -9,7 +9,6 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import ConfirmDialog from 'primevue/confirmdialog';
 import Popover from 'primevue/popover';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
@@ -42,12 +41,10 @@ const shipForm = ref({
     tracking_number: '' 
 });
 
-const opRefs = ref({});
-const toggleAvailability = (event, id) => {
-    opRefs.value[id].toggle(event);
-};
+// Removed Popover toggle logic in favor of always-visible breakdown
 
 const isQuotation = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
+const canCancel = computed(() => so.value && !['shipped', 'cancelled', 'closed'].includes(so.value.status.name));
 
 const getTotalAvailable = (line) => {
     return line.availability?.reduce((sum, loc) => sum + loc.available_qty, 0) || 0;
@@ -113,6 +110,46 @@ const approve = async () => {
             }
         }
     });
+};
+
+const cancelOrder = () => {
+    confirm.require({
+        message: 'Are you sure you want to cancel this order? All reserved stock will be released.',
+        header: 'Cancel Sales Order',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger',
+        accept: async () => {
+            try {
+                await axios.patch(`/api/sales-orders/${so.value.id}/cancel`);
+                toast.add({ severity: 'success', summary: 'Cancelled', detail: 'Order cancelled and stock released', life: 3000 });
+                loadSO();
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Cancellation failed', life: 3000 });
+            }
+        }
+    });
+};
+
+const deleteOrder = () => {
+    confirm.require({
+        message: 'Permanently delete this quotation? This action cannot be undone.',
+        header: 'Delete Quotation',
+        icon: 'pi pi-trash',
+        acceptClass: 'p-button-danger',
+        accept: async () => {
+            try {
+                await axios.delete(`/api/sales-orders/${so.value.id}`);
+                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Quotation removed', life: 3000 });
+                router.visit('/sales-orders');
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Delete failed', life: 3000 });
+            }
+        }
+    });
+};
+
+const editOrder = () => {
+    router.visit(`/sales-orders/${so.value.id}/edit`);
 };
 
 const openPickDialog = () => {
@@ -252,15 +289,16 @@ const totalDiscount = computed(() => {
     return so.value?.lines?.reduce((sum, line) => sum + (line.discount_amount || 0), 0) || 0;
 });
 
+
 </script>
 
 <template>
     <Head :title="so ? so.so_number : 'Loading...'" />
     <AppLayout v-if="so">
-        <div class="h-full flex flex-col gap-6">
+        <div class="h-full flex flex-col gap-4">
 
             <!-- Header Panel -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 blur-[100px] pointer-events-none"></div>
 
                 <div class="flex items-center gap-4 z-10">
@@ -292,6 +330,30 @@ const totalDiscount = computed(() => {
                         :loading="approveLoading"
                         class="p-button-sm !bg-teal-500/20 hover:!bg-teal-500/30 !text-teal-400 !border-teal-500/50 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="approve"
+                    />
+
+                    <Button 
+                        v-if="isQuotation && can('manage-sales-orders')" 
+                        label="Edit" 
+                        icon="pi pi-pencil" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="editOrder"
+                    />
+
+                    <Button 
+                        v-if="canCancel && can('manage-sales-orders')" 
+                        label="Cancel Order" 
+                        icon="pi pi-times-circle" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-red-400 !border-red-900/30 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="cancelOrder"
+                    />
+
+                    <Button 
+                        v-if="isQuotation && can('manage-sales-orders')" 
+                        label="Delete" 
+                        icon="pi pi-trash" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-500 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="deleteOrder"
                     />
 
                     <Button 
@@ -331,10 +393,10 @@ const totalDiscount = computed(() => {
             </div>
 
             <!-- Details Board -->
-            <div class="grid grid-cols-12 gap-6">
+            <div class="grid grid-cols-12 gap-4">
                 <!-- Meta Info Side -->
-                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
                         <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Sales Metadata</span>
                         
                         <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
@@ -368,10 +430,10 @@ const totalDiscount = computed(() => {
                     </div>
 
                     <!-- Financial Summary -->
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Financial Summary</span>
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2">Financial Summary</span>
                         
-                        <div class="flex justify-between items-center py-1">
+                        <div class="flex justify-between items-center py-0.5">
                             <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">Untaxed Amount</span>
                             <span class="text-xs font-bold text-white">₱{{ Number(so.subtotal || 0).toFixed(2) }}</span>
                         </div>
@@ -386,10 +448,10 @@ const totalDiscount = computed(() => {
                     </div>
 
                     <!-- Fulfillment History -->
-                    <div v-if="so.transactions && so.transactions.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Fulfillment History</span>
+                    <div v-if="so.transactions && so.transactions.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 text-center">Fulfillment History</span>
                         
-                        <div v-for="tx in so.transactions" :key="tx.id" class="flex flex-col gap-2 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group transition-all hover:border-sky-500/30">
+                        <div v-for="tx in so.transactions" :key="tx.id" class="flex flex-col gap-1.5 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group transition-all hover:border-sky-500/30">
                             <div class="flex justify-between items-center">
                                 <span class="text-[10px] font-mono text-sky-400 font-bold uppercase">{{ tx.reference_number }}</span>
                                 <span class="text-[9px] font-mono text-zinc-600">{{ tx.transaction_date }}</span>
@@ -403,9 +465,9 @@ const totalDiscount = computed(() => {
                 </div>
 
                 <!-- Lines Data -->
-                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-6">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3 mb-4 block">Fulfillment Lines</span>
+                <div class="col-span-12 lg:col-span-9 flex flex-col gap-4">
+                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-4">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 mb-3 block">Fulfillment Lines</span>
                         
                         <DataTable :value="so.lines" class="p-datatable-sm w-full" stripedRows>
                             <Column field="product_name" header="PRODUCT/ID">
@@ -428,46 +490,38 @@ const totalDiscount = computed(() => {
                             <!-- Stock Visibility for Quotations -->
                             <Column v-if="isQuotation" header="AVAILABILITY">
                                 <template #body="{ data }">
-                                    <div class="flex items-center gap-2">
-                                        <Tag 
-                                            :severity="getAvailabilityStatus(data).severity" 
-                                            :value="getAvailabilityStatus(data).label" 
-                                            class="text-[8px] font-bold cursor-pointer hover:opacity-80 transition-opacity"
-                                            @click="toggleAvailability($event, data.id)"
-                                        />
-                                        
-                                        <Popover :ref="(el) => opRefs[data.id] = el" class="NexusPopover">
-                                            <div class="p-3 flex flex-col gap-3 min-w-[200px]">
-                                                <span class="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] font-mono border-b border-zinc-800 pb-2">inventory Breakdown</span>
-                                                <div v-for="loc in data.availability" :key="loc.location_name" class="flex flex-col gap-1 py-1 border-b border-zinc-800/40 last:border-0">
-                                                    <div class="flex justify-between items-center text-[10px]">
-                                                        <span class="text-zinc-400 font-bold uppercase tracking-tighter">{{ loc.location_name }}</span>
-                                                        <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="font-mono font-bold">{{ loc.available_qty }}</span>
-                                                    </div>
-                                                    <div class="flex justify-between text-[8px] text-zinc-600 font-mono">
-                                                        <span>QOH: {{ loc.quantity_on_hand }}</span>
-                                                        <span>RSV: {{ loc.reserved_qty }}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="flex justify-between pt-2 border-t border-zinc-800 mt-1">
-                                                    <span class="text-[9px] font-bold text-zinc-400 uppercase font-mono">Total Available</span>
-                                                    <span class="text-xs font-black text-white font-mono">{{ getTotalAvailable(data) }}</span>
+                                    <div class="flex flex-col gap-1.5 py-1 min-w-[150px]">
+                                        <div v-if="data.availability && data.availability.some(l => l.available_qty > 0 || l.reserved_qty > 0)" class="bg-zinc-950/50 rounded-lg p-2 border border-zinc-800/50 flex flex-col gap-1">
+                                            <div v-for="loc in data.availability.filter(l => l.available_qty > 0 || l.reserved_qty > 0)" :key="loc.location_name" 
+                                                 class="flex items-center justify-between px-0.5 border-b border-zinc-800/30 last:border-0 pb-0.5 mb-0.5 last:pb-0 last:mb-0">
+                                                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">{{ loc.location_name }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="text-[10px] font-mono font-bold">{{ loc.available_qty }}</span>
+                                                    <span v-if="loc.reserved_qty > 0" class="text-[8px] text-amber-500/60 font-mono">({{ loc.reserved_qty }} RSV)</span>
                                                 </div>
                                             </div>
-                                        </Popover>
+                                        </div>
+                                        <div v-else class="text-center py-2 bg-rose-500/5 border border-rose-500/10 rounded-lg">
+                                            <span class="text-[8px] font-bold text-rose-400 uppercase tracking-widest">OUT OF STOCK</span>
+                                        </div>
+                                        
+                                        <div class="flex justify-between px-1">
+                                            <span class="text-[9px] font-bold text-zinc-600 uppercase font-mono tracking-widest">Total</span>
+                                            <span class="text-[10px] font-black" :class="getTotalAvailable(data) > 0 ? 'text-white' : 'text-red-500/50'">{{ getTotalAvailable(data) }}</span>
+                                        </div>
                                     </div>
                                 </template>
                             </Column>
                             <Column header="LIFECYCLE STATUS">
                                 <template #body="{ data }">
-                                    <div class="flex flex-col gap-1 w-24">
-                                        <div class="h-1 bg-zinc-800 rounded-full overflow-hidden flex">
-                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-help-500/40"></div>
-                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-teal-500/60"></div>
+                                    <div class="flex flex-col gap-1.5 w-32">
+                                        <div class="h-1.5 bg-zinc-950 rounded-full overflow-hidden flex border border-zinc-800/50">
+                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-help-500/30 transition-all duration-500"></div>
+                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-teal-500/70 transition-all duration-700 shadow-[0_0_5px_rgba(20,184,166,0.5)]"></div>
                                         </div>
-                                        <div class="flex justify-between text-[8px] font-mono text-zinc-600 uppercase tracking-tighter">
-                                            <span>Pick</span>
-                                            <span>Ship</span>
+                                        <div class="flex justify-between items-center px-0.5">
+                                            <span class="text-[8px] font-bold text-zinc-500 font-mono uppercase tracking-tighter">Processed</span>
+                                            <span class="text-[9px] font-black text-zinc-300 font-mono">{{ Math.round(data.shipped_qty / data.ordered_qty * 100) }}%</span>
                                         </div>
                                     </div>
                                 </template>
@@ -655,7 +709,6 @@ const totalDiscount = computed(() => {
             </div>
         </Dialog>
 
-        <ConfirmDialog />
     </AppLayout>
 </template>
 
@@ -671,7 +724,7 @@ const totalDiscount = computed(() => {
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
     border-bottom: 1px solid rgba(39, 39, 42, 0.5);
-    padding: 1rem;
+    padding: 0.5rem 0.75rem;
 }
 :deep(.p-dialog) {
     background: #18181b;

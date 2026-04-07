@@ -10,7 +10,6 @@ import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
-import ConfirmDialog from 'primevue/confirmdialog';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
@@ -476,10 +475,10 @@ const openPrint = () => {
 <template>
     <Head :title="po ? po.po_number : 'Loading...'" />
     <AppLayout v-if="po">
-        <div class="h-full flex flex-col gap-6">
+        <div class="h-full flex flex-col gap-4">
 
             <!-- Header Panel -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[100px] pointer-events-none"></div>
 
                 <div class="flex items-center gap-4 z-10">
@@ -565,17 +564,17 @@ const openPrint = () => {
             </div>
 
             <!-- Details Board -->
-            <div class="grid grid-cols-12 gap-6">
+            <div class="grid grid-cols-12 gap-4">
                 <!-- Meta Info Side -->
-                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Order Metadata</span>
+                <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
+                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2">Order Metadata</span>
                         
-                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
+                        <div class="flex justify-between items-center py-1.5 border-b border-zinc-800/30">
                             <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Drafted By</span>
                             <span class="text-xs font-bold text-white">{{ po.created_by }}</span>
                         </div>
-                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
+                        <div class="flex justify-between items-center py-1.5 border-b border-zinc-800/30">
                             <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Created On</span>
                             <span class="text-xs font-bold text-zinc-400">{{ po.created_at }}</span>
                         </div>
@@ -626,8 +625,8 @@ const openPrint = () => {
                     </div>
 
                     <!-- Receipt History (GRN) -->
-                    <div v-if="po.receipts && po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700">
-                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-3">Goods Receipt History (GRN)</span>
+                    <div v-if="po.receipts && po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700">
+                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-2">Goods Receipt History (GRN)</span>
                         
                         <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-sky-500/20 transition-all">
                             <div class="flex justify-between items-center">
@@ -649,8 +648,8 @@ const openPrint = () => {
                     </div>
 
                     <!-- Return History (PRN) -->
-                    <div v-if="po.returns && po.returns.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-in fade-in slide-in-from-left duration-700 border-l-2 border-l-red-900/50">
-                        <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-3">Purchase Return History (PRN)</span>
+                    <div v-if="po.returns && po.returns.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700 border-l-2 border-l-red-900/50">
+                        <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-2">Purchase Return History (PRN)</span>
                         
                         <div v-for="ret in po.returns" :key="ret.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-red-500/20 transition-all">
                             <div class="flex justify-between items-center">
@@ -673,16 +672,16 @@ const openPrint = () => {
                 </div>
 
                 <!-- Lines Data -->
-                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-6">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3 mb-4 block">Line Items</span>
+                <div class="col-span-12 lg:col-span-9 flex flex-col gap-4">
+                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-4">
+                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 mb-3 block">Line Items</span>
                         
                         <DataTable 
                             :value="po.lines" 
                             class="p-datatable-sm w-full"
                             stripedRows
                         >
-                            <Column field="sku" header="INTERNAL ID" style="width: 15rem">
+                            <Column field="sku" header="SKU" style="width: 15rem">
                                 <template #body="{ data }">
                                     <span class="text-sky-400 font-mono text-[10px] font-bold tracking-widest text-[#50e3c2]">{{ data.sku }}</span>
                                 </template>
@@ -773,7 +772,7 @@ const openPrint = () => {
 
                 <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
                     <DataTable :value="grnForm.lines" class="p-datatable-sm w-full">
-                        <Column field="sku" header="INTERNAL ID">
+                        <Column field="sku" header="SKU">
                             <template #body="{ data }">
                                 <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
                             </template>
@@ -1166,6 +1165,7 @@ const openPrint = () => {
             </template>
         </Dialog>
 
+        <!-- Global ConfirmDialog is provided by AppLayout -->
     </AppLayout>
 </template>
 
@@ -1178,7 +1178,7 @@ const openPrint = () => {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    padding: 1rem;
+    padding: 0.5rem 0.75rem;
 }
 :deep(.p-datatable .p-datatable-tbody > tr) {
     background: transparent;
@@ -1186,7 +1186,7 @@ const openPrint = () => {
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
     border-bottom: 1px solid rgba(39, 39, 42, 0.5); /* zinc-800/50 */
     color: #e4e4e7; /* zinc-200 */
-    padding: 1rem;
+    padding: 0.5rem 0.75rem;
 }
 :deep(.p-tag.p-tag-warning) { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
 :deep(.p-tag.p-tag-info) { background: rgba(14, 165, 233, 0.1); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.2); }
@@ -1204,10 +1204,10 @@ const openPrint = () => {
     background: rgba(24, 24, 27, 0.8);
     border-bottom: 1px solid rgba(39, 39, 42, 0.8);
     color: white;
-    padding: 1.5rem;
+    padding: 1rem;
 }
-:deep(.p-dialog-content) { background: transparent; padding: 1.5rem; color: #a1a1aa; }
-:deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1.25rem; }
+:deep(.p-dialog-content) { background: transparent; padding: 1rem; color: #a1a1aa; }
+:deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1rem; }
 :deep(.p-select), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
 :deep(.p-inputnumber-button) { background: #18181b; border-color: #27272a; color: #a1a1aa; }
 :deep(.p-inputnumber-button:hover) { background: #27272a; color: white; }

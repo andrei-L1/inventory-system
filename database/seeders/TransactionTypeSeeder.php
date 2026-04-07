@@ -16,6 +16,7 @@ class TransactionTypeSeeder extends Seeder
             ['name' => 'adjustment',      'code' => 'ADJS', 'affects_inventory' => true,  'is_debit' => true],
             ['name' => 'opening_balance', 'code' => 'OPNB', 'affects_inventory' => true,  'is_debit' => true],
             ['name' => 'purchase_return', 'code' => 'PRET', 'affects_inventory' => true,  'is_debit' => false],
+            ['name' => 'sales_return',    'code' => 'SRET', 'affects_inventory' => true,  'is_debit' => true],
         ];
 
         foreach ($types as $type) {

@@ -32,4 +32,35 @@ class Customer extends Model
     {
         return $this->hasMany(SalesOrder::class);
     }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Total exposure = Unpaid balance on all Open Invoices - Unallocated Payment balances.
+     */
+    public function getExposureAttribute(): float
+    {
+        $unpaidInvoices = (float) $this->invoices()
+            ->whereIn('status', [Invoice::STATUS_OPEN])
+            ->get()
+            ->sum(function ($inv) {
+                return (float) ($inv->total_amount - $inv->paid_amount);
+            });
+
+        $unallocatedPayments = (float) $this->payments()
+            ->get()
+            ->sum(function ($pay) {
+                return (float) $pay->unallocated_amount;
+            });
+
+        return max(0, $unpaidInvoices - $unallocatedPayments);
+    }
 }

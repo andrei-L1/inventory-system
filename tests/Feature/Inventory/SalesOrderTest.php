@@ -204,7 +204,18 @@ class SalesOrderTest extends TestCase
 
         $this->actingAs($this->user)->patchJson("/api/sales-orders/{$so->id}/approve");
 
-        // 3. Fulfill (Ship 10)
+        // 3. Fulfill (Pick -> Pack -> Ship)
+        // Pick
+        $this->actingAs($this->user)->patchJson("/api/sales-orders/{$so->id}/pick", [
+            'lines' => [['so_line_id' => $line->id, 'picked_qty' => 10]],
+        ])->assertStatus(200);
+
+        // Pack
+        $this->actingAs($this->user)->patchJson("/api/sales-orders/{$so->id}/pack", [
+            'lines' => [['so_line_id' => $line->id, 'packed_qty' => 10]],
+        ])->assertStatus(200);
+
+        // Ship
         $payload = [
             'lines' => [
                 [

@@ -103,7 +103,9 @@ class SalesOrder extends Model
         return in_array($this->status?->name, [
             SalesOrderStatus::CONFIRMED,
             SalesOrderStatus::PICKED,
+            SalesOrderStatus::PARTIALLY_PICKED,
             SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_PACKED,
             SalesOrderStatus::PARTIALLY_SHIPPED,
         ]);
     }

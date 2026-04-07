@@ -47,7 +47,7 @@ class UomHelper
         $isNegative = $quantity < -0.00000001;
 
         // Base case: If it's a whole number, just show it
-        if (abs($absQty - round($absQty)) < 0.000001) {
+        if (abs($absQty - round($absQty)) < 0.00000001) {
             $res = round($absQty).' '.$uom->abbreviation;
 
             // NEW: Add expanded total if there's a smaller unit
@@ -79,7 +79,7 @@ class UomHelper
         }
 
         $multiplier = $conversion->conversion_factor;
-        $wholeUnits = floor($absQty + 0.000001);
+        $wholeUnits = floor($absQty + 0.00000001);
         $remainder = $absQty - $wholeUnits;
         $smallerQty = $remainder * $multiplier;
 
