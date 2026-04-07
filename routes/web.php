@@ -37,25 +37,13 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         return Inertia::render('Catalog');
     })->name('catalog');
 
-    Route::get('/inventory-center', function () {
-        return Inertia::render('InventoryCenter');
-    })->name('inventory-center');
+    Route::get('/inventory-center', fn () => Inertia::render('InventoryCenter'))->name('inventory-center');
+    Route::get('/location-center', fn () => Inertia::render('LocationCenter'))->name('location-center');
+    Route::get('/uom-center', fn () => Inertia::render('UomCenter'))->name('uom-center');
+    Route::get('/category-center', fn () => Inertia::render('CategoryCenter'))->name('category-center');
 
-    Route::get('/location-center', function () {
-        return Inertia::render('LocationCenter');
-    })->name('location-center');
-
-    Route::get('/vendor-center', function () {
-        return Inertia::render('VendorCenter');
-    })->name('vendor-center');
-
-    Route::get('/customer-center', function () {
-        return Inertia::render('CustomerCenter');
-    })->name('customer-center');
-
-    Route::get('/uom-center', function () {
-        return Inertia::render('UomCenter');
-    })->name('uom-center');
+    Route::get('/customer-center', fn () => Inertia::render('CustomerCenter'))->name('customer-center');
+    Route::get('/vendor-center', fn () => Inertia::render('VendorCenter'))->name('vendor-center');
 
     // --- Stock Movement (Phase 2.4) ---
     Route::get('/movements/receipt', function () {

@@ -24,10 +24,19 @@
         .footer { margin-top: 50px; font-size: 9pt; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
         .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; margin-top: 60px; }
         .signature-box { border-top: 1px solid #000; text-align: center; padding-top: 10px; font-size: 9pt; }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+        .no-print { margin-bottom: 20px; text-align: right; padding: 20px; background: #f8f9fa; border-bottom: 1px solid #eee; }
+        .print-btn { padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; font-family: inherit; }
         .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: 600; text-transform: uppercase; background: #eee; }
     </style>
 </head>
 <body>
+    <div class="no-print">
+        <button onclick="window.print()" class="print-btn">Print Document</button>
+    </div>
     <div class="header">
         <div class="company-info">
             <h1>{{ $company['name'] }}</h1>
@@ -75,7 +84,10 @@
                 <tr>
                     <td>
                         <strong>{{ $line->product->sku }}</strong><br>
-                        <span style="font-size: 9pt; color: #666;">{{ $line->product->name }}</span>
+                        <span style="font-size: 9pt; font-weight: 600; color: #1a1a1a;">{{ $line->product->name }}</span>
+                        @if($line->product->product_code)
+                            <br><small style="color: #666; font-family: monospace;">MPN: {{ $line->product->product_code }}</small>
+                        @endif
                     </td>
                     <td>{{ $line->location->name }}</td>
                     <td class="text-right">{{ number_format($line->ordered_qty, 2) }}</td>

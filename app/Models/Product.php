@@ -64,23 +64,28 @@ class Product extends Model
                         $abbreviation .= $w[0];
                     }
                 }
-                // Limit to 4 letters for the acronym if it's very long
                 $abbreviation = substr($abbreviation, 0, 4);
             } else {
-                $abbreviation = substr($words[0], 0, 3);
+                $abbreviation = strtoupper(substr($words[0], 0, 3));
             }
 
             // 2. Automated Internal ID (SKU)
+            // Pattern: [CAT_CODE]-[ABBR]-[SERIAL]
             if (empty($product->sku)) {
+                $category = Category::find($product->category_id);
+                $catPrefix = $category?->code ?: strtoupper(substr($category?->name ?: 'GEN', 0, 3));
+
                 $nextId = (self::max('id') ?? 0) + 1;
-                $paddedId = str_pad($nextId, 12, '0', STR_PAD_LEFT);
-                $product->sku = "{$paddedId}-{$abbreviation}";
+                $serial = str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+                $product->sku = "{$catPrefix}-{$abbreviation}-{$serial}";
             }
 
-            // 3. Automated Vendor Code (Product Code)
-            if (empty($product->product_code)) {
-                $product->product_code = "PRD-{$abbreviation}-".strtoupper(substr(uniqid(), -4));
-            }
+            // 3. Automated Vendor Code (Product Code / MPN)
+            // Removed auto-generation. Users should explicitly provide the Manufacturer Part Number (MPN) if applicable.
+            // if (empty($product->product_code)) {
+            //     $product->product_code = "PRD-{$abbreviation}-".strtoupper(substr(uniqid(), -4));
+            // }
         });
     }
 

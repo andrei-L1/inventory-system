@@ -165,7 +165,7 @@
         <thead>
             <tr>
                 <th width="5%">#</th>
-                <th width="20%">SKU / Item Code</th>
+                <th width="20%">SKU / MPN</th>
                 <th width="55%">Product Description</th>
                 <th width="20%" class="text-right">Quantity</th>
             </tr>
@@ -174,7 +174,12 @@
             @foreach($trx->lines as $index => $line)
                 <tr>
                     <td>{{ $index + 1 }}</td>
-                    <td class="font-mono">{{ $line->product->sku ?? $line->product->product_code }}</td>
+                    <td class="font-mono">
+                        <span style="display: block; font-weight: bold; color: #2d3748;">{{ $line->product->sku }}</span>
+                        @if($line->product->product_code)
+                            <span style="display: block; font-size: 10px; color: #718096; margin-top: 2px;">MPN: {{ $line->product->product_code }}</span>
+                        @endif
+                    </td>
                     <td>
                         <b>{{ $line->product->name }}</b>
                         @if($line->notes)<br><small style="color: #718096 italic;">{{ $line->notes }}</small>@endif

@@ -548,8 +548,10 @@ const tablePt = {
                                 
                                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                                     <div class="flex flex-col gap-2">
-                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Internal ID</label>
-                                        <code class="text-sky-400 font-mono text-sm tracking-widest bg-sky-500/5 px-2 py-0.5 rounded border border-sky-500/10 w-fit">{{ selectedProduct.sku }}</code>
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">SKU</label>
+                                        <div class="h-10 bg-zinc-950 border border-zinc-900 rounded-lg flex items-center px-4">
+                                            <span class="text-zinc-500 font-mono text-xs font-bold">{{ selectedProduct.sku }}</span>
+                                        </div>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>

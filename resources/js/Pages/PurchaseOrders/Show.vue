@@ -681,7 +681,7 @@ const openPrint = () => {
                             class="p-datatable-sm w-full"
                             stripedRows
                         >
-                            <Column field="sku" header="INTERNAL ID" style="width: 15rem">
+                            <Column field="sku" header="SKU" style="width: 15rem">
                                 <template #body="{ data }">
                                     <span class="text-sky-400 font-mono text-[10px] font-bold tracking-widest text-[#50e3c2]">{{ data.sku }}</span>
                                 </template>
@@ -772,7 +772,7 @@ const openPrint = () => {
 
                 <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
                     <DataTable :value="grnForm.lines" class="p-datatable-sm w-full">
-                        <Column field="sku" header="INTERNAL ID">
+                        <Column field="sku" header="SKU">
                             <template #body="{ data }">
                                 <span class="text-sky-400 font-mono text-[10px] font-bold">{{ data.sku }}</span>
                             </template>
