@@ -40,31 +40,7 @@ return new class extends Migration
             'decimals' => 3
         ]);
 
-        // Insert new precise atomic base units for Mass and Volume
-        \Illuminate\Support\Facades\DB::table('units_of_measure')->insertOrIgnore([
-            [
-                'name' => 'Gram',
-                'abbreviation' => 'g',
-                'is_active' => true,
-                'category' => 'mass',
-                'is_base' => true,
-                'conversion_factor_to_base' => 1.0,
-                'decimals' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Milliliter',
-                'abbreviation' => 'ml',
-                'is_active' => true,
-                'category' => 'volume',
-                'is_base' => true,
-                'conversion_factor_to_base' => 1.0,
-                'decimals' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        ]);
+        // The bulk of standard unit initialization is now safely handled by Database\Seeders\UomSeeder.
     }
 
     /**
