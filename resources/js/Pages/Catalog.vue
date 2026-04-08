@@ -63,6 +63,11 @@ const imagePreview = ref(null);
 const imageFile = ref(null);
 const imageUploading = ref(false);
 
+const productConversions = ref([]);
+const loadingConversions = ref(false);
+const newRule = ref({ from_uom_id: null, to_uom_id: null, conversion_factor: null });
+const addingRule = ref(false);
+
 // Validation errors
 const errors = ref({});
 
@@ -74,6 +79,54 @@ const debouncedSearch = useDebounceFn(() => {
 watch(search, () => {
     debouncedSearch();
 });
+
+watch(activeTab, (val) => {
+    if (val === 'packaging' && product.value.id) {
+        loadProductConversions();
+    }
+});
+
+const loadProductConversions = async () => {
+    if (!product.value.id) return;
+    loadingConversions.value = true;
+    try {
+        const res = await axios.get('/api/uom-conversions', { params: { product_id: product.value.id } });
+        productConversions.value = res.data.data;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not load packaging rules.', life: 3000 });
+    } finally {
+        loadingConversions.value = false;
+    }
+};
+
+const saveProductConversion = async () => {
+    if (!newRule.value.from_uom_id || !newRule.value.to_uom_id || !newRule.value.conversion_factor) {
+        toast.add({ severity: 'warn', summary: 'Missing Info', detail: 'All fields are required.', life: 3000 });
+        return;
+    }
+    try {
+        await axios.post('/api/uom-conversions', {
+            ...newRule.value,
+            product_id: product.value.id
+        });
+        toast.add({ severity: 'success', summary: 'Added', detail: 'Packaging rule created.', life: 3000 });
+        newRule.value = { from_uom_id: null, to_uom_id: null, conversion_factor: null };
+        addingRule.value = false;
+        loadProductConversions();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Failed to add rule', life: 4000 });
+    }
+};
+
+const deleteProductConversion = async (id) => {
+    try {
+        await axios.delete(`/api/uom-conversions/${id}`);
+        toast.add({ severity: 'success', summary: 'Deleted', detail: 'Packaging rule removed.', life: 3000 });
+        loadProductConversions();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete rule', life: 3000 });
+    }
+};
 
 const loadProducts = async () => {
     loading.value = true;
@@ -151,6 +204,8 @@ const resetForm = () => {
     errors.value = {};
     submitted.value = false;
     isEditing.value = false;
+    addingRule.value = false;
+    productConversions.value = [];
     activeTab.value = 'basic';
 };
 
@@ -585,6 +640,13 @@ const stats = computed(() => ({
                                       :class="activeTab === 'media' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">03</span>
                                 03. PRODUCT PHOTO
                             </button>
+                            <button @click="activeTab = 'packaging'" 
+                                    class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
+                                    :class="activeTab === 'packaging' ? 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.1)]' : 'bg-zinc-800/20 text-zinc-400 border-zinc-800 shadow-sm hover:text-zinc-100 hover:bg-zinc-800/80 hover:border-zinc-700'">
+                                <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
+                                      :class="activeTab === 'packaging' ? 'border-fuchsia-500/40 bg-fuchsia-500/20 text-fuchsia-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">04</span>
+                                04. PACKAGING (UOM)
+                            </button>
                         </nav>
 
                         <div class="mt-auto pb-10 px-2">
@@ -752,6 +814,62 @@ const stats = computed(() => ({
                                             <h5 class="text-white font-bold uppercase text-xs tracking-[0.2em] m-0">Upload Product Image</h5>
                                             <span class="text-[10px] text-zinc-500 font-mono">WEBP // PNG // JPEG (MAX: 5MB)</span>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-show="activeTab === 'packaging'" class="animate-in slide-in-from-right-4 duration-500 h-full flex flex-col">
+                                <div v-if="!product.id" class="flex-1 border-2 border-dashed border-zinc-900 bg-zinc-950/50 rounded-2xl flex flex-col items-center justify-center p-10 text-center opacity-70">
+                                    <i class="pi pi-save text-4xl text-zinc-600 mb-4"></i>
+                                    <h4 class="text-white font-bold text-lg m-0">Save Product First</h4>
+                                    <p class="text-zinc-500 text-sm mt-2 max-w-md">You must create and save the basic product record before you can define custom packaging conversions.</p>
+                                </div>
+                                <div v-else class="flex flex-col gap-6">
+                                    <div class="flex justify-between items-center bg-zinc-900/30 p-4 border border-zinc-800/80 rounded-xl">
+                                        <div class="flex flex-col">
+                                            <span class="text-white font-bold text-sm tracking-tight uppercase">Product Packaging Equivalency</span>
+                                            <span class="text-[10px] text-zinc-500 font-mono mt-1 leading-relaxed">Define how cases, pallets, or boxes break down accurately to the atomic base unit for true scale calculations.</span>
+                                        </div>
+                                        <Button v-if="!addingRule" label="ADD PACKAGING" icon="pi pi-plus" class="!bg-fuchsia-500 hover:!bg-fuchsia-400 !border-none !text-[10px] !font-bold !h-10 !px-4" @click="addingRule = true" />
+                                    </div>
+
+                                    <div v-if="addingRule" class="bg-[radial-gradient(ellipse_at_top,rgba(217,70,239,0.05),transparent)] border border-fuchsia-500/20 p-6 rounded-xl flex flex-col gap-5 shadow-inner">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div class="flex flex-col gap-2">
+                                                <label class="text-[10px] font-bold text-fuchsia-400/80 uppercase tracking-widest font-mono">1. Packaging Unit</label>
+                                                <Select v-model="newRule.from_uom_id" :options="uoms.filter(u => !u.is_base)" optionLabel="name" optionValue="id" placeholder="E.g. Box" class="!bg-zinc-900 !border-zinc-800 !text-white" />
+                                            </div>
+                                            <div class="flex flex-col gap-2">
+                                                <label class="text-[10px] font-bold text-fuchsia-400/80 uppercase tracking-widest font-mono">2. Translates To</label>
+                                                <Select v-model="newRule.to_uom_id" :options="uoms.filter(u => u.is_base)" optionLabel="name" optionValue="id" placeholder="E.g. Pieces" class="!bg-zinc-900 !border-zinc-800 !text-sky-400 !font-bold" />
+                                            </div>
+                                            <div class="flex flex-col gap-2">
+                                                <label class="text-[10px] font-bold text-fuchsia-400/80 uppercase tracking-widest font-mono">3. Qty in Base Unit</label>
+                                                <InputNumber v-model="newRule.conversion_factor" placeholder="E.g. 12" inputClass="!bg-zinc-900 !border-zinc-800 !text-fuchsia-400 !font-bold !font-mono" />
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-end gap-3 mt-2 pt-4 border-t border-fuchsia-500/10">
+                                            <Button label="CANCEL CONFIG" class="!bg-transparent !border-zinc-700 !text-zinc-400 hover:!text-white !px-4 !h-8 !border !text-[9px] font-bold tracking-widest transition-colors" @click="addingRule = false" />
+                                            <Button label="COMMIT RULE" class="!bg-fuchsia-500 hover:!bg-fuchsia-400 !text-white !border-none !px-6 !h-8 !text-[9px] !font-bold tracking-widest" @click="saveProductConversion" />
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col gap-3" v-if="!loadingConversions">
+                                        <div v-for="rule in productConversions" :key="rule.id" class="flex justify-between items-center p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg group hover:border-zinc-700 transition-colors">
+                                            <div class="flex items-center gap-4">
+                                                <div class="px-3 py-1.5 bg-zinc-950 rounded text-[12px] font-mono font-black text-white border border-zinc-800 shadow-inner">1 {{ rule.fromUom?.abbreviation || '?' }}</div>
+                                                <i class="pi pi-arrow-right text-zinc-600 text-[10px]"></i>
+                                                <div class="px-3 py-1.5 bg-sky-950/20 rounded text-[12px] font-mono font-black text-fuchsia-400 border border-fuchsia-500/20 shadow-[0_0_15px_rgba(217,70,239,0.08)]">{{ rule.conversion_factor }} {{ rule.toUom?.abbreviation || '?' }}</div>
+                                            </div>
+                                            <Button icon="pi pi-trash" class="!w-8 !h-8 !p-0 !bg-transparent !border-none !text-zinc-600 hover:!text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer" @click="deleteProductConversion(rule.id)" />
+                                        </div>
+                                        <div v-if="productConversions.length === 0 && !addingRule" class="text-center py-12 px-6 opacity-40 grayscale flex flex-col items-center">
+                                            <i class="pi pi-box text-3xl mb-4 text-zinc-500 font-light"></i>
+                                            <p class="text-[10px] font-mono uppercase tracking-[0.2em] leading-relaxed m-0 text-zinc-400">No custom packaging defined.<br/><span class="opacity-70 text-[9px]">Product will use standard universal metrics from global settings.</span></p>
+                                        </div>
+                                    </div>
+                                    <div v-if="loadingConversions" class="flex justify-center py-16">
+                                        <i class="pi pi-spin pi-spinner text-fuchsia-400 text-3xl opacity-50"></i>
                                     </div>
                                 </div>
                             </div>

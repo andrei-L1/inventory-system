@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\UomConversion;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class UomConversionController extends Controller
 {
@@ -17,6 +19,10 @@ class UomConversionController extends Controller
             $query->where('from_uom_id', $request->uom_id)
                 ->orWhere('to_uom_id', $request->uom_id);
         }
+        
+        if ($request->has('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
 
         return response()->json(['data' => $query->get()]);
     }
@@ -27,7 +33,10 @@ class UomConversionController extends Controller
             'from_uom_id' => 'required|exists:units_of_measure,id',
             'to_uom_id' => 'required|exists:units_of_measure,id|different:from_uom_id',
             'conversion_factor' => 'required|numeric|min:0.000001',
+            'product_id' => 'nullable|exists:products,id',
         ]);
+        
+        $this->enforceStarSchema($validated['to_uom_id']);
 
         $conversion = UomConversion::create($validated);
 
@@ -45,7 +54,11 @@ class UomConversionController extends Controller
             'from_uom_id' => 'sometimes|exists:units_of_measure,id',
             'to_uom_id' => 'sometimes|exists:units_of_measure,id|different:from_uom_id',
             'conversion_factor' => 'sometimes|numeric|min:0.000001',
+            'product_id' => 'nullable|exists:products,id',
         ]);
+
+        $toUomId = $validated['to_uom_id'] ?? $uomConversion->to_uom_id;
+        $this->enforceStarSchema($toUomId);
 
         $uomConversion->update($validated);
 
@@ -54,8 +67,19 @@ class UomConversionController extends Controller
 
     public function destroy(UomConversion $uomConversion): JsonResponse
     {
+        // TODO: Enforce lock if transaction history exists for this conversion
         $uomConversion->delete();
 
         return response()->json(null, 204);
+    }
+    
+    private function enforceStarSchema($toUomId): void
+    {
+        $toUom = UnitOfMeasure::find($toUomId);
+        if (!$toUom || !$toUom->is_base) {
+            throw ValidationException::withMessages([
+                'to_uom_id' => 'Conversions must translate directly back to an Atomic Base Unit to prevent recursive loops (Star Schema enforcement).'
+            ]);
+        }
     }
 }

@@ -21,10 +21,15 @@ const uoms = ref([]);
 const conversions = ref([]);
 const loadingUoms = ref(false);
 const loadingConversions = ref(false);
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+const categoryOptions = ref([
+    { label: 'Count / Packaging', value: 'count' },
+    { label: 'Weight / Mass', value: 'mass' },
+    { label: 'Volume (Liquid)', value: 'volume' }
+]);
 
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
+const getUomCategory = (id) => {
+    const u = uoms.value.find(x => x.id === id);
+    return u ? u.category : 'count';
 };
 
 const isUnitAChild = (uomId) => {
@@ -35,9 +40,12 @@ const isUnitAChild = (uomId) => {
 const uomDialogVisible = ref(false);
 const uomSubmitted = ref(false);
 const uomForm = ref({
-    id: null,
     name: '',
     abbreviation: '',
+    category: 'count',
+    is_base: false,
+    conversion_factor_to_base: null,
+    decimals: 0,
     is_active: true
 });
 
@@ -78,7 +86,7 @@ const getConversionsForUom = (uomId) => {
 
 // -- UOM CRUD --
 const openNewUom = () => {
-    uomForm.value = { id: null, name: '', abbreviation: '', is_active: true };
+    uomForm.value = { id: null, name: '', abbreviation: '', category: 'count', is_base: false, conversion_factor_to_base: null, decimals: 0, is_active: true };
     uomSubmitted.value = false;
     uomDialogVisible.value = true;
 };
@@ -226,7 +234,14 @@ const getUomAbbr = (id) => {
                                 <div class="w-12 h-12 rounded-xl bg-zinc-950 border border-fuchsia-500/20 flex items-center justify-center shadow-inner">
                                     <span class="text-sm font-black text-fuchsia-400 font-mono tracking-tighter">{{ uom.abbreviation }}</span>
                                 </div>
-                                <h3 class="text-lg font-bold text-white tracking-tight m-0 mt-2">{{ uom.name }}</h3>
+                                <h3 class="text-lg font-bold text-white tracking-tight m-0 mt-2 flex items-center gap-2">
+                                    {{ uom.name }}
+                                    <span v-if="uom.is_base" class="text-[9px] bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded font-black tracking-widest border border-sky-400/30">BASE UNIT</span>
+                                </h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[9px] font-bold text-zinc-400 font-mono tracking-widest uppercase">{{ uom.category }} </span>
+                                    <span class="text-[9px] text-zinc-600 font-mono ml-1">• {{ uom.decimals }} Decimals</span>
+                                </div>
                                 <div class="flex items-center gap-2 mt-1">
                                     <span class="w-1.5 h-1.5 rounded-full" :class="uom.is_active ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
                                     <span class="text-[9px] font-bold tracking-widest uppercase font-mono" :class="uom.is_active ? 'text-zinc-400' : 'text-zinc-600'">{{ uom.is_active ? 'ACTIVE' : 'DISABLED' }}</span>
@@ -322,6 +337,47 @@ const getUomAbbr = (id) => {
                                            :class="{'!border-red-500/50': uomSubmitted && !uomForm.abbreviation}" />
                             </div>
 
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Measurement Category</label>
+                                <Select v-model="uomForm.category" :options="categoryOptions" optionLabel="label" optionValue="value" 
+                                        class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !font-bold" />
+                            </div>
+
+                            <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Allowed Decimals</label>
+                                <InputText v-model="uomForm.decimals" type="number" min="0" max="6" 
+                                           class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !font-bold"
+                                           placeholder="e.g. 0 for Pcs, 3 for Kg" />
+                            </div>
+
+                            <!-- Contextual Physics Fields -->
+                            <div class="col-span-12 flex flex-col gap-4 mt-2 p-4 bg-zinc-900/30 border border-zinc-800 rounded-xl" v-if="uomForm.category !== 'count'">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-[11px] uppercase tracking-tight text-sky-400">Universal Base Unit</span>
+                                        <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Is this the absolute smallest unit for {{ uomForm.category }}?</span>
+                                    </div>
+                                    <ToggleSwitch v-model="uomForm.is_base" 
+                                                 :pt="{ slider: ({ props }) => ({ class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700' }) }" />
+                                </div>
+
+                                <div v-if="!uomForm.is_base" class="flex flex-col gap-2 mt-2 pt-4 border-t border-zinc-800/60 transition-all">
+                                    <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Multiplier to Base Unit</label>
+                                    <div class="flex gap-2 items-center">
+                                        <span class="text-xs text-zinc-500 font-mono font-bold whitespace-nowrap">1 {{ uomForm.abbreviation || 'X' }} = </span>
+                                        <InputText v-model="uomForm.conversion_factor_to_base" type="number" step="0.00001" 
+                                                   class="!bg-zinc-950 !border-sky-500/30 !text-sky-400 !font-mono !font-bold !h-12 w-full focus:!border-sky-500/70"
+                                                   placeholder="e.g. 1000" />
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Count Category Notice -->
+                            <div class="col-span-12 p-3 bg-fuchsia-500/5 border border-fuchsia-500/20 rounded-lg" v-if="uomForm.category === 'count'">
+                                <p class="text-[10px] text-fuchsia-400/80 font-mono tracking-tight m-0 leading-relaxed uppercase">
+                                    <i class="pi pi-info-circle mr-1 text-fuchsia-500"></i> Packaging conversions (like Box = 12 pcs) are product-specific. Do not set them here. Navigate to a product's catalog page to map its packaging size. Global fallbacks can still be defined in rules.
+                                </p>
+                            </div>
+
                             <div class="col-span-12 pt-2 flex items-center justify-between p-4 bg-zinc-900/30 rounded-xl border border-zinc-800/80">
                                 <div class="flex flex-col">
                                     <span class="text-white font-bold text-[11px] uppercase tracking-tight">Active Status</span>
@@ -393,18 +449,16 @@ const getUomAbbr = (id) => {
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.conversion_factor}" />
                             </div>
                             <div class="flex flex-col gap-2 flex-1">
-                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">To Unit (e.g. Pcs)</label>
+                                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">To Base Unit (Star Schema)</label>
                                 <Select v-model="convForm.to_uom_id" 
                                         :options="uoms.filter(u => {
                                             const fromUom = uoms.find(x => x.id === convForm.from_uom_id);
-                                            if (!fromUom) return u.id !== convForm.from_uom_id;
+                                            if (!fromUom) return u.is_base;
                                             
-                                            // If parent is discrete, child MUST be discrete
-                                            if (isDiscrete(fromUom.abbreviation) && !isDiscrete(u.abbreviation)) return false;
-                                            
-                                            return u.id !== convForm.from_uom_id;
+                                            // Must be a base unit of the SAME category to prevent infinite daisy-chains
+                                            return u.is_base && u.category === fromUom.category && u.id !== convForm.from_uom_id;
                                         })" 
-                                        optionLabel="abbreviation" optionValue="id" placeholder="Select"
+                                        optionLabel="abbreviation" optionValue="id" placeholder="Select Base"
                                         class="!bg-zinc-900/50 !border-zinc-800 !text-white w-full !h-12 !font-bold"
                                         :class="{'!border-red-500/50': convSubmitted && !convForm.to_uom_id}" />
                             </div>
