@@ -34,6 +34,39 @@ class ProductUpdateRequest extends FormRequest
             'reorder_quantity' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
             'image' => 'nullable|image|max:2048',
+            'initial_conversion_factor' => [
+                'nullable',
+                'numeric',
+                'min:0.000001',
+                function ($attribute, $value, $fail) {
+                    $uomId = $this->input('uom_id');
+                    if (!$uomId) return;
+
+                    $uom = \App\Models\UnitOfMeasure::find($uomId);
+                    if (!$uom || $uom->is_base) return;
+
+                    $productId = $this->route('product');
+                    $id = is_object($productId) ? $productId->id : $productId;
+
+                    // Check if a global rule exists
+                    $hasGlobalRule = \App\Models\UomConversion::where('from_uom_id', $uomId)
+                        ->whereNull('product_id')
+                        ->exists();
+
+                    // Check if a product-specific rule exists (in case of update)
+                    $hasProductRule = false;
+                    if ($id) {
+                        $hasProductRule = \App\Models\UomConversion::where('from_uom_id', $uomId)
+                            ->where('product_id', $id)
+                            ->exists();
+                    }
+
+                    if (!$hasGlobalRule && !$hasProductRule && empty($value)) {
+                        $fail("A conversion factor is required for this unit ({$uom->abbreviation}) because no packaging definition exists for this product.");
+                    }
+                }
+            ],
+            'initial_to_uom_id' => 'nullable|exists:units_of_measure,id',
         ];
 
         // If the product has history, lock the core identifiers & accounting math fields

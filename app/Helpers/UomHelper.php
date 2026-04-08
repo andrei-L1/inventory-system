@@ -15,7 +15,7 @@ class UomHelper
     /**
      * Format a quantity based on the UOM type (Discrete vs. Continuous).
      */
-    public static function format($quantity, int $uomId, ?int $productId = null): string
+    public static function format($quantity, int $uomId, ?int $productId = null, bool $throw = false): string
     {
         if ($quantity === null) {
             return '0';
@@ -50,13 +50,13 @@ class UomHelper
         }
 
         // Discrete units (BOX, PCS) use recursive breakdown if fractional
-        return self::formatDiscrete($quantity, $uomId, $productId);
+        return self::formatDiscrete($quantity, $uomId, $productId, $throw);
     }
 
     /**
      * Handle recursive dual-UOM breakdown for discrete units.
      */
-    private static function formatDiscrete(float $quantity, int $uomId, ?int $productId = null): string
+    private static function formatDiscrete(float $quantity, int $uomId, ?int $productId = null, bool $throw = false): string
     {
         $uom = self::getUom($uomId);
         $absQty = abs($quantity);
@@ -68,7 +68,7 @@ class UomHelper
 
             // Expand to base unit if this is a packaging unit
             if (!$uom->is_base) {
-                $multiplier = self::getMultiplierToSmallest($uomId, $productId);
+                $multiplier = self::getMultiplierToSmallest($uomId, $productId, $throw);
                 if ($multiplier > 1) {
                     $totalSmallest = round($absQty * $multiplier);
                     $smallestUom = self::getUom(self::getSmallestUnitId($uomId));
@@ -106,7 +106,7 @@ class UomHelper
         }
 
         // Recurse into the smaller unit
-        $smallerPart = self::formatDiscrete($smallerQty, $conversion->to_uom_id, $productId);
+        $smallerPart = self::formatDiscrete($smallerQty, $conversion->to_uom_id, $productId, $throw);
 
         if (str_starts_with($smallerPart, '-')) {
             $smallerPart = substr($smallerPart, 1);
@@ -159,7 +159,7 @@ class UomHelper
     /**
      * Calculate the multiplier to get from any UOM cleanly to its base unit.
      */
-    public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null): float
+    public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null, bool $throw = true): float
     {
         if (! $fromUomId) return 1.0;
         
@@ -172,7 +172,6 @@ class UomHelper
         }
         
         // Contextual Counting layer uses the Product-aware conversions table
-        // Star Schema compliance guarantees we only need 1 look up here
         $query = self::$conversions->where('from_uom_id', $fromUomId);
         
         $bestConv = null;
@@ -185,6 +184,10 @@ class UomHelper
         
         if ($bestConv) {
             return (float) $bestConv->conversion_factor;
+        }
+
+        if (!$throw) {
+            return 1.0;
         }
 
         throw \Illuminate\Validation\ValidationException::withMessages([

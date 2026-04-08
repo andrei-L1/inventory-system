@@ -11,23 +11,25 @@ use Illuminate\Validation\ValidationException;
 
 class UomConversionController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
-        $query = UomConversion::with(['fromUom', 'toUom']);
+        $query = UomConversion::with(['fromUom', 'toUom', 'product']);
 
         if ($request->has('uom_id')) {
-            $query->where('from_uom_id', $request->uom_id)
-                ->orWhere('to_uom_id', $request->uom_id);
+            $query->where(function ($q) use ($request) {
+                $q->where('from_uom_id', $request->uom_id)
+                    ->orWhere('to_uom_id', $request->uom_id);
+            });
         }
         
         if ($request->has('product_id')) {
             $query->where('product_id', $request->product_id);
         }
 
-        return response()->json(['data' => $query->get()]);
+        return \App\Http\Resources\Inventory\UomConversionResource::collection($query->get());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): \App\Http\Resources\Inventory\UomConversionResource
     {
         $validated = $request->validate([
             'from_uom_id' => 'required|exists:units_of_measure,id',
@@ -40,15 +42,15 @@ class UomConversionController extends Controller
 
         $conversion = UomConversion::create($validated);
 
-        return response()->json(['data' => $conversion->load(['fromUom', 'toUom'])], 201);
+        return new \App\Http\Resources\Inventory\UomConversionResource($conversion->load(['fromUom', 'toUom']));
     }
 
-    public function show(UomConversion $uomConversion): JsonResponse
+    public function show(UomConversion $uomConversion): \App\Http\Resources\Inventory\UomConversionResource
     {
-        return response()->json(['data' => $uomConversion->load(['fromUom', 'toUom'])]);
+        return new \App\Http\Resources\Inventory\UomConversionResource($uomConversion->load(['fromUom', 'toUom']));
     }
 
-    public function update(Request $request, UomConversion $uomConversion): JsonResponse
+    public function update(Request $request, UomConversion $uomConversion): \App\Http\Resources\Inventory\UomConversionResource
     {
         $validated = $request->validate([
             'from_uom_id' => 'sometimes|exists:units_of_measure,id',
@@ -62,7 +64,7 @@ class UomConversionController extends Controller
 
         $uomConversion->update($validated);
 
-        return response()->json(['data' => $uomConversion->load(['fromUom', 'toUom'])]);
+        return new \App\Http\Resources\Inventory\UomConversionResource($uomConversion->load(['fromUom', 'toUom']));
     }
 
     public function destroy(UomConversion $uomConversion): JsonResponse

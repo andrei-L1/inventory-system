@@ -33,6 +33,29 @@ const getUomCategory = (id) => {
     return u ? u.category : 'count';
 };
 
+const categoryIcons = {
+    count: 'pi pi-box',
+    mass: 'pi pi-gauge',
+    volume: 'pi pi-tint',
+    length: 'pi pi-arrows-h'
+};
+
+const groupedUoms = computed(() => {
+    const groups = [];
+    categoryOptions.value.forEach(cat => {
+        const units = uoms.value.filter(u => u.category === cat.value);
+        if (units.length > 0) {
+            groups.push({
+                key: cat.value,
+                label: cat.label,
+                icon: categoryIcons[cat.value] || 'pi pi-tag',
+                units: units
+            });
+        }
+    });
+    return groups;
+});
+
 const isUnitAChild = (uomId) => {
     return conversions.value.some(c => c.to_uom_id === uomId);
 };
@@ -214,92 +237,125 @@ const getUomAbbr = (id) => {
                 </div>
             </div>
 
-            <!-- Unit Matrix Grid -->
+            <!-- Unit Matrix Grid segmented by Category -->
             <div class="max-w-[1600px] w-full mx-auto flex-1 overflow-y-auto custom-scrollbar pb-20">
                 <div v-if="loadingUoms" class="flex justify-center items-center py-32">
                     <i class="pi pi-spin pi-spinner text-fuchsia-400 text-4xl"></i>
                 </div>
                 
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-                    <!-- UOM Cards -->
-                    <div v-for="uom in uoms" :key="uom.id" 
-                         class="bg-zinc-900/40 border rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 relative"
-                         :class="uom.is_active ? 'border-zinc-800/80 shadow-[0_5px_30px_rgba(0,0,0,0.5)]' : 'border-zinc-900 opacity-60 grayscale'">
-                        
-                        <!-- Glow Accent -->
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 blur-[50px] -mr-16 -mt-16 rounded-full"></div>
-
-                        <!-- Card Header -->
-                        <div class="p-6 border-b border-zinc-800/60 flex justify-between items-start bg-zinc-900/60 relative z-10">
-                            <div class="flex flex-col gap-2">
-                                <div class="w-12 h-12 rounded-xl bg-zinc-950 border border-fuchsia-500/20 flex items-center justify-center shadow-inner">
-                                    <span class="text-sm font-black text-fuchsia-400 font-mono tracking-tighter">{{ uom.abbreviation }}</span>
-                                </div>
-                                <h3 class="text-lg font-bold text-white tracking-tight m-0 mt-2 flex items-center gap-2">
-                                    {{ uom.name }}
-                                    <span v-if="uom.is_base" class="text-[9px] bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded font-black tracking-widest border border-sky-400/30">BASE UNIT</span>
-                                </h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[9px] font-bold text-zinc-400 font-mono tracking-widest uppercase">{{ uom.category }} </span>
-                                    <span class="text-[9px] text-zinc-600 font-mono ml-1">• {{ uom.decimals }} Decimals</span>
-                                </div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="w-1.5 h-1.5 rounded-full" :class="uom.is_active ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
-                                    <span class="text-[9px] font-bold tracking-widest uppercase font-mono" :class="uom.is_active ? 'text-zinc-400' : 'text-zinc-600'">{{ uom.is_active ? 'ACTIVE' : 'DISABLED' }}</span>
-                                </div>
+                <div v-else class="flex flex-col gap-16">
+                    <!-- Category Section -->
+                    <div v-for="group in groupedUoms" :key="group.key" class="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <!-- Category Header -->
+                        <div class="flex items-center gap-4 mb-8 sticky top-0 bg-zinc-950/80 backdrop-blur-md py-4 z-20 border-b border-zinc-900/50">
+                            <div class="w-10 h-10 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-fuchsia-400 shadow-lg">
+                                <i :class="group.icon" class="text-lg"></i>
                             </div>
-                            <div v-if="can('manage-products')" class="flex gap-2">
-                                <button @click="editUom(uom)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none outline-none text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer">
-                                    <i class="pi pi-pencil text-xs"></i>
-                                </button>
-                                <button @click="deleteUom(uom)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none outline-none text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
-                                    <i class="pi pi-trash text-xs"></i>
-                                </button>
+                            <div class="flex flex-col">
+                                <h2 class="text-xl font-bold text-white tracking-tight m-0 uppercase flex items-center gap-3">
+                                    {{ group.label }}
+                                    <span class="text-[10px] bg-zinc-900 text-zinc-500 px-2 py-0.5 rounded border border-zinc-800 font-mono tracking-tighter">{{ group.units.length }} UNITS</span>
+                                </h2>
+                                <p class="text-[9px] text-zinc-600 font-mono uppercase tracking-widest mt-1">Consolidated Registry // System Measurement Tier</p>
                             </div>
+                            <div class="flex-1 h-[1px] bg-gradient-to-r from-zinc-800 to-transparent ml-4"></div>
                         </div>
 
-                        <!-- Card Body (Conversions) -->
-                        <div class="p-6 flex-1 flex flex-col bg-zinc-950/30 relative z-10">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono">Conversion Rules</span>
-                                <div class="flex flex-col items-end">
-                                    <button 
-                                        v-if="can('manage-products')" 
-                                        @click="openNewConversion(uom.id)" 
-                                        :disabled="isUnitAChild(uom.id)"
-                                        class="text-[10px] bg-transparent border-none outline-none font-bold uppercase tracking-widest font-mono flex items-center gap-1 transition-colors"
-                                        :class="isUnitAChild(uom.id) ? 'text-zinc-700 cursor-not-allowed' : 'text-sky-400 hover:text-sky-300 cursor-pointer'"
-                                    >
-                                        <i class="pi pi-plus text-[8px]"></i> Rule
-                                    </button>
-                                    <span v-if="isUnitAChild(uom.id)" class="text-[8px] font-bold text-amber-600/60 uppercase mt-1 text-right max-w-[120px] leading-tight">
-                                        Nesting Restricted: This is already a child unit.
-                                    </span>
-                                </div>
-                            </div>
+                        <!-- Grid of Units -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+                            <!-- UOM Cards -->
+                            <div v-for="uom in group.units" :key="uom.id" 
+                                 class="bg-zinc-900/40 border rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 relative"
+                                 :class="uom.is_active ? 'border-zinc-800/80 shadow-[0_5px_30px_rgba(0,0,0,0.5)]' : 'border-zinc-900 opacity-60 grayscale'">
+                                
+                                <!-- Glow Accent -->
+                                <div class="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/10 blur-[50px] -mr-16 -mt-16 rounded-full"></div>
 
-                            <div class="flex flex-col gap-3">
-                                <template v-if="getConversionsForUom(uom.id).length > 0">
-                                    <div v-for="conv in getConversionsForUom(uom.id)" :key="conv.id" 
-                                         class="group flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 transition-colors">
-                                        
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-xs font-black text-white font-mono bg-zinc-900 px-2 py-1 rounded">1 {{ uom.abbreviation }}</span>
-                                            <span class="text-[10px] text-zinc-600 font-mono">=</span>
-                                            <span class="text-xs font-black text-fuchsia-400 font-mono">{{ conv.conversion_factor }} <span class="text-zinc-400 font-bold ml-0.5">{{ getUomAbbr(conv.to_uom_id) }}</span></span>
+                                <!-- Card Header -->
+                                <div class="p-6 border-b border-zinc-800/60 flex justify-between items-start bg-zinc-900/60 relative z-10">
+                                    <div class="flex flex-col gap-2">
+                                        <div class="w-12 h-12 rounded-xl bg-zinc-950 border border-fuchsia-500/20 flex items-center justify-center shadow-inner">
+                                            <span class="text-sm font-black text-fuchsia-400 font-mono tracking-tighter">{{ uom.abbreviation }}</span>
                                         </div>
-
-                                        <button v-if="can('manage-products')" @click="deleteConversion(conv.id)" class="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded bg-transparent border-none outline-none text-red-500 hover:bg-red-500/20 transition-all cursor-pointer">
-                                            <i class="pi pi-times text-[10px]"></i>
+                                        <h3 class="text-lg font-bold text-white tracking-tight m-0 mt-2 flex items-center gap-2">
+                                            {{ uom.name }}
+                                            <span v-if="uom.is_base" class="text-[9px] bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded font-black tracking-widest border border-sky-400/30">BASE UNIT</span>
+                                        </h3>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="text-[9px] text-zinc-600 font-mono ml-0.5">{{ uom.decimals }} Decimals Allowed</span>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="uom.is_active ? 'bg-emerald-500' : 'bg-zinc-600'"></span>
+                                            <span class="text-[9px] font-bold tracking-widest uppercase font-mono" :class="uom.is_active ? 'text-zinc-400' : 'text-zinc-600'">{{ uom.is_active ? 'ACTIVE' : 'DISABLED' }}</span>
+                                        </div>
+                                    </div>
+                                    <div v-if="can('manage-products')" class="flex gap-2">
+                                        <button @click="editUom(uom)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none outline-none text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer">
+                                            <i class="pi pi-pencil text-xs"></i>
+                                        </button>
+                                        <button @click="deleteUom(uom)" class="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none outline-none text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
+                                            <i class="pi pi-trash text-xs"></i>
                                         </button>
                                     </div>
-                                </template>
-                                <div v-else class="py-6 flex flex-col items-center justify-center opacity-40 grayscale border border-dashed border-zinc-800 rounded-xl">
-                                    <i class="pi pi-calculator text-lg text-zinc-600 mb-2"></i>
-                                    <p class="text-[9px] font-mono uppercase tracking-widest text-zinc-500 m-0">No conversions set</p>
+                                </div>
+
+                                <!-- Card Body (Conversions) -->
+                                <div class="p-6 flex-1 flex flex-col bg-zinc-950/30 relative z-10">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em] font-mono">Conversion Rules</span>
+                                        <div class="flex flex-col items-end">
+                                            <button 
+                                                v-if="can('manage-products')" 
+                                                @click="openNewConversion(uom.id)" 
+                                                :disabled="isUnitAChild(uom.id)"
+                                                class="text-[10px] bg-transparent border-none outline-none font-bold uppercase tracking-widest font-mono flex items-center gap-1 transition-colors"
+                                                :class="isUnitAChild(uom.id) ? 'text-zinc-700 cursor-not-allowed' : 'text-sky-400 hover:text-sky-300 cursor-pointer'"
+                                            >
+                                                <i class="pi pi-plus text-[8px]"></i> Rule
+                                            </button>
+                                            <span v-if="isUnitAChild(uom.id)" class="text-[8px] font-bold text-amber-600/60 uppercase mt-1 text-right max-w-[120px] leading-tight">
+                                                Nesting Restricted: This is already a child unit.
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col gap-3">
+                                        <template v-if="getConversionsForUom(uom.id).length > 0">
+                                            <div v-for="conv in getConversionsForUom(uom.id)" :key="conv.id" 
+                                                 class="group flex flex-col gap-1.5 p-3 rounded-xl bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 transition-colors">
+                                                
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-3">
+                                                        <span class="text-xs font-black text-white font-mono bg-zinc-900 px-2 py-1 rounded">1 {{ uom.abbreviation }}</span>
+                                                        <span class="text-[10px] text-zinc-600 font-mono">=</span>
+                                                        <span class="text-xs font-black text-fuchsia-400 font-mono">{{ conv.conversion_factor }} <span class="text-zinc-400 font-bold ml-0.5">{{ getUomAbbr(conv.to_uom_id) }}</span></span>
+                                                    </div>
+                                                    <button v-if="can('manage-products')" @click="deleteConversion(conv.id)" class="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded bg-transparent border-none outline-none text-red-500 hover:bg-red-500/20 transition-all cursor-pointer">
+                                                        <i class="pi pi-times text-[10px]"></i>
+                                                    </button>
+                                                </div>
+
+                                                <!-- Product Label if specific -->
+                                                <div v-if="conv.product_id" class="flex items-center gap-1.5 mt-0.5">
+                                                    <span class="text-[8px] bg-sky-500/10 text-sky-400 border border-sky-500/20 px-1.5 py-0.5 rounded-full font-black tracking-widest uppercase font-mono">Product Specific</span>
+                                                    <span class="text-[9px] text-zinc-500 font-bold font-mono truncate max-w-[150px]">{{ conv.product_sku || 'Unnamed' }}</span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <div v-else class="py-6 flex flex-col items-center justify-center opacity-40 grayscale border border-dashed border-zinc-800 rounded-xl">
+                                            <i class="pi pi-calculator text-lg text-zinc-600 mb-2"></i>
+                                            <p class="text-[9px] font-mono uppercase tracking-widest text-zinc-500 m-0">No conversions set</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Global Empty State -->
+                    <div v-if="groupedUoms.length === 0 && !loadingUoms" class="py-48 text-center flex flex-col items-center justify-center opacity-20">
+                        <i class="pi pi-database text-6xl mb-6"></i>
+                        <p class="font-mono text-sm tracking-[0.3em] uppercase">No measurements registry found</p>
                     </div>
                 </div>
             </div>
