@@ -257,21 +257,26 @@ class StockEngineTest extends TestCase
     {
         $location = Location::where('code', 'WH-A-Z1')->first();
 
-        // 1. Setup UOMs and Conversion
-        $piecesUom = UnitOfMeasure::create(['name' => 'Pieces Test', 'abbreviation' => 'pcst']);
-        $boxUom = UnitOfMeasure::create(['name' => 'Box Test', 'abbreviation' => 'boxt']);
+        // 1. Setup UOMs (Using seeded units)
+        $pcsUom = UnitOfMeasure::where('abbreviation', 'pcs')->firstOrFail();
+        $boxUom = UnitOfMeasure::where('abbreviation', 'bx')->firstOrFail();
 
+        // Ensure a conversion exists for this product (bx -> pcs)
         UomConversion::create([
+            'product_id' => null, // Global
             'from_uom_id' => $boxUom->id,
-            'to_uom_id' => $piecesUom->id,
+            'to_uom_id' => $pcsUom->id,
             'conversion_factor' => 12,
         ]);
+
+        UomHelper::clearCache();
 
         // 2. Setup Product with Base UOM = Pieces
         $product = Product::create([
             'product_code' => 'P-UOM',
             'name' => 'UOM Product',
-            'uom_id' => $piecesUom->id,
+            'category_id' => 1,
+            'uom_id' => $pcsUom->id,
             'costing_method_id' => CostingMethod::where('name', 'fifo')->first()->id,
             'is_active' => true,
         ]);

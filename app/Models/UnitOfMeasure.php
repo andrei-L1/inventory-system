@@ -21,6 +21,17 @@ class UnitOfMeasure extends Model
     protected $fillable = [
         'name',
         'abbreviation',
+        'category',
+        'is_base',
+        'conversion_factor_to_base',
+        'decimals',
         'is_active',
+    ];
+
+    protected $casts = [
+        'is_base' => 'boolean',
+        'is_active' => 'boolean',
+        'conversion_factor_to_base' => 'float',
+        'decimals' => 'integer',
     ];
 }

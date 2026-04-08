@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Vendor;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\VendorSeeder;
+use App\Helpers\UomHelper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -25,6 +26,7 @@ class MultiUomProcurementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        UomHelper::clearCache();
         $this->seed(DatabaseSeeder::class);
         $this->seed(VendorSeeder::class);
     }
@@ -46,6 +48,7 @@ class MultiUomProcurementTest extends TestCase
             'to_uom_id' => $pcsUom->id,
             'conversion_factor' => 10,
         ]);
+        UomHelper::clearCache();
 
         // 2. Create Product with Base UOM 'pcs'
         $product = Product::create([
@@ -134,6 +137,7 @@ class MultiUomProcurementTest extends TestCase
             'to_uom_id' => $pcsUom->id,
             'conversion_factor' => 10,
         ]);
+        UomHelper::clearCache();
 
         // 2. Create Product with Base UOM 'bx' (Box)
         $product = Product::create([

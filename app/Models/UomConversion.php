@@ -10,6 +10,7 @@ class UomConversion extends Model
     use HasFactory;
 
     protected $fillable = [
+        'product_id',
         'from_uom_id',
         'to_uom_id',
         'conversion_factor',

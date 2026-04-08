@@ -19,26 +19,26 @@ class UomSeeder extends Seeder
             // Base Unit
             [
                 'name' => 'Piece',
-                'abbreviation' => 'PCS',
+                'abbreviation' => 'pcs',
                 'category' => 'count',
                 'is_base' => true,
                 'conversion_factor_to_base' => null,
                 'decimals' => 0,
                 'is_active' => true,
             ],
-            // Generic Common Packaging Units (Rules mapped dynamically per product, but registered globally here)
+            // Generic Common Packaging Units
             [
                 'name' => 'Dozen',
-                'abbreviation' => 'DZN',
+                'abbreviation' => 'dzn',
                 'category' => 'count',
                 'is_base' => false,
-                'conversion_factor_to_base' => null, // Intentionally null for count. Custom mapped via uom_conversions
+                'conversion_factor_to_base' => null,
                 'decimals' => 0,
                 'is_active' => true,
             ],
             [
                 'name' => 'Box',
-                'abbreviation' => 'BOX',
+                'abbreviation' => 'bx',
                 'category' => 'count',
                 'is_base' => false,
                 'conversion_factor_to_base' => null,
@@ -47,7 +47,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Case',
-                'abbreviation' => 'CASE',
+                'abbreviation' => 'case',
                 'category' => 'count',
                 'is_base' => false,
                 'conversion_factor_to_base' => null,
@@ -56,7 +56,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Pallet',
-                'abbreviation' => 'PLT',
+                'abbreviation' => 'plt',
                 'category' => 'count',
                 'is_base' => false,
                 'conversion_factor_to_base' => null,
@@ -65,12 +65,12 @@ class UomSeeder extends Seeder
             ],
 
             // ==========================================
-            // MASS / WEIGHT (Universal Scaling)
+            // MASS / WEIGHT
             // ==========================================
             // Base Unit
             [
                 'name' => 'Gram',
-                'abbreviation' => 'G',
+                'abbreviation' => 'g',
                 'category' => 'mass',
                 'is_base' => true,
                 'conversion_factor_to_base' => null,
@@ -79,7 +79,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Milligram',
-                'abbreviation' => 'MG',
+                'abbreviation' => 'mg',
                 'category' => 'mass',
                 'is_base' => false,
                 'conversion_factor_to_base' => 0.001,
@@ -88,7 +88,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Kilogram',
-                'abbreviation' => 'KG',
+                'abbreviation' => 'kg',
                 'category' => 'mass',
                 'is_base' => false,
                 'conversion_factor_to_base' => 1000,
@@ -97,7 +97,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Metric Ton',
-                'abbreviation' => 'TON',
+                'abbreviation' => 'ton',
                 'category' => 'mass',
                 'is_base' => false,
                 'conversion_factor_to_base' => 1000000,
@@ -106,7 +106,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Ounce',
-                'abbreviation' => 'OZ',
+                'abbreviation' => 'oz',
                 'category' => 'mass',
                 'is_base' => false,
                 'conversion_factor_to_base' => 28.3495,
@@ -115,7 +115,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Pound',
-                'abbreviation' => 'LB',
+                'abbreviation' => 'lb',
                 'category' => 'mass',
                 'is_base' => false,
                 'conversion_factor_to_base' => 453.592,
@@ -124,12 +124,12 @@ class UomSeeder extends Seeder
             ],
 
             // ==========================================
-            // VOLUME (Universal Scaling)
+            // VOLUME
             // ==========================================
             // Base Unit
             [
                 'name' => 'Milliliter',
-                'abbreviation' => 'ML',
+                'abbreviation' => 'ml',
                 'category' => 'volume',
                 'is_base' => true,
                 'conversion_factor_to_base' => null,
@@ -138,7 +138,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Liter',
-                'abbreviation' => 'L',
+                'abbreviation' => 'l',
                 'category' => 'volume',
                 'is_base' => false,
                 'conversion_factor_to_base' => 1000,
@@ -147,7 +147,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Cubic Centimeter',
-                'abbreviation' => 'CM3',
+                'abbreviation' => 'cm3',
                 'category' => 'volume',
                 'is_base' => false,
                 'conversion_factor_to_base' => 1,
@@ -156,7 +156,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Gallon (US)',
-                'abbreviation' => 'GAL',
+                'abbreviation' => 'gal',
                 'category' => 'volume',
                 'is_base' => false,
                 'conversion_factor_to_base' => 3785.41,
@@ -165,12 +165,12 @@ class UomSeeder extends Seeder
             ],
 
             // ==========================================
-            // LENGTH (Universal Scaling)
+            // LENGTH
             // ==========================================
             // Base Unit
             [
                 'name' => 'Millimeter',
-                'abbreviation' => 'MM',
+                'abbreviation' => 'mm',
                 'category' => 'length',
                 'is_base' => true,
                 'conversion_factor_to_base' => null,
@@ -179,7 +179,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Centimeter',
-                'abbreviation' => 'CM',
+                'abbreviation' => 'cm',
                 'category' => 'length',
                 'is_base' => false,
                 'conversion_factor_to_base' => 10,
@@ -188,7 +188,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Meter',
-                'abbreviation' => 'M',
+                'abbreviation' => 'm',
                 'category' => 'length',
                 'is_base' => false,
                 'conversion_factor_to_base' => 1000,
@@ -197,7 +197,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Inch',
-                'abbreviation' => 'IN',
+                'abbreviation' => 'in',
                 'category' => 'length',
                 'is_base' => false,
                 'conversion_factor_to_base' => 25.4,
@@ -206,7 +206,7 @@ class UomSeeder extends Seeder
             ],
             [
                 'name' => 'Foot',
-                'abbreviation' => 'FT',
+                'abbreviation' => 'ft',
                 'category' => 'length',
                 'is_base' => false,
                 'conversion_factor_to_base' => 304.8,

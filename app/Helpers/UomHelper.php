@@ -187,7 +187,9 @@ class UomHelper
             return (float) $bestConv->conversion_factor;
         }
 
-        return 1.0;
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'uom_id' => 'Missing conversion rule for this unit (' . $uom->abbreviation . '). Please define its packaging size.'
+        ]);
     }
 
     public static function clearCache(): void
