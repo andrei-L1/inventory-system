@@ -17,6 +17,10 @@ class UnitOfMeasureResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'abbreviation' => $this->abbreviation,
+            'category' => $this->category,
+            'is_base' => (bool) $this->is_base,
+            'decimals' => (int) $this->decimals,
+            'conversion_factor_to_base' => (float) $this->conversion_factor_to_base,
             'is_active' => (bool) $this->is_active,
         ];
     }

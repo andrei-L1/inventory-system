@@ -43,8 +43,8 @@ class ProductUpdateRequest extends FormRequest
             $rules['uom_id'] = "required|integer|in:{$existingProduct->uom_id}";
             $rules['costing_method_id'] = "required|integer|in:{$existingProduct->costing_method_id}";
         } else {
-            $rules['product_code'] = "required|string|max:100|unique:products,product_code,{$id}";
-            $rules['sku'] = "required|string|max:100|unique:products,sku,{$id}";
+            $rules['product_code'] = "nullable|string|max:100|unique:products,product_code,{$id}";
+            $rules['sku'] = "nullable|string|max:100|unique:products,sku,{$id}";
         }
 
         return $rules;

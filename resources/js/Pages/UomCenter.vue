@@ -24,7 +24,8 @@ const loadingConversions = ref(false);
 const categoryOptions = ref([
     { label: 'Count / Packaging', value: 'count' },
     { label: 'Weight / Mass', value: 'mass' },
-    { label: 'Volume (Liquid)', value: 'volume' }
+    { label: 'Volume (Liquid)', value: 'volume' },
+    { label: 'Length / Linear', value: 'length' }
 ]);
 
 const getUomCategory = (id) => {

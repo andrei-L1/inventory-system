@@ -80,6 +80,20 @@ watch(search, () => {
     debouncedSearch();
 });
 
+watch(() => product.value.uom_id, (newVal) => {
+    if (!isEditing.value && newVal) {
+        const uom = uoms.value.find(u => u.id === newVal);
+        if (uom && !uom.is_base) {
+            const base = uoms.value.find(b => b.category === uom.category && b.is_base);
+            product.value.initial_to_uom_id = base ? base.id : null;
+            product.value.initial_conversion_factor = null;
+        } else {
+            product.value.initial_to_uom_id = null;
+            product.value.initial_conversion_factor = null;
+        }
+    }
+});
+
 watch(activeTab, (val) => {
     if (val === 'packaging' && product.value.id) {
         loadProductConversions();
@@ -197,7 +211,9 @@ const resetForm = () => {
         reorder_quantity: 0,
         average_cost: 0,
         is_active: true,
-        image: null
+        image: null,
+        initial_conversion_factor: null,
+        initial_to_uom_id: null
     };
     imagePreview.value = null;
     imageFile.value = null;
@@ -273,6 +289,12 @@ const validateForm = () => {
     
     if (!product.value.category_id) newErrors.category_id = 'A product category must be selected.';
     if (!product.value.uom_id) newErrors.uom_id = 'Unit of measure is required.';
+    
+    // Strict Packaging Validation: If non-base UOM is selected on create, we NEED a factor.
+    if (!isEditing.value && isNonBaseUOM.value && !product.value.initial_conversion_factor) {
+        newErrors.initial_conversion_factor = 'A conversion factor is required for this unit.';
+    }
+
     if (!product.value.costing_method_id) newErrors.costing_method_id = 'Costing method must be defined.';
     if (product.value.selling_price < 0) newErrors.selling_price = 'Price cannot be negative.';
     if (product.value.reorder_point < 0) newErrors.reorder_point = 'Reorder point cannot be negative.';
@@ -394,6 +416,18 @@ const stats = computed(() => ({
     active: products.value.filter(p => p.is_active).length,
     totalValue: products.value.reduce((sum, p) => sum + (p.selling_price || 0), 0)
 }));
+const isNonBaseUOM = computed(() => {
+    if (!product.value.uom_id) return false;
+    const uom = uoms.value.find(u => u.id === product.value.uom_id);
+    return uom && !uom.is_base;
+});
+
+const getBaseUomForSelected = computed(() => {
+    if (!product.value.uom_id) return null;
+    const uom = uoms.value.find(u => u.id === product.value.uom_id);
+    if (!uom) return null;
+    return uoms.value.find(b => b.category === uom.category && b.is_base);
+});
 </script>
 
 <template>
@@ -725,6 +759,30 @@ const stats = computed(() => ({
                                                 class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 disabled:opacity-50"
                                                 :class="{'!border-red-500/50': errors.uom_id}" />
                                         <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">UOM locked due to audit history</p>
+                                        
+                                        <!-- Initial Packaging Factor (for New Products using non-base units) -->
+                                        <div v-if="!isEditing && isNonBaseUOM" 
+                                             class="mt-4 p-4 bg-fuchsia-500/5 border border-fuchsia-500/20 rounded-xl flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div class="flex justify-between items-center">
+                                                <label class="text-[9px] font-black text-fuchsia-400 uppercase tracking-[0.2em] font-mono">Packaging Definition Required</label>
+                                                <span v-if="errors.initial_conversion_factor" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Missing</span>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex-1 flex flex-col gap-1.5">
+                                                    <span class="text-[8px] text-zinc-500 font-bold uppercase font-mono">1 UNIT =</span>
+                                                    <InputNumber v-model="product.initial_conversion_factor" placeholder="Qty..." 
+                                                                 class="w-full"
+                                                                 inputClass="!bg-zinc-900 !border-fuchsia-500/20 !text-fuchsia-400 !font-bold !font-mono !h-10" />
+                                                </div>
+                                                <div class="flex-1 flex flex-col gap-1.5">
+                                                    <span class="text-[8px] text-zinc-500 font-bold uppercase font-mono">BASE UNIT</span>
+                                                    <div class="h-10 px-4 bg-zinc-900 border border-zinc-800 rounded flex items-center text-sky-400 font-bold text-xs font-mono">
+                                                        {{ getBaseUomForSelected?.name || '---' }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="text-[8px] text-zinc-500 font-medium leading-relaxed m-0 italic">This establishes the Star Schema conversion factor for this product immediately.</p>
+                                        </div>
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">

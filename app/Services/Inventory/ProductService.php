@@ -56,6 +56,20 @@ class ProductService
 
             $product = Product::create($data);
 
+            // 1.5 Handle Initial Conversion Rule (Atomic Packaging)
+            if (!empty($data['initial_conversion_factor'])) {
+                $toUomId = $data['initial_to_uom_id'] ?? \App\Helpers\UomHelper::getSmallestUnitId($product->uom_id);
+                
+                if ($toUomId) {
+                    \App\Models\UomConversion::create([
+                        'product_id' => $product->id,
+                        'from_uom_id' => $product->uom_id,
+                        'to_uom_id' => $toUomId,
+                        'conversion_factor' => (float) $data['initial_conversion_factor'],
+                    ]);
+                }
+            }
+
             // 2. Handle Image Attachment if provided
             if ($image) {
                 $this->handleAttachment($product, $image, 'main_image');
