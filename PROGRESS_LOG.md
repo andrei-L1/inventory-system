@@ -491,3 +491,10 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 *Last Updated: 2026-04-03 10:30:00*
 
 
+
+### 2026-04-09: Sales Returns Engine & Absolute Precision Hardening
+
+- **Sales Returns (RMA) Completion**: Finalized the Sales Order Returns lifecycle. Implemented Replacement vs Refund resolution logic within the SalesOrderReturnController. The system now dynamically recalculates exact line subtotals, reverses ordered quantities for refunds, and auto-generates Invoice Credit Notes.
+- **Quantity-Based Status Engine**: Restructured the Order Status engine to be entirely mathematically derived. SalesOrder::recalculateStatus() now governs UI visibility based on the true ratio of ordered_qty vs shipped_qty, completely eliminating split-brain workflow lockups.
+- **System-Wide Decimal Precision Standardization (Batch 3)**: Discovered and patched the final fractional stragglers. Upgraded Sales Order 	ax_amount and discount_amount across the whole schema to absolute decimal(18, 8) precision, guaranteeing zero truncation on reporting metrics.
+- **Testing**: Executed and verified the PrecisionReturnTest and InvoicingAndReturnsTest, closing this phase with 166 passing assertions.

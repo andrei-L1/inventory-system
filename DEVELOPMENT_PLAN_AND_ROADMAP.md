@@ -605,6 +605,6 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 1. **Reporting Engine (Phase 8)** — Develop the asynchronous valuation engine to calculate Total Inventory Value and Gross Margin historicals.
 2. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
-3. **Sales Returns (RMA) & Invoicing (Phase 5.4-5.5)** — Close the final gaps in the Sales module by implementing restock logic and credit notes.
+3. **Invoicing & Payments (Phase 5.5)** — Build the Invoice Controller to finalize standard Accounts Receivable and payment allocations against the newly minted Credit Notes.
 4. **User Management UI (Phase 9.1)** — Create the admin dashboard for managing staff roles and access permissions.
 
