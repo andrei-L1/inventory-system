@@ -424,8 +424,6 @@ class StockService
         }
     }
 
-    protected array $uomCache = [];
-
     // -------------------------------------------------------------------------
     // PRIVATE: Apply UOM conversion to line data before storing.
     // -------------------------------------------------------------------------
@@ -438,17 +436,13 @@ class StockService
             $fromId = (int) $lineData['uom_id'];
             $targetUomId = UomHelper::getSmallestUnitId($product->uom_id);
             $toId = $targetUomId;
-            $cacheKey = "{$product->id}_{$fromId}_{$toId}"; // Scope to product
+            $cacheKey = "{$product->id}_{$fromId}_{$toId}"; // Loggable key
 
-            if (! isset($this->uomCache[$cacheKey])) {
-                try {
-                    $this->uomCache[$cacheKey] = UomHelper::getConversionFactor($fromId, $toId);
-                } catch (\Exception $e) {
-                    throw new UomConversionException($e->getMessage());
-                }
+            try {
+                $factor = UomHelper::getConversionFactor($fromId, $toId, $product->id);
+            } catch (\Exception $e) {
+                throw new UomConversionException($e->getMessage());
             }
-
-            $factor = $this->uomCache[$cacheKey];
 
             // Apply high-precision conversion (matching DB decimal 18,8)
             $lineData['quantity'] = round($lineData['quantity'] * $factor, 8);

@@ -342,7 +342,7 @@ class PurchaseOrderController extends Controller
                     // 1. Convert received quantity to the PO line's UOM for validation and tracking
                     $qtyToUpdatePO = $receivedQty;
                     if ((int) $receivedUomId !== (int) $lineUomId) {
-                        $factor = $this->getUomConversionFactor($receivedUomId, $lineUomId);
+                        $factor = $this->getUomConversionFactor($receivedUomId, $lineUomId, $poLine->product_id);
                         $qtyToUpdatePO = round($receivedQty * $factor, 8);
                     }
 
@@ -449,7 +449,7 @@ class PurchaseOrderController extends Controller
                     // 1. Convert return quantity to the PO line's UOM for validation and tracking
                     $qtyToUpdatePO = $returnQtyRaw;
                     if ((int) $returnUomId !== (int) $lineUomId) {
-                        $factor = $this->getUomConversionFactor($returnUomId, $lineUomId);
+                        $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $poLine->product_id);
                         $qtyToUpdatePO = round($returnQtyRaw * $factor, 8);
                     }
 
@@ -457,7 +457,7 @@ class PurchaseOrderController extends Controller
                     if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00000001)) {
                         $receivedInReturnUnit = $poLine->received_qty;
                         if ((int) $returnUomId !== (int) $lineUomId) {
-                            $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId);
+                            $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
                             $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 4);
                         }
                         abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
@@ -628,10 +628,10 @@ class PurchaseOrderController extends Controller
     /**
      * Helper to find a conversion factor between two UOMs.
      */
-    private function getUomConversionFactor(int $fromId, int $toId): float
+    private function getUomConversionFactor(int $fromId, int $toId, ?int $productId = null): float
     {
         try {
-            return UomHelper::getConversionFactor($fromId, $toId);
+            return UomHelper::getConversionFactor($fromId, $toId, $productId);
         } catch (\Exception $e) {
             throw new UomConversionException($e->getMessage());
         }

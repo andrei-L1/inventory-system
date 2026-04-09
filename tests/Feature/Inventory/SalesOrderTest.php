@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
@@ -33,6 +34,7 @@ class SalesOrderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        UomHelper::clearCache();
         $this->stockService = app(StockService::class);
 
         // Setup lookup data first
@@ -78,7 +80,10 @@ class SalesOrderTest extends TestCase
 
         // 6. Mandatory Categories & UOMs for factories to reference
         Category::firstOrCreate(['name' => 'General']);
-        UnitOfMeasure::firstOrCreate(['name' => 'Piece', 'abbreviation' => 'pcs']);
+        UnitOfMeasure::firstOrCreate(
+            ['abbreviation' => 'pcs'],
+            ['name' => 'Piece', 'category' => 'count', 'is_base' => true, 'decimals' => 0, 'is_active' => true]
+        );
     }
 
     public function test_can_create_sales_order()
@@ -124,7 +129,11 @@ class SalesOrderTest extends TestCase
     {
         $product = Product::factory()->create(['uom_id' => 1]); // Assuming 1 is base UOM for simplicity in test
         $location = Location::factory()->create();
-        $uom = UnitOfMeasure::firstOrCreate(['id' => 1], ['name' => 'Piece', 'abbreviation' => 'pcs']);
+        $uom = UnitOfMeasure::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'Piece', 'abbreviation' => 'pcs', 'category' => 'count', 'is_base' => true, 'decimals' => 0, 'is_active' => true]
+        );
+        UomHelper::clearCache();
         $product->update(['uom_id' => $uom->id]);
 
         // 1. Add some stock first (Receipt)

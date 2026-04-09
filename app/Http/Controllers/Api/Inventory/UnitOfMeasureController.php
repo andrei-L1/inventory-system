@@ -19,6 +19,11 @@ class UnitOfMeasureController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:units_of_measure,name',
             'abbreviation' => 'required|string|max:10|unique:units_of_measure,abbreviation',
+            'category' => 'required|string|in:count,mass,volume,length',
+            'is_base' => 'boolean',
+            'decimals' => 'integer|min:0|max:6',
+            'conversion_factor_to_base' => 'nullable|numeric',
+            'is_active' => 'boolean',
         ]);
 
         return new UnitOfMeasureResource(UnitOfMeasure::create($validated));
@@ -34,6 +39,11 @@ class UnitOfMeasureController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100|unique:units_of_measure,name,'.$uom->id,
             'abbreviation' => 'required|string|max:10|unique:units_of_measure,abbreviation,'.$uom->id,
+            'category' => 'required|string|in:count,mass,volume,length',
+            'is_base' => 'boolean',
+            'decimals' => 'integer|min:0|max:6',
+            'conversion_factor_to_base' => 'nullable|numeric',
+            'is_active' => 'boolean',
         ]);
         $uom->update($validated);
 

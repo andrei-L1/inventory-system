@@ -171,7 +171,7 @@ class Product extends Model
      */
     public function getAverageCostAttribute($value): float
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id);
+        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
 
         return $multiplier > 0 ? (float) $value * $multiplier : (float) $value;
     }
@@ -184,7 +184,7 @@ class Product extends Model
         // Internal QOH is now stored in Atomic Pieces.
         // We convert it back to the Product's Base UOM for catalog display.
         $pieces = (float) $this->inventories()->sum('quantity_on_hand');
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id);
+        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
 
         return $multiplier > 0 ? $pieces / $multiplier : $pieces;
     }
@@ -195,6 +195,6 @@ class Product extends Model
     public function getFormattedTotalQohAttribute(): string
     {
         // total_qoh is now correctly scaled to the product's UOM in the getter above.
-        return UomHelper::format($this->total_qoh, $this->uom_id);
+        return UomHelper::format($this->total_qoh, $this->uom_id, $this->id, false);
     }
 }

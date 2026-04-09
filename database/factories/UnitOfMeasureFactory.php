@@ -14,6 +14,9 @@ class UnitOfMeasureFactory extends Factory
         return [
             'name' => $this->faker->unique()->word().'_'.$this->faker->unique()->numberBetween(1, 9999),
             'abbreviation' => strtoupper($this->faker->unique()->lexify('??')),
+            'category' => 'count',
+            'is_base' => true,
+            'decimals' => 0,
             'is_active' => true,
         ];
     }

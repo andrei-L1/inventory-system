@@ -2,10 +2,12 @@
 
 namespace App\Services\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Models\Attachment;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\Product;
+use App\Models\UomConversion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +58,23 @@ class ProductService
 
             $product = Product::create($data);
 
+            // 1.5 Handle Initial Conversion Rule (Atomic Packaging)
+            if (! empty($data['initial_conversion_factor'])) {
+                $toUomId = $data['initial_to_uom_id'] ?? UomHelper::getSmallestUnitId($product->uom_id);
+
+                if ($toUomId) {
+                    UomConversion::create([
+                        'product_id' => $product->id,
+                        'from_uom_id' => $product->uom_id,
+                        'to_uom_id' => $toUomId,
+                        'conversion_factor' => (float) $data['initial_conversion_factor'],
+                    ]);
+
+                    // Clear cache to ensure the new rule is visible in the current request (e.g. for Resource response)
+                    UomHelper::clearCache();
+                }
+            }
+
             // 2. Handle Image Attachment if provided
             if ($image) {
                 $this->handleAttachment($product, $image, 'main_image');
@@ -75,6 +94,42 @@ class ProductService
             }
 
             return $product;
+        });
+    }
+
+    /**
+     * Update an existing product.
+     */
+    public function updateProduct(Product $product, array $data): Product
+    {
+        return DB::transaction(function () use ($product, $data) {
+            $image = $data['image'] ?? null;
+            unset($data['image']);
+
+            // 1. Update basic product data
+            $product->update($data);
+
+            // 2. Handle Initial Conversion Rule Update
+            if (! empty($data['initial_conversion_factor'])) {
+                $toUomId = $data['initial_to_uom_id'] ?? UomHelper::getSmallestUnitId($product->uom_id);
+
+                if ($toUomId) {
+                    // Update existing or create if missing
+                    UomConversion::updateOrCreate(
+                        ['product_id' => $product->id, 'from_uom_id' => $product->uom_id],
+                        ['to_uom_id' => $toUomId, 'conversion_factor' => (float) $data['initial_conversion_factor']]
+                    );
+
+                    UomHelper::clearCache();
+                }
+            }
+
+            // 3. Handle Image Attachment
+            if ($image) {
+                $this->handleAttachment($product, $image, 'main_image');
+            }
+
+            return $product->refresh();
         });
     }
 

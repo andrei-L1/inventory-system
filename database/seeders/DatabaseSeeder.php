@@ -71,15 +71,7 @@ class DatabaseSeeder extends Seeder
         // ────────────────────────────────────────────────────────────────────
         // 4. Units of Measure
         // ────────────────────────────────────────────────────────────────────
-        $uoms = [
-            ['name' => 'Piece',    'abbreviation' => 'pcs', 'is_active' => true],
-            ['name' => 'Box',      'abbreviation' => 'bx',  'is_active' => true],
-            ['name' => 'Kilogram', 'abbreviation' => 'kg',  'is_active' => true],
-        ];
-
-        foreach ($uoms as $uom) {
-            DB::table('units_of_measure')->updateOrInsert(['abbreviation' => $uom['abbreviation']], $uom + ['created_at' => Carbon::now(), 'updated_at' => Carbon::now()]);
-        }
+        $this->call(UomSeeder::class);
 
         // ────────────────────────────────────────────────────────────────────
         // 5. Sample Locations  (location_types seeded above — safe to read now)

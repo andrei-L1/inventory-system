@@ -72,7 +72,27 @@ To keep the system user-friendly, we "mask" the precision in the interface:
 | :--- | :--- |
 | **Averaging Algorithm** | `App\Services\Inventory\Costing\Traits\ManagesCostLayers` |
 | **Precision Constants** | `App\Services\Inventory\StockService::QTY_EPSILON` |
+| **UOM Scaling Engine** | `App\Helpers\UomHelper` |
 | **Schema Definition** | `database/migrations/2026_04_04_000001_upgrade_quantity_precision.php` |
+
+---
+
+## 7. Contextual UOM Scaling (Product-Aware)
+
+A major innovation in the system is the **Contextual Counting Layer**. This allows the same unit abbreviation (e.g., "BX" for Box) to represent different absolute quantities depending on the product context.
+
+### 7.1 The Rule Prioritization
+When the system calculates the "Base Multiplier" for a product movement, it follows a strict hierarchy to find the correct math:
+1.  **Product-Specific Rule**: Search `uom_conversions` where `from_uom_id = TARGET` AND `product_id = CURRENT_PRODUCT`.
+2.  **Global Rule**: If no specific product rule exists, search `uom_conversions` where `from_uom_id = TARGET` AND `product_id IS NULL`.
+3.  **Default 1:1**: If no rules are found, the system assumes a direct mapping (for same-unit transactions).
+
+### 7.2 Scaling Invariant
+For any transaction involving a custom UOM, the resulting atomic stock change is calculated as:
+$$ \Delta \text{AtomicQty} = \text{TransactionQty} \times \text{UomHelper::getMultiplierToSmallest}(\text{uom\_id}, \text{product\_id}) $$
+
+> [!IMPORTANT]
+> **Data Isolation**: This mechanism ensures that a "Box of 12" for *Bolt A* never conflicts with a "Box of 50" for *Bolt B*, even though both use the same UOM ID. This prevents global rule pollution and keeps the inventory math surgical.
 
 > [!CAUTION]
 > **Code Sync Constraint**: Any new calculation (Invoicing, Discounts, Tax) **MUST** be wrapped in `round(..., 8)` in PHP. Failing to do this will cause "Rounding Drift" and corrupt the inventory ledger over time.

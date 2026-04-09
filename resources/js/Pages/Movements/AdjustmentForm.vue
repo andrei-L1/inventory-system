@@ -111,7 +111,7 @@
                                             <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit</label>
                                             <Select 
                                                 v-model="line.uom_id" 
-                                                :options="uoms" 
+                                                :options="getAvailableUoms(line.product?.id)" 
                                                 optionLabel="abbreviation" 
                                                 optionValue="id"
                                                 placeholder="UOM" 
@@ -231,19 +231,43 @@ const isUomIdDiscrete = (id) => {
     return uom ? isDiscrete(uom.abbreviation) : true;
 };
 
-const getFactorToBase = (uomId) => {
-    if (!uomId) return { factor: 1, baseId: null };
+const getFactorToBase = (uomId, productId = null) => {
     let factor = 1.0;
-    let current = Number(uomId);
+    let current = uomId;
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
-        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
-        factor *= Number(rule.conversion_factor);
-        current = Number(rule.to_uom_id);
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
+        }
+        if (!rule || processed.includes(rule.to_uom_id)) break;
+        factor *= rule.conversion_factor;
+        current = rule.to_uom_id;
         processed.push(current);
     }
     return { factor, baseId: current };
+};
+
+const getAvailableUoms = (productId) => {
+    if (!productId) return [];
+    const product = products.value.find(p => p.id === productId);
+    if (!product || !product.uom_id) return uoms.value;
+
+    const currentUom = uoms.value.find(u => u.id === product.uom_id);
+    if (!currentUom) return [];
+
+    return uoms.value.filter(u => {
+        if (u.category !== currentUom.category) return false;
+        if (u.is_base) return true;
+        if (u.category !== 'count') return true;
+        return uomConversions.value.some(c => 
+            c.from_uom_id === u.id && 
+            (c.product_id === null || c.product_id === product.id)
+        );
+    });
 };
 
 const loadData = async () => {
@@ -309,8 +333,8 @@ const postAdjustment = async () => {
         
         let adjustmentQtyInBase = parseFloat(line.quantity) || 0;
         
-        const targetInfo = getFactorToBase(line.uom_id);
-        const productBaseInfo = getFactorToBase(line.product.uom_id);
+        const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
+        const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
@@ -380,7 +404,7 @@ const fetchProductInventory = async (line) => {
 
 const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
-    const factor = getFactorToBase(line.uom_id).factor;
+    const factor = getFactorToBase(line.uom_id, line.product?.id).factor;
     const scaled = (parseFloat(rawPieces) / factor);
     return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
 };
@@ -399,8 +423,8 @@ const getUomAbbr = (id) => {
 const isInsufficient = (line) => {
     if (!line.product || !form.location) return false;
     let qtyInBase = parseFloat(line.quantity) || 0;
-    const targetInfo = getFactorToBase(line.uom_id);
-    const productBaseInfo = getFactorToBase(line.product.uom_id);
+    const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
+    const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
     if (targetInfo.baseId === productBaseInfo.baseId) {
         const effectiveFactor = targetInfo.factor / productBaseInfo.factor;

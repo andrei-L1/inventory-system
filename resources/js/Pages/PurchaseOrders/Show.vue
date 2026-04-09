@@ -58,7 +58,7 @@ const fetchProductInventory = async (line) => {
 
 const getScaledQty = (line, rawPieces) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
-    const factor = getFactorToBase(line.uom_id).factor;
+    const factor = getFactorToBase(line.uom_id, line.product_id).factor;
     const scaled = (parseFloat(rawPieces) / factor);
     return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
 };
@@ -90,13 +90,20 @@ const getFilteredUoms = (line) => {
     return uoms.value.filter(u => isDiscrete(u.abbreviation));
 };
 
-const getFactorToBase = (uomId) => {
+const getFactorToBase = (uomId, productId = null) => {
     if (!uomId) return { factor: 1, baseId: null };
     let factor = 1.0;
     let current = Number(uomId);
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === null);
+        }
+        
         if (!rule || processed.includes(Number(rule.to_uom_id))) break;
         factor *= Number(rule.conversion_factor);
         current = Number(rule.to_uom_id);
@@ -109,8 +116,8 @@ const onGrnUomChange = (line) => {
     const poLine = po.value.lines.find(l => l.id === line.po_line_id);
     if (!poLine) return;
 
-    const targetInfo = getFactorToBase(line.uom_id);
-    const poBaseInfo = getFactorToBase(poLine.uom_id);
+    const targetInfo = getFactorToBase(line.uom_id, line.product_id);
+    const poBaseInfo = getFactorToBase(poLine.uom_id, poLine.product_id);
 
     if (targetInfo.baseId === poBaseInfo.baseId) {
         const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
@@ -125,8 +132,8 @@ const onReturnUomChange = (line) => {
     const poLine = po.value.lines.find(l => l.id === line.po_line_id);
     if (!poLine) return;
 
-    const targetInfo = getFactorToBase(line.uom_id);
-    const poBaseInfo = getFactorToBase(poLine.uom_id);
+    const targetInfo = getFactorToBase(line.uom_id, line.product_id);
+    const poBaseInfo = getFactorToBase(poLine.uom_id, poLine.product_id);
 
     if (targetInfo.baseId === poBaseInfo.baseId) {
         const effectiveFactor = poBaseInfo.factor / targetInfo.factor;

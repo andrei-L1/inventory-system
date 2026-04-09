@@ -66,7 +66,7 @@ class Inventory extends Model
      */
     public function getScaledQuantityOnHandAttribute(): float
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
         return $multiplier > 0 ? (float) $this->getRawOriginal('quantity_on_hand') / $multiplier : (float) $this->getRawOriginal('quantity_on_hand');
     }
@@ -76,7 +76,7 @@ class Inventory extends Model
      */
     public function getScaledAverageCostAttribute(): float
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
         return $multiplier > 0 ? (float) $this->getRawOriginal('average_cost') * $multiplier : (float) $this->getRawOriginal('average_cost');
     }
@@ -86,7 +86,7 @@ class Inventory extends Model
      */
     public function getScaledReservedQtyAttribute(): float
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id);
+        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
         return $multiplier > 0 ? (float) $this->getRawOriginal('reserved_qty') / $multiplier : (float) $this->getRawOriginal('reserved_qty');
     }
@@ -96,6 +96,6 @@ class Inventory extends Model
      */
     public function getFormattedQuantityOnHandAttribute(): string
     {
-        return UomHelper::format($this->scaled_quantity_on_hand, $this->product->uom_id);
+        return UomHelper::format($this->scaled_quantity_on_hand, $this->product->uom_id, $this->product_id, false);
     }
 }

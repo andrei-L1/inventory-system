@@ -152,7 +152,7 @@ class InventoryQueryController extends Controller
         $availableTarget = $availableBase;
         if ($targetUomId != $product->uom_id) {
             try {
-                $factor = UomHelper::getConversionFactor($product->uom_id, $targetUomId);
+                $factor = UomHelper::getConversionFactor($product->uom_id, $targetUomId, $product->id);
                 $availableTarget *= $factor;
             } catch (\Exception $e) {
                 // Fallback to base if conversion fails

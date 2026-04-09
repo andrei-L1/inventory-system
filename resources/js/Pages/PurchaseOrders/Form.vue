@@ -39,12 +39,19 @@ const isUomIdDiscrete = (id) => {
     return uom ? isDiscrete(uom.abbreviation) : true;
 };
 
-const getFactorToBase = (uomId) => {
+const getFactorToBase = (uomId, productId = null) => {
     let factor = 1.0;
     let current = uomId;
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
+        }
+        
         if (!rule || processed.includes(rule.to_uom_id)) break;
         factor *= rule.conversion_factor;
         current = rule.to_uom_id;
@@ -98,12 +105,53 @@ const onProductSelect = (line) => {
     }
 };
 
+const getAvailableUoms = (productId) => {
+    if (!productId) return [];
+    const product = products.value.find(p => p.id === productId);
+    if (!product || !product.uom_id) return uoms.value;
+
+    const currentUom = uoms.value.find(u => u.id === product.uom_id);
+    if (!currentUom) return [];
+
+    return uoms.value.filter(u => {
+        // Must be in the same category
+        if (u.category !== currentUom.category) return false;
+        
+        // Base units of same category are always allowed
+        if (u.is_base) return true;
+
+        // If continuous, we assume conversions to base always exist via multiplier
+        if (u.category !== 'count') return true;
+
+        // If discrete, it must have a valid rule defined (global or specific to this product)
+        return uomConversions.value.some(c => 
+            c.from_uom_id === u.id && 
+            (c.product_id === null || c.product_id === product.id)
+        );
+    });
+};
+
+const getConversionDetails = (uomId, productId) => {
+    if (!productId || !uomId) return null;
+    const baseAuth = getFactorToBase(uomId, productId);
+    if (baseAuth.factor === 1) return null;
+
+    const directRule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(uomId) && c.product_id === productId);
+    const baseUom = uoms.value.find(u => u.id === baseAuth.baseId);
+    const baseAbbr = baseUom ? baseUom.abbreviation : '';
+
+    return {
+        text: `= ${baseAuth.factor} ${baseAbbr}`,
+        isCustom: !!directRule
+    };
+};
+
 const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
-    const targetInfo = getFactorToBase(line.uom_id);
-    const productBaseInfo = getFactorToBase(product.uom_id); // The product's reference UOM
+    const targetInfo = getFactorToBase(line.uom_id, product.id);
+    const productBaseInfo = getFactorToBase(product.uom_id, product.id); // The product's reference UOM
     
     // CASE A: Cost is ZERO - Suggest the corresponding cost for this UOM based on the Product's base Average Cost
     if (!line.unit_cost || line.unit_cost == 0) {
@@ -118,7 +166,7 @@ const onUomChange = (line) => {
     
     // CASE B: Cost ALREADY EXISTS - Scale the existing cost relative to the PREVIOUS UOM factor to preserve line value
     else if (line.prev_uom_id) {
-        const prevInfo = getFactorToBase(line.prev_uom_id);
+        const prevInfo = getFactorToBase(line.prev_uom_id, product.id);
         if (targetInfo.baseId === prevInfo.baseId) {
             const ratio = targetInfo.factor / prevInfo.factor;
             line.unit_cost = line.unit_cost * ratio;
@@ -304,13 +352,47 @@ const cancel = () => {
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
                                     <Select 
                                         v-model="line.uom_id" 
-                                        :options="uoms" 
+                                        :options="getAvailableUoms(line.product_id)" 
                                         optionLabel="abbreviation" 
                                         optionValue="id" 
                                         placeholder="UOM" 
                                         @change="onUomChange(line)"
                                         class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-orange-500/50"
-                                    />
+                                    >
+                                        <template #value="slotProps">
+                                            <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                <span class="font-bold text-[11px]">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
+                                                <span 
+                                                    v-if="getConversionDetails(slotProps.value, line.product_id)" 
+                                                    class="text-[9px] text-zinc-500 font-mono font-bold tracking-widest hidden 2xl:block"
+                                                >
+                                                    {{ getConversionDetails(slotProps.value, line.product_id).text }}
+                                                </span>
+                                            </div>
+                                            <span v-else>
+                                                {{ slotProps.placeholder }}
+                                            </span>
+                                        </template>
+                                        <template #option="slotProps">
+                                            <div class="flex flex-col">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-bold text-[11px]">{{ slotProps.option.abbreviation }}</span>
+                                                    <span 
+                                                        v-if="getConversionDetails(slotProps.option.id, line.product_id)?.isCustom" 
+                                                        class="px-1.5 py-[1px] bg-rose-500/20 text-rose-400 text-[8px] font-mono rounded tracking-widest border border-rose-500/30 uppercase"
+                                                    >
+                                                        Custom
+                                                    </span>
+                                                </div>
+                                                <span 
+                                                    v-if="getConversionDetails(slotProps.option.id, line.product_id)" 
+                                                    class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                >
+                                                    {{ getConversionDetails(slotProps.option.id, line.product_id).text }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </Select>
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>

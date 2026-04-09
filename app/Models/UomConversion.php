@@ -10,6 +10,7 @@ class UomConversion extends Model
     use HasFactory;
 
     protected $fillable = [
+        'product_id',
         'from_uom_id',
         'to_uom_id',
         'conversion_factor',
@@ -23,5 +24,10 @@ class UomConversion extends Model
     public function toUom()
     {
         return $this->belongsTo(UnitOfMeasure::class, 'to_uom_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'product_id');
     }
 }

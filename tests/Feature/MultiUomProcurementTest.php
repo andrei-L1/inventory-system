@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Helpers\UomHelper;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Inventory;
@@ -25,6 +26,7 @@ class MultiUomProcurementTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        UomHelper::clearCache();
         $this->seed(DatabaseSeeder::class);
         $this->seed(VendorSeeder::class);
     }
@@ -46,6 +48,7 @@ class MultiUomProcurementTest extends TestCase
             'to_uom_id' => $pcsUom->id,
             'conversion_factor' => 10,
         ]);
+        UomHelper::clearCache();
 
         // 2. Create Product with Base UOM 'pcs'
         $product = Product::create([
@@ -134,6 +137,7 @@ class MultiUomProcurementTest extends TestCase
             'to_uom_id' => $pcsUom->id,
             'conversion_factor' => 10,
         ]);
+        UomHelper::clearCache();
 
         // 2. Create Product with Base UOM 'bx' (Box)
         $product = Product::create([

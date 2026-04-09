@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Models\Product;
+use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductUpdateRequest extends FormRequest
@@ -34,6 +36,43 @@ class ProductUpdateRequest extends FormRequest
             'reorder_quantity' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
             'image' => 'nullable|image|max:2048',
+            'initial_conversion_factor' => [
+                'nullable',
+                'numeric',
+                'min:0.000001',
+                function ($attribute, $value, $fail) {
+                    $uomId = $this->input('uom_id');
+                    if (! $uomId) {
+                        return;
+                    }
+
+                    $uom = UnitOfMeasure::find($uomId);
+                    if (! $uom || $uom->is_base) {
+                        return;
+                    }
+
+                    $productId = $this->route('product');
+                    $id = is_object($productId) ? $productId->id : $productId;
+
+                    // Check if a global rule exists
+                    $hasGlobalRule = UomConversion::where('from_uom_id', $uomId)
+                        ->whereNull('product_id')
+                        ->exists();
+
+                    // Check if a product-specific rule exists (in case of update)
+                    $hasProductRule = false;
+                    if ($id) {
+                        $hasProductRule = UomConversion::where('from_uom_id', $uomId)
+                            ->where('product_id', $id)
+                            ->exists();
+                    }
+
+                    if (! $hasGlobalRule && ! $hasProductRule && empty($value)) {
+                        $fail("A conversion factor is required for this unit ({$uom->abbreviation}) because no packaging definition exists for this product.");
+                    }
+                },
+            ],
+            'initial_to_uom_id' => 'nullable|exists:units_of_measure,id',
         ];
 
         // If the product has history, lock the core identifiers & accounting math fields
@@ -43,8 +82,8 @@ class ProductUpdateRequest extends FormRequest
             $rules['uom_id'] = "required|integer|in:{$existingProduct->uom_id}";
             $rules['costing_method_id'] = "required|integer|in:{$existingProduct->costing_method_id}";
         } else {
-            $rules['product_code'] = "required|string|max:100|unique:products,product_code,{$id}";
-            $rules['sku'] = "required|string|max:100|unique:products,sku,{$id}";
+            $rules['product_code'] = "nullable|string|max:100|unique:products,product_code,{$id}";
+            $rules['sku'] = "nullable|string|max:100|unique:products,sku,{$id}";
         }
 
         return $rules;

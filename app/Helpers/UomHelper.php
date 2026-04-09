@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class UomHelper
 {
@@ -15,7 +16,7 @@ class UomHelper
     /**
      * Format a quantity based on the UOM type (Discrete vs. Continuous).
      */
-    public static function format($quantity, int $uomId): string
+    public static function format($quantity, int $uomId, ?int $productId = null, bool $throw = false): string
     {
         if ($quantity === null) {
             return '0';
@@ -28,19 +29,37 @@ class UomHelper
             return (string) $quantity;
         }
 
-        // Continuous units (KG, L, etc.) always show decimals
-        if (! self::isDiscrete($uom->abbreviation)) {
-            return round($quantity, 4).' '.$uom->abbreviation;
+        // Mass / Volume auto-scaling (e.g. 1500g -> 1.5 kg)
+        if ($uom->category !== 'count') {
+            if ($uom->is_base && abs($quantity) > 0) {
+                $scaledUom = null;
+                $bestFactor = 1.0;
+                foreach (self::$uoms as $candidate) {
+                    if ($candidate->category === $uom->category && ! $candidate->is_base && $candidate->conversion_factor_to_base) {
+                        if (abs($quantity) >= $candidate->conversion_factor_to_base && $candidate->conversion_factor_to_base > $bestFactor) {
+                            $scaledUom = $candidate;
+                            $bestFactor = $candidate->conversion_factor_to_base;
+                        }
+                    }
+                }
+                if ($scaledUom) {
+                    $scaledQty = $quantity / $bestFactor;
+
+                    return round($scaledQty, $scaledUom->decimals).' '.$scaledUom->abbreviation;
+                }
+            }
+
+            return round($quantity, $uom->decimals).' '.$uom->abbreviation;
         }
 
         // Discrete units (BOX, PCS) use recursive breakdown if fractional
-        return self::formatDiscrete($quantity, $uomId);
+        return self::formatDiscrete($quantity, $uomId, $productId, $throw);
     }
 
     /**
      * Handle recursive dual-UOM breakdown for discrete units.
      */
-    private static function formatDiscrete(float $quantity, int $uomId): string
+    private static function formatDiscrete(float $quantity, int $uomId, ?int $productId = null, bool $throw = false): string
     {
         $uom = self::getUom($uomId);
         $absQty = abs($quantity);
@@ -50,13 +69,11 @@ class UomHelper
         if (abs($absQty - round($absQty)) < 0.00000001) {
             $res = round($absQty).' '.$uom->abbreviation;
 
-            // NEW: Add expanded total if there's a smaller unit
-            $conversion = self::$conversions->where('from_uom_id', $uomId)->sortByDesc('conversion_factor')->first();
-            if ($conversion && $absQty > 0) {
-                // We keep traversing to find the absolute smallest to show the total
-                $multiplierToSmallest = self::getMultiplierToSmallest($uomId);
-                if ($multiplierToSmallest > 1) {
-                    $totalSmallest = round($absQty * $multiplierToSmallest, 2);
+            // Expand to base unit if this is a packaging unit
+            if (! $uom->is_base) {
+                $multiplier = self::getMultiplierToSmallest($uomId, $productId, $throw);
+                if ($multiplier > 1) {
+                    $totalSmallest = round($absQty * $multiplier);
                     $smallestUom = self::getUom(self::getSmallestUnitId($uomId));
                     $res .= ' ['.$totalSmallest.' '.($smallestUom->abbreviation ?? 'pcs').']';
                 }
@@ -65,15 +82,19 @@ class UomHelper
             return $isNegative ? '-'.$res : $res;
         }
 
-        // It has a fraction. Try to find a smaller unit.
-        $conversion = self::$conversions
-            ->where('from_uom_id', $uomId)
-            ->sortByDesc('conversion_factor')
-            ->first();
+        // It has a fraction. Get the conversion rule to breakdown.
+        $query = self::$conversions->where('from_uom_id', $uomId);
+        $conversion = null;
+        if ($productId) {
+            $conversion = $query->where('product_id', $productId)->first();
+        }
+        if (! $conversion) {
+            $conversion = $query->whereNull('product_id')->first();
+        }
 
         if (! $conversion) {
-            // No smaller unit found, show original decimal
-            $res = round($absQty, 4).' '.$uom->abbreviation;
+            // No conversion rule found, show original decimal bounded by defined precision
+            $res = round($absQty, $uom->decimals).' '.$uom->abbreviation;
 
             return $isNegative ? '-'.$res : $res;
         }
@@ -89,9 +110,8 @@ class UomHelper
         }
 
         // Recurse into the smaller unit
-        $smallerPart = self::formatDiscrete($smallerQty, $conversion->to_uom_id);
+        $smallerPart = self::formatDiscrete($smallerQty, $conversion->to_uom_id, $productId, $throw);
 
-        // Remove minus sign from recursion if parent handled it
         if (str_starts_with($smallerPart, '-')) {
             $smallerPart = substr($smallerPart, 1);
         }
@@ -104,76 +124,88 @@ class UomHelper
     }
 
     /**
-     * List of mass/volume base units that should never be broken down.
+     * @deprecated Use check on $uom->category === 'count' instead. Left for compatibility.
      */
     public static function isDiscrete(string $abbr): bool
     {
-        $nonDiscrete = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN'];
+        self::ensureCacheLoaded();
+        foreach (self::$uoms as $u) {
+            if (strcasecmp($u->abbreviation, $abbr) === 0) {
+                return $u->category === 'count';
+            }
+        }
 
-        return ! in_array(strtoupper($abbr), $nonDiscrete);
+        return true;
     }
 
     /**
-     * Find the absolute smallest unit (PCS) by traversing the conversion chain down.
+     * Find the absolute smallest unit by category traversal.
      */
-    public static function getSmallestUnitId(?int $startingUomId): ?int
+    public static function getSmallestUnitId(?int $startingUomId, ?int $productId = null): ?int
     {
         if (! $startingUomId) {
             return null;
         }
         self::ensureCacheLoaded();
-
-        $currentUomId = $startingUomId;
-        $processed = [$currentUomId];
-
-        while (true) {
-            $outgoing = self::$conversions->where('from_uom_id', $currentUomId);
-            $bestConv = $outgoing->sortByDesc('conversion_factor')->first();
-
-            if (! $bestConv || in_array($bestConv->to_uom_id, $processed)) {
-                break;
-            }
-
-            $currentUomId = $bestConv->to_uom_id;
-            $processed[] = $currentUomId;
+        $uom = self::getUom($startingUomId);
+        if (! $uom) {
+            return null;
         }
 
-        return $currentUomId;
+        if ($uom->is_base) {
+            return $uom->id;
+        }
+
+        foreach (self::$uoms as $baseUom) {
+            if ($baseUom->category === $uom->category && $baseUom->is_base) {
+                return $baseUom->id;
+            }
+        }
+
+        return $startingUomId;
     }
 
     /**
-     * Calculate the total multiplier to get from any UOM in the chain to the smallest base unit.
+     * Calculate the multiplier to get from any UOM cleanly to its base unit.
      */
-    public static function getMultiplierToSmallest(?int $fromUomId): float
+    public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null, bool $throw = true): float
     {
         if (! $fromUomId) {
             return 1.0;
         }
-        self::ensureCacheLoaded();
 
-        $smallestUnitId = self::getSmallestUnitId($fromUomId);
-        if ($fromUomId === $smallestUnitId) {
+        self::ensureCacheLoaded();
+        $uom = self::getUom($fromUomId);
+        if (! $uom || $uom->is_base) {
             return 1.0;
         }
 
-        $multiplier = 1.0;
-        $current = $fromUomId;
-        $processed = [$current];
-
-        while ($current !== $smallestUnitId) {
-            $outgoing = self::$conversions->where('from_uom_id', $current);
-            $bestConv = $outgoing->sortByDesc('conversion_factor')->first();
-
-            if (! $bestConv || in_array($bestConv->to_uom_id, $processed)) {
-                break;
-            }
-
-            $multiplier *= $bestConv->conversion_factor;
-            $current = $bestConv->to_uom_id;
-            $processed[] = $current;
+        if ($uom->category !== 'count') {
+            return (float) ($uom->conversion_factor_to_base ?? 1.0);
         }
 
-        return $multiplier;
+        // Contextual Counting layer uses the Product-aware conversions table
+        $query = self::$conversions->where('from_uom_id', $fromUomId);
+
+        $bestConv = null;
+        if ($productId) {
+            $bestConv = $query->where('product_id', $productId)->first();
+        }
+        if (! $bestConv) {
+            $bestConv = $query->whereNull('product_id')->first();
+        }
+
+        if ($bestConv) {
+            return (float) $bestConv->conversion_factor;
+        }
+
+        if (! $throw) {
+            return 1.0;
+        }
+
+        throw ValidationException::withMessages([
+            'uom_id' => 'Missing conversion rule for this unit ('.$uom->abbreviation.'). Please define its packaging size.',
+        ]);
     }
 
     public static function clearCache(): void
@@ -194,21 +226,21 @@ class UomHelper
     }
 
     /**
-     * Get the conversion factor from one UOM to another by traversing the hierarchy.
+     * Get the conversion factor from one UOM to another by dividing their base multipliers.
      */
-    public static function getConversionFactor(int $fromId, int $toId): float
+    public static function getConversionFactor(int $fromId, int $toId, ?int $productId = null): float
     {
         self::ensureCacheLoaded();
 
-        $fromBase = self::getSmallestUnitId($fromId);
-        $toBase = self::getSmallestUnitId($toId);
+        $fromBase = self::getSmallestUnitId($fromId, $productId);
+        $toBase = self::getSmallestUnitId($toId, $productId);
 
         if ($fromBase !== $toBase) {
             throw new \Exception("No conversion defined between UOM #{$fromId} and #{$toId} (different base units: {$fromBase} vs {$toBase}).");
         }
 
-        $fromMult = self::getMultiplierToSmallest($fromId);
-        $toMult = self::getMultiplierToSmallest($toId);
+        $fromMult = self::getMultiplierToSmallest($fromId, $productId);
+        $toMult = self::getMultiplierToSmallest($toId, $productId);
 
         return $fromMult / $toMult;
     }
