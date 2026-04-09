@@ -161,4 +161,10 @@ class SalesOrderLine extends Model
     {
         return UomHelper::format($this->remaining_return_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
+
+    public function getFormattedUnitPriceAttribute(): string
+    {
+        $symbol = '₱';
+        return $symbol . number_format($this->unit_price, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+    }
 }

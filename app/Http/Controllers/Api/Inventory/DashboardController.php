@@ -38,21 +38,13 @@ class DashboardController extends Controller
         // Count transactions posted today
         $transactionsToday = Transaction::whereDate('transaction_date', today())->count();
 
-        // Activity Feed is actually a list of recent transaction lines
-        $recentTransactions = DB::table('transaction_lines')
-            ->join('transactions', 'transaction_lines.transaction_id', '=', 'transactions.id')
-            ->join('products', 'transaction_lines.product_id', '=', 'products.id')
-            ->join('transaction_types', 'transactions.transaction_type_id', '=', 'transaction_types.id')
-            ->select(
-                'transactions.reference_number',
-                'transactions.transaction_date',
-                'products.name as product_name',
-                'transaction_types.name as type_name',
-                'transaction_lines.quantity'
-            )
-            ->latest('transactions.transaction_date')
-            ->limit(5)
-            ->get();
+        // Activity Feed: Using TransactionLine model & resource to ensure UOM formatting is applied.
+        $recentTransactions = \App\Http\Resources\Inventory\TransactionLineResource::collection(
+            \App\Models\TransactionLine::with(['product.uom', 'transaction.type', 'location', 'uom'])
+                ->latest()
+                ->limit(5)
+                ->get()
+        );
 
         // Count pending POs (all except closed/cancelled)
         $pendingPoCount = PurchaseOrder::whereHas('status', function ($query) {

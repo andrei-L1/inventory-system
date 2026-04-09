@@ -40,7 +40,7 @@ const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const uomConversions = ref([]);
 const loadingConversions = ref(false);
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
+// UOM Configs
 
 const selectedLineForStock = ref(null);
 
@@ -60,7 +60,7 @@ const getScaledQty = (line, rawPieces) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(line.uom_id, line.product_id).factor;
     const scaled = (parseFloat(rawPieces) / factor);
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {
@@ -74,26 +74,28 @@ const getUomAbbr = (id) => {
     return uom ? uom.abbreviation : '';
 };
 
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
-};
-
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
-    return uom ? isDiscrete(uom.abbreviation) : true;
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFilteredUoms = (line) => {
     let list = uoms.value;
-    if (line.product_uom && !isDiscrete(line.product_uom)) {
-        // Continuous stays the same
+    
+    // Determine the category of the line's current UOM
+    const currentUom = uoms.value.find(u => u.id === line.uom_id);
+    if (currentUom && currentUom.category) {
+        list = uoms.value.filter(u => u.category === currentUom.category);
     } else {
-        list = uoms.value.filter(u => isDiscrete(u.abbreviation));
+        // Safe fallback using id-based check mapped up to line's uom if resolving fails
+        const isCount = isUomIdDiscrete(line.uom_id);
+        list = uoms.value.filter(u => u.category === (isCount ? 'count' : u.category));
     }
 
     return list.map(u => {
-        // Find conversion rule for this UOM and this specific product
-        let rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id === line.product_id);
+        // Find conversion rule for this UOM and this specific product safely with Number casting
+        let rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id !== null && Number(c.product_id) === Number(line.product_id));
+        let isCustom = !!rule;
         
         // Fallback to global rule
         if (!rule) {
@@ -111,7 +113,7 @@ const getFilteredUoms = (line) => {
         return {
             ...u,
             conversion_text,
-            is_custom: !!(rule && rule.is_custom)
+            is_custom: isCustom
         };
     });
 };
@@ -410,6 +412,7 @@ const openReturnMode = async () => {
                 product_name: l.product_name,
                 sku: l.sku,
                 received_qty: l.received_qty,
+                formatted_received_qty: l.formatted_received_qty,
                 received_qty_in_po_unit: l.received_qty, // Keep track of base received qty
                 uom: l.uom,
                 uom_id: l.uom_id,
@@ -731,7 +734,7 @@ const openPrint = () => {
 
                             <Column field="unit_cost" header="UNIT COST">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-400 font-mono text-xs">₱{{ Number(data.unit_cost).toFixed(2) }}</span>
+                                    <span class="text-zinc-400 font-mono text-xs">{{ data.formatted_unit_cost }}</span>
                                 </template>
                             </Column>
 
@@ -895,16 +898,23 @@ const openPrint = () => {
             </template>
         </Dialog>
         <!-- Return Items (RTV) Dialog (Surgical Precision Redesign) -->
-        <Dialog v-model:visible="returnDialog" modal :header="null" :closable="false" :style="{ width: '60rem' }" class="!p-0 !border-0 !bg-transparent !shadow-2xl">
-            <div class="flex flex-col bg-zinc-950 border border-zinc-800 rounded-sm overflow-hidden">
-                
-                <!-- Modal Header (Minimalist) -->
-                <div class="px-6 py-4 border-b border-zinc-800 bg-zinc-900/50 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-6 bg-red-600"></div>
-                        <h2 class="text-sm font-bold text-white tracking-widest uppercase font-mono">Process Purchase Return (RTV)</h2>
+        <Dialog v-model:visible="returnDialog" modal :closable="false" :style="{ width: '65rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:header:class="!hidden" pt:content:class="!p-0 !bg-transparent !overflow-hidden">
+            <div class="flex flex-col bg-zinc-950 border border-red-900/40 rounded-2xl overflow-hidden relative shadow-[0_0_50px_rgba(220,38,38,0.15)] ring-1 ring-white/5">
+                <!-- Red Ambient Glow -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-red-600/10 blur-[100px] pointer-events-none"></div>
+
+                <!-- Modal Header (Premium) -->
+                <div class="px-6 py-5 border-b border-red-900/30 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-red-900/30 border border-red-500/20 flex items-center justify-center">
+                            <i class="pi pi-replay text-red-500 text-lg"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h2 class="text-lg font-black text-white tracking-tight font-mono">PROCESS REVERSAL (RTV)</h2>
+                            <p class="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Revert previously received stock from <span class="text-sky-400">PO-{{ po.po_number }}</span></p>
+                        </div>
                     </div>
-                    <button @click="returnDialog = false" class="text-zinc-500 hover:text-white transition-colors">
+                    <button @click="returnDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
                         <i class="pi pi-times text-xs"></i>
                     </button>
                 </div>
@@ -912,22 +922,22 @@ const openPrint = () => {
                 <div class="p-6 flex flex-col gap-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
                     
                     <!-- Technical Alert -->
-                    <div class="bg-zinc-900 border border-zinc-800 p-4 border-l-2 border-l-red-600">
-                        <div class="flex items-center gap-3 mb-2">
-                            <i class="pi pi-info-circle text-red-500 text-xs"></i>
-                            <span class="text-[10px] font-bold text-white uppercase tracking-widest font-mono">System Protocol: Stock Reversal</span>
+                    <div class="bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-start gap-4">
+                        <i class="pi pi-exclamation-triangle text-red-500 mt-0.5"></i>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-red-400 uppercase tracking-widest font-mono mb-1">System Protocol: Stock Reversal</span>
+                            <p class="text-[11px] text-zinc-400 leading-relaxed font-medium">
+                                Executing a return generates a <span class="text-white font-mono font-bold px-1 py-0.5 rounded bg-zinc-900">PRET</span> movement ledger. 
+                                <span class="text-emerald-400 font-bold text-[10px] tracking-wide uppercase mx-1">Replacement</span> resets line receipt status. 
+                                <span class="text-sky-400 font-bold text-[10px] tracking-wide uppercase mx-1">Credit</span> adjusts accounting valuation layers natively.
+                            </p>
                         </div>
-                        <p class="text-[11px] text-zinc-500 leading-relaxed font-medium">
-                            Executing a return generates a <span class="text-zinc-300 font-mono italic">PRET</span> movement. 
-                            <span class="text-zinc-400 font-bold">Replacement</span> resets line receipt status. 
-                            <span class="text-zinc-400 font-bold">Credit</span> adjusts accounting values only.
-                        </p>
                     </div>
 
                     <!-- Filter Configuration -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="flex flex-col gap-2">
-                            <label class="text-[9px] font-bold text-zinc-600 tracking-widest uppercase font-mono">Source Picking Location</label>
+                            <label class="text-[9px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Source Picking Location</label>
                             <Select 
                                 v-model="returnForm.location_id" 
                                 :options="filteredReturnLocations" 
@@ -935,7 +945,7 @@ const openPrint = () => {
                                 optionValue="id" 
                                 placeholder="SELECT BIN..." 
                                 filter
-                                class="!w-full !bg-black !border-zinc-800 !rounded-none !h-10 !px-2 !flex !items-center !text-xs font-mono"
+                                class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-12 !px-2 !flex !items-center !text-sm font-mono focus-within:!border-red-500/50 shadow-inner"
                             >
                                 <template #option="slotProps">
                                     <div class="flex items-center justify-between w-full">
@@ -951,53 +961,57 @@ const openPrint = () => {
                     <div class="flex flex-col gap-3">
                         <label class="text-[9px] font-bold text-zinc-600 tracking-widest uppercase font-mono">Inventory Context</label>
                         
-                        <div class="space-y-px bg-zinc-800 border border-zinc-800">
-                            <div v-for="line in returnForm.lines" :key="line.po_line_id" 
-                                 class="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 bg-zinc-950 items-center hover:bg-zinc-900/50 transition-colors"
+                        <div class="border border-zinc-800 rounded-xl bg-black overflow-hidden shadow-inner">
+                            <div v-for="(line, index) in returnForm.lines" :key="line.po_line_id" 
+                                 class="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 items-center hover:bg-zinc-900/50 transition-colors"
+                                 :class="{ 'border-b border-zinc-800/80': index !== returnForm.lines.length - 1 }"
                             >
                                 <!-- Product Identity -->
                                 <div class="lg:col-span-3 flex flex-col gap-1">
                                     <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
                                     <div class="flex items-center gap-3">
-                                        <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest">{{ line.sku }}</span>
-                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-600 uppercase">MPN: {{ line.product_code }}</span>
+                                        <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest"><i class="pi pi-box text-[8px] mr-1"></i>{{ line.sku }}</span>
+                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-500 uppercase">MPN: {{ line.product_code }}</span>
                                     </div>
                                 </div>
 
                                 <!-- Status Badges -->
                                 <div class="lg:col-span-2 flex gap-2">
-                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 bg-black py-1">
-                                        <span class="text-[8px] font-bold text-zinc-700 uppercase">PO</span>
-                                        <span class="text-[10px] font-mono font-bold text-zinc-400">{{ line.received_qty }} {{ line.uom }}</span>
+                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 bg-zinc-950 py-1.5 rounded-lg overflow-hidden">
+                                        <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest whitespace-nowrap">Original RCV</span>
+                                        <span class="text-[10px] font-mono font-bold text-white mt-0.5 whitespace-nowrap px-2">{{ line.formatted_received_qty || (line.received_qty + ' ' + line.uom) }}</span>
                                     </div>
-                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 py-1"
-                                         :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-black']">
-                                        <span class="text-[8px] font-bold uppercase" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-700' : 'text-zinc-700']">BIN</span>
-                                        <span class="text-[10px] font-mono font-bold" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-500' : 'text-zinc-600']">
-                                            {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
-                                        </span>
+                                    <div class="flex flex-col items-center flex-1 border py-1.5 rounded-lg transition-colors"
+                                         :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/5 border-red-500/20']">
+                                        <span class="text-[8px] font-bold uppercase tracking-widest" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-600' : 'text-red-500/50']">Stock In Bin</span>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            <div class="w-1.5 h-1.5 rounded-full" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-red-500']"></div>
+                                            <span class="text-[10px] font-mono font-bold" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-400' : 'text-red-400']">
+                                                {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Inputs -->
                                 <div class="lg:col-span-3">
-                                    <div class="flex items-center bg-black border border-zinc-800 rounded-none focus-within:border-red-500/50 transition-all h-8 group">
+                                    <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg focus-within:border-red-500/50 focus-within:ring-1 focus-within:ring-red-500/50 transition-all shadow-inner h-10 group overflow-hidden">
                                         <div class="flex-1 flex items-center px-1">
                                             <InputNumber 
                                                 v-model="line.return_qty" 
                                                 :min="0" 
                                                 :minFractionDigits="0" 
                                                 :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
-                                                class="p-inputtext-sm text-center font-mono font-bold text-red-500 border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                                :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#ef4444', width: '100%', boxShadow: 'none', height: '1.75rem', fontSize: '0.75rem' }"
+                                                class="p-inputtext-sm text-center font-mono font-bold text-red-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                                :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f87171', width: '100%', boxShadow: 'none', height: '2rem', fontSize: '1rem' }"
                                                 placeholder="0"
                                             />
                                         </div>
                                         
                                         <!-- Simple Divider -->
-                                        <div class="w-px h-4 bg-zinc-800 group-focus-within:bg-red-500/20"></div>
+                                        <div class="w-px h-6 bg-zinc-800 group-focus-within:bg-red-500/30"></div>
                                         
-                                        <div class="w-20">
+                                        <div class="w-24">
                                             <Select 
                                                 v-model="line.uom_id" 
                                                 :options="getFilteredUoms(line)" 
@@ -1005,11 +1019,24 @@ const openPrint = () => {
                                                 optionValue="id" 
                                                 placeholder="Unit"
                                                 @change="onReturnUomChange(line)"
-                                                class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
+                                                class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black group-focus-within:bg-red-500/5"
                                                 pt:root:class="!border-0 !bg-transparent !shadow-none"
-                                                pt:label:class="!text-red-500 !p-1 !text-center !uppercase font-black !text-[9px]"
-                                                pt:dropdown:class="!text-zinc-600 !w-4"
-                                            />
+                                                pt:label:class="!text-red-400 !p-2 !text-center !uppercase font-black !text-[11px]"
+                                                pt:dropdown:class="!text-zinc-600 !w-6"
+                                            >
+                                                <template #option="slotProps">
+                                                    <div class="flex items-center justify-between w-full min-w-[120px] py-0.5">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-[11px] font-bold text-white">{{ slotProps.option.abbreviation.toUpperCase() }}</span>
+                                                            <span class="text-[9px] text-zinc-500">{{ slotProps.option.name }}</span>
+                                                        </div>
+                                                        <div class="flex flex-col items-end gap-1">
+                                                            <span v-if="slotProps.option.conversion_text" class="text-[9px] font-black text-red-500 font-mono tracking-tighter">{{ slotProps.option.conversion_text }}</span>
+                                                            <Tag v-if="slotProps.option.is_custom" value="CUSTOM" class="text-[7px] px-1 py-0 font-bold" severity="danger" />
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </Select>
                                         </div>
                                     </div>
                                 </div>
@@ -1020,15 +1047,29 @@ const openPrint = () => {
                                         :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'CREDIT', value: 'credit'}]" 
                                         optionLabel="label" 
                                         optionValue="value" 
-                                        class="!w-full !bg-black !border-zinc-800 !rounded-none !h-8 !flex !items-center !text-[9px] !font-bold tracking-widest" 
-                                    />
+                                        class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-lg !h-10 !flex !items-center !text-[10px] !font-bold tracking-widest text-white shadow-inner focus-within:!border-zinc-600" 
+                                        pt:label:class="!pl-3"
+                                    >
+                                        <template #option="slotProps">
+                                            <span class="text-[10px] font-bold tracking-widest uppercase" :class="slotProps.option.value === 'replacement' ? 'text-emerald-400' : 'text-sky-400'">
+                                                <i class="mr-2 text-[9px]" :class="slotProps.option.value === 'replacement' ? 'pi pi-sync' : 'pi pi-wallet'"></i>
+                                                {{ slotProps.option.label }}
+                                            </span>
+                                        </template>
+                                        <template #value="slotProps">
+                                            <span v-if="slotProps.value" class="text-[10px] font-bold tracking-widest uppercase" :class="slotProps.value === 'replacement' ? 'text-emerald-400' : 'text-sky-400'">
+                                                {{ slotProps.value === 'replacement' ? 'REPLACE' : 'CREDIT' }}
+                                            </span>
+                                            <span v-else>{{ slotProps.placeholder }}</span>
+                                        </template>
+                                    </Select>
                                 </div>
 
                                 <div class="lg:col-span-2">
                                     <InputText 
                                         v-model="line.reason" 
-                                        placeholder="REASON..." 
-                                        class="!w-full !bg-black !border-zinc-800 !rounded-none !text-[9px] !font-bold !py-1 !h-8 focus:!border-zinc-600" 
+                                        placeholder="Reason..." 
+                                        class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-lg !text-xs !font-medium !py-0 !h-10 focus:!border-red-500/50 shadow-inner text-white placeholder:text-zinc-600" 
                                     />
                                 </div>
                             </div>
@@ -1037,22 +1078,25 @@ const openPrint = () => {
                 </div>
 
                 <!-- Action Footer -->
-                <div class="px-6 py-4 border-t border-zinc-800 bg-zinc-900/50 flex justify-between items-center">
+                <div class="px-6 py-5 border-t border-red-900/30 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-10 relative">
                     <Button 
                         label="Cancel" 
+                        icon="pi pi-times"
                         @click="returnDialog = false" 
-                        class="p-button-text !text-zinc-600 hover:!text-white !font-bold !text-[10px] !tracking-widest uppercase" 
+                        class="p-button-text !text-zinc-500 hover:!text-white !font-bold !text-[11px] !tracking-widest uppercase" 
                     />
                     
-                    <div class="flex items-center gap-4">
-                        <span v-if="returnForm.lines.some(l => l.return_qty > 0)" class="text-[9px] font-mono text-red-500 font-bold uppercase tracking-tighter">
-                            {{ returnForm.lines.filter(l => l.return_qty > 0).length }} Items Prepared for Reversal
+                    <div class="flex items-center gap-6">
+                        <span v-if="returnForm.lines.some(l => l.return_qty > 0)" class="text-[10px] font-mono text-red-400 font-bold uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                            {{ returnForm.lines.filter(l => l.return_qty > 0).length }} Items Ready for Reversal
                         </span>
                         <Button 
                             label="Process Return" 
+                            icon="pi pi-replay"
                             @click="postReturn" 
                             :loading="returnLoading" 
-                            class="!h-9 !px-6 !bg-white hover:!bg-zinc-200 !text-black !font-bold !text-[11px] !tracking-widest !rounded-none !border-none transition-all uppercase" 
+                            class="!min-h-[2.5rem] !px-8 !bg-red-600 hover:!bg-red-500 !text-white !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)]" 
                         />
                     </div>
                 </div>
@@ -1118,16 +1162,9 @@ const openPrint = () => {
                                 <span class="text-xs font-bold">{{ data.product_name }}</span>
                             </template>
                         </Column>
-                        <Column field="quantity" header="RECEIVED" style="width: 100px">
+                        <Column field="quantity" header="RECEIVED">
                             <template #body="{ data }">
-                                <span class="text-white font-mono text-xs font-bold">{{ Math.abs(data.quantity) }}</span>
-                            </template>
-                        </Column>
-                        <Column header="UNIT" style="width: 80px">
-                            <template #body="{ data }">
-                                <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
-                                    {{ data.uom_abbreviation || 'PCS' }}
-                                </span>
+                                <span class="text-white font-mono text-xs font-bold">{{ data.formatted_quantity }}</span>
                             </template>
                         </Column>
                     </DataTable>
@@ -1191,16 +1228,9 @@ const openPrint = () => {
                                 </span>
                             </template>
                         </Column>
-                        <Column field="quantity" header="QTY" style="width: 100px">
+                        <Column field="quantity" header="QTY">
                             <template #body="{ data }">
-                                <span class="text-red-500 font-mono text-xs font-black">{{ Math.abs(data.quantity) }}</span>
-                            </template>
-                        </Column>
-                        <Column header="UNIT" style="width: 80px">
-                            <template #body="{ data }">
-                                <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
-                                    {{ data.uom_abbreviation || 'PCS' }}
-                                </span>
+                                <span class="text-red-500 font-mono text-xs font-black">{{ data.formatted_quantity }}</span>
                             </template>
                         </Column>
                     </DataTable>

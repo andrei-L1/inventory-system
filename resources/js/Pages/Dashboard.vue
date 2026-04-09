@@ -238,13 +238,13 @@ onMounted(loadDashboard);
                                 <span class="bg-zinc-900 px-3 py-1 rounded text-[9px] font-bold text-zinc-400 border border-zinc-800 group-hover/item:text-sky-400 transition-colors uppercase font-mono">{{ t.type_name }}</span>
                                 <div class="flex flex-col">
                                     <span class="text-sm font-bold text-zinc-200 group-hover/item:text-white transition-colors">{{ t.product_name }}</span>
-                                    <span class="text-[9px] text-zinc-600 font-mono uppercase tracking-widest">{{ t.transaction_date }}</span>
+                                    <span class="text-[9px] text-zinc-600 font-mono uppercase tracking-widest">{{ t.transaction.reference_number }} • {{ t.transaction.transaction_date }}</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-8">
                                 <div class="flex flex-col items-end">
                                     <span class="text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-widest">Quantity</span>
-                                    <span class="text-sm font-bold text-sky-400">{{ t.quantity }} <span class="text-[9px] text-zinc-600">PCS</span></span>
+                                    <span class="text-sm font-bold text-sky-400">{{ t.formatted_quantity }}</span>
                                 </div>
                                 <div class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
                                     <i class="pi pi-arrow-right text-[10px] text-zinc-500"></i>
@@ -271,10 +271,10 @@ onMounted(loadDashboard);
                                 <div class="flex justify-between items-start">
                                      <div class="flex flex-col">
                                          <span class="text-xs font-bold text-white tracking-tight line-clamp-1">{{ item.name }}</span>
-                                         <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase mt-1">Shortage: {{ item.shortage }} {{ item.uom }}</span>
+                                         <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase mt-1">Shortage: {{ item.formatted_shortage }}</span>
                                      </div>
                                      <div class="flex flex-col items-end">
-                                         <span class="text-[10px] font-bold text-red-400 font-mono tracking-tighter">{{ item.quantity_on_hand }} / {{ item.reorder_point }}</span>
+                                         <span class="text-[10px] font-bold text-red-400 font-mono tracking-tighter">{{ item.formatted_quantity_on_hand }} / {{ item.reorder_point }}</span>
                                      </div>
                                 </div>
                                 <div class="w-full bg-zinc-800 rounded-full h-1 mt-1 overflow-hidden">

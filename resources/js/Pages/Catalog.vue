@@ -189,12 +189,39 @@ const toggleStock = (event, product) => {
     stockOp.value.toggle(event);
 };
 
-const getScaledQty = (product, rawQty) => {
-    if (!product || !product.uom) return rawQty || 0;
-    const isDiscrete = product.uom.is_discrete;
-    const val = Number(rawQty || 0);
-    return isDiscrete ? Math.round(val) : val.toFixed(4).replace(/\.?0+$/, "");
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id == id);
+    return uom ? uom.category === 'count' : true;
 };
+
+const getFactorToBase = (uomId, productId = null) => {
+    const uom = uoms.value.find(u => u.id == uomId);
+    if (!uom) return { factor: 1, baseId: uomId };
+    if (uom.is_base) return { factor: 1, baseId: uom.id };
+    
+    // Check product-specific rules first
+    if (productId) {
+        const prodRule = allConversions.value.find(c => c.product_id === productId && c.from_uom_id === uomId);
+        if (prodRule) return { factor: parseFloat(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
+    }
+    
+    // Check global rules
+    const globalRule = allConversions.value.find(c => !c.product_id && c.from_uom_id === uomId);
+    if (globalRule) return { factor: parseFloat(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
+    
+    return { factor: 1, baseId: uom.id };
+};
+
+const getScaledQty = (productObj, rawPieces) => {
+    if (!productObj || rawPieces === undefined || rawPieces === null) return '0';
+    const factor = getFactorToBase(productObj.uom_id, productObj.id).factor;
+    const scaled = (parseFloat(rawPieces) / factor);
+    return isUomIdDiscrete(productObj.uom_id) 
+        ? Math.floor(scaled + 0.0001).toString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+};
+
+// Final stock quantities used for reorder logic in the grid
 
 onMounted(() => {
     loadProducts();
@@ -641,7 +668,7 @@ const getBaseUomForSelected = computed(() => {
                     
                     <Column field="selling_price" header="Price" style="width: 130px">
                         <template #body="{ data }">
-                            <span class="font-mono font-bold text-zinc-200 text-sm">{{ formatCurrency(data.selling_price) }}</span>
+                            <span class="font-mono font-bold text-zinc-200 text-sm">{{ data.formatted_selling_price }}</span>
                         </template>
                     </Column>
 
@@ -652,7 +679,7 @@ const getBaseUomForSelected = computed(() => {
                                     <div class="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-sky-500/30">
                                         <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
                                         <span class="text-[11px] font-mono font-bold tracking-tight" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
-                                            {{ getScaledQty(data, data.total_qoh) }} <span class="text-[9px] text-zinc-600 ml-0.5">{{ data.uom?.abbreviation }}</span>
+                                            {{ data.formatted_total_qoh }}
                                         </span>
                                     </div>
                                     <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-sky-500/50 transition-colors"></i>
@@ -849,12 +876,14 @@ const getBaseUomForSelected = computed(() => {
                                             <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Minimum Stock Level</label>
                                             <span v-if="errors.reorder_point" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">{{ errors.reorder_point }}</span>
                                         </div>
-                                        <InputNumber v-model="product.reorder_point" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold"
+                                        <InputNumber v-model="product.reorder_point" :minFractionDigits="0" :maxFractionDigits="isUomIdDiscrete(product.uom_id) ? 0 : 8"
+                                                    inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold"
                                                     :class="{'!border-red-500/50': errors.reorder_point}" />
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Restock Amount</label>
-                                        <InputNumber v-model="product.reorder_quantity" inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
+                                        <InputNumber v-model="product.reorder_quantity" :minFractionDigits="0" :maxFractionDigits="isUomIdDiscrete(product.uom_id) ? 0 : 8"
+                                                    inputClass="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 !w-full !px-4 !font-mono font-bold" />
                                     </div>
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">

@@ -22,6 +22,8 @@ const toast = useToast();
 
 const so = ref(null);
 const loading = ref(true);
+const uoms = ref([]);
+const uomConversions = ref([]);
 
 const pickLoading = ref(false);
 const packLoading = ref(false);
@@ -68,6 +70,24 @@ const getAvailabilityStatus = (line) => {
     return { severity: 'danger', label: 'Out of Stock' };
 };
 
+const loadMasterData = async () => {
+    try {
+        const [uomRes, convRes] = await Promise.all([
+            axios.get('/api/uom'),
+            axios.get('/api/uom-conversions')
+        ]);
+        uoms.value = uomRes.data.data;
+        uomConversions.value = convRes.data.data;
+    } catch (e) {
+        console.error("Failed to load UOM metadata", e);
+    }
+};
+
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? uom.category === 'count' : true;
+};
+
 const loadSO = async () => {
     loading.value = true;
     try {
@@ -81,8 +101,8 @@ const loadSO = async () => {
     }
 };
 
-onMounted(() => {
-    loadSO();
+onMounted(async () => {
+    await Promise.all([loadSO(), loadMasterData()]);
 });
 
 const getStatusColor = (statusName) => {
@@ -369,26 +389,27 @@ const totalDiscount = computed(() => {
         <div class="h-full flex flex-col gap-4">
 
             <!-- Header Panel -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 blur-[100px] pointer-events-none"></div>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-zinc-950 border border-teal-900/30 rounded-3xl shadow-2xl relative overflow-hidden ring-1 ring-white/5">
+                <!-- Teal Ambient Glow -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-teal-500/10 blur-[100px] pointer-events-none"></div>
 
-                <div class="flex items-center gap-4 z-10">
-                    <button @click="router.visit('/sales-orders')" class="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors hover:border-zinc-600">
-                        <i class="pi pi-arrow-left"></i>
+                <div class="flex items-center gap-5 z-10">
+                    <button @click="router.visit('/sales-orders')" class="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-all hover:scale-105 hover:border-teal-500/30 active:scale-95 group">
+                        <i class="pi pi-arrow-left group-hover:-translate-x-1 transition-transform"></i>
                     </button>
                     <div>
-                        <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-white text-2xl font-black tracking-tight font-mono">{{ so.so_number }}</h1>
+                        <div class="flex items-center gap-4 mb-1.5">
+                            <h1 class="text-white text-3xl font-black tracking-tighter font-mono">{{ so.so_number }}</h1>
                             <Tag 
                                 :severity="getStatusColor(so.status.name)" 
                                 :value="so.status.name.replace('_', ' ').toUpperCase()" 
-                                class="text-[9px] font-bold tracking-widest font-mono uppercase px-2 py-0.5 rounded shadow-[inset_0_1px_4px_rgba(0,0,0,0.5)]"
+                                class="text-[9px] font-black tracking-[0.2em] font-mono uppercase px-3 py-1 rounded-lg shadow-inner bg-zinc-800/50 border border-zinc-700/50"
                             />
                         </div>
-                        <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
-                            <span @click="router.visit(`/customer-center?customer_id=${so.customer_id}`)" class="text-zinc-500 hover:text-teal-400 cursor-pointer transition-colors">{{ so.customer_name }}</span>
-                            <span class="text-zinc-700 mx-2">&bull;</span>
-                            <span class="text-zinc-500">₱{{ Number(so.total_amount).toFixed(2) }}</span>
+                        <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono flex items-center gap-3">
+                            <span @click="router.visit(`/customer-center?customer_id=${so.customer_id}`)" class="text-teal-400 hover:text-teal-300 cursor-pointer transition-colors">{{ so.customer_name }}</span>
+                            <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
+                            <span class="text-zinc-500">₱{{ Number(so.total_amount).toFixed(2) }} Revenue</span>
                         </p>
                     </div>
                 </div>
@@ -528,16 +549,16 @@ const totalDiscount = computed(() => {
 
                     <!-- Fulfillment History -->
                     <div v-if="so.transactions && so.transactions.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-                        <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 text-center">Fulfillment History</span>
+                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 text-center">Fulfillment History</span>
                         
-                        <div v-for="tx in so.transactions" :key="tx.id" class="flex flex-col gap-1.5 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group transition-all hover:border-sky-500/30">
+                        <div v-for="tx in so.transactions" :key="tx.id" class="flex flex-col gap-1.5 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group transition-all hover:border-teal-500/30">
                             <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-mono text-sky-400 font-bold uppercase">{{ tx.reference_number }}</span>
+                                <span class="text-[10px] font-mono text-teal-400 font-bold uppercase tracking-tight">{{ tx.reference_number }}</span>
                                 <span class="text-[9px] font-mono text-zinc-600">{{ tx.transaction_date }}</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-[9px] font-bold text-zinc-500 uppercase">Status</span>
-                                <Tag :severity="tx.status.name === 'posted' ? 'success' : 'warning'" :value="tx.status.name.toUpperCase()" class="text-[8px] font-bold px-1.5 py-0.5" />
+                                <span class="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Status</span>
+                                <Tag :severity="tx.status.name === 'posted' ? 'success' : 'warning'" :value="tx.status.name.toUpperCase()" class="text-[8px] font-black px-1.5 py-0.5 rounded-md" />
                             </div>
                         </div>
                     </div>
@@ -593,35 +614,48 @@ const totalDiscount = computed(() => {
                             </Column>
                             <Column header="LIFECYCLE STATUS">
                                 <template #body="{ data }">
-                                    <div class="flex flex-col gap-1.5 w-32">
-                                        <div class="h-1.5 bg-zinc-950 rounded-full overflow-hidden flex border border-zinc-800/50">
-                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-help-500/30 transition-all duration-500"></div>
-                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="h-full bg-teal-500/70 transition-all duration-700 shadow-[0_0_5px_rgba(20,184,166,0.5)]"></div>
+                                    <div class="flex flex-col gap-2 w-36">
+                                        <div class="h-2 bg-zinc-950 rounded-full overflow-hidden relative border border-zinc-800/80 p-[1px] shadow-inner">
+                                            <!-- Picked Bar (Background layer) -->
+                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="absolute top-0 left-0 h-full bg-teal-500/30 transition-all duration-500 rounded-full"></div>
+                                            <!-- Shipped Bar (Foreground layer) -->
+                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-700 shadow-[0_0_10px_rgba(16,185,129,0.5)] rounded-full"></div>
                                         </div>
-                                        <div class="flex justify-between items-center px-0.5">
-                                            <span class="text-[8px] font-bold text-zinc-500 font-mono uppercase tracking-tighter">Processed</span>
-                                            <span class="text-[9px] font-black text-zinc-300 font-mono">{{ Math.round(data.shipped_qty / data.ordered_qty * 100) }}%</span>
+                                        <div class="flex justify-between items-center px-1">
+                                            <span class="text-[8px] font-black text-zinc-600 font-mono uppercase tracking-widest">Fulfillment</span>
+                                            <span class="text-[10px] font-black text-emerald-400 font-mono">{{ Math.round(data.shipped_qty / data.ordered_qty * 100) }}%</span>
                                         </div>
                                     </div>
                                 </template>
                             </Column>
-                            <Column field="ordered_qty" header="ORDERED">
+                            <Column header="MANIFEST">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-300 font-mono text-xs font-bold">{{ data.formatted_ordered_qty }}</span>
+                                    <div class="flex flex-col">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] font-mono font-black text-white">{{ data.formatted_ordered_qty }}</span>
+                                        </div>
+                                        <span class="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Ordered</span>
+                                    </div>
                                 </template>
                             </Column>
-                            <Column field="picked_qty" header="PICKED">
+                            <Column header="PICK/PACK">
                                 <template #body="{ data }">
-                                    <span :class="data.picked_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
-                                        {{ data.formatted_picked_qty }}
-                                    </span>
+                                    <div class="flex flex-col">
+                                        <span class="text-[10px] font-mono font-bold text-zinc-300">{{ data.formatted_picked_qty }} Picked</span>
+                                        <span class="text-[10px] font-mono font-bold text-zinc-300">{{ data.formatted_packed_qty }} Packed</span>
+                                    </div>
                                 </template>
                             </Column>
-                            <Column field="shipped_qty" header="FULFILLED">
+                            <Column header="SHIPPED">
                                 <template #body="{ data }">
-                                    <span :class="data.shipped_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400'" class="font-mono text-xs font-bold">
-                                        {{ data.formatted_shipped_qty }}
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[11px] font-mono font-black text-emerald-400">{{ data.formatted_shipped_qty }}</span>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="PRICE">
+                                <template #body="{ data }">
+                                    <span class="text-zinc-400 font-mono text-[10px] font-bold">{{ data.formatted_unit_price }}</span>
                                 </template>
                             </Column>
                             <Column field="subtotal" header="LINE TOTAL">
@@ -643,22 +677,38 @@ const totalDiscount = computed(() => {
                 </div>
 
                 <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-xl">
-                    <DataTable :value="so.transactions" class="p-datatable-sm w-full">
+                    <DataTable :value="so.transactions" class="p-datatable-sm w-full audit-ledger-grid" :pt="{
+                        thead: { class: 'bg-zinc-950' },
+                        bodyrow: { class: 'hover:bg-teal-500/[0.02] transition-colors border-b border-zinc-900/50' }
+                    }">
                         <Column field="reference_number" header="MOVEMENT REF">
                             <template #body="{ data }">
-                                <span class="text-sky-400 font-mono text-[10px] font-bold uppercase">{{ data.reference_number }}</span>
+                                <span class="text-teal-500 font-mono text-[10px] font-bold uppercase tracking-tight">{{ data.reference_number }}</span>
                             </template>
                         </Column>
-                        <Column field="transaction_date" header="DATE" />
+                        <Column field="transaction_date" header="DATE">
+                             <template #body="{ data }">
+                                <span class="text-[10px] font-mono text-zinc-400">{{ data.transaction_date }}</span>
+                            </template>
+                        </Column>
                         <Column field="display_type" header="TYPE">
                             <template #body="{ data }">
-                                <span class="text-[10px] font-bold text-zinc-500 uppercase">{{ data.display_type }}</span>
+                                <span class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{{ data.display_type }}</span>
                             </template>
                         </Column>
-                        <Column field="from_location_name" header="EXPORT FROM" />
-                        <Column field="notes" header="MEMO">
+                        <Column field="from_location_name" header="EXPORT FROM">
                             <template #body="{ data }">
-                                <span class="text-[10px] text-zinc-500 italic">{{ data.notes }}</span>
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-tight">{{ data.from_location_name }}</span>
+                            </template>
+                        </Column>
+                        <Column field="to_location_name" header="DESTINATION">
+                            <template #body="{ data }">
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-tight">{{ data.to_location_name }}</span>
+                            </template>
+                        </Column>
+                        <Column field="formatted_quantity" header="QUANTITY">
+                             <template #body="{ data }">
+                                <span class="text-[11px] font-mono font-black text-white" :class="{ 'text-amber-500': data.quantity < 0 }">{{ data.formatted_quantity }}</span>
                             </template>
                         </Column>
                         <Column header="COGS AUDIT">
@@ -672,167 +722,342 @@ const totalDiscount = computed(() => {
         </div>
 
         <!-- Pick Dialog -->
-        <Dialog v-model:visible="pickDialog" modal header="Inventory Picking Control" :style="{ width: '50rem' }">
-            <div class="flex flex-col gap-4 py-4">
-                <div class="p-4 bg-help-500/10 border border-help-500/20 rounded-xl mb-2">
-                    <p class="text-xs text-help-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
-                        Mission: Move items from storage locations to the staging area for packing.
-                    </p>
-                </div>
-                
-                <DataTable :value="pickForm.lines" class="p-datatable-sm overflow-hidden" scrollable scrollHeight="300px">
-                    <Column field="product_name" header="PRODUCT">
-                        <template #body="{ data }">
-                            <div class="flex flex-col">
-                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
-                            </div>
-                        </template>
-                    </Column>
-                    <Column header="PROGRESS">
-                        <template #body="{ data }">
-                            <span class="text-[10px] font-mono text-zinc-500 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
-                                {{ data.picked_qty }} / {{ data.ordered_qty }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column header="QTY TO PICK">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.to_pick" :min="0" :max="data.ordered_qty - data.picked_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
-                        </template>
-                    </Column>
-                </DataTable>
+        <Dialog v-model:visible="pickDialog" modal :header="null" :closable="false" :style="{ width: '55rem' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:content:class="!p-0 !bg-transparent">
+            <div class="flex flex-col bg-zinc-950 border border-teal-900/30 rounded-3xl overflow-hidden relative ring-1 ring-white/5">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-teal-500/10 blur-[100px] pointer-events-none"></div>
 
-                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
-                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="pickDialog = false" />
-                    <Button label="Complete Pick Selection" :loading="pickLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitPick" />
+                <div class="px-6 py-5 border-b border-teal-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                            <i class="pi pi-box text-teal-500 text-lg"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h2 class="text-lg font-black text-white tracking-tight font-mono uppercase">Inventory Picking Control</h2>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-0.5">Stage items for order fulfillment</p>
+                        </div>
+                    </div>
+                    <button @click="pickDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="pi pi-times text-[10px]"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 flex flex-col gap-6 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <div class="bg-teal-500/5 border border-teal-500/10 p-4 rounded-2xl flex items-start gap-3">
+                        <i class="pi pi-info-circle text-teal-500 mt-0.5"></i>
+                        <p class="text-[11px] text-zinc-400 font-medium leading-relaxed font-mono uppercase tracking-tight">
+                            Protocol: Move reserved stock from storage bins to the staging area. Registering picks decreases available inventory and increments the staging ledger.
+                        </p>
+                    </div>
+                
+                    <DataTable :value="pickForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
+                        <Column field="product_name" header="PRODUCT/SKU">
+                            <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span class="text-[9px] font-mono text-teal-500/70 font-bold uppercase tracking-widest">{{ data.sku }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="PROGRESS">
+                            <template #body="{ data }">
+                                <div class="flex flex-col gap-1 items-center">
+                                    <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-800 shadow-inner">
+                                        {{ data.picked_qty }} / {{ data.ordered_qty }}
+                                    </span>
+                                    <span class="text-[8px] font-black text-zinc-600 uppercase">{{ data.uom }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="QUANTITY TO STAGE" style="width: 180px">
+                            <template #body="{ data }">
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-teal-500/50 transition-all shadow-inner h-10 group overflow-hidden">
+                                     <InputNumber 
+                                        v-model="data.to_pick" 
+                                        :min="0" 
+                                        :max="data.ordered_qty - data.picked_qty" 
+                                        :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
+                                        class="p-inputtext-sm text-center font-mono font-black text-teal-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                        :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#14b8a6', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"
+                                        placeholder="0"
+                                    />
+                                    <div class="px-3 border-l border-zinc-800 bg-zinc-900/50 h-full flex items-center">
+                                        <span class="text-[9px] font-black text-zinc-500 uppercase">{{ data.uom }}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+
+                <div class="px-6 py-5 border-t border-teal-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-20 relative">
+                    <Button label="Cancel" @click="pickDialog = false" class="p-button-text !text-zinc-500 hover:!text-white uppercase font-mono font-black tracking-widest text-[11px]" />
+                    <Button 
+                        label="Complete Pick Selection" 
+                        :loading="pickLoading" 
+                        @click="submitPick"
+                        class="!px-8 !h-11 !bg-teal-500 hover:!bg-teal-400 !text-zinc-950 font-black uppercase font-mono tracking-widest text-[11px] !rounded-xl !border-none shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+                    />
                 </div>
             </div>
         </Dialog>
 
         <!-- Pack Dialog -->
-        <Dialog v-model:visible="packDialog" modal header="Packing & Quality Verification" :style="{ width: '50rem' }">
-            <div class="flex flex-col gap-4 py-4">
-                <div class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-2">
-                    <p class="text-xs text-indigo-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
-                        Mission: Verify picked items and box them for final shipment.
-                    </p>
-                </div>
-                
-                <DataTable :value="packForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
-                    <Column field="product_name" header="PRODUCT">
-                        <template #body="{ data }">
-                            <div class="flex flex-col">
-                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
-                            </div>
-                        </template>
-                    </Column>
-                    <Column header="PICKED">
-                        <template #body="{ data }">
-                            <span class="text-[10px] font-mono text-zinc-400">{{ data.picked_qty }} {{ data.uom }}</span>
-                        </template>
-                    </Column>
-                    <Column header="QTY TO PACK">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.to_pack" :min="0" :max="data.picked_qty - data.packed_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
-                        </template>
-                    </Column>
-                </DataTable>
+        <Dialog v-model:visible="packDialog" modal :header="null" :closable="false" :style="{ width: '55rem' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:content:class="!p-0 !bg-transparent">
+            <div class="flex flex-col bg-zinc-950 border border-indigo-900/30 rounded-3xl overflow-hidden relative ring-1 ring-white/5 shadow-[0_0_50px_rgba(79,70,229,0.1)]">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-indigo-500/10 blur-[100px] pointer-events-none"></div>
 
-                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
-                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="packDialog = false" />
-                    <Button label="Verify & Pack" :loading="packLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitPack" />
+                <div class="px-6 py-5 border-b border-indigo-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                            <i class="pi pi-gift text-indigo-400 text-lg"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h2 class="text-lg font-black text-white tracking-tight font-mono uppercase">Packing & Quality Assurance</h2>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-0.5">Verify and box items for dispatch</p>
+                        </div>
+                    </div>
+                    <button @click="packDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="pi pi-times text-[10px]"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 flex flex-col gap-6 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <div class="bg-indigo-500/5 border border-indigo-500/10 p-4 rounded-2xl flex items-start gap-3">
+                        <i class="pi pi-verified text-indigo-400 mt-0.5"></i>
+                        <p class="text-[11px] text-zinc-400 font-medium leading-relaxed font-mono uppercase tracking-tight">
+                            Protocol: Audit staged items against packing manifest. Once "Packed", stock is considered ready for fulfillment and cannot be modified without a reversal.
+                        </p>
+                    </div>
+                
+                    <DataTable :value="packForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
+                        <Column field="product_name" header="PRODUCT">
+                            <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span class="text-[9px] font-mono text-indigo-400/70 font-bold uppercase tracking-widest font-mono uppercase">{{ data.sku }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="STAGED (PICKED)">
+                            <template #body="{ data }">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[10px] font-mono font-black text-zinc-300">{{ data.picked_qty }}</span>
+                                    <span class="text-[8px] font-black text-zinc-600 uppercase">{{ data.uom }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="QUANTITY TO PACK" style="width: 180px">
+                            <template #body="{ data }">
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-indigo-500/50 transition-all shadow-inner h-10 group overflow-hidden">
+                                     <InputNumber 
+                                        v-model="data.to_pack" 
+                                        :min="0" 
+                                        :max="data.picked_qty - data.packed_qty" 
+                                        :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
+                                        class="p-inputtext-sm text-center font-mono font-black text-indigo-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                        :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#818cf8', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"
+                                        placeholder="0"
+                                    />
+                                    <div class="px-3 border-l border-zinc-800 bg-zinc-900/50 h-full flex items-center">
+                                        <span class="text-[9px] font-black text-zinc-500 uppercase">{{ data.uom }}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
+
+                <div class="px-6 py-5 border-t border-indigo-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-20 relative">
+                    <Button label="Cancel" @click="packDialog = false" class="p-button-text !text-zinc-500 hover:!text-white uppercase font-mono font-black tracking-widest text-[11px]" />
+                    <div class="flex items-center gap-4">
+                        <span v-if="packForm.lines.some(l => l.to_pack > 0)" class="text-[10px] font-mono text-zinc-500 font-bold uppercase">{{ packForm.lines.filter(l => l.to_pack > 0).length }} Items Prepared</span>
+                        <Button 
+                            label="Verify & Pack" 
+                            :loading="packLoading" 
+                            @click="submitPack"
+                            class="!px-8 !h-11 !bg-indigo-600 hover:!bg-indigo-500 !text-white font-black uppercase font-mono tracking-widest text-[11px] !rounded-xl !border-none shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                        />
+                    </div>
                 </div>
             </div>
         </Dialog>
 
         <!-- Ship Dialog -->
-        <Dialog v-model:visible="shipDialog" modal header="Final Fulfillment & Logistics" :style="{ width: '55rem' }">
-            <div class="flex flex-col gap-4 py-4">
-                <div class="p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl mb-2">
-                    <p class="text-xs text-teal-400 font-medium leading-relaxed font-mono uppercase tracking-wider">
-                        Mission: Handover packed boxes to carrier and finalize stock issue.
-                    </p>
+        <Dialog v-model:visible="shipDialog" modal :header="null" :closable="false" :style="{ width: '60rem' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:content:class="!p-0 !bg-transparent">
+            <div class="flex flex-col bg-zinc-950 border border-emerald-900/30 rounded-3xl overflow-hidden relative ring-1 ring-white/5 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
+
+                <div class="px-6 py-5 border-b border-emerald-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <i class="pi pi-truck text-emerald-500 text-lg"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h2 class="text-lg font-black text-white tracking-tight font-mono uppercase">Logistics & Dispatch Control</h2>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-0.5">Final fulfillment and courier handover</p>
+                        </div>
+                    </div>
+                    <button @click="shipDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="pi pi-times text-[10px]"></i>
+                    </button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Carrier Service</label>
-                        <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, Internal" class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+                <div class="p-6 flex flex-col gap-6 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <div class="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-2xl flex items-start gap-4">
+                        <i class="pi pi-map-marker text-emerald-500 mt-0.5"></i>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-emerald-400 uppercase tracking-widest font-mono mb-1">Carrier Manifest Protocol</span>
+                            <p class="text-[11px] text-zinc-400 font-medium leading-relaxed font-mono uppercase tracking-tight">
+                                Executing dispatch finalizes the stock issue ledger. Please verify tracking ID accuracy for customer-side traceability. Handover recorded units to <span class="text-white font-bold bg-zinc-900 px-2 py-0.5 rounded">SHIPMENT-EXPORT</span>.
+                            </p>
+                        </div>
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Tracking Reference</label>
-                        <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking #" class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+
+                    <div class="grid grid-cols-2 gap-6 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Carrier Service Name</label>
+                            <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, Internal Runner" class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-emerald-500/50 transition-all shadow-inner" />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Tracking Reference / AWB</label>
+                            <InputText v-model="shipForm.tracking_number" placeholder="Enter Ref #" class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-emerald-500/50 transition-all shadow-inner" />
+                        </div>
                     </div>
-                </div>
                 
-                <DataTable :value="shipForm.lines" class="p-datatable-sm" scrollable scrollHeight="250px">
-                    <Column field="product_name" header="PRODUCT" />
-                    <Column header="PACKED">
-                        <template #body="{ data }">
-                            <span class="text-[10px] font-mono text-zinc-400">{{ data.packed_qty }} {{ data.uom }}</span>
-                        </template>
-                    </Column>
-                    <Column header="QTY TO SHIP">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.to_ship" :min="0" :max="data.packed_qty - data.shipped_qty" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
-                        </template>
-                    </Column>
-                </DataTable>
+                    <DataTable :value="shipForm.lines" class="p-datatable-sm" scrollable scrollHeight="250px">
+                        <Column field="product_name" header="PRODUCT/SKU">
+                             <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span class="text-[9px] font-mono text-emerald-500/70 font-bold uppercase tracking-widest">{{ data.sku }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="BOXED (PACKED)">
+                            <template #body="{ data }">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[10px] font-mono font-black text-zinc-300">{{ data.packed_qty }}</span>
+                                    <span class="text-[8px] font-black text-zinc-600 uppercase">{{ data.uom }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="QUANTITY TO SHIP" style="width: 180px">
+                            <template #body="{ data }">
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-emerald-500/50 transition-all shadow-inner h-10 group overflow-hidden">
+                                     <InputNumber 
+                                        v-model="data.to_ship" 
+                                        :min="0" 
+                                        :max="data.packed_qty - data.shipped_qty" 
+                                        :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
+                                        class="p-inputtext-sm text-center font-mono font-black text-emerald-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                        :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#10b981', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"
+                                        placeholder="0"
+                                    />
+                                    <div class="px-3 border-l border-zinc-800 bg-zinc-900/50 h-full flex items-center">
+                                        <span class="text-[9px] font-black text-zinc-500 uppercase">{{ data.uom }}</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </Column>
+                    </DataTable>
+                </div>
 
-                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
-                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="shipDialog = false" />
-                    <Button label="Dispatch Shipment" :loading="fulfillLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="fulfill" />
+                <div class="px-6 py-5 border-t border-emerald-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-20 relative">
+                    <Button label="Cancel" @click="shipDialog = false" class="p-button-text !text-zinc-500 hover:!text-white uppercase font-mono font-black tracking-widest text-[11px]" />
+                    <Button 
+                        label="Dispatch Shipment" 
+                        :loading="fulfillLoading" 
+                        @click="fulfill"
+                        class="!px-10 !h-12 !bg-white hover:!bg-zinc-200 !text-zinc-950 font-black uppercase font-mono tracking-widest text-[11px] !rounded-xl !border-none shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-all"
+                    />
                 </div>
             </div>
         </Dialog>
 
         <!-- Return Dialog -->
-        <Dialog v-model:visible="returnDialog" modal header="Sales Return & RMA Process" :style="{ width: '60rem' }">
-            <div class="flex flex-col gap-4 py-4">
-                <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-2">
-                    <p class="text-xs text-amber-500 font-medium leading-relaxed font-mono uppercase tracking-wider">
-                        Mission: Process returned items, reverse fulfillment quantities, and increase inventory.
-                    </p>
+        <Dialog v-model:visible="returnDialog" modal :header="null" :closable="false" :style="{ width: '65rem' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:content:class="!p-0 !bg-transparent">
+            <div class="flex flex-col bg-zinc-950 border border-amber-900/30 rounded-3xl overflow-hidden relative ring-1 ring-white/5 shadow-[0_0_50px_rgba(245,158,11,0.1)]">
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-amber-500/10 blur-[100px] pointer-events-none"></div>
+
+                <div class="px-6 py-5 border-b border-amber-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                            <i class="pi pi-backward text-amber-500 text-lg"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <h2 class="text-lg font-black text-white tracking-tight font-mono uppercase">Sales Return (RMA) Core</h2>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mt-0.5">Reverse fulfilled orders and issue credits</p>
+                        </div>
+                    </div>
+                    <button @click="returnDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+                        <i class="pi pi-times text-[10px]"></i>
+                    </button>
                 </div>
+
+                <div class="p-6 flex flex-col gap-6 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    <div class="bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl flex items-start gap-3">
+                        <i class="pi pi-exclamation-triangle text-amber-500 mt-0.5"></i>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-amber-400 uppercase tracking-widest font-mono mb-1">RMA Protocol Enforcement</span>
+                            <p class="text-[11px] text-zinc-400 font-medium leading-relaxed font-mono uppercase tracking-tight">
+                                Processing a return creates an <span class="text-white font-bold bg-zinc-900 px-2 py-0.5 rounded">SRMA</span> reversal movement. System will automatically restore inventory to picking bins and calculate credit note liabilities.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50">
+                        <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
+                        <InputText v-model="returnForm.notes" placeholder="Detailed reason for global return..." class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-amber-500/50 transition-all shadow-inner" />
+                    </div>
                 
-                <div class="mb-4 flex flex-col gap-2">
-                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
-                    <InputText v-model="returnForm.notes" placeholder="Reason for global return..." class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+                    <DataTable :value="returnForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
+                        <Column field="product_name" header="PRODUCT/ID">
+                             <template #body="{ data }">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
+                                    <span class="text-[9px] font-mono text-amber-500/70 font-bold uppercase tracking-widest">{{ data.sku }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="FULFILLED">
+                            <template #body="{ data }">
+                                <div class="flex flex-col items-center">
+                                    <span class="text-[11px] font-mono font-black text-zinc-200">{{ data.shipped_qty }}</span>
+                                    <span class="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">{{ data.uom }}</span>
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="QTY TO RETURN" style="width: 140px">
+                            <template #body="{ data }">
+                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-amber-500/50 transition-all shadow-inner h-10 group overflow-hidden">
+                                     <InputNumber 
+                                        v-model="data.to_return" 
+                                        :min="0" 
+                                        :max="data.shipped_qty" 
+                                        :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
+                                        class="p-inputtext-sm text-center font-mono font-black text-amber-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                        :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f59e0b', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </template>
+                        </Column>
+                        <Column header="REASON / CONDITION" style="width: 200px">
+                            <template #body="{ data }">
+                                <InputText v-model="data.reason" placeholder="e.g. Defective, Wrong Item" class="!bg-zinc-950 !border-zinc-800 !rounded-xl !text-[10px] !h-10 w-full !px-3 shadow-inner focus:!border-amber-500/50 transition-all" />
+                            </template>
+                        </Column>
+                    </DataTable>
                 </div>
 
-                <DataTable :value="returnForm.lines" class="p-datatable-sm overflow-hidden" scrollable scrollHeight="300px">
-                    <Column field="product_name" header="PRODUCT">
-                        <template #body="{ data }">
-                            <div class="flex flex-col">
-                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
-                            </div>
-                        </template>
-                    </Column>
-                    <Column header="SHIPPED">
-                        <template #body="{ data }">
-                            <span class="text-[10px] font-mono text-zinc-400">
-                                {{ data.shipped_qty }} {{ data.uom }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column header="QTY TO RETURN">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.to_return" :min="0" :max="data.shipped_qty" :minFractionDigits="0" :maxFractionDigits="8" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
-                        </template>
-                    </Column>
-                    <Column header="REASON">
-                        <template #body="{ data }">
-                            <InputText v-model="data.reason" placeholder="Defective, Wrong Item, etc." class="!bg-zinc-950 !border-zinc-800 !text-white text-[10px] w-full" />
-                        </template>
-                    </Column>
-                </DataTable>
-
-                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
-                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="returnDialog = false" />
-                    <Button label="Process Return" :loading="returnLoading" class="!bg-amber-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitReturn" />
+                <div class="px-6 py-5 border-t border-amber-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-20 relative">
+                    <Button label="Cancel" @click="returnDialog = false" class="p-button-text !text-zinc-500 hover:!text-white uppercase font-mono font-black tracking-widest text-[11px]" />
+                    <Button 
+                        label="Execute Return" 
+                        :loading="returnLoading" 
+                        @click="submitReturn"
+                        class="!px-10 !h-12 !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black uppercase font-mono tracking-widest text-[11px] !rounded-xl !border-none shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                    />
                 </div>
             </div>
         </Dialog>
@@ -842,29 +1067,37 @@ const totalDiscount = computed(() => {
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #09090b;
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8);
+    background: transparent;
+    border-bottom: 1px solid rgba(20, 184, 166, 0.1);
     color: #52525b;
-    font-size: 9px;
-    font-weight: 800;
+    font-size: 8px;
+    font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.25em;
+    padding: 1rem 0.75rem;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
     border-bottom: 1px solid rgba(39, 39, 42, 0.5);
-    padding: 0.5rem 0.75rem;
+    padding: 1rem 0.75rem;
 }
 :deep(.p-dialog) {
-    background: #18181b;
+    background: #09090b;
     border: 1px solid #27272a;
-    border-radius: 20px;
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 :deep(.p-dialog-header) {
-    background: #18181b;
+    background: #09090b;
     color: white;
-    border-bottom: 1px solid #27272a;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
 }
 :deep(.p-dialog-content) {
-    background: #18181b;
+    background: #09090b;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+.no-print {
+    @media print {
+        display: none !important;
+    }
 }
 </style>

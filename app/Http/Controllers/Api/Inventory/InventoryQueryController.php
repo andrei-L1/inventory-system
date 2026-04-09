@@ -60,6 +60,7 @@ class InventoryQueryController extends Controller
                     'formatted_quantity_on_hand' => $product->formatted_total_qoh,
                     'reorder_point' => (float) $product->reorder_point,
                     'shortage' => (float) ($product->reorder_point - $product->total_qoh),
+                    'formatted_shortage' => UomHelper::format($product->reorder_point - $product->total_qoh, $product->uom_id, $product->id, false),
                     'preferred_vendor' => $product->preferredVendor->name ?? 'None',
                     'status' => 'critical',
                 ];
@@ -71,20 +72,26 @@ class InventoryQueryController extends Controller
     /**
      * Get inventory locations and QOH for a specific product.
      */
-    public function getLocations(Product $product): JsonResponse
+    public function getLocations(Request $request, Product $product): JsonResponse
     {
+        $targetUomId = $request->query('target_uom_id') ? (int) $request->query('target_uom_id') : $product->uom_id;
+        $multiplier = UomHelper::getMultiplierToSmallest($targetUomId, $product->id, false);
+
         $inventories = Inventory::with(['location'])
             ->where('product_id', $product->id)
             ->where('quantity_on_hand', '>', 0)
             ->get()
-            ->map(function ($inv) {
+            ->map(function ($inv) use ($targetUomId, $multiplier, $product) {
+                $qoh = (float) $inv->quantity_on_hand;
+                $scaledQoh = $multiplier > 0 ? $qoh / $multiplier : $qoh;
+
                 return [
                     'id' => $inv->id,
                     'location_id' => $inv->location_id,
                     'location_name' => $inv->location->name ?? 'Unknown Location',
                     'location_code' => $inv->location->code ?? 'N/A',
-                    'quantity_on_hand' => (float) $inv->quantity_on_hand,
-                    'formatted_quantity_on_hand' => $inv->formatted_quantity_on_hand,
+                    'quantity_on_hand' => $qoh,
+                    'formatted_quantity_on_hand' => UomHelper::format($scaledQoh, $targetUomId, $product->id, false),
                     'average_cost' => (float) $inv->average_cost,
                     'last_movement_date' => $inv->updated_at,
                 ];
@@ -96,26 +103,36 @@ class InventoryQueryController extends Controller
     /**
      * Get active cost layers (FIFO/LIFO representation) for a product.
      */
-    public function getCostLayers(Product $product): JsonResponse
+    public function getCostLayers(Request $request, Product $product): JsonResponse
     {
+        $targetUomId = $request->query('target_uom_id') ? (int) $request->query('target_uom_id') : $product->uom_id;
+        $multiplier = UomHelper::getMultiplierToSmallest($targetUomId, $product->id, false);
+
         $layers = InventoryCostLayer::with(['location', 'transactionLine.transaction.purchaseOrder'])
             ->where('product_id', $product->id)
             ->where('is_exhausted', false)
             ->where('remaining_qty', '>', 0)
             ->orderBy('receipt_date', 'asc')
             ->get()
-            ->map(function ($layer) {
+            ->map(function ($layer) use ($targetUomId, $multiplier, $product) {
                 $po = $layer->transactionLine?->transaction?->purchaseOrder;
+                
+                $receivedScaled = $multiplier > 0 ? (float) $layer->received_qty / $multiplier : (float) $layer->received_qty;
+                $remainingScaled = $multiplier > 0 ? (float) $layer->remaining_qty / $multiplier : (float) $layer->remaining_qty;
+                $unitCostScaled = $multiplier > 0 ? (float) $layer->unit_cost * $multiplier : (float) $layer->unit_cost;
+
+                $targetUom = UnitOfMeasure::find($targetUomId);
 
                 return [
                     'id' => $layer->id,
                     'location_name' => $layer->location?->name ?? 'Unknown Location',
                     'receipt_date' => $layer->receipt_date,
                     'unit_cost' => (float) $layer->unit_cost,
+                    'formatted_unit_cost' => '₱' . number_format($unitCostScaled, 2) . ' / ' . ($targetUom->abbreviation ?? 'pcs'),
                     'original_qty' => (float) $layer->received_qty,
-                    'formatted_original_qty' => $layer->formatted_received_qty,
+                    'formatted_original_qty' => UomHelper::format($receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (float) $layer->remaining_qty,
-                    'formatted_remaining_qty' => $layer->formatted_remaining_qty,
+                    'formatted_remaining_qty' => UomHelper::format($remainingScaled, $targetUomId, $product->id, false),
                     'total_value' => round((float) $layer->remaining_qty * (float) $layer->unit_cost, 8),
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,

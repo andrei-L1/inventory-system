@@ -65,53 +65,36 @@ const selectedViewUomId = ref(null);
 const stockOp = ref(null);
 const selectedLineForStock = ref(null);
 
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
-
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
+const isUomIdDiscrete = (id) => {
+    const uom = uoms.value.find(u => u.id == id);
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFactorToBase = (uomId, productId = null) => {
-    if (!uomId) return { factor: 1, baseId: null };
-    let factor = 1.0;
-    let current = Number(uomId);
-    let processed = [current];
-    while (true) {
-        let rule = null;
-        if (productId) {
-            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === productId);
-        }
-        if (!rule) {
-            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === null);
-        }
-        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
-        factor *= Number(rule.conversion_factor);
-        current = Number(rule.to_uom_id);
-        processed.push(current);
+    const uom = uoms.value.find(u => u.id == uomId);
+    if (!uom) return { factor: 1, baseId: uomId };
+    if (uom.is_base) return { factor: 1, baseId: uom.id };
+    
+    // Check product-specific rules first
+    if (productId) {
+        const prodRule = uomConversions.value.find(c => c.product_id === productId && c.from_uom_id === uomId);
+        if (prodRule) return { factor: parseFloat(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
     }
-    return { factor, baseId: current };
+    
+    // Check global rules
+    const globalRule = uomConversions.value.find(c => !c.product_id && c.from_uom_id === uomId);
+    if (globalRule) return { factor: parseFloat(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
+    
+    return { factor: 1, baseId: uom.id };
 };
 
-const getScaledQty = (productUomId, rawPieces, productId = null) => {
+const getScaledQty = (uomId, rawPieces, productId = null) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
-    
-    // Default to product's base UOM if no global switcher is selected
-    const targetUomId = selectedViewUomId.value || productUomId;
-    const targetUom = uoms.value.find(u => u.id == targetUomId);
-    const targetAbbr = targetUom ? targetUom.abbreviation : '';
-
-    const targetInfo = getFactorToBase(targetUomId, productId);
-    const productBaseInfo = getFactorToBase(productUomId, productId);
-
-    if (targetInfo.baseId !== productBaseInfo.baseId && selectedViewUomId.value) {
-        // Fallback to base if incompatible
-        const baseUom = uoms.value.find(u => u.id == productUomId);
-        return `${Number(rawPieces).toFixed(2)} ${baseUom?.abbreviation || ''} (No Conv)`;
-    }
-
-    const scaled = (Number(rawPieces) / targetInfo.factor);
-    const formatted = isDiscrete(targetAbbr) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
-    return `${formatted} ${targetAbbr}`;
+    const factor = getFactorToBase(uomId, productId).factor;
+    const scaled = (parseFloat(rawPieces) / factor);
+    return isUomIdDiscrete(uomId) 
+        ? Math.floor(scaled + 0.0001).toString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
 };
 
 const toggleStockInfo = async (event, product) => {
@@ -142,7 +125,9 @@ const loadMasterData = async () => {
 const loadProducts = async () => {
     loadingProducts.value = true;
     try {
-        const res = await axios.get('/api/products', { params: { query: search.value } });
+        const params = { query: search.value };
+        if (selectedViewUomId.value) params.target_uom_id = selectedViewUomId.value;
+        const res = await axios.get('/api/products', { params });
         products.value = res.data.data;
         if (products.value.length > 0 && !selectedProduct.value) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -172,6 +157,7 @@ const loadHistory = async (page = 1) => {
         if (historyFilters.value.date_from) params.date_from = historyFilters.value.date_from;
         if (historyFilters.value.date_to) params.date_to = historyFilters.value.date_to;
         if (historyFilters.value.type && historyFilters.value.type !== 'all') params.type = historyFilters.value.type;
+        if (selectedViewUomId.value) params.target_uom_id = selectedViewUomId.value;
 
         const res = await axios.get(`/api/products/${selectedProduct.value.id}/transactions`, { params });
         history.value = res.data.data;
@@ -196,9 +182,10 @@ const loadIntelligenceData = async () => {
     if (!selectedProduct.value) return;
     loadingIntelligence.value = true;
     try {
+        const params = selectedViewUomId.value ? { target_uom_id: selectedViewUomId.value } : {};
         const [locRes, layerRes] = await Promise.all([
-            axios.get(`/api/inventory/${selectedProduct.value.id}/locations`),
-            axios.get(`/api/inventory/${selectedProduct.value.id}/cost-layers`)
+            axios.get(`/api/inventory/${selectedProduct.value.id}/locations`, { params }),
+            axios.get(`/api/inventory/${selectedProduct.value.id}/cost-layers`, { params })
         ]);
         locationBreakdown.value = locRes.data.data;
         layers.value = layerRes.data.data;
@@ -481,15 +468,15 @@ const tablePt = {
                                 <div class="flex flex-col gap-2 w-full">
                                     <div class="flex justify-between items-center w-full">
                                         <span class="text-[9px] font-bold font-mono tracking-widest uppercase" :class="selectedProduct?.id === option.id ? 'text-emerald-400' : 'text-zinc-600'">{{ option.sku }}</span>
-                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-emerald-500/50 transition-colors" 
-                                              @click.stop="toggleStockInfo($event, option)"
-                                              :class="[
-                                                  option.total_qoh === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                                  option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
-                                                  'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                              ]">
-                                            {{ getScaledQty(option.uom_id, option.total_qoh, option.id) }}
-                                        </span>
+                                          <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-emerald-500/50 transition-colors" 
+                                                @click.stop="toggleStockInfo($event, option)"
+                                                :class="[
+                                                    option.total_qoh === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                    option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
+                                                    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                ]">
+                                              {{ option.formatted_total_qoh }}
+                                          </span>
                                     </div>
                                     <span class="text-xs font-bold truncate tracking-tight">{{ option.name }}</span>
                                 </div>
@@ -539,7 +526,7 @@ const tablePt = {
                                                   selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400' : 
                                                   'text-emerald-400'
                                               ]">
-                                            {{ getScaledQty(selectedProduct.uom_id, selectedProduct.total_qoh, selectedProduct.id) }}
+                                            {{ selectedProduct.formatted_total_qoh }}
                                         </span>
                                         <span class="text-[10px] font-bold font-mono mt-2" 
                                               :class="[
@@ -561,11 +548,11 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
-                                        <span class="text-white font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.selling_price) }}</span>
+                                        <span class="text-white font-bold text-lg tracking-tight">{{ selectedProduct.formatted_selling_price }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
-                                        <span class="text-sky-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.average_cost) }}</span>
+                                        <span class="text-sky-400 font-bold text-lg tracking-tight">{{ selectedProduct.formatted_average_cost }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
@@ -643,7 +630,7 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
                                             <div class="flex items-end gap-3">
-                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand, selectedProduct.id) }}</span>
+                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ loc.formatted_quantity_on_hand }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -691,12 +678,12 @@ const tablePt = {
                                     </Column>
                                     <Column field="remaining_qty" header="Remaining" style="width: 140px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty, selectedProduct.id) }}</span>
+                                            <span class="font-mono font-bold text-zinc-200">{{ data.formatted_remaining_qty }}</span>
                                         </template>
                                     </Column>
                                     <Column field="unit_cost" header="Unit Cost" style="width: 120px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ formatCurrency(data.unit_cost) }}</span>
+                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ data.formatted_unit_cost }}</span>
                                         </template>
                                     </Column>
                                     <Column header="Layer Value" style="width: 130px">
@@ -828,10 +815,7 @@ const tablePt = {
                                         <div class="flex flex-col">
                                             <div class="font-mono font-bold text-xs tracking-tighter"
                                                  :class="data.quantity < 0 ? 'text-rose-400' : 'text-emerald-400'">
-                                                {{ data.quantity < 0 ? '' : '+' }}{{ data.quantity }}
-                                            </div>
-                                            <div v-if="data.uom_abbreviation !== (selectedProduct.uom?.abbreviation || 'pcs')" class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter mt-0.5">
-                                                Base: {{ getScaledQty(selectedProduct.uom_id, data.quantity) }}
+                                                {{ data.formatted_quantity }}
                                             </div>
                                         </div>
                                     </template>
@@ -848,7 +832,7 @@ const tablePt = {
                                 <Column header="Unit Cost" style="width: 120px">
                                     <template #body="{ data }">
                                         <span class="font-mono text-[11px] font-bold text-sky-400">
-                                            {{ data.unit_cost > 0 ? formatCurrency(data.unit_cost) : '—' }}
+                                            {{ data.formatted_unit_cost }}
                                         </span>
                                     </template>
                                 </Column>
@@ -994,17 +978,17 @@ const tablePt = {
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Min Stock (Trigger)</label>
-                                <InputNumber v-model="ruleForm.min_stock" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
+                                <InputNumber v-model="ruleForm.min_stock" :minFractionDigits="0" :maxFractionDigits="selectedProduct ? (isUomIdDiscrete(selectedProduct.uom_id) ? 0 : 8) : 0" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
                             </div>
                             <div class="flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Restock Amount</label>
-                                <InputNumber v-model="ruleForm.reorder_qty" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
+                                <InputNumber v-model="ruleForm.reorder_qty" :minFractionDigits="0" :maxFractionDigits="selectedProduct ? (isUomIdDiscrete(selectedProduct.uom_id) ? 0 : 8) : 0" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" />
                             </div>
                         </div>
 
                         <div class="flex flex-col gap-2">
                             <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Max Stock Limit (Optional)</label>
-                            <InputNumber v-model="ruleForm.max_stock" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" placeholder="No limit" />
+                            <InputNumber v-model="ruleForm.max_stock" :minFractionDigits="0" :maxFractionDigits="selectedProduct ? (isUomIdDiscrete(selectedProduct.uom_id) ? 0 : 8) : 0" inputClass="!bg-zinc-900 !border-zinc-800 !text-white !w-full !font-mono" placeholder="No limit" />
                         </div>
 
                         <div class="flex items-center justify-between p-4 border border-zinc-800 bg-zinc-900/50 rounded-lg">
@@ -1039,7 +1023,7 @@ const tablePt = {
                             {{ loc.location_name }}
                         </span>
                         <span class="font-mono text-zinc-200">
-                            {{ getScaledQty(selectedLineForStock.uom_id, loc.quantity_on_hand) }}
+                            {{ getScaledQty(selectedLineForStock.uom_id, loc.quantity_on_hand, selectedLineForStock.id) }}
                         </span>
                     </div>
                     <div v-if="!locationBreakdown.length" class="text-center py-2 text-zinc-600 text-[10px] italic">
@@ -1049,7 +1033,7 @@ const tablePt = {
                 <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono text-[9px]">
                     <span class="font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
                     <span class="font-black text-white px-2 py-0.5 bg-zinc-900 rounded">
-                        {{ getScaledQty(selectedLineForStock.uom_id, selectedLineForStock.total_qoh) }}
+                        {{ getScaledQty(selectedLineForStock.uom_id, selectedLineForStock.total_qoh, selectedLineForStock.id) }}
                     </span>
                 </div>
             </div>

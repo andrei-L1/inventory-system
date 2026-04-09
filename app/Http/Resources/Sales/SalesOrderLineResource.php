@@ -43,6 +43,7 @@ class SalesOrderLineResource extends JsonResource
             'returned_qty' => (float) $this->returned_qty,
             'formatted_returned_qty' => $this->formatted_returned_qty,
             'unit_price' => (float) $this->unit_price,
+            'formatted_unit_price' => $this->formatted_unit_price,
             'tax_rate' => (float) $this->tax_rate,
             'tax_amount' => (float) $this->tax_amount,
             'discount_rate' => (float) $this->discount_rate,

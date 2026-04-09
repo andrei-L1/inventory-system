@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\UomHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,14 +13,26 @@ class InventoryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $targetUomId = $request->query('target_uom_id');
+        $qoh = (float) $this->quantity_on_hand;
+
+        if ($targetUomId) {
+            $multiplier = UomHelper::getMultiplierToSmallest((int) $targetUomId, $this->product_id, false);
+            $scaledQoh = $multiplier > 0 ? $qoh / $multiplier : $qoh;
+            $formattedQuantityOnHand = UomHelper::format($scaledQoh, (int) $targetUomId, $this->product_id, false);
+        } else {
+            $formattedQuantityOnHand = $this->formatted_quantity_on_hand;
+        }
+
         return [
             'id' => $this->id,
             'product_id' => $this->product_id,
             'location_id' => $this->location_id,
-            'quantity_on_hand' => (float) $this->quantity_on_hand,
-            'formatted_quantity_on_hand' => $this->formatted_quantity_on_hand,
+            'quantity_on_hand' => $qoh,
+            'formatted_quantity_on_hand' => $formattedQuantityOnHand,
             'average_cost' => (float) $this->average_cost,
-            'total_value' => (float) ($this->quantity_on_hand * $this->average_cost),
+            'formatted_average_cost' => $this->formatted_average_cost,
+            'total_value' => (float) ($qoh * $this->average_cost),
             'last_movement_date' => $this->updated_at,
 
             // Relationships

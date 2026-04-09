@@ -29,15 +29,9 @@ const locations = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
-
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
-};
-
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
-    return uom ? isDiscrete(uom.abbreviation) : true;
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFactorToBase = (uomId, productId = null) => {
