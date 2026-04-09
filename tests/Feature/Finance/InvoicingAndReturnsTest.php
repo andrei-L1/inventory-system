@@ -76,10 +76,12 @@ class InvoicingAndReturnsTest extends TestCase
 
         // 3. Perform Return
         $response = $this->postJson("/api/sales-orders/{$so->id}/return", [
+            'location_id' => $location->id,
             'lines' => [
                 [
                     'so_line_id' => $soLine->id,
                     'returned_qty' => 4,
+                    'resolution' => 'refund',
                     'reason' => 'Defective',
                 ],
             ],

@@ -10,6 +10,7 @@ import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Popover from 'primevue/popover';
+import Select from 'primevue/select';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
@@ -24,6 +25,7 @@ const so = ref(null);
 const loading = ref(true);
 const uoms = ref([]);
 const uomConversions = ref([]);
+const locations = ref([]);
 
 const pickLoading = ref(false);
 const packLoading = ref(false);
@@ -46,6 +48,7 @@ const shipForm = ref({
 const returnDialog = ref(false);
 const returnLoading = ref(false);
 const returnForm = ref({ 
+    location_id: null,
     lines: [],
     notes: ''
 });
@@ -72,14 +75,16 @@ const getAvailabilityStatus = (line) => {
 
 const loadMasterData = async () => {
     try {
-        const [uomRes, convRes] = await Promise.all([
+        const [uomRes, convRes, locRes] = await Promise.all([
             axios.get('/api/uom'),
-            axios.get('/api/uom-conversions')
+            axios.get('/api/uom-conversions'),
+            axios.get('/api/locations?limit=1000')
         ]);
         uoms.value = uomRes.data.data;
         uomConversions.value = convRes.data.data;
+        locations.value = locRes.data.data;
     } catch (e) {
-        console.error("Failed to load UOM metadata", e);
+        console.error("Failed to load metadata", e);
     }
 };
 
@@ -314,19 +319,28 @@ const openReturnDialog = () => {
             returned_qty: l.returned_qty, // already returned
             to_return: 0,
             uom: l.uom?.abbreviation,
+            resolution: 'replacement',
             reason: ''
         }));
     returnForm.value.notes = '';
+    returnForm.value.location_id = null;
     returnDialog.value = true;
 };
 
 const submitReturn = async () => {
+    if (!returnForm.value.location_id) {
+        toast.add({ severity: 'warn', summary: 'Input Required', detail: 'Specify a destination location for the return', life: 3000 });
+        return;
+    }
+
     try {
         const payload = {
+            location_id: returnForm.value.location_id,
             notes: returnForm.value.notes,
             lines: returnForm.value.lines.filter(l => l.to_return > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 returned_qty: l.to_return,
+                resolution: l.resolution,
                 reason: l.reason
             }))
         };
@@ -1005,9 +1019,23 @@ const totalDiscount = computed(() => {
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50">
-                        <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
-                        <InputText v-model="returnForm.notes" placeholder="Detailed reason for global return..." class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-amber-500/50 transition-all shadow-inner" />
+                    <div class="grid grid-cols-2 gap-6 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50">
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Receiving Location (Destination Bin)</label>
+                            <Select 
+                                v-model="returnForm.location_id" 
+                                :options="locations" 
+                                optionLabel="name" 
+                                optionValue="id" 
+                                placeholder="Select active bin" 
+                                filter 
+                                class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !text-xs !font-bold text-white shadow-inner"
+                            />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
+                            <InputText v-model="returnForm.notes" placeholder="Detailed reason for global return..." class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-amber-500/50 transition-all shadow-inner" />
+                        </div>
                     </div>
                 
                     <DataTable :value="returnForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
@@ -1040,6 +1068,11 @@ const totalDiscount = computed(() => {
                                         placeholder="0"
                                     />
                                 </div>
+                            </template>
+                        </Column>
+                        <Column header="RESOLUTION" style="width: 170px">
+                            <template #body="{ data }">
+                                <Select v-model="data.resolution" :options="[{label:'Replacement',value:'replacement'},{label:'Refund / Credit',value:'refund'}]" optionLabel="label" optionValue="value" class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !text-[10px] !h-10 shadow-inner focus:!border-amber-500/50 transition-all font-bold text-white uppercase tracking-widest" />
                             </template>
                         </Column>
                         <Column header="REASON / CONDITION" style="width: 200px">

@@ -95,10 +95,12 @@ class PrecisionReturnTest extends TestCase
         $expectedCreditTotal = round($returnQty * $precisionPrice, 8);
 
         $response = $this->postJson("/api/sales-orders/{$so->id}/return", [
+            'location_id' => $location->id,
             'lines' => [
                 [
                     'so_line_id' => $soLine->id,
                     'returned_qty' => $returnQty,
+                    'resolution' => 'refund',
                     'reason' => 'Defective',
                 ],
             ],
