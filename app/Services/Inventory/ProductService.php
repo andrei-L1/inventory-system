@@ -2,10 +2,12 @@
 
 namespace App\Services\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Models\Attachment;
 use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\Product;
+use App\Models\UomConversion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -57,11 +59,11 @@ class ProductService
             $product = Product::create($data);
 
             // 1.5 Handle Initial Conversion Rule (Atomic Packaging)
-            if (!empty($data['initial_conversion_factor'])) {
-                $toUomId = $data['initial_to_uom_id'] ?? \App\Helpers\UomHelper::getSmallestUnitId($product->uom_id);
-                
+            if (! empty($data['initial_conversion_factor'])) {
+                $toUomId = $data['initial_to_uom_id'] ?? UomHelper::getSmallestUnitId($product->uom_id);
+
                 if ($toUomId) {
-                    \App\Models\UomConversion::create([
+                    UomConversion::create([
                         'product_id' => $product->id,
                         'from_uom_id' => $product->uom_id,
                         'to_uom_id' => $toUomId,
@@ -69,7 +71,7 @@ class ProductService
                     ]);
 
                     // Clear cache to ensure the new rule is visible in the current request (e.g. for Resource response)
-                    \App\Helpers\UomHelper::clearCache();
+                    UomHelper::clearCache();
                 }
             }
 
@@ -108,17 +110,17 @@ class ProductService
             $product->update($data);
 
             // 2. Handle Initial Conversion Rule Update
-            if (!empty($data['initial_conversion_factor'])) {
-                $toUomId = $data['initial_to_uom_id'] ?? \App\Helpers\UomHelper::getSmallestUnitId($product->uom_id);
+            if (! empty($data['initial_conversion_factor'])) {
+                $toUomId = $data['initial_to_uom_id'] ?? UomHelper::getSmallestUnitId($product->uom_id);
 
                 if ($toUomId) {
                     // Update existing or create if missing
-                    \App\Models\UomConversion::updateOrCreate(
+                    UomConversion::updateOrCreate(
                         ['product_id' => $product->id, 'from_uom_id' => $product->uom_id],
                         ['to_uom_id' => $toUomId, 'conversion_factor' => (float) $data['initial_conversion_factor']]
                     );
 
-                    \App\Helpers\UomHelper::clearCache();
+                    UomHelper::clearCache();
                 }
             }
 

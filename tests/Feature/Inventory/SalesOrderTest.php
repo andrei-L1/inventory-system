@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inventory;
 
+use App\Helpers\UomHelper;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
@@ -18,7 +19,6 @@ use App\Models\TransactionStatus;
 use App\Models\TransactionType;
 use App\Models\UnitOfMeasure;
 use App\Models\User;
-use App\Helpers\UomHelper;
 use App\Services\Inventory\StockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

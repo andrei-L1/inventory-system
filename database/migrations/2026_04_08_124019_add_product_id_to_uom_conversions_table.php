@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::disableForeignKeyConstraints();
-        
+
         Schema::table('uom_conversions', function (Blueprint $table) {
             // Add the column first
             $table->foreignId('product_id')->nullable()->after('id')->constrained('products')->cascadeOnDelete();
@@ -24,7 +24,7 @@ return new class extends Migration
             // Add new index
             $table->unique(['from_uom_id', 'to_uom_id', 'product_id'], 'uom_conv_from_to_prod_unique');
         });
-        
+
         Schema::enableForeignKeyConstraints();
     }
 
@@ -35,10 +35,10 @@ return new class extends Migration
     {
         Schema::table('uom_conversions', function (Blueprint $table) {
             $table->dropUnique('uom_conv_from_to_prod_unique');
-            
+
             $table->dropForeign(['product_id']);
             $table->dropColumn('product_id');
-            
+
             $table->unique(['from_uom_id', 'to_uom_id']);
         });
     }

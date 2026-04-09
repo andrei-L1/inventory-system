@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Helpers\UomHelper;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Inventory;
@@ -14,7 +15,6 @@ use App\Models\User;
 use App\Models\Vendor;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\VendorSeeder;
-use App\Helpers\UomHelper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;

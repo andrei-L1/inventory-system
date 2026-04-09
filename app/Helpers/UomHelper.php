@@ -5,6 +5,7 @@ namespace App\Helpers;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class UomHelper
 {
@@ -34,7 +35,7 @@ class UomHelper
                 $scaledUom = null;
                 $bestFactor = 1.0;
                 foreach (self::$uoms as $candidate) {
-                    if ($candidate->category === $uom->category && !$candidate->is_base && $candidate->conversion_factor_to_base) {
+                    if ($candidate->category === $uom->category && ! $candidate->is_base && $candidate->conversion_factor_to_base) {
                         if (abs($quantity) >= $candidate->conversion_factor_to_base && $candidate->conversion_factor_to_base > $bestFactor) {
                             $scaledUom = $candidate;
                             $bestFactor = $candidate->conversion_factor_to_base;
@@ -43,10 +44,12 @@ class UomHelper
                 }
                 if ($scaledUom) {
                     $scaledQty = $quantity / $bestFactor;
-                    return round($scaledQty, $scaledUom->decimals) . ' ' . $scaledUom->abbreviation;
+
+                    return round($scaledQty, $scaledUom->decimals).' '.$scaledUom->abbreviation;
                 }
             }
-            return round($quantity, $uom->decimals) . ' ' . $uom->abbreviation;
+
+            return round($quantity, $uom->decimals).' '.$uom->abbreviation;
         }
 
         // Discrete units (BOX, PCS) use recursive breakdown if fractional
@@ -64,19 +67,19 @@ class UomHelper
 
         // Base case: If it's a whole number, just show it
         if (abs($absQty - round($absQty)) < 0.00000001) {
-            $res = round($absQty) . ' ' . $uom->abbreviation;
+            $res = round($absQty).' '.$uom->abbreviation;
 
             // Expand to base unit if this is a packaging unit
-            if (!$uom->is_base) {
+            if (! $uom->is_base) {
                 $multiplier = self::getMultiplierToSmallest($uomId, $productId, $throw);
                 if ($multiplier > 1) {
                     $totalSmallest = round($absQty * $multiplier);
                     $smallestUom = self::getUom(self::getSmallestUnitId($uomId));
-                    $res .= ' [' . $totalSmallest . ' ' . ($smallestUom->abbreviation ?? 'pcs') . ']';
+                    $res .= ' ['.$totalSmallest.' '.($smallestUom->abbreviation ?? 'pcs').']';
                 }
             }
 
-            return $isNegative ? '-' . $res : $res;
+            return $isNegative ? '-'.$res : $res;
         }
 
         // It has a fraction. Get the conversion rule to breakdown.
@@ -85,14 +88,15 @@ class UomHelper
         if ($productId) {
             $conversion = $query->where('product_id', $productId)->first();
         }
-        if (!$conversion) {
+        if (! $conversion) {
             $conversion = $query->whereNull('product_id')->first();
         }
 
         if (! $conversion) {
             // No conversion rule found, show original decimal bounded by defined precision
-            $res = round($absQty, $uom->decimals) . ' ' . $uom->abbreviation;
-            return $isNegative ? '-' . $res : $res;
+            $res = round($absQty, $uom->decimals).' '.$uom->abbreviation;
+
+            return $isNegative ? '-'.$res : $res;
         }
 
         $multiplier = $conversion->conversion_factor;
@@ -102,7 +106,7 @@ class UomHelper
 
         $parts = [];
         if ($wholeUnits > 0) {
-            $parts[] = $wholeUnits . ' ' . $uom->abbreviation;
+            $parts[] = $wholeUnits.' '.$uom->abbreviation;
         }
 
         // Recurse into the smaller unit
@@ -116,7 +120,7 @@ class UomHelper
 
         $res = implode(', ', $parts);
 
-        return $isNegative ? '-' . $res : $res;
+        return $isNegative ? '-'.$res : $res;
     }
 
     /**
@@ -130,6 +134,7 @@ class UomHelper
                 return $u->category === 'count';
             }
         }
+
         return true;
     }
 
@@ -143,10 +148,14 @@ class UomHelper
         }
         self::ensureCacheLoaded();
         $uom = self::getUom($startingUomId);
-        if (!$uom) return null;
-        
-        if ($uom->is_base) return $uom->id;
-        
+        if (! $uom) {
+            return null;
+        }
+
+        if ($uom->is_base) {
+            return $uom->id;
+        }
+
         foreach (self::$uoms as $baseUom) {
             if ($baseUom->category === $uom->category && $baseUom->is_base) {
                 return $baseUom->id;
@@ -161,37 +170,41 @@ class UomHelper
      */
     public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null, bool $throw = true): float
     {
-        if (! $fromUomId) return 1.0;
-        
+        if (! $fromUomId) {
+            return 1.0;
+        }
+
         self::ensureCacheLoaded();
         $uom = self::getUom($fromUomId);
-        if (!$uom || $uom->is_base) return 1.0;
+        if (! $uom || $uom->is_base) {
+            return 1.0;
+        }
 
         if ($uom->category !== 'count') {
             return (float) ($uom->conversion_factor_to_base ?? 1.0);
         }
-        
+
         // Contextual Counting layer uses the Product-aware conversions table
         $query = self::$conversions->where('from_uom_id', $fromUomId);
-        
+
         $bestConv = null;
         if ($productId) {
             $bestConv = $query->where('product_id', $productId)->first();
         }
-        if (!$bestConv) {
+        if (! $bestConv) {
             $bestConv = $query->whereNull('product_id')->first();
         }
-        
+
         if ($bestConv) {
             return (float) $bestConv->conversion_factor;
         }
 
-        if (!$throw) {
+        if (! $throw) {
             return 1.0;
         }
 
-        throw \Illuminate\Validation\ValidationException::withMessages([
-            'uom_id' => 'Missing conversion rule for this unit (' . $uom->abbreviation . '). Please define its packaging size.'
+        throw ValidationException::withMessages([
+            'uom_id' => 'Missing conversion rule for this unit ('.$uom->abbreviation.'). Please define its packaging size.',
         ]);
     }
 

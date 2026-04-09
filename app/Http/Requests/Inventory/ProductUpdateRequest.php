@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Inventory;
 
 use App\Models\Product;
+use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductUpdateRequest extends FormRequest
@@ -40,31 +42,35 @@ class ProductUpdateRequest extends FormRequest
                 'min:0.000001',
                 function ($attribute, $value, $fail) {
                     $uomId = $this->input('uom_id');
-                    if (!$uomId) return;
+                    if (! $uomId) {
+                        return;
+                    }
 
-                    $uom = \App\Models\UnitOfMeasure::find($uomId);
-                    if (!$uom || $uom->is_base) return;
+                    $uom = UnitOfMeasure::find($uomId);
+                    if (! $uom || $uom->is_base) {
+                        return;
+                    }
 
                     $productId = $this->route('product');
                     $id = is_object($productId) ? $productId->id : $productId;
 
                     // Check if a global rule exists
-                    $hasGlobalRule = \App\Models\UomConversion::where('from_uom_id', $uomId)
+                    $hasGlobalRule = UomConversion::where('from_uom_id', $uomId)
                         ->whereNull('product_id')
                         ->exists();
 
                     // Check if a product-specific rule exists (in case of update)
                     $hasProductRule = false;
                     if ($id) {
-                        $hasProductRule = \App\Models\UomConversion::where('from_uom_id', $uomId)
+                        $hasProductRule = UomConversion::where('from_uom_id', $uomId)
                             ->where('product_id', $id)
                             ->exists();
                     }
 
-                    if (!$hasGlobalRule && !$hasProductRule && empty($value)) {
+                    if (! $hasGlobalRule && ! $hasProductRule && empty($value)) {
                         $fail("A conversion factor is required for this unit ({$uom->abbreviation}) because no packaging definition exists for this product.");
                     }
-                }
+                },
             ],
             'initial_to_uom_id' => 'nullable|exists:units_of_measure,id',
         ];

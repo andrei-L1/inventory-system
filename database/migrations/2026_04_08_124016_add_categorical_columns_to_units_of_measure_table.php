@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -19,25 +20,25 @@ return new class extends Migration
         });
 
         // Seed categorical data for existing default units
-        \Illuminate\Support\Facades\DB::table('units_of_measure')->where('abbreviation', 'pcs')->update([
+        DB::table('units_of_measure')->where('abbreviation', 'pcs')->update([
             'category' => 'count',
             'is_base' => true,
             'conversion_factor_to_base' => 1.0,
-            'decimals' => 0
+            'decimals' => 0,
         ]);
 
-        \Illuminate\Support\Facades\DB::table('units_of_measure')->where('abbreviation', 'bx')->update([
+        DB::table('units_of_measure')->where('abbreviation', 'bx')->update([
             'category' => 'count',
             'is_base' => false,
             'conversion_factor_to_base' => null, // Contextual (Product Specific packaging)
-            'decimals' => 0
+            'decimals' => 0,
         ]);
 
-        \Illuminate\Support\Facades\DB::table('units_of_measure')->where('abbreviation', 'kg')->update([
+        DB::table('units_of_measure')->where('abbreviation', 'kg')->update([
             'category' => 'mass',
             'is_base' => false,
             'conversion_factor_to_base' => 1000.0,
-            'decimals' => 3
+            'decimals' => 3,
         ]);
 
         // The bulk of standard unit initialization is now safely handled by Database\Seeders\UomSeeder.
@@ -51,7 +52,7 @@ return new class extends Migration
         Schema::table('units_of_measure', function (Blueprint $table) {
             $table->dropColumn(['category', 'is_base', 'conversion_factor_to_base', 'decimals']);
         });
-        
-        \Illuminate\Support\Facades\DB::table('units_of_measure')->whereIn('abbreviation', ['g', 'ml'])->delete();
+
+        DB::table('units_of_measure')->whereIn('abbreviation', ['g', 'ml'])->delete();
     }
 };

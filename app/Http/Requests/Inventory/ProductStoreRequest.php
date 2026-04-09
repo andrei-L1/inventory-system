@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Inventory;
 
+use App\Models\UnitOfMeasure;
+use App\Models\UomConversion;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProductStoreRequest extends FormRequest
@@ -31,7 +33,7 @@ class ProductStoreRequest extends FormRequest
             'barcode' => 'nullable|string|max:100|unique:products,barcode',
             'category_id' => 'required|exists:categories,id',
             'uom_id' => 'required|exists:units_of_measure,id',
-            
+
             // Conditional Packaging Validation
             'initial_conversion_factor' => [
                 'nullable',
@@ -39,22 +41,26 @@ class ProductStoreRequest extends FormRequest
                 'min:0.000001',
                 function ($attribute, $value, $fail) {
                     $uomId = $this->input('uom_id');
-                    if (!$uomId) return;
+                    if (! $uomId) {
+                        return;
+                    }
 
-                    $uom = \App\Models\UnitOfMeasure::find($uomId);
-                    if (!$uom || $uom->is_base) return;
+                    $uom = UnitOfMeasure::find($uomId);
+                    if (! $uom || $uom->is_base) {
+                        return;
+                    }
 
                     // If it's not a base unit, check if a global rule exists
-                    $hasGlobalRule = \App\Models\UomConversion::where('from_uom_id', $uomId)
+                    $hasGlobalRule = UomConversion::where('from_uom_id', $uomId)
                         ->whereNull('product_id')
                         ->exists();
 
-                    if (!$hasGlobalRule && empty($value)) {
+                    if (! $hasGlobalRule && empty($value)) {
                         $fail("A conversion factor is required for this unit ({$uom->abbreviation}) because no global default exists.");
                     }
-                }
+                },
             ],
-            
+
             'initial_to_uom_id' => 'nullable|exists:units_of_measure,id',
             'costing_method_id' => 'required|exists:costing_methods,id',
             'preferred_vendor_id' => 'nullable|exists:vendors,id',
