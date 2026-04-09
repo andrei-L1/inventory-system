@@ -79,19 +79,19 @@ class PurchaseOrderController extends Controller
 
             $totalAmount = 0.0;
             foreach ($data['lines'] as $lineData) {
-                $lineCost = $lineData['ordered_qty'] * $lineData['unit_cost'];
+                $lineCost = round($lineData['ordered_qty'] * $lineData['unit_cost'], 8);
                 $totalAmount += $lineCost;
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => $lineData['ordered_qty'],
+                    'ordered_qty' => round($lineData['ordered_qty'], 8),
                     'received_qty' => 0,
-                    'unit_cost' => $lineData['unit_cost'],
+                    'unit_cost' => round($lineData['unit_cost'], 8),
                 ]);
             }
 
-            $po->update(['total_amount' => $totalAmount]);
+            $po->update(['total_amount' => round($totalAmount, 8)]);
 
             return $po;
         });
@@ -126,19 +126,19 @@ class PurchaseOrderController extends Controller
 
             $totalAmount = 0.0;
             foreach ($data['lines'] as $lineData) {
-                $lineCost = $lineData['ordered_qty'] * $lineData['unit_cost'];
+                $lineCost = round($lineData['ordered_qty'] * $lineData['unit_cost'], 8);
                 $totalAmount += $lineCost;
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => $lineData['ordered_qty'],
+                    'ordered_qty' => round($lineData['ordered_qty'], 8),
                     'received_qty' => 0,
-                    'unit_cost' => $lineData['unit_cost'],
+                    'unit_cost' => round($lineData['unit_cost'], 8),
                 ]);
             }
 
-            $purchaseOrder->update(['total_amount' => $totalAmount]);
+            $purchaseOrder->update(['total_amount' => round($totalAmount, 8)]);
 
             return $purchaseOrder;
         });
@@ -523,7 +523,7 @@ class PurchaseOrderController extends Controller
             ->get()
             ->sum(fn ($line) => round((float) $line->ordered_qty * (float) $line->unit_cost, 8));
 
-        $purchaseOrder->update(['total_amount' => round($total, 2)]);
+        $purchaseOrder->update(['total_amount' => round($total, 8)]);
     }
 
     /**
@@ -596,15 +596,15 @@ class PurchaseOrderController extends Controller
                         ?? ($suggestion->product->average_cost > 0 ? $suggestion->product->average_cost : null)
                         ?? ($suggestion->product->selling_price * 0.6); // Fallback estimate
 
-                    $lineCost = $suggestion->suggested_qty * $unitCost;
+                    $lineCost = round($suggestion->suggested_qty * $unitCost, 8);
                     $totalAmount += $lineCost;
 
                     $po->lines()->create([
                         'product_id' => $suggestion->product_id,
                         'uom_id' => $suggestion->product->uom_id,
-                        'ordered_qty' => $suggestion->suggested_qty,
+                        'ordered_qty' => round($suggestion->suggested_qty, 8),
                         'received_qty' => 0,
-                        'unit_cost' => $unitCost,
+                        'unit_cost' => round($unitCost, 8),
                     ]);
 
                     // Link and update suggestion
@@ -614,7 +614,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                $po->update(['total_amount' => $totalAmount]);
+                $po->update(['total_amount' => round($totalAmount, 8)]);
                 $posCreated[] = $po->po_number;
             }
         });

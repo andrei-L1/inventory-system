@@ -84,10 +84,36 @@ const isUomIdDiscrete = (id) => {
 };
 
 const getFilteredUoms = (line) => {
-    if (!line.product_uom || !isDiscrete(line.product_uom)) return uoms.value;
-    
-    // If product is discrete, only allow discrete units for receiving
-    return uoms.value.filter(u => isDiscrete(u.abbreviation));
+    let list = uoms.value;
+    if (line.product_uom && !isDiscrete(line.product_uom)) {
+        // Continuous stays the same
+    } else {
+        list = uoms.value.filter(u => isDiscrete(u.abbreviation));
+    }
+
+    return list.map(u => {
+        // Find conversion rule for this UOM and this specific product
+        let rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id === line.product_id);
+        
+        // Fallback to global rule
+        if (!rule) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id === null);
+        }
+
+        let conversion_text = '';
+        if (rule) {
+            const toUom = uoms.value.find(tu => tu.id === rule.to_uom_id);
+            if (toUom) {
+                conversion_text = `× ${Number(rule.conversion_factor)} ${toUom.abbreviation}`;
+            }
+        }
+
+        return {
+            ...u,
+            conversion_text,
+            is_custom: !!(rule && rule.is_custom)
+        };
+    });
 };
 
 const getFactorToBase = (uomId, productId = null) => {
@@ -840,9 +866,22 @@ const openPrint = () => {
                                             @change="onGrnUomChange(data)"
                                             class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
                                             pt:root:class="!border-0 !bg-transparent !shadow-none"
-                                            pt:label:class="!text-amber-500 !p-2 !text-center !uppercase font-black"
+                                            pt:label:class="!text-amber-500 !p-1.5 !text-center !uppercase font-black"
                                             pt:dropdown:class="!text-zinc-600 !w-6"
-                                        />
+                                        >
+                                            <template #option="slotProps">
+                                                <div class="flex items-center justify-between w-full min-w-[120px] py-0.5">
+                                                    <div class="flex flex-col">
+                                                        <span class="text-[11px] font-bold text-white">{{ slotProps.option.abbreviation.toUpperCase() }}</span>
+                                                        <span class="text-[9px] text-zinc-500">{{ slotProps.option.name }}</span>
+                                                    </div>
+                                                    <div class="flex flex-col items-end gap-1">
+                                                        <span v-if="slotProps.option.conversion_text" class="text-[9px] font-black text-amber-500 font-mono tracking-tighter">{{ slotProps.option.conversion_text }}</span>
+                                                        <Tag v-if="slotProps.option.is_custom" value="CUSTOM" class="text-[7px] px-1 py-0 font-bold" severity="warn" />
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </Select>
                                     </div>
                                 </div>
                             </template>

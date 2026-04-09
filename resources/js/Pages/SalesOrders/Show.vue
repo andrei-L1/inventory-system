@@ -41,13 +41,24 @@ const shipForm = ref({
     tracking_number: '' 
 });
 
+const returnDialog = ref(false);
+const returnLoading = ref(false);
+const returnForm = ref({ 
+    lines: [],
+    notes: ''
+});
+
 // Removed Popover toggle logic in favor of always-visible breakdown
 
 const isQuotation = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
 const canCancel = computed(() => so.value && !['shipped', 'cancelled', 'closed'].includes(so.value.status.name));
 
 const getTotalAvailable = (line) => {
-    return line.availability?.reduce((sum, loc) => sum + loc.available_qty, 0) || 0;
+    return line.total_available_qty || 0;
+};
+
+const getFormattedTotalAvailable = (line) => {
+    return line.formatted_total_available_qty || '0';
 };
 
 const getAvailabilityStatus = (line) => {
@@ -272,10 +283,68 @@ const fulfill = async () => {
     }
 };
 
+const openReturnDialog = () => {
+    returnForm.value.lines = so.value.lines
+        .filter(l => l.shipped_qty > 0)
+        .map(l => ({
+            so_line_id: l.id,
+            product_name: l.product_name,
+            sku: l.sku,
+            shipped_qty: l.shipped_qty,
+            returned_qty: l.returned_qty, // already returned
+            to_return: 0,
+            uom: l.uom?.abbreviation,
+            reason: ''
+        }));
+    returnForm.value.notes = '';
+    returnDialog.value = true;
+};
+
+const submitReturn = async () => {
+    try {
+        const payload = {
+            notes: returnForm.value.notes,
+            lines: returnForm.value.lines.filter(l => l.to_return > 0).map(l => ({
+                so_line_id: l.so_line_id,
+                returned_qty: l.to_return,
+                reason: l.reason
+            }))
+        };
+
+        if (payload.lines.length === 0) {
+            toast.add({ severity: 'warn', summary: 'Input Required', detail: 'Specify at least one item to return', life: 3000 });
+            return;
+        }
+
+        returnLoading.value = true;
+        await axios.post(`/api/sales-orders/${so.value.id}/return`, payload);
+        toast.add({ severity: 'success', summary: 'Return Processed', detail: 'Stock updated and Credit Note generated', life: 3000 });
+        returnDialog.value = false;
+        loadSO();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Return failed', life: 3000 });
+    } finally {
+        returnLoading.value = false;
+    }
+};
+
 const canApprove = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
-const canPick = computed(() => so.value?.status?.name === 'confirmed' || so.value?.status?.name === 'partially_picked');
-const canPack = computed(() => ['picked', 'partially_picked', 'partially_packed'].includes(so.value?.status?.name));
-const canShip = computed(() => ['packed', 'partially_packed', 'partially_shipped'].includes(so.value?.status?.name));
+const canPick = computed(() => {
+    if (!so.value || ['quotation', 'quotation_sent', 'shipped', 'cancelled', 'closed'].includes(so.value.status.name)) return false;
+    return so.value.lines?.some(l => Number(l.picked_qty) < Number(l.ordered_qty));
+});
+
+const canPack = computed(() => {
+    if (!so.value || ['quotation', 'quotation_sent', 'shipped', 'cancelled', 'closed'].includes(so.value.status.name)) return false;
+    return so.value.lines?.some(l => Number(l.packed_qty) < Number(l.picked_qty));
+});
+
+const canShip = computed(() => {
+    if (!so.value || ['quotation', 'quotation_sent', 'shipped', 'cancelled', 'closed'].includes(so.value.status.name)) return false;
+    return so.value.lines?.some(l => Number(l.shipped_qty) < Number(l.packed_qty));
+});
+
+const canReturn = computed(() => so.value?.lines?.some(l => Number(l.shipped_qty) > 0));
 
 const subtotal = computed(() => {
     return so.value?.lines?.reduce((sum, line) => sum + (line.ordered_qty * line.unit_price), 0) || 0;
@@ -391,6 +460,14 @@ const totalDiscount = computed(() => {
                         class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openShipDialog"
                     />
+
+                    <Button 
+                        v-if="canReturn && can('manage-sales-orders')" 
+                        label="Return Items" 
+                        icon="pi pi-backward" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-amber-400 !border-amber-900/30 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="openReturnDialog"
+                    />
                 </div>
             </div>
 
@@ -498,8 +575,8 @@ const totalDiscount = computed(() => {
                                                  class="flex items-center justify-between px-0.5 border-b border-zinc-800/30 last:border-0 pb-0.5 mb-0.5 last:pb-0 last:mb-0">
                                                 <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">{{ loc.location_name }}</span>
                                                 <div class="flex items-center gap-2">
-                                                    <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="text-[10px] font-mono font-bold">{{ loc.available_qty }}</span>
-                                                    <span v-if="loc.reserved_qty > 0" class="text-[8px] text-amber-500/60 font-mono">({{ loc.reserved_qty }} RSV)</span>
+                                                    <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="text-[10px] font-mono font-bold">{{ loc.formatted_available_qty }}</span>
+                                                    <span v-if="loc.reserved_qty > 0" class="text-[8px] text-amber-500/60 font-mono">({{ loc.formatted_reserved_qty }} RSV)</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -509,7 +586,7 @@ const totalDiscount = computed(() => {
                                         
                                         <div class="flex justify-between px-1">
                                             <span class="text-[9px] font-bold text-zinc-600 uppercase font-mono tracking-widest">Total</span>
-                                            <span class="text-[10px] font-black" :class="getTotalAvailable(data) > 0 ? 'text-white' : 'text-red-500/50'">{{ getTotalAvailable(data) }}</span>
+                                            <span class="text-[10px] font-black" :class="getTotalAvailable(data) > 0 ? 'text-white' : 'text-red-500/50'">{{ getFormattedTotalAvailable(data) }}</span>
                                         </div>
                                     </div>
                                 </template>
@@ -530,20 +607,20 @@ const totalDiscount = computed(() => {
                             </Column>
                             <Column field="ordered_qty" header="ORDERED">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-300 font-mono text-xs font-bold">{{ data.ordered_qty }}</span>
+                                    <span class="text-zinc-300 font-mono text-xs font-bold">{{ data.formatted_ordered_qty }}</span>
                                 </template>
                             </Column>
                             <Column field="picked_qty" header="PICKED">
                                 <template #body="{ data }">
                                     <span :class="data.picked_qty >= data.ordered_qty ? 'text-help-400' : 'text-zinc-500'" class="font-mono text-xs font-bold">
-                                        {{ data.picked_qty }}
+                                        {{ data.formatted_picked_qty }}
                                     </span>
                                 </template>
                             </Column>
                             <Column field="shipped_qty" header="FULFILLED">
                                 <template #body="{ data }">
                                     <span :class="data.shipped_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400'" class="font-mono text-xs font-bold">
-                                        {{ data.shipped_qty }}
+                                        {{ data.formatted_shipped_qty }}
                                     </span>
                                 </template>
                             </Column>
@@ -707,6 +784,55 @@ const totalDiscount = computed(() => {
                 <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
                     <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="shipDialog = false" />
                     <Button label="Dispatch Shipment" :loading="fulfillLoading" class="!bg-teal-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="fulfill" />
+                </div>
+            </div>
+        </Dialog>
+
+        <!-- Return Dialog -->
+        <Dialog v-model:visible="returnDialog" modal header="Sales Return & RMA Process" :style="{ width: '60rem' }">
+            <div class="flex flex-col gap-4 py-4">
+                <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-2">
+                    <p class="text-xs text-amber-500 font-medium leading-relaxed font-mono uppercase tracking-wider">
+                        Mission: Process returned items, reverse fulfillment quantities, and increase inventory.
+                    </p>
+                </div>
+                
+                <div class="mb-4 flex flex-col gap-2">
+                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
+                    <InputText v-model="returnForm.notes" placeholder="Reason for global return..." class="w-full bg-zinc-950 border-zinc-800 text-xs text-white" />
+                </div>
+
+                <DataTable :value="returnForm.lines" class="p-datatable-sm overflow-hidden" scrollable scrollHeight="300px">
+                    <Column field="product_name" header="PRODUCT">
+                        <template #body="{ data }">
+                            <div class="flex flex-col">
+                                <span class="text-white font-bold text-[11px]">{{ data.product_name }}</span>
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">{{ data.sku }}</span>
+                            </div>
+                        </template>
+                    </Column>
+                    <Column header="SHIPPED">
+                        <template #body="{ data }">
+                            <span class="text-[10px] font-mono text-zinc-400">
+                                {{ data.shipped_qty }} {{ data.uom }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column header="QTY TO RETURN">
+                        <template #body="{ data }">
+                            <InputNumber v-model="data.to_return" :min="0" :max="data.shipped_qty" :minFractionDigits="0" :maxFractionDigits="8" :suffix="' ' + data.uom" class="w-24 p-inputtext-sm text-xs font-mono" inputClass="!bg-zinc-950 !border-zinc-800 !text-white text-center" />
+                        </template>
+                    </Column>
+                    <Column header="REASON">
+                        <template #body="{ data }">
+                            <InputText v-model="data.reason" placeholder="Defective, Wrong Item, etc." class="!bg-zinc-950 !border-zinc-800 !text-white text-[10px] w-full" />
+                        </template>
+                    </Column>
+                </DataTable>
+
+                <div class="flex justify-end gap-3 mt-4 border-t border-zinc-800 pt-4">
+                    <Button label="Cancel" class="p-button-text !text-zinc-500 uppercase font-mono font-bold tracking-widest text-[10px]" @click="returnDialog = false" />
+                    <Button label="Process Return" :loading="returnLoading" class="!bg-amber-500 !border-none !text-zinc-950 font-bold uppercase font-mono tracking-widest text-[10px]" @click="submitReturn" />
                 </div>
             </div>
         </Dialog>

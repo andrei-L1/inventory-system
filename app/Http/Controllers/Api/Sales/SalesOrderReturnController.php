@@ -59,10 +59,11 @@ class SalesOrderReturnController extends Controller
                 $creditNoteLines = [];
 
                 foreach ($request->lines as $item) {
+                    /** @var \App\Models\SalesOrderLine $soLine */
                     $soLine = $soLines->get($item['so_line_id']);
                     $returnedQty = (float) $item['returned_qty'];
 
-                    if ($returnedQty > ($soLine->shipped_qty - $soLine->returned_qty + 0.000001)) {
+                    if ($returnedQty > ($soLine->shipped_qty - $soLine->returned_qty + 0.00000001)) {
                         abort(422, "Cannot return more than what was shipped for product: {$soLine->product->name}");
                     }
 
@@ -83,9 +84,9 @@ class SalesOrderReturnController extends Controller
                     $creditNoteLines[] = [
                         'product_id' => $soLine->product_id,
                         'sales_order_line_id' => $soLine->id,
-                        'quantity' => $returnedQty,
-                        'unit_price' => $soLine->unit_price,
-                        'subtotal' => $returnedQty * $soLine->unit_price,
+                        'quantity' => round($returnedQty, 8),
+                        'unit_price' => round((float) $soLine->unit_price, 8),
+                        'subtotal' => round($returnedQty * (float) $soLine->unit_price, 8),
                     ];
                 }
 
@@ -98,7 +99,7 @@ class SalesOrderReturnController extends Controller
                     'customer_id' => $salesOrder->customer_id,
                     'sales_order_id' => $salesOrder->id,
                     'invoice_date' => now()->toDateString(),
-                    'total_amount' => collect($creditNoteLines)->sum('subtotal'),
+                    'total_amount' => round(collect($creditNoteLines)->sum('subtotal'), 8),
                     'status' => Invoice::STATUS_DRAFT,
                     'type' => Invoice::TYPE_CREDIT_NOTE,
                     'notes' => 'Generated from Return: '.$transaction->reference_number,

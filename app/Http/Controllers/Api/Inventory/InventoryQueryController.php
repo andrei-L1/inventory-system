@@ -162,7 +162,7 @@ class InventoryQueryController extends Controller
         return response()->json([
             'qoh' => $qoh,
             'reserved_qty' => $reserved,
-            'available_qty' => round($availableTarget, 4),
+            'available_qty' => round($availableTarget, 8),
             'uom_id' => $targetUomId,
             'uom_abbr' => $targetUom->abbreviation ?? 'pcs',
         ]);

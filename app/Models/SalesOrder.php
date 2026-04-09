@@ -50,7 +50,7 @@ class SalesOrder extends Model
         'sent_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
-        'total_amount' => 'decimal:2',
+        'total_amount' => 'decimal:8',
     ];
 
     public function customer()
@@ -98,14 +98,37 @@ class SalesOrder extends Model
         return $this->status?->name === SalesOrderStatus::CONFIRMED;
     }
 
+    public function canBePicked(): bool
+    {
+        return in_array($this->status?->name, [
+            SalesOrderStatus::CONFIRMED,
+            SalesOrderStatus::PARTIALLY_PICKED,
+            SalesOrderStatus::PICKED,
+            SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_SHIPPED,
+        ]);
+    }
+
+    public function canBePacked(): bool
+    {
+        return in_array($this->status?->name, [
+            SalesOrderStatus::PARTIALLY_PICKED,
+            SalesOrderStatus::PICKED,
+            SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_SHIPPED,
+        ]);
+    }
+
     public function canBeShipped(): bool
     {
         return in_array($this->status?->name, [
             SalesOrderStatus::CONFIRMED,
-            SalesOrderStatus::PICKED,
             SalesOrderStatus::PARTIALLY_PICKED,
-            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PICKED,
             SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
             SalesOrderStatus::PARTIALLY_SHIPPED,
         ]);
     }

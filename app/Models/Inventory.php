@@ -46,6 +46,8 @@ class Inventory extends Model
         'scaled_quantity_on_hand',
         'scaled_average_cost',
         'formatted_quantity_on_hand',
+        'formatted_reserved_qty',
+        'formatted_available_qty',
     ];
 
     /**
@@ -97,5 +99,22 @@ class Inventory extends Model
     public function getFormattedQuantityOnHandAttribute(): string
     {
         return UomHelper::format($this->scaled_quantity_on_hand, $this->product->uom_id, $this->product_id, false);
+    }
+
+    /**
+     * Get the formatted reserved quantity.
+     */
+    public function getFormattedReservedQtyAttribute(): string
+    {
+        return UomHelper::format($this->scaled_reserved_qty, $this->product->uom_id, $this->product_id, false);
+    }
+
+    /**
+     * Get the formatted available quantity.
+     */
+    public function getFormattedAvailableQtyAttribute(): string
+    {
+        $availableRecord = $this->scaled_quantity_on_hand - $this->scaled_reserved_qty;
+        return UomHelper::format($availableRecord, $this->product->uom_id, $this->product_id, false);
     }
 }

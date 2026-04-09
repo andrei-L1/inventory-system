@@ -82,8 +82,8 @@ class SalesOrderController extends Controller
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => $lineData['ordered_qty'],
-                    'unit_price' => $lineData['unit_price'],
+                    'ordered_qty' => round($lineData['ordered_qty'], 8),
+                    'unit_price' => round($lineData['unit_price'], 8),
                     'tax_rate' => $lineData['tax_rate'] ?? 0,
                     'tax_amount' => $this->calculateTaxAmount($lineData),
                     'discount_rate' => $lineData['discount_rate'] ?? 0,
@@ -92,7 +92,7 @@ class SalesOrderController extends Controller
                 ]);
             }
 
-            $so->update(['total_amount' => $totalAmount]);
+            $so->update(['total_amount' => round($totalAmount, 8)]);
 
             return $so;
         });
@@ -133,8 +133,8 @@ class SalesOrderController extends Controller
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => $lineData['ordered_qty'],
-                    'unit_price' => $lineData['unit_price'],
+                    'ordered_qty' => round($lineData['ordered_qty'], 8),
+                    'unit_price' => round($lineData['unit_price'], 8),
                     'tax_rate' => $lineData['tax_rate'] ?? 0,
                     'tax_amount' => $this->calculateTaxAmount($lineData),
                     'discount_rate' => $lineData['discount_rate'] ?? 0,
@@ -143,7 +143,7 @@ class SalesOrderController extends Controller
                 ]);
             }
 
-            $salesOrder->update(['total_amount' => $totalAmount]);
+            $salesOrder->update(['total_amount' => round($totalAmount, 8)]);
 
             return $salesOrder;
         });
@@ -175,10 +175,10 @@ class SalesOrderController extends Controller
             // CREDIT LIMIT ENFORCEMENT
             $customer = $so->customer;
             if ($customer->credit_limit > 0) {
-                $exposure = $customer->exposure;
-                $newTotal = $exposure + (float) $so->total_amount;
+                $exposure = (float) $customer->exposure;
+                $newTotal = round($exposure + (float) $so->total_amount, 8);
 
-                if ($newTotal > ($customer->credit_limit + 0.01)) {
+                if ($newTotal > ((float) $customer->credit_limit + 0.00000001)) {
                     abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
                 }
             }
@@ -223,8 +223,8 @@ class SalesOrderController extends Controller
 
         $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
-            if ($so->status->name !== SalesOrderStatus::CONFIRMED && $so->status->name !== SalesOrderStatus::PARTIALLY_PICKED) {
-                abort(400, 'Sales order must be confirmed or partially picked to be picked.');
+            if (! $so->canBePicked()) {
+                abort(400, "Sales order cannot be picked in its current status: {$so->status->name}");
             }
 
             $allPicked = true;
@@ -246,7 +246,7 @@ class SalesOrderController extends Controller
                 }
             }
 
-            // Check if others are picked too
+            // Global check across all lines
             foreach ($so->lines as $line) {
                 if ($line->picked_qty < $line->ordered_qty) {
                     $allPicked = false;
@@ -254,9 +254,15 @@ class SalesOrderController extends Controller
                 }
             }
 
-            $statusName = $allPicked ? SalesOrderStatus::PICKED : SalesOrderStatus::PARTIALLY_PICKED;
-            $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
-            $so->update(['status_id' => $status->id]);
+            // FORWARD-ONLY STATUS UPDATE:
+            // Only update status if current state is CONFIRMED or a PICK state.
+            // If we are already in PACKED or SHIPPED states, keep the 'higher' status.
+            $pickStatuses = [SalesOrderStatus::CONFIRMED, SalesOrderStatus::PARTIALLY_PICKED, SalesOrderStatus::PICKED];
+            if (in_array($so->status->name, $pickStatuses)) {
+                $statusName = $allPicked ? SalesOrderStatus::PICKED : SalesOrderStatus::PARTIALLY_PICKED;
+                $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
+                $so->update(['status_id' => $status->id]);
+            }
 
             return $so;
         });
@@ -274,8 +280,8 @@ class SalesOrderController extends Controller
 
         $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
-            if (! in_array($so->status->name, [SalesOrderStatus::PICKED, SalesOrderStatus::PARTIALLY_PICKED, SalesOrderStatus::PARTIALLY_PACKED])) {
-                abort(400, 'Sales order must be picked or partially packed to be packed.');
+            if (! $so->canBePacked()) {
+                abort(400, "Sales order cannot be packed in its current status: {$so->status->name}");
             }
 
             $allPacked = true;
@@ -305,9 +311,20 @@ class SalesOrderController extends Controller
                 }
             }
 
-            $statusName = $allPacked ? SalesOrderStatus::PACKED : SalesOrderStatus::PARTIALLY_PACKED;
-            $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
-            $so->update(['status_id' => $status->id]);
+            // FORWARD-ONLY STATUS UPDATE:
+            // Only update status if current state is a PICK or PACK state.
+            // If already in SHIPPED states, keep the 'higher' status.
+            $packStatuses = [
+                SalesOrderStatus::PARTIALLY_PICKED,
+                SalesOrderStatus::PICKED,
+                SalesOrderStatus::PARTIALLY_PACKED,
+                SalesOrderStatus::PACKED
+            ];
+            if (in_array($so->status->name, $packStatuses)) {
+                $statusName = $allPacked ? SalesOrderStatus::PACKED : SalesOrderStatus::PARTIALLY_PACKED;
+                $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
+                $so->update(['status_id' => $status->id]);
+            }
 
             return $so;
         });
