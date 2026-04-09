@@ -108,6 +108,12 @@ Because users rarely want to see "4800 Pieces" when they actually have "200 Boxe
 - Models (`Product` and `Inventory`) use `scaled_` attributes (e.g., `$inventory->scaled_quantity_on_hand`) to convert raw integers back into the product's preferred unit for the UI.
 - Calculation: `Raw Pieces / (Multiplier to Smallest) = Scaled Quantity`.
 
-### C. Financial Precision
+### C. Contextual Scaling (Product-Aware Rules)
+To support diverse packaging across the catalog, the UOM engine is **Context-Aware**:
+- **Rule Prioritization**: Lookups prioritize product-specific rules (e.g., "Box of 12" for SKU-A) over global defaults (e.g., "Box of 24" as a system-wide standard).
+- **Isolation**: This allows generic unit names like "Box" or "Carton" to coexist with different mathematical values for different products without data contamination.
+- **Backend Enforcement**: Controllers for Sales, Procurement, and Logistics strictly inject the `product_id` context into all scaling operations to ensure ledger integrity.
+
+### D. Financial Precision
 - **Atomic Costing**: Unit costs are similarly normalized. If a Box of 10 costs $100, the ledger records a unit cost of $10 per "Piece".
 - **Zero-Loss Reversals**: By using integers for the base ledger, the system avoids floating-point drift, ensuring that reversing a "Box" movement always returns exactly the same "Piece" count to the shelves.

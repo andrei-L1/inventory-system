@@ -1,5 +1,5 @@
 # Nexus Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-04-04 (Nexus Rebranding & Printing Audit). All status markers reflect actual codebase state.
+> Last audited: 2026-04-09 (Product-Aware UOM Integration Audit). All status markers reflect actual codebase state.
 
 ---
 
@@ -64,6 +64,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Ledger UOM Persistence** — Refactored `transaction_lines` to store `base_uom_id`, decoupling calculative storage from original transaction UOM for 100% audit transparency. ✅ NEW
 - [x] **Full Concurrency & Locking Audit** — Comprehensive race-condition audit across all controllers and StockService. PO status transitions (approve/send/ship/close), GRN receive, and processReturn now use `DB::transaction` + `lockForUpdate`. `postTransaction()` and `reverseTransaction()` lock the Transaction header row before idempotency checks. `ReorderRuleController` catches `QueryException` for DB-level unique guard. 33 tests, 113 assertions — 100% passing. ✅ NEW
 - [x] **Inventory Costing Engine Refactor (Strategy Pattern)** — Successfully refactored the engine to use pluggable FIFO, LIFO, and Weighted Average strategies. Decoupled valuation logic from physical movement and ensured the global `average_cost` invariant is maintained across all receipt types. ✅ NEW
+- [x] **Product-Aware Contextual Scaling** — Upgraded `UomHelper` and core controllers to support product-specific UOM conversion rules. The system now allows the same unit (e.g., "Box") to have different conversion factors per SKU without global rule pollution. ✅ NEW
 
 
 ### 0.2 Database Schema

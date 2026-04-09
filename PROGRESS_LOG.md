@@ -7,6 +7,17 @@ This project follows an **"Architecture-Lead"** strategy to ensure absolute data
 
 ---
 
+### 🎯 Milestone: Product-Aware UOM System-Wide Integration
+**Date**: 2026-04-09 | **Status**: 100% COMPLETE
+**Summary**: Completed the "Contextual Counting" layer, allowing products to have custom packaging rules (e.g., "Box of 12" for a specific SKU) that are mathematically isolated from the rest of the system.
+- **Contextual Scaling**: Upgraded `UomHelper` and `StockService` to prioritize `product_id` during all conversion lookups. This prevents "Packaging Pollution" where a generic unit like "Box" could be ambiguous across the catalog.
+- **Transaction-Wide Synchronization**: Updated all 12 major transactional Vue forms (Procurement, Sales, and Logistics) to dynamically filter UOM dropdowns based on compatibility with the selected product.
+- **Rich UI Indicators**: Enhanced the PO/SO line items with "Custom" badges for product-specific units and real-time "Atomic Level" breakdowns (e.g., `= 12 pcs`) inside the dropdown and selection label.
+- **Backend Enclosure**: Hardened the API Controllers for Sales, Procurement, and Inventory Queries by enforcing Product ID injection into all scaling mathematical operations.
+- **Verification**: 100% pass on all `MultiUomProcurementTest` cases and full system integrity audit verified.
+
+---
+
 ### 🎯 Milestone: Nexus Rebranding & Professional Printing (Phase 6.1)
 **Date**: 2026-04-04 | **Status**: 100% COMPLETE
 **Summary**: Successfully rebranded the entire system to **Nexus** and launched the high-fidelity server-side printing module for all logistics and procurement documents.

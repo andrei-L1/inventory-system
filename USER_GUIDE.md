@@ -31,6 +31,14 @@ Navigate to **Catalog** via the left-hand navigation sidebar to manage what item
 * **Listing Details:** Here you define the properties of items: Name, SKU code, Reorder Point, Unit Options (UOM), and the **Costing Method** (FIFO, LIFO, or Weighted Average).
 * **Categories:** Add detailed attributes by assigning items to groups like `Raw Materials`, `Components`, or `Finished Goods`.
 
+### 3.1. Advanced Units of Measure (UOM)
+The system features a **Contextual Counting Engine** that supports complex packaging rules tailored to individual products.
+
+*   **Product-Specific Rules**: You can define custom conversion rules directly on a product (e.g., "Box of 12" for SKU-A) in the Catalog. 
+*   **Custom Badges**: When drafting a Purchase Order or Sales Order, units that are governed by product-specific rules are highlighted with a pink **[CUSTOM]** badge in the dropdown.
+*   **Atomic Breakdowns**: To prevent purchasing errors, the system displays the "Base Unit" equivalent (e.g., `= 12 pcs`) directly underneath the selected unit in all transaction forms.
+*   **Filtered Selection**: The system intelligently filters UOM dropdowns. You will only see units that have a valid mathematical conversion path for the specific product you are transacting.
+
 ### Vendor Center
 Navigate to **Vendors** to manage your supply chain partners.
 * **Entity Records:** Register suppliers by assigning Vendor Codes, Phone Numbers, and physical address details. 
@@ -52,10 +60,13 @@ Navigate here to model the physical topology of your facility.
 
 ### 4.2. Stock Movements
 When stock shifts physically or financially, you must log a transaction document. Navigate from the `Inventory Center` by selecting an item and clicking the respective Action tool:
-* **Receipt (Inbound):** Brings new stock into a location from a Vendor. Increases global quantity and updates cost layers.
+* **Receipt (Inbound):** Brings new stock into a location from a Vendor. Increases global quantity and updates cost layers. Supports real-time "Cost-to-Unit" scaling (e.g., buying in Boxes handles the price-per-piece math automatically).
 * **Issue (Outbound):** Removes stock from a location (e.g., for manufacturing or sales). Deducts from FIFO cost layers.
 * **Transfer (Internal):** Moves stock seamlessly from Bin A to Bin B without affecting global quantity or cost valuation.
 * **Adjustment (Reconciliation):** Adds or subtracts items manually to account for shrinkage, damage, audit corrections, or discovered stock. 
+
+> [!TIP]
+> **Multi-Unit Transactions**: You can receive or issue stock in any valid UOM (Boxes, Cases, Pieces). The system's Atomic Storage Model will automatically convert the quantity into the base unit before writing to the ledger, ensuring 100% mathematical integrity.
 
 > [!IMPORTANT]
 > *Transactions use an immutable ledger. Once a movement is successfully posted, it permanently records time, user, and financial cost. Alert toasts will notify you of success or constraints (like trying to issue more stock than exists).*
