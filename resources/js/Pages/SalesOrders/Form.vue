@@ -40,12 +40,19 @@ const isUomIdDiscrete = (id) => {
     return uom ? isDiscrete(uom.abbreviation) : true;
 };
 
-const getFactorToBase = (uomId) => {
+const getFactorToBase = (uomId, productId = null) => {
     let factor = 1.0;
     let current = uomId;
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => c.from_uom_id === current);
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
+        }
+        
         if (!rule || processed.includes(rule.to_uom_id)) break;
         factor *= rule.conversion_factor;
         current = rule.to_uom_id;
@@ -129,12 +136,38 @@ const onProductSelect = (line) => {
     }
 };
 
+const getAvailableUoms = (productId) => {
+    if (!productId) return [];
+    const product = products.value.find(p => p.id === productId);
+    if (!product || !product.uom_id) return uoms.value;
+
+    const currentUom = uoms.value.find(u => u.id === product.uom_id);
+    if (!currentUom) return [];
+
+    return uoms.value.filter(u => {
+        // Must be in the same category
+        if (u.category !== currentUom.category) return false;
+        
+        // Base units of same category are always allowed
+        if (u.is_base) return true;
+
+        // If continuous, we assume conversions to base always exist via multiplier
+        if (u.category !== 'count') return true;
+
+        // If discrete, it must have a valid rule defined (global or specific to this product)
+        return uomConversions.value.some(c => 
+            c.from_uom_id === u.id && 
+            (c.product_id === null || c.product_id === product.id)
+        );
+    });
+};
+
 const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
-    const targetInfo = getFactorToBase(line.uom_id);
-    const productBaseInfo = getFactorToBase(product.uom_id);
+    const targetInfo = getFactorToBase(line.uom_id, product.id);
+    const productBaseInfo = getFactorToBase(product.uom_id, product.id);
     
     if (!line.unit_price || line.unit_price == 0) {
         const basePrice = product.selling_price || 0;
@@ -146,7 +179,7 @@ const onUomChange = (line) => {
         }
     } 
     else if (line.prev_uom_id) {
-        const prevInfo = getFactorToBase(line.prev_uom_id);
+        const prevInfo = getFactorToBase(line.prev_uom_id, product.id);
         if (targetInfo.baseId === prevInfo.baseId) {
             const ratio = targetInfo.factor / prevInfo.factor;
             line.unit_price = line.unit_price * ratio;
@@ -386,7 +419,7 @@ const cancel = () => {
                                         <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
                                         <Select 
                                             v-model="line.uom_id" 
-                                            :options="uoms" 
+                                            :options="getAvailableUoms(line.product_id)" 
                                             optionLabel="abbreviation" 
                                             optionValue="id" 
                                             placeholder="UOM" 

@@ -71,13 +71,19 @@ const isDiscrete = (abbr) => {
     return !continuousUnits.includes(abbr?.toUpperCase());
 };
 
-const getFactorToBase = (uomId) => {
+const getFactorToBase = (uomId, productId = null) => {
     if (!uomId) return { factor: 1, baseId: null };
     let factor = 1.0;
     let current = Number(uomId);
     let processed = [current];
     while (true) {
-        const rule = uomConversions.value.find(c => Number(c.from_uom_id) === current);
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === null);
+        }
         if (!rule || processed.includes(Number(rule.to_uom_id))) break;
         factor *= Number(rule.conversion_factor);
         current = Number(rule.to_uom_id);
@@ -86,7 +92,7 @@ const getFactorToBase = (uomId) => {
     return { factor, baseId: current };
 };
 
-const getScaledQty = (productUomId, rawPieces) => {
+const getScaledQty = (productUomId, rawPieces, productId = null) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     
     // Default to product's base UOM if no global switcher is selected
@@ -94,8 +100,8 @@ const getScaledQty = (productUomId, rawPieces) => {
     const targetUom = uoms.value.find(u => u.id == targetUomId);
     const targetAbbr = targetUom ? targetUom.abbreviation : '';
 
-    const targetInfo = getFactorToBase(targetUomId);
-    const productBaseInfo = getFactorToBase(productUomId);
+    const targetInfo = getFactorToBase(targetUomId, productId);
+    const productBaseInfo = getFactorToBase(productUomId, productId);
 
     if (targetInfo.baseId !== productBaseInfo.baseId && selectedViewUomId.value) {
         // Fallback to base if incompatible
@@ -482,7 +488,7 @@ const tablePt = {
                                                   option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
                                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                               ]">
-                                            {{ getScaledQty(option.uom_id, option.total_qoh) }}
+                                            {{ getScaledQty(option.uom_id, option.total_qoh, option.id) }}
                                         </span>
                                     </div>
                                     <span class="text-xs font-bold truncate tracking-tight">{{ option.name }}</span>
@@ -533,7 +539,7 @@ const tablePt = {
                                                   selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400' : 
                                                   'text-emerald-400'
                                               ]">
-                                            {{ getScaledQty(selectedProduct.uom_id, selectedProduct.total_qoh) }}
+                                            {{ getScaledQty(selectedProduct.uom_id, selectedProduct.total_qoh, selectedProduct.id) }}
                                         </span>
                                         <span class="text-[10px] font-bold font-mono mt-2" 
                                               :class="[
@@ -637,7 +643,7 @@ const tablePt = {
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
                                             </div>
                                             <div class="flex items-end gap-3">
-                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand) }}</span>
+                                                <span class="text-emerald-400 font-mono font-bold text-xs tracking-tighter">{{ getScaledQty(selectedProduct.uom_id, loc.quantity_on_hand, selectedProduct.id) }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -685,7 +691,7 @@ const tablePt = {
                                     </Column>
                                     <Column field="remaining_qty" header="Remaining" style="width: 140px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty) }}</span>
+                                            <span class="font-mono font-bold text-zinc-200">{{ getScaledQty(selectedProduct.uom_id, data.remaining_qty, selectedProduct.id) }}</span>
                                         </template>
                                     </Column>
                                     <Column field="unit_cost" header="Unit Cost" style="width: 120px">

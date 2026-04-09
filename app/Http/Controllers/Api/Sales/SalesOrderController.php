@@ -194,7 +194,7 @@ class SalesOrderController extends Controller
                 // round(..., 8) prevents floating-point dust from UOM chain multiplication
                 $baseQty = (float) $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
-                    $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
+                    $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
                     $baseQty = round($baseQty * $factor, 8);
                 }
 
@@ -368,7 +368,7 @@ class SalesOrderController extends Controller
                     // Convert to base UOM
                     $factor = 1.0;
                     if ($soLine->uom_id !== $product->uom_id) {
-                        $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id);
+                        $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id, $product->id);
                     }
                     $baseShippedQty = round($shippedQtyRaw * $factor, 8);
 
@@ -449,7 +449,7 @@ class SalesOrderController extends Controller
                     $baseQty = (float) $line->ordered_qty - (float) $line->shipped_qty;
                     if ($baseQty > 0.00000001) {
                         if ($line->uom_id !== $product->uom_id) {
-                            $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id);
+                            $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
                             $baseQty = round($baseQty * $factor, 8);
                         }
                         $stockService->releaseReservation($product, $location, $baseQty);
