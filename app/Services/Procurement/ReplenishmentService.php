@@ -2,6 +2,7 @@
 
 namespace App\Services\Procurement;
 
+use App\Helpers\FinancialMath;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\ReorderRule;
@@ -19,8 +20,9 @@ class ReplenishmentService
 
         foreach ($rules as $rule) {
             $currentStock = $this->calculateStock($rule->product_id, $rule->location_id);
+            $minStockStr = (string) $rule->min_stock;
 
-            if ($currentStock < $rule->min_stock) {
+            if (FinancialMath::lt($currentStock, $minStockStr)) {
                 // Check if a pending suggestion already exists
                 $existing = ReplenishmentSuggestion::where('product_id', $rule->product_id)
                     ->where('location_id', $rule->location_id)
@@ -32,7 +34,7 @@ class ReplenishmentService
                         'product_id' => $rule->product_id,
                         'location_id' => $rule->location_id,
                         'current_stock' => $currentStock,
-                        'suggested_qty' => $rule->reorder_qty,
+                        'suggested_qty' => (string) $rule->reorder_qty,
                         'reason' => 'Stock below minimum ('.$rule->min_stock.')',
                         'status' => 'pending',
                     ]);
@@ -41,7 +43,7 @@ class ReplenishmentService
                     // Update existing suggestion with latest stock
                     $existing->update([
                         'current_stock' => $currentStock,
-                        'suggested_qty' => $rule->reorder_qty,
+                        'suggested_qty' => (string) $rule->reorder_qty,
                     ]);
                 }
             } else {
@@ -59,14 +61,14 @@ class ReplenishmentService
     /**
      * Calculate stock for a product, optionally filtered by location.
      */
-    protected function calculateStock(int $productId, ?int $locationId): float
+    protected function calculateStock(int $productId, ?int $locationId): string
     {
         $query = Inventory::where('product_id', $productId);
 
         if ($locationId) {
-            return (float) $query->where('location_id', $locationId)->sum('quantity_on_hand');
+            return (string) $query->where('location_id', $locationId)->sum('quantity_on_hand');
         }
 
-        return (float) $query->sum('quantity_on_hand');
+        return (string) $query->sum('quantity_on_hand');
     }
 }

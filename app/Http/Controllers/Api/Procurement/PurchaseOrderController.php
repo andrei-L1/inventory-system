@@ -347,12 +347,14 @@ class PurchaseOrderController extends Controller
 
                     // LOCK 1: Discrete units must be whole numbers
                     if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
-                        // isZero checks if the fractional part is zero (BCMath-safe)
-                        $fractional = FinancialMath::sub($receivedQtyRaw, (string) floor((float) $receivedQtyRaw));
+                        // isZero checks if the fractional part is zero (BCMath-safe).
+                        // Instead of float floor(), use BCMath truncation (scale 0) for positive numbers.
+                        $truncated = bcadd($receivedQtyRaw, '0', 0);
+                        $fractional = FinancialMath::sub($receivedQtyRaw, $truncated);
                         if (! FinancialMath::isZero($fractional)) {
                             abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
                         }
-                        $receivedQtyRaw = (string) (int) $receivedQtyRaw;
+                        $receivedQtyRaw = $truncated;
                     }
 
                     // LOCK 2: Discrete products cannot be received in continuous units (No KG for Pieces)
