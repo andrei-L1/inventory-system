@@ -69,7 +69,9 @@ class TransactionResource extends JsonResource
             'formatted_quantity' => $line->formatted_quantity ?? null,
             'uom_abbreviation' => $line->uom->abbreviation ?? 'PCS',
             'unit_cost' => (float) ($line->unit_cost ?? 0),
+            'formatted_unit_cost' => $line->formatted_unit_cost ?? null,
             'unit_price' => (float) ($line->unit_price ?? 0),
+            'formatted_unit_price' => $line->formatted_unit_price ?? null,
             'total_cost' => (float) ($line->total_cost ?? 0),
 
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),

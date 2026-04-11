@@ -16,6 +16,9 @@ class SalesOrder extends Model
         'status_id',
         'order_date',
         'requested_delivery_date',
+        // 'expected_shipping_date' is handled via accessor/mutator below
+        // and maps to the 'requested_delivery_date' DB column.
+        'expected_shipping_date',
         'total_amount',
         'currency',
         'notes',
@@ -50,8 +53,27 @@ class SalesOrder extends Model
         'sent_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
-        'total_amount' => 'decimal:2',
+        'total_amount' => 'decimal:8',
     ];
+
+    /**
+     * Accessor: expose `requested_delivery_date` under the app-layer name
+     * `expected_shipping_date` that the controller, resource, and frontend use.
+     */
+    public function getExpectedShippingDateAttribute(): ?string
+    {
+        return $this->requested_delivery_date
+            ? $this->requested_delivery_date->toDateString()
+            : null;
+    }
+
+    /**
+     * Mutator: writing to `expected_shipping_date` persists to the real DB column.
+     */
+    public function setExpectedShippingDateAttribute(?string $value): void
+    {
+        $this->attributes['requested_delivery_date'] = $value;
+    }
 
     public function customer()
     {
@@ -98,15 +120,86 @@ class SalesOrder extends Model
         return $this->status?->name === SalesOrderStatus::CONFIRMED;
     }
 
+    public function canBePicked(): bool
+    {
+        return in_array($this->status?->name, [
+            SalesOrderStatus::CONFIRMED,
+            SalesOrderStatus::PARTIALLY_PICKED,
+            SalesOrderStatus::PICKED,
+            SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_SHIPPED,
+        ]);
+    }
+
+    public function canBePacked(): bool
+    {
+        return in_array($this->status?->name, [
+            SalesOrderStatus::PARTIALLY_PICKED,
+            SalesOrderStatus::PICKED,
+            SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PARTIALLY_SHIPPED,
+        ]);
+    }
+
     public function canBeShipped(): bool
     {
         return in_array($this->status?->name, [
             SalesOrderStatus::CONFIRMED,
-            SalesOrderStatus::PICKED,
             SalesOrderStatus::PARTIALLY_PICKED,
-            SalesOrderStatus::PACKED,
+            SalesOrderStatus::PICKED,
             SalesOrderStatus::PARTIALLY_PACKED,
+            SalesOrderStatus::PACKED,
             SalesOrderStatus::PARTIALLY_SHIPPED,
         ]);
+    }
+
+    /**
+     * Recalculate and persist the SO status from current line quantities.
+     *
+     * This is the bidirectional status engine used after returns. Unlike the
+     * forward-only updates in pick/pack/ship, this method inspects actual
+     * quantities to determine the correct state, allowing the status to
+     * move backwards (e.g. SHIPPED → PARTIALLY_SHIPPED) when items are returned.
+     */
+    public function recalculateStatus(): void
+    {
+        $this->loadMissing('lines');
+        $lines = $this->lines;
+
+        if ($lines->isEmpty()) {
+            return;
+        }
+
+        $epsilon = 0.00000001;
+
+        $totalOrdered = (float) $lines->sum(fn ($l) => (float) $l->ordered_qty);
+        $totalShipped = (float) $lines->sum(fn ($l) => (float) $l->shipped_qty);
+        $totalPacked  = (float) $lines->sum(fn ($l) => (float) $l->packed_qty);
+        $totalPicked  = (float) $lines->sum(fn ($l) => (float) $l->picked_qty);
+
+        // Walk down the fulfillment hierarchy from the top.
+        // The highest milestone that is fully satisfied wins.
+        if ($totalShipped >= $totalOrdered - $epsilon) {
+            $statusName = SalesOrderStatus::SHIPPED;
+        } elseif ($totalShipped > $epsilon) {
+            $statusName = SalesOrderStatus::PARTIALLY_SHIPPED;
+        } elseif ($totalPacked >= $totalOrdered - $epsilon) {
+            $statusName = SalesOrderStatus::PACKED;
+        } elseif ($totalPacked > $epsilon) {
+            $statusName = SalesOrderStatus::PARTIALLY_PACKED;
+        } elseif ($totalPicked >= $totalOrdered - $epsilon) {
+            $statusName = SalesOrderStatus::PICKED;
+        } elseif ($totalPicked > $epsilon) {
+            $statusName = SalesOrderStatus::PARTIALLY_PICKED;
+        } else {
+            // All progress has been reversed — order is back to confirmed/ready state.
+            $statusName = SalesOrderStatus::CONFIRMED;
+        }
+
+        $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
+        $this->update(['status_id' => $status->id]);
+        $this->setRelation('status', $status);
     }
 }

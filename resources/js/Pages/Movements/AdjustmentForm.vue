@@ -123,7 +123,7 @@
                                             <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Adj Qty (+/-)</label>
                                             <InputNumber 
                                                 v-model="line.quantity" 
-                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
+                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
                                                 :inputClass="'w-full bg-zinc-950 border text-center font-bold p-2 rounded-lg outline-none ' + (isInsufficient(line) ? 'border-red-500/60 focus:border-red-500 text-rose-500' : 'border-zinc-800 focus:border-amber-500/50 ' + (line.quantity < 0 ? 'text-red-400' : 'text-emerald-400'))"
                                             />
                                         </div>
@@ -166,7 +166,7 @@
                                                     >{{ getScaledQty(line, inv.quantity_on_hand) }}</span>
                                                     <!-- Show effect on specific location -->
                                                     <div v-if="inv.location_id === form.location?.id && line.quantity !== 0" class="text-[9px] font-bold font-mono" :class="line.quantity < 0 ? 'text-red-500' : 'text-emerald-500'">
-                                                        {{ line.quantity > 0 ? '→ ' : '→ ' }}{{ (parseFloat(getScaledQty(line, inv.quantity_on_hand)) + (parseFloat(line.quantity) || 0)).toFixed(2) }}
+                                                        {{ line.quantity > 0 ? '→ ' : '→ ' }}{{ (parseFloat(getScaledQty(line, inv.quantity_on_hand)) + (parseFloat(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -220,15 +220,9 @@ const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingData = ref(false);
 
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
-
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
-};
-
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
-    return uom ? isDiscrete(uom.abbreviation) : true;
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFactorToBase = (uomId, productId = null) => {
@@ -406,7 +400,7 @@ const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(line.uom_id, line.product?.id).factor;
     const scaled = (parseFloat(rawPieces) / factor);
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {

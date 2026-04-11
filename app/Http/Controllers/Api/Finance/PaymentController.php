@@ -72,12 +72,12 @@ class PaymentController extends Controller
                     $invoice = Invoice::lockForUpdate()->findOrFail($item['invoice_id']);
                     $amountToAllocate = (float) $item['amount'];
 
-                    if ($amountToAllocate > ($payment->unallocated_amount + 0.000001)) {
-                        abort(422, "Insufficient unallocated amount in payment: {$payment->payment_number}");
+                    if ($amountToAllocate > ($payment->unallocated_amount + 0.00000001)) {
+                        abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Only {$payment->unallocated_amount} unallocated remains on this payment.");
                     }
 
-                    if ($amountToAllocate > ($invoice->balance + 0.000001)) {
-                        abort(422, "Cannot allocate more than the remaining balance for invoice: {$invoice->invoice_number}");
+                    if ($amountToAllocate > ($invoice->balance + 0.00000001)) {
+                        abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Current balance is {$invoice->balance}.");
                     }
 
                     // Create allocation

@@ -27,10 +27,22 @@ class TransactionLineResource extends JsonResource
             'formatted_quantity' => $this->formatted_quantity,
             'uom_abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? 'PCS',
             'unit_cost' => (float) ($this->unit_cost ?? 0),
+            'formatted_unit_cost' => $this->formatted_unit_cost,
             'unit_price' => (float) ($this->unit_price ?? 0),
+            'formatted_unit_price' => $this->formatted_unit_price,
             'total_cost' => (float) (($this->unit_cost ?? 0) * abs($this->quantity)),
             'location_id' => $this->location_id,
             'location_name' => $this->location->name ?? null,
+            'type_name' => $this->transaction->type->label ?? $this->transaction->type->name ?? 'MOVEMENT',
+            'transaction' => [
+                'id' => $this->transaction_id,
+                'reference_number' => $this->transaction->reference_number ?? 'N/A',
+                'transaction_date' => $this->transaction->transaction_date ?? null,
+                'type' => [
+                    'name' => $this->transaction->type->name ?? 'unknown',
+                    'label' => $this->transaction->type->label ?? 'Unknown',
+                ],
+            ],
         ];
     }
 }

@@ -32,7 +32,7 @@
                     </div>
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_PIECES</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
                     </div>
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_VALUE</span>
@@ -170,7 +170,7 @@
                                          <InputNumber 
                                              v-model="form.lines[index].quantity" 
                                              :min="0"
-                                             :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 4"
+                                             :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 8"
                                              placeholder="0" 
                                              class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
                                              :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'center', color: 'white', width: '100%', borderRadius: '0.75rem', height: '3rem' }"
@@ -186,7 +186,7 @@
                                                  v-model="form.lines[index].unit_cost" 
                                                  :min="0"
                                                  :minFractionDigits="2"
-                                                 :maxFractionDigits="4"
+                                                 :maxFractionDigits="8"
                                                  placeholder="0.00" 
                                                  class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
                                                  :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'right', color: '#34d399', width: '100%', borderRadius: '0.75rem', height: '3rem', paddingLeft: '2rem' }"
@@ -198,7 +198,7 @@
                                 <Column header="SUBTOTAL" class="!py-6 !px-8 text-right">
                                     <template #body="{ index }">
                                         <div class="flex items-center justify-end gap-6">
-                                            <span class="text-xs font-bold font-mono text-white">₱ {{ (form.lines[index].quantity * form.lines[index].unit_cost || 0).toLocaleString() }}</span>
+                                            <span class="text-xs font-bold font-mono text-white">₱ {{ (form.lines[index].quantity * form.lines[index].unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
                                             <button @click="removeLine(index)" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20">
                                                 <i class="pi pi-trash text-[10px]" />
                                             </button>
@@ -280,15 +280,9 @@ const loadingProducts = ref(false);
 const stockOp = ref(null);
 const selectedLineForStock = ref(null);
 
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
-
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
-};
-
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
-    return uom ? isDiscrete(uom.abbreviation) : true;
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFactorToBase = (uomId, productId = null) => {
@@ -344,7 +338,7 @@ const getScaledQty = (productUomId, rawPieces, targetUomId, productId = null) =>
     }
 
     const scaled = (Number(rawPieces) / targetInfo.factor);
-    const formatted = isDiscrete(targetAbbr) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    const formatted = isUomIdDiscrete(targetUomId) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
     return `${formatted} ${targetAbbr}`;
 };
 

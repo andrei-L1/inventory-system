@@ -26,6 +26,7 @@ class PurchaseOrderLineResource extends JsonResource
             'pending_qty' => (float) ($this->ordered_qty - $this->received_qty),
             'formatted_pending_qty' => $this->formatted_pending_qty,
             'unit_cost' => (float) $this->unit_cost,
+            'formatted_unit_cost' => $this->formatted_unit_cost,
             'total_line_cost' => (float) $this->total_cost,
         ];
     }

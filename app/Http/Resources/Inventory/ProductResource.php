@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\UomHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,6 +15,17 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $targetUomId = $request->query('target_uom_id');
+        $qoh = (float) ($this->inventories_sum_quantity_on_hand ?? ($this->relationLoaded('inventories') ? $this->inventories->sum('quantity_on_hand') : $this->inventories()->sum('quantity_on_hand')));
+
+        if ($targetUomId) {
+            $multiplier = UomHelper::getMultiplierToSmallest((int) $targetUomId, $this->id, false);
+            $scaledQoh = $multiplier > 0 ? $qoh / $multiplier : $qoh;
+            $formattedTotalQoh = UomHelper::format($scaledQoh, (int) $targetUomId, $this->id, false);
+        } else {
+            $formattedTotalQoh = $this->formatted_total_qoh;
+        }
+
         return [
             'id' => $this->id,
             'sku' => $this->sku ?? $this->product_code, // Guaranteed display ID
@@ -23,9 +35,11 @@ class ProductResource extends JsonResource
             'barcode' => $this->barcode,
             'brand' => $this->brand,
             'selling_price' => (float) $this->selling_price,
+            'formatted_selling_price' => $this->formatted_selling_price,
             'average_cost' => (float) $this->average_cost,
-            'total_qoh' => (float) ($this->inventories_sum_quantity_on_hand ?? ($this->relationLoaded('inventories') ? $this->inventories->sum('quantity_on_hand') : $this->inventories()->sum('quantity_on_hand'))),
-            'formatted_total_qoh' => $this->formatted_total_qoh,
+            'formatted_average_cost' => $this->formatted_average_cost,
+            'total_qoh' => $qoh,
+            'formatted_total_qoh' => $formattedTotalQoh,
             'reorder_point' => (float) $this->reorder_point,
             'reorder_quantity' => (float) $this->reorder_quantity,
 

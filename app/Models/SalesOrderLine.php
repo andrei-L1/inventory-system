@@ -2,12 +2,22 @@
 
 namespace App\Models;
 
+use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SalesOrderLine extends Model
 {
     use HasFactory;
+
+    protected $appends = [
+        'formatted_ordered_qty',
+        'formatted_shipped_qty',
+        'formatted_picked_qty',
+        'formatted_packed_qty',
+        'formatted_returned_qty',
+        'formatted_remaining_qty',
+    ];
 
     protected $fillable = [
         'sales_order_id',
@@ -92,5 +102,69 @@ class SalesOrderLine extends Model
     public function getRemainingQtyAttribute(): float
     {
         return max(0, (float) $this->ordered_qty - (float) $this->shipped_qty);
+    }
+    
+    /**
+     * Quantity that can be returned (Shipped - Returned)
+     */
+    public function getRemainingReturnQtyAttribute(): float
+    {
+        return max(0, (float) $this->shipped_qty - (float) $this->returned_qty);
+    }
+
+    public function getFormattedOrderedQtyAttribute(): string
+    {
+        return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedShippedQtyAttribute(): string
+    {
+        return UomHelper::format($this->shipped_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedPickedQtyAttribute(): string
+    {
+        return UomHelper::format($this->picked_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedPackedQtyAttribute(): string
+    {
+        return UomHelper::format($this->packed_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedReturnedQtyAttribute(): string
+    {
+        return UomHelper::format($this->returned_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedRemainingQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedRemainingPickQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_pick_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedRemainingPackQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_pack_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedRemainingShipQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_ship_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedRemainingReturnQtyAttribute(): string
+    {
+        return UomHelper::format($this->remaining_return_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedUnitPriceAttribute(): string
+    {
+        $symbol = '₱';
+        return $symbol . number_format($this->unit_price, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
     }
 }

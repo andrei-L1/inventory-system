@@ -62,21 +62,27 @@ class PurchaseOrderLine extends Model
 
     public function getFormattedOrderedQtyAttribute(): string
     {
-        return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id);
+        return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
 
     public function getFormattedReceivedQtyAttribute(): string
     {
-        return UomHelper::format($this->received_qty, $this->uom_id ?? $this->product->uom_id);
+        return UomHelper::format($this->received_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
 
     public function getFormattedReturnedQtyAttribute(): string
     {
-        return UomHelper::format($this->returned_qty, $this->uom_id ?? $this->product->uom_id);
+        return UomHelper::format($this->returned_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
 
     public function getFormattedPendingQtyAttribute(): string
     {
-        return UomHelper::format($this->remaining_qty, $this->uom_id ?? $this->product->uom_id);
+        return UomHelper::format($this->remaining_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+    }
+
+    public function getFormattedUnitCostAttribute(): string
+    {
+        $symbol = '₱';
+        return $symbol . number_format($this->unit_cost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
     }
 }

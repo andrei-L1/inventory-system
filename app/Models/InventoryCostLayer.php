@@ -68,7 +68,7 @@ class InventoryCostLayer extends Model
      */
     public function getFormattedRemainingQtyAttribute(): string
     {
-        return UomHelper::format($this->remaining_qty, $this->product->uom_id);
+        return UomHelper::format($this->remaining_qty, $this->product->uom_id, $this->product_id);
     }
 
     /**
@@ -76,7 +76,7 @@ class InventoryCostLayer extends Model
      */
     public function getFormattedReceivedQtyAttribute(): string
     {
-        return UomHelper::format($this->received_qty, $this->product->uom_id);
+        return UomHelper::format($this->received_qty, $this->product->uom_id, $this->product_id);
     }
 
     /**

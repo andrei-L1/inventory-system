@@ -31,7 +31,7 @@
                     </div>
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">SUM_TRANSFER</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
                     </div>
                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-violet-500 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-violet-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">SOURCE ROUTE</span>
@@ -175,7 +175,7 @@
                                             <InputNumber 
                                                 v-model="line.quantity" 
                                                 :min="0" 
-                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
+                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
                                                 :inputClass="'w-full bg-zinc-950 border text-center text-white p-2 rounded-lg outline-none ' + (isInsufficient(line) ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-800 focus:border-violet-500/50')"
                                             />
                                         </div>
@@ -239,7 +239,7 @@
                                                 <span class="text-zinc-500 font-mono">{{ getScaledQty(line, getLocalStock(line)) }}</span>
                                                 <i class="pi pi-arrow-right text-[8px] text-zinc-800"></i>
                                                 <span class="font-black font-mono" :class="isInsufficient(line) ? 'text-rose-500' : 'text-violet-400'">
-                                                    {{ (parseFloat(getScaledQty(line, getLocalStock(line))) - (parseFloat(line.quantity) || 0)).toFixed(2) }}
+                                                    {{ (parseFloat(getScaledQty(line, getLocalStock(line))) - (parseFloat(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
                                                 </span>
                                             </div>
                                         </div>
@@ -294,15 +294,9 @@ const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingData = ref(false);
 
-const continuousUnits = ['KG', 'L', 'M', 'ML', 'G', 'LB', 'OZ', 'CM', 'MM', 'FT', 'IN', 'GRAM', 'KILOGRAM', 'LITER'];
-
-const isDiscrete = (abbr) => {
-    return !continuousUnits.includes(abbr?.toUpperCase());
-};
-
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
-    return uom ? isDiscrete(uom.abbreviation) : true;
+    return uom ? uom.category === 'count' : true;
 };
 
 const getFactorToBase = (uomId, productId = null) => {
@@ -407,7 +401,7 @@ const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(line.uom_id, line.product?.id).factor;
     const scaled = (parseFloat(rawPieces) / factor);
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toFixed(2);
+    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {

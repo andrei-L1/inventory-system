@@ -108,7 +108,36 @@ class TransactionLine extends Model
      */
     public function getFormattedQuantityAttribute(): string
     {
-        // Re-scale the base quantity back to the original UOM for display
-        return UomHelper::format($this->quantity, $this->uom_id ?? $this->product->uom_id);
+        $uomId = $this->uom_id ?? $this->product->uom_id;
+        $multiplier = UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
+        $scaledQty = $multiplier > 0 ? (float) $this->quantity / $multiplier : (float) $this->quantity;
+
+        return UomHelper::format($scaledQty, $uomId, $this->product_id, false);
+    }
+
+    public function getFormattedUnitCostAttribute(): ?string
+    {
+        if ($this->unit_cost === null) {
+            return null;
+        }
+        $uomId = $this->uom_id ?? $this->product->uom_id;
+        $multiplier = UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
+        $scaledCost = $multiplier > 0 ? (float) $this->unit_cost * $multiplier : (float) $this->unit_cost;
+
+        $symbol = '₱';
+        return $symbol . number_format($scaledCost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+    }
+
+    public function getFormattedUnitPriceAttribute(): ?string
+    {
+        if ($this->unit_price === null) {
+            return null;
+        }
+        $uomId = $this->uom_id ?? $this->product->uom_id;
+        $multiplier = UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
+        $scaledPrice = $multiplier > 0 ? (float) $this->unit_price * $multiplier : (float) $this->unit_price;
+
+        $symbol = '₱';
+        return $symbol . number_format($scaledPrice, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
     }
 }

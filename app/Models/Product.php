@@ -47,6 +47,12 @@ class Product extends Model
 {
     use HasAttachments, HasFactory, SoftDeletes;
 
+    protected $appends = [
+        'formatted_total_qoh',
+        'formatted_average_cost',
+        'formatted_selling_price',
+    ];
+
     protected static function boot()
     {
         parent::boot();
@@ -196,5 +202,17 @@ class Product extends Model
     {
         // total_qoh is now correctly scaled to the product's UOM in the getter above.
         return UomHelper::format($this->total_qoh, $this->uom_id, $this->id, false);
+    }
+
+    public function getFormattedAverageCostAttribute(): string
+    {
+        $symbol = '₱'; // Default currency symbol
+        return $symbol . number_format($this->average_cost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+    }
+
+    public function getFormattedSellingPriceAttribute(): string
+    {
+        $symbol = '₱'; // Default currency symbol
+        return $symbol . number_format($this->selling_price, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
     }
 }

@@ -46,6 +46,9 @@ class Inventory extends Model
         'scaled_quantity_on_hand',
         'scaled_average_cost',
         'formatted_quantity_on_hand',
+        'formatted_reserved_qty',
+        'formatted_available_qty',
+        'formatted_average_cost',
     ];
 
     /**
@@ -97,5 +100,31 @@ class Inventory extends Model
     public function getFormattedQuantityOnHandAttribute(): string
     {
         return UomHelper::format($this->scaled_quantity_on_hand, $this->product->uom_id, $this->product_id, false);
+    }
+
+    /**
+     * Get the formatted reserved quantity.
+     */
+    public function getFormattedReservedQtyAttribute(): string
+    {
+        return UomHelper::format($this->scaled_reserved_qty, $this->product->uom_id, $this->product_id, false);
+    }
+
+    /**
+     * Get the formatted available quantity.
+     */
+    public function getFormattedAvailableQtyAttribute(): string
+    {
+        $availableRecord = $this->scaled_quantity_on_hand - $this->scaled_reserved_qty;
+        return UomHelper::format($availableRecord, $this->product->uom_id, $this->product_id, false);
+    }
+
+    /**
+     * Get the formatted average cost scaled to the product's UOM.
+     */
+    public function getFormattedAverageCostAttribute(): string
+    {
+        $symbol = '₱';
+        return $symbol . number_format($this->scaled_average_cost, 2) . ' / ' . ($this->product->uom->abbreviation ?? 'pcs');
     }
 }
