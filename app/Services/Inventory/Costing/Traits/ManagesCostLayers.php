@@ -32,8 +32,8 @@ trait ManagesCostLayers
 
         // Initialize accumulators as BCMath strings — never floats.
         $remainingToConsume = $quantity;
-        $totalCostConsumed  = '0';
-        $totalQtyConsumed   = '0';
+        $totalCostConsumed = '0';
+        $totalQtyConsumed = '0';
 
         foreach ($layers as $layer) {
             /** @var InventoryCostLayer $layer */
@@ -53,7 +53,7 @@ trait ManagesCostLayers
                 $totalCostConsumed,
                 FinancialMath::mul($consumeAmount, (string) $layer->unit_cost)
             );
-            $totalQtyConsumed   = FinancialMath::add($totalQtyConsumed, $consumeAmount);
+            $totalQtyConsumed = FinancialMath::add($totalQtyConsumed, $consumeAmount);
             $remainingToConsume = FinancialMath::sub($remainingToConsume, $consumeAmount);
 
             $layer->issued_qty = FinancialMath::round(
@@ -108,12 +108,12 @@ trait ManagesCostLayers
     protected function updateRunningAverage(Inventory $inventory, string $newQty, string $newUnitCost): void
     {
         // getRawOriginal() returns the raw DB string — safe for BCMath.
-        $currentQty     = (string) $inventory->getRawOriginal('quantity_on_hand');
+        $currentQty = (string) $inventory->getRawOriginal('quantity_on_hand');
         $currentAvgCost = (string) $inventory->getRawOriginal('average_cost');
 
         $totalValueBefore = FinancialMath::mul($currentQty, $currentAvgCost);
-        $newValueInbound  = FinancialMath::mul($newQty, $newUnitCost);
-        $totalQtyAfter    = FinancialMath::add($currentQty, $newQty);
+        $newValueInbound = FinancialMath::mul($newQty, $newUnitCost);
+        $totalQtyAfter = FinancialMath::add($currentQty, $newQty);
 
         if (FinancialMath::isPositive($totalQtyAfter)) {
             $inventory->average_cost = FinancialMath::round(

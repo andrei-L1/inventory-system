@@ -45,9 +45,9 @@ class SalesOrderLine extends Model
         'packed_qty' => 'decimal:8',
         'returned_qty' => 'decimal:8',
         'unit_price' => 'decimal:8',
-        'tax_rate'        => 'decimal:2',
-        'tax_amount'      => 'decimal:8',
-        'discount_rate'   => 'decimal:2',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:8',
+        'discount_rate' => 'decimal:2',
         'discount_amount' => 'decimal:8',
         'subtotal' => 'decimal:8',
     ];
@@ -167,7 +167,7 @@ class SalesOrderLine extends Model
         // S-L2: Use the parent SO's currency code dynamically instead of hardcoding '₱'.
         // Falls back to PHP if the relationship is not loaded to prevent N+1 errors.
         $currencyCode = $this->salesOrder?->currency ?? 'PHP';
-        $symbol = match($currencyCode) {
+        $symbol = match ($currencyCode) {
             'USD' => '$',
             'EUR' => '€',
             default => '₱',

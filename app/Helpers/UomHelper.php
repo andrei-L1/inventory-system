@@ -2,7 +2,6 @@
 
 namespace App\Helpers;
 
-use App\Helpers\FinancialMath;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Support\Collection;
@@ -238,14 +237,14 @@ class UomHelper
         self::ensureCacheLoaded();
 
         $fromBase = self::getSmallestUnitId($fromId, $productId);
-        $toBase   = self::getSmallestUnitId($toId, $productId);
+        $toBase = self::getSmallestUnitId($toId, $productId);
 
         if ($fromBase !== $toBase) {
             throw new \Exception("No conversion defined between UOM #{$fromId} and #{$toId} (different base units: {$fromBase} vs {$toBase}).");
         }
 
         $fromMult = self::getMultiplierToSmallest($fromId, $productId);
-        $toMult   = self::getMultiplierToSmallest($toId, $productId);
+        $toMult = self::getMultiplierToSmallest($toId, $productId);
 
         // BCMath division — no float arithmetic.
         return FinancialMath::div($fromMult, $toMult, FinancialMath::LINE_SCALE);

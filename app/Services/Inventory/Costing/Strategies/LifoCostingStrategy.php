@@ -18,12 +18,12 @@ class LifoCostingStrategy implements CostingStrategy
         $this->updateRunningAverage($inventory, $qty, $unitCost);
 
         InventoryCostLayer::create([
-            'product_id'         => $inventory->product_id,
-            'location_id'        => $inventory->location_id,
-            'transaction_line_id'=> $line->id,
-            'received_qty'       => $qty,
-            'unit_cost'          => $unitCost,
-            'receipt_date'       => Carbon::now(),
+            'product_id' => $inventory->product_id,
+            'location_id' => $inventory->location_id,
+            'transaction_line_id' => $line->id,
+            'received_qty' => $qty,
+            'unit_cost' => $unitCost,
+            'receipt_date' => Carbon::now(),
         ]);
     }
 

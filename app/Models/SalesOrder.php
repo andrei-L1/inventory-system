@@ -176,14 +176,14 @@ class SalesOrder extends Model
         // Accumulate quantities in BCMath strings — no float summation, no epsilon.
         $totalOrdered = '0';
         $totalShipped = '0';
-        $totalPacked  = '0';
-        $totalPicked  = '0';
+        $totalPacked = '0';
+        $totalPicked = '0';
 
         foreach ($lines as $l) {
             $totalOrdered = FinancialMath::add($totalOrdered, (string) $l->ordered_qty);
             $totalShipped = FinancialMath::add($totalShipped, (string) $l->shipped_qty);
-            $totalPacked  = FinancialMath::add($totalPacked,  (string) $l->packed_qty);
-            $totalPicked  = FinancialMath::add($totalPicked,  (string) $l->picked_qty);
+            $totalPacked = FinancialMath::add($totalPacked, (string) $l->packed_qty);
+            $totalPicked = FinancialMath::add($totalPicked, (string) $l->picked_qty);
         }
 
         // Walk the fulfillment hierarchy top-down.

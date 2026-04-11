@@ -120,7 +120,7 @@ class FinancialMath
      */
     public static function round(mixed $value, int $scale): string
     {
-        $str  = self::toDecimal($value);
+        $str = self::toDecimal($value);
         $half = '0.'.str_repeat('0', $scale).'5';
 
         if ($str[0] === '-') {
@@ -211,7 +211,7 @@ class FinancialMath
      */
     private static function soTaxable(mixed $qty, mixed $unitPrice, mixed $discountRate): string
     {
-        $base     = self::soBase($qty, $unitPrice);
+        $base = self::soBase($qty, $unitPrice);
         $discount = self::mul($base, self::div($discountRate, '100'));
 
         return self::sub($base, $discount);
@@ -238,7 +238,7 @@ class FinancialMath
         mixed $taxRate = 0,
     ): string {
         $taxable = self::soTaxable($qty, $unitPrice, $discountRate);
-        $tax     = self::mul($taxable, self::div($taxRate, '100'));
+        $tax = self::mul($taxable, self::div($taxRate, '100'));
 
         return self::round(self::add($taxable, $tax), self::LINE_SCALE);
     }
@@ -290,7 +290,7 @@ class FinancialMath
             // Force each input to LINE_SCALE before accumulating —
             // guards against 2dp strings, ints, or inconsistent-scale inputs.
             $normalized = bcadd(self::toDecimal($lineTotal), '0', self::LINE_SCALE);
-            $sum        = bcadd($sum, $normalized, self::LINE_SCALE);
+            $sum = bcadd($sum, $normalized, self::LINE_SCALE);
         }
 
         return self::round($sum, self::HEADER_SCALE);

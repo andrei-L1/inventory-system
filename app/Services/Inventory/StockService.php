@@ -120,8 +120,8 @@ class StockService
                     'product_id' => $line->product_id,
                     'location_id' => $line->location_id,
                     // DB decimal:8 cast returns string — safe for FinancialMath directly.
-                    'quantity'   => (string) $line->quantity,
-                    'unit_cost'  => (string) ($line->unit_cost ?? '0'),
+                    'quantity' => (string) $line->quantity,
+                    'unit_cost' => (string) ($line->unit_cost ?? '0'),
                 ];
                 $this->applyLineToInventory($line, $lineData);
             }
@@ -162,7 +162,7 @@ class StockService
 
                     return array_merge($line, [
                         'location_id' => $data['from_location_id'],
-                        'quantity'    => $negQty,
+                        'quantity' => $negQty,
                     ]);
                 })->toArray(),
             ];
@@ -185,11 +185,11 @@ class StockService
                     $absQty = ltrim($qty, '-');
 
                     return [
-                        'product_id'  => $outLine->product_id,
+                        'product_id' => $outLine->product_id,
                         'location_id' => $data['to_location_id'],
-                        'quantity'    => $absQty,
-                        'unit_cost'   => (string) $outLine->unit_cost, // Preserve COGS
-                        'uom_id'      => $outLine->uom_id,
+                        'quantity' => $absQty,
+                        'unit_cost' => (string) $outLine->unit_cost, // Preserve COGS
+                        'uom_id' => $outLine->uom_id,
                     ];
                 })->toArray(),
             ];
@@ -358,7 +358,7 @@ class StockService
         }
 
         // Normalize quantity — must be a string for FinancialMath.
-        $qtyMove  = (string) $lineData['quantity'];
+        $qtyMove = (string) $lineData['quantity'];
         $unitCost = (string) ($lineData['unit_cost'] ?? '0');
         $isReceipt = FinancialMath::isPositive($qtyMove);
 
@@ -387,7 +387,7 @@ class StockService
 
             $this->updateProductGlobalAverageCost($inventory->product);
 
-            $line->unit_cost  = $unitCost;
+            $line->unit_cost = $unitCost;
             $line->total_cost = FinancialMath::round(
                 FinancialMath::mul($qtyMove, $unitCost),
                 FinancialMath::LINE_SCALE
@@ -403,7 +403,7 @@ class StockService
 
             $this->updateProductGlobalAverageCost($inventory->product);
 
-            $line->unit_cost  = $unitCost;
+            $line->unit_cost = $unitCost;
             $line->total_cost = FinancialMath::round(
                 FinancialMath::mul($unitCost, ltrim($qtyMove, '-')),
                 FinancialMath::LINE_SCALE
@@ -463,8 +463,8 @@ class StockService
             }
 
             // Apply high-precision BCMath conversion — no float math.
-            $qtyStr  = (string) $lineData['quantity'];
-            $factor  = (string) UomHelper::getConversionFactor($fromId, $toId, $product->id);
+            $qtyStr = (string) $lineData['quantity'];
+            $factor = (string) UomHelper::getConversionFactor($fromId, $toId, $product->id);
             $lineData['quantity'] = FinancialMath::round(
                 FinancialMath::mul($qtyStr, $factor),
                 FinancialMath::LINE_SCALE

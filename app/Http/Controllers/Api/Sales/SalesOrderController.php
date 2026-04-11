@@ -85,16 +85,16 @@ class SalesOrderController extends Controller
                 $lineTotals[] = $lineTotal;
 
                 $so->lines()->create([
-                    'product_id'      => $lineData['product_id'],
-                    'location_id'     => $lineData['location_id'],
-                    'uom_id'          => $lineData['uom_id'],
-                    'ordered_qty'     => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
-                    'unit_price'      => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
-                    'tax_rate'        => $lineData['tax_rate'] ?? 0,
-                    'tax_amount'      => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
-                    'discount_rate'   => $lineData['discount_rate'] ?? 0,
+                    'product_id' => $lineData['product_id'],
+                    'location_id' => $lineData['location_id'],
+                    'uom_id' => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
+                    'tax_rate' => $lineData['tax_rate'] ?? 0,
+                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
+                    'discount_rate' => $lineData['discount_rate'] ?? 0,
                     'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
-                    'subtotal'        => $lineTotal,
+                    'subtotal' => $lineTotal,
                 ]);
             }
 
@@ -141,16 +141,16 @@ class SalesOrderController extends Controller
                 $lineTotals[] = $lineTotal;
 
                 $salesOrder->lines()->create([
-                    'product_id'      => $lineData['product_id'],
-                    'location_id'     => $lineData['location_id'],
-                    'uom_id'          => $lineData['uom_id'],
-                    'ordered_qty'     => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
-                    'unit_price'      => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
-                    'tax_rate'        => $lineData['tax_rate'] ?? 0,
-                    'tax_amount'      => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
-                    'discount_rate'   => $lineData['discount_rate'] ?? 0,
+                    'product_id' => $lineData['product_id'],
+                    'location_id' => $lineData['location_id'],
+                    'uom_id' => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
+                    'tax_rate' => $lineData['tax_rate'] ?? 0,
+                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
+                    'discount_rate' => $lineData['discount_rate'] ?? 0,
                     'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
-                    'subtotal'        => $lineTotal,
+                    'subtotal' => $lineTotal,
                 ]);
             }
 
@@ -233,7 +233,7 @@ class SalesOrderController extends Controller
      */
     public function send(Request $request, SalesOrder $salesOrder): SalesOrderResource
     {
-        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
+        $salesOrder = DB::transaction(function () use ($salesOrder) {
             $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
             $so->loadMissing('status');
 

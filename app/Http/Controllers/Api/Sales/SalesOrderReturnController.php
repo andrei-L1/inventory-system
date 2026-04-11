@@ -83,15 +83,15 @@ class SalesOrderReturnController extends Controller
                     ];
 
                     $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $returnedQty);
-                    $soLine->shipped_qty  = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
+                    $soLine->shipped_qty = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
                     $newPacked = FinancialMath::sub((string) $soLine->packed_qty, $returnedQty);
-                    $soLine->packed_qty   = FinancialMath::round(
+                    $soLine->packed_qty = FinancialMath::round(
                         FinancialMath::isNegative($newPacked) ? '0' : $newPacked,
                         FinancialMath::LINE_SCALE
                     );
 
                     $newPicked = FinancialMath::sub((string) $soLine->picked_qty, $returnedQty);
-                    $soLine->picked_qty   = FinancialMath::round(
+                    $soLine->picked_qty = FinancialMath::round(
                         FinancialMath::isNegative($newPicked) ? '0' : $newPicked,
                         FinancialMath::LINE_SCALE
                     );
@@ -116,11 +116,11 @@ class SalesOrderReturnController extends Controller
 
                         // Credit Note line values
                         $creditNoteLines[] = [
-                            'product_id'         => $soLine->product_id,
+                            'product_id' => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity'            => FinancialMath::round($returnedQty, FinancialMath::LINE_SCALE),
-                            'unit_price'          => (string) $soLine->unit_price,
-                            'subtotal'            => FinancialMath::round(FinancialMath::mul($returnedQty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE),
+                            'quantity' => FinancialMath::round($returnedQty, FinancialMath::LINE_SCALE),
+                            'unit_price' => (string) $soLine->unit_price,
+                            'subtotal' => FinancialMath::round(FinancialMath::mul($returnedQty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE),
                         ];
                     }
 

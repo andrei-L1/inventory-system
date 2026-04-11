@@ -84,7 +84,7 @@ class PaymentController extends Controller
                     PaymentAllocation::create([
                         'payment_id' => $payment->id,
                         'invoice_id' => $invoice->id,
-                        'amount'     => $amountToAllocate,
+                        'amount' => $amountToAllocate,
                     ]);
 
                     $invoice->paid_amount = FinancialMath::add((string) $invoice->paid_amount, $amountToAllocate);

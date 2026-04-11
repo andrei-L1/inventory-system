@@ -95,11 +95,11 @@ class PurchaseOrderController extends Controller
                 $lineTotals[] = $lineCost;
 
                 $po->lines()->create([
-                    'product_id'  => $lineData['product_id'],
-                    'uom_id'      => $lineData['uom_id'],
+                    'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost'   => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
                 ]);
             }
 
@@ -149,11 +149,11 @@ class PurchaseOrderController extends Controller
                 $lineTotals[] = $lineCost;
 
                 $purchaseOrder->lines()->create([
-                    'product_id'  => $lineData['product_id'],
-                    'uom_id'      => $lineData['uom_id'],
+                    'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
                     'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost'   => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
                 ]);
             }
 

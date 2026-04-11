@@ -19,17 +19,17 @@ class CustomerStatementService
             ->when($endDate, fn ($q) => $q->where('invoice_date', '<=', $endDate))
             ->get()
             ->map(function ($inv) {
-                    $amountStr = (string) $inv->total_amount;
-                    $negAmount = FinancialMath::isNegative($amountStr) ? $amountStr : '-'.ltrim($amountStr, '-');
-                    $posAmount = ltrim($amountStr, '-');
+                $amountStr = (string) $inv->total_amount;
+                $negAmount = FinancialMath::isNegative($amountStr) ? $amountStr : '-'.ltrim($amountStr, '-');
+                $posAmount = ltrim($amountStr, '-');
 
-                    return [
-                        'date' => $inv->invoice_date,
-                        'reference' => $inv->invoice_number,
-                        'type' => $inv->type === Invoice::TYPE_CREDIT_NOTE ? 'Credit Note' : 'Invoice',
-                        'amount' => $amountStr,
-                        'balance_impact' => $inv->type === Invoice::TYPE_CREDIT_NOTE ? $negAmount : $posAmount,
-                    ];
+                return [
+                    'date' => $inv->invoice_date,
+                    'reference' => $inv->invoice_number,
+                    'type' => $inv->type === Invoice::TYPE_CREDIT_NOTE ? 'Credit Note' : 'Invoice',
+                    'amount' => $amountStr,
+                    'balance_impact' => $inv->type === Invoice::TYPE_CREDIT_NOTE ? $negAmount : $posAmount,
+                ];
             });
 
         $payments = $customer->payments()
@@ -37,16 +37,16 @@ class CustomerStatementService
             ->when($endDate, fn ($q) => $q->where('payment_date', '<=', $endDate))
             ->get()
             ->map(function ($pay) {
-                    $payAmtStr = (string) $pay->amount;
-                    $negPayAmt = FinancialMath::isNegative($payAmtStr) ? $payAmtStr : '-'.ltrim($payAmtStr, '-');
+                $payAmtStr = (string) $pay->amount;
+                $negPayAmt = FinancialMath::isNegative($payAmtStr) ? $payAmtStr : '-'.ltrim($payAmtStr, '-');
 
-                    return [
-                        'date' => $pay->payment_date,
-                        'reference' => $pay->payment_number,
-                        'type' => 'Payment',
-                        'amount' => $payAmtStr,
-                        'balance_impact' => $negPayAmt,
-                    ];
+                return [
+                    'date' => $pay->payment_date,
+                    'reference' => $pay->payment_number,
+                    'type' => 'Payment',
+                    'amount' => $payAmtStr,
+                    'balance_impact' => $negPayAmt,
+                ];
             });
 
         return $invoices->concat($payments)->sortBy('date')->values();

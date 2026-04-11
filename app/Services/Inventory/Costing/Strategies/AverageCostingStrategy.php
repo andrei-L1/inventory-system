@@ -22,12 +22,12 @@ class AverageCostingStrategy implements CostingStrategy
         $this->updateRunningAverage($inventory, $qty, $unitCost);
 
         InventoryCostLayer::create([
-            'product_id'         => $inventory->product_id,
-            'location_id'        => $inventory->location_id,
-            'transaction_line_id'=> $line->id,
-            'received_qty'       => $qty,
-            'unit_cost'          => $unitCost, // already 8dp string
-            'receipt_date'       => Carbon::now(),
+            'product_id' => $inventory->product_id,
+            'location_id' => $inventory->location_id,
+            'transaction_line_id' => $line->id,
+            'received_qty' => $qty,
+            'unit_cost' => $unitCost, // already 8dp string
+            'receipt_date' => Carbon::now(),
         ]);
 
         // Level all active layers to the new running average
