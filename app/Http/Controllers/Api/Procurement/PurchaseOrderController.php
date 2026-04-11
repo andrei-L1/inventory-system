@@ -340,18 +340,19 @@ class PurchaseOrderController extends Controller
                         abort(400, 'PO line does not belong to this purchase order.');
                     }
 
-                    $receivedQtyRaw = (float) $item['received_qty'];
+                    $receivedQtyRaw = (string) $item['received_qty'];
                     $receivedUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
                     $receivedUom = UnitOfMeasure::find($receivedUomId);
                     $productUom = $poLine->product->uom;
 
                     // LOCK 1: Discrete units must be whole numbers
-                    // Threshold matches the 8-decimal DB standard (1e-8)
                     if ($receivedUom && UomHelper::isDiscrete($receivedUom->abbreviation)) {
-                        if (abs($receivedQtyRaw - round($receivedQtyRaw)) > 0.00000001) {
+                        // isZero checks if the fractional part is zero (BCMath-safe)
+                        $fractional = FinancialMath::sub($receivedQtyRaw, (string) floor((float) $receivedQtyRaw));
+                        if (! FinancialMath::isZero($fractional)) {
                             abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
                         }
-                        $receivedQtyRaw = round($receivedQtyRaw);
+                        $receivedQtyRaw = (string) (int) $receivedQtyRaw;
                     }
 
                     // LOCK 2: Discrete products cannot be received in continuous units (No KG for Pieces)
@@ -364,17 +365,17 @@ class PurchaseOrderController extends Controller
                     $receivedQty = $receivedQtyRaw;
                     $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
 
-                    // 1. Convert received quantity to the PO line's UOM for validation and tracking
+                    // Convert received quantity to PO line UOM for validation and tracking
                     $qtyToUpdatePO = $receivedQty;
                     if ((int) $receivedUomId !== (int) $lineUomId) {
                         $factor = $this->getUomConversionFactor($receivedUomId, $lineUomId, $poLine->product_id);
-                        $qtyToUpdatePO = round($receivedQty * $factor, 8);
+                        $qtyToUpdatePO = FinancialMath::round(FinancialMath::mul($receivedQty, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     // VALIDATION: Prevent over-receipt (measured in PO Line UOM)
-                    // Threshold matches the 8-decimal DB standard (1e-8)
-                    if (($poLine->received_qty + $qtyToUpdatePO) > ($poLine->ordered_qty + 0.00000001)) {
-                        $remaining = max(0, $poLine->ordered_qty - $poLine->received_qty);
+                    $newReceived = FinancialMath::add((string) $poLine->received_qty, $qtyToUpdatePO);
+                    if (FinancialMath::gt($newReceived, (string) $poLine->ordered_qty)) {
+                        $remaining = FinancialMath::sub((string) $poLine->ordered_qty, (string) $poLine->received_qty);
                         abort(422, "Cannot receive {$receivedQty} units (equiv. to {$qtyToUpdatePO} in PO unit) for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
                     }
 
@@ -382,12 +383,11 @@ class PurchaseOrderController extends Controller
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
                         'quantity' => $receivedQty,
-                        'unit_cost' => $poLine->unit_cost,
+                        'unit_cost' => (string) $poLine->unit_cost,
                         'uom_id' => $receivedUomId,
                     ];
 
-                    // Update PO line received quantity (normalized to PO unit)
-                    $poLine->received_qty += $qtyToUpdatePO;
+                    $poLine->received_qty = FinancialMath::add((string) $poLine->received_qty, $qtyToUpdatePO);
                     $poLine->save();
                 }
 
@@ -476,24 +476,23 @@ class PurchaseOrderController extends Controller
                         abort(400, 'Invalid PO line ID.');
                     }
 
-                    $returnQtyRaw = (float) $item['return_qty'];
+                    $returnQtyRaw = (string) $item['return_qty'];
                     $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
                     $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
 
-                    // 1. Convert return quantity to the PO line's UOM for validation and tracking
+                    // Convert return qty to PO line UOM for validation and tracking
                     $qtyToUpdatePO = $returnQtyRaw;
                     if ((int) $returnUomId !== (int) $lineUomId) {
                         $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $poLine->product_id);
-                        $qtyToUpdatePO = round($returnQtyRaw * $factor, 8);
+                        $qtyToUpdatePO = FinancialMath::round(FinancialMath::mul($returnQtyRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
-                    // Threshold matches the 8-decimal DB standard (1e-8)
-                    if ($qtyToUpdatePO > ((float) $poLine->received_qty + 0.00000001)) {
-                        $receivedInReturnUnit = $poLine->received_qty;
+                    // Guard: cannot return more than received
+                    if (FinancialMath::gt($qtyToUpdatePO, (string) $poLine->received_qty)) {
+                        $receivedInReturnUnit = (string) $poLine->received_qty;
                         if ((int) $returnUomId !== (int) $lineUomId) {
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
-                            // C-4: Use 8-decimal precision in the error message, matching the DB standard.
-                            $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 8);
+                            $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string) $poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
                         }
                         abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
                     }

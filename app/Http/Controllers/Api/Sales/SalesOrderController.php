@@ -190,11 +190,10 @@ class SalesOrderController extends Controller
             // CREDIT LIMIT ENFORCEMENT
             $customer = $so->customer;
             if ($customer->credit_limit > 0) {
-                $exposure = (float) $customer->exposure;
-                $newTotal = round($exposure + (float) $so->total_amount, 8);
+                $newTotal = FinancialMath::add((string) $customer->exposure, (string) $so->total_amount);
 
-                if ($newTotal > ((float) $customer->credit_limit + 0.00000001)) {
-                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
+                if (FinancialMath::gt($newTotal, (string) $customer->credit_limit)) {
+                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$customer->exposure}, New Order: {$so->total_amount}.");
                 }
             }
 
@@ -207,10 +206,10 @@ class SalesOrderController extends Controller
 
                 // Convert ordered qty to base UOM for reservation
                 // round(..., 8) prevents floating-point dust from UOM chain multiplication
-                $baseQty = (float) $line->ordered_qty;
+                $baseQty = (string) $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
                     $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
-                    $baseQty = round($baseQty * $factor, 8);
+                    $baseQty = FinancialMath::round(FinancialMath::mul($baseQty, $factor), FinancialMath::LINE_SCALE);
                 }
 
                 $stockService->reserveStock($product, $location, $baseQty);
@@ -272,25 +271,25 @@ class SalesOrderController extends Controller
             $allPicked = true;
             foreach ($request->lines as $item) {
                 $line = $so->lines()->findOrFail($item['so_line_id']);
-                $newPicked = (float) $item['picked_qty'];
+                $newPicked = (string) $item['picked_qty'];
 
                 // Enforce cap: cannot pick more than ordered
-                $remainingToPick = (float) $line->ordered_qty - (float) $line->picked_qty;
-                if ($newPicked > ($remainingToPick + 0.00000001)) {
+                $remainingToPick = FinancialMath::sub((string) $line->ordered_qty, (string) $line->picked_qty);
+                if (FinancialMath::gt($newPicked, $remainingToPick)) {
                     abort(422, "Cannot pick more than ordered for product: {$line->product->name}. Remaining to pick: {$remainingToPick}");
                 }
 
-                $line->picked_qty += $newPicked;
+                $line->picked_qty = FinancialMath::add((string) $line->picked_qty, $newPicked);
                 $line->save();
 
-                if ($line->picked_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->picked_qty, (string) $line->ordered_qty)) {
                     $allPicked = false;
                 }
             }
 
             // Global check across all lines
             foreach ($so->lines as $line) {
-                if ($line->picked_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->picked_qty, (string) $line->ordered_qty)) {
                     $allPicked = false;
                     break;
                 }
@@ -329,25 +328,25 @@ class SalesOrderController extends Controller
             $allPacked = true;
             foreach ($request->lines as $item) {
                 $line = $so->lines()->findOrFail($item['so_line_id']);
-                $newPacked = (float) $item['packed_qty'];
+                $newPacked = (string) $item['packed_qty'];
 
                 // Enforce cap: cannot pack more than picked
-                $remainingToPack = (float) $line->picked_qty - (float) $line->packed_qty;
-                if ($newPacked > ($remainingToPack + 0.00000001)) {
+                $remainingToPack = FinancialMath::sub((string) $line->picked_qty, (string) $line->packed_qty);
+                if (FinancialMath::gt($newPacked, $remainingToPack)) {
                     abort(422, "Cannot pack more than picked for product: {$line->product->name}. Remaining to pack: {$remainingToPack}");
                 }
 
-                $line->packed_qty += $newPacked;
+                $line->packed_qty = FinancialMath::add((string) $line->packed_qty, $newPacked);
                 $line->save();
 
-                if ($line->packed_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->packed_qty, (string) $line->ordered_qty)) {
                     $allPacked = false;
                 }
             }
 
             // Global check
             foreach ($so->lines as $line) {
-                if ($line->packed_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->packed_qty, (string) $line->ordered_qty)) {
                     $allPacked = false;
                     break;
                 }
@@ -416,31 +415,33 @@ class SalesOrderController extends Controller
 
                 foreach ($request->lines as $item) {
                     $soLine = $soLines->get($item['so_line_id']);
-                    $shippedQtyRaw = (float) $item['shipped_qty'];
+                    $shippedQtyRaw = (string) $item['shipped_qty'];
                     $product = $soLine->product;
 
-                    if ($shippedQtyRaw > ($soLine->packed_qty - $soLine->shipped_qty + 0.00000001)) {
-                        $remaining = $soLine->packed_qty - $soLine->shipped_qty;
-                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remaining}");
+                    $remainingToShip = FinancialMath::sub((string) $soLine->packed_qty, (string) $soLine->shipped_qty);
+                    if (FinancialMath::gt($shippedQtyRaw, $remainingToShip)) {
+                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remainingToShip}");
                     }
 
                     // Convert to base UOM
-                    $factor = 1.0;
+                    $factor = '1';
                     if ($soLine->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id, $product->id);
                     }
-                    $baseShippedQty = round($shippedQtyRaw * $factor, 8);
+                    $baseShippedQty = FinancialMath::round(FinancialMath::mul($shippedQtyRaw, $factor), FinancialMath::LINE_SCALE);
 
                     $stockService->releaseReservation($product, $soLine->location, $baseShippedQty);
 
+                    // Negate safely without (float) cast
+                    $negQty = '-'.ltrim($shippedQtyRaw, '-');
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $soLine->location_id,
-                        'quantity' => -abs($shippedQtyRaw),
+                        'quantity' => $negQty,
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    $soLine->shipped_qty += $shippedQtyRaw;
+                    $soLine->shipped_qty = FinancialMath::add((string) $soLine->shipped_qty, $shippedQtyRaw);
                     $soLine->save();
                 }
 
@@ -448,7 +449,7 @@ class SalesOrderController extends Controller
                 $salesOrder->unsetRelation('lines');
                 $allShipped = true;
                 foreach ($salesOrder->lines as $line) {
-                    if ($line->shipped_qty < $line->ordered_qty) {
+                    if (FinancialMath::lt((string) $line->shipped_qty, (string) $line->ordered_qty)) {
                         $allShipped = false;
                         break;
                     }
@@ -505,11 +506,11 @@ class SalesOrderController extends Controller
                     $product = $line->product;
                     $location = $line->location;
 
-                    $baseQty = (float) $line->ordered_qty - (float) $line->shipped_qty;
-                    if ($baseQty > 0.00000001) {
+                    $baseQty = FinancialMath::sub((string) $line->ordered_qty, (string) $line->shipped_qty);
+                    if (FinancialMath::isPositive($baseQty)) {
                         if ($line->uom_id !== $product->uom_id) {
                             $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
-                            $baseQty = round($baseQty * $factor, 8);
+                            $baseQty = FinancialMath::round(FinancialMath::mul($baseQty, $factor), FinancialMath::LINE_SCALE);
                         }
                         $stockService->releaseReservation($product, $location, $baseQty);
                     }

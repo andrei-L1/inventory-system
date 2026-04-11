@@ -67,55 +67,55 @@ class SalesOrderReturnController extends Controller
                 foreach ($request->lines as $item) {
                     /** @var SalesOrderLine $soLine */
                     $soLine = $soLines->get($item['so_line_id']);
-                    $returnedQty = (float) $item['returned_qty'];
+                    $returnedQty = (string) $item['returned_qty'];
 
-                    if ($returnedQty > ($soLine->shipped_qty - $soLine->returned_qty + 0.00000001)) {
+                    $maxReturnable = FinancialMath::sub((string) $soLine->shipped_qty, (string) $soLine->returned_qty);
+                    if (FinancialMath::gt($returnedQty, $maxReturnable)) {
                         abort(422, "Cannot return more than what was shipped for product: {$soLine->product->name}");
                     }
 
-                    // Add to inventory transaction (Receipt)
-                    // We use the location specified by the user (e.g. a Quarantine or Returns bin)
-                    // instead of the original picking bin.
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => abs($returnedQty), // Receipt is positive
+                        'quantity' => $returnedQty, // Receipt is positive string
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    // Update SO Line pipeline quantities. The item physically returned,
-                    // so it must be picked/packed/shipped again if it's a replacement.
-                    $soLine->returned_qty += $returnedQty;
-                    $soLine->shipped_qty -= $returnedQty;
-                    $soLine->packed_qty = max(0, $soLine->packed_qty - $returnedQty);
-                    $soLine->picked_qty = max(0, $soLine->picked_qty - $returnedQty);
+                    $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $returnedQty);
+                    $soLine->shipped_qty  = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
+                    $soLine->packed_qty   = FinancialMath::round(
+                        max('0', FinancialMath::sub((string) $soLine->packed_qty, $returnedQty)),
+                        FinancialMath::LINE_SCALE
+                    );
+                    $soLine->picked_qty   = FinancialMath::round(
+                        max('0', FinancialMath::sub((string) $soLine->picked_qty, $returnedQty)),
+                        FinancialMath::LINE_SCALE
+                    );
 
-                    // If refund, we cancel this portion of the order and refund them
                     if ($item['resolution'] === 'refund') {
-                        $soLine->ordered_qty = max(0, (float) $soLine->ordered_qty - $returnedQty);
+                        $soLine->ordered_qty = FinancialMath::round(
+                            max('0', FinancialMath::sub((string) $soLine->ordered_qty, $returnedQty)),
+                            FinancialMath::LINE_SCALE
+                        );
 
-                        // Recalculate line totals
-                        $qty = (float) $soLine->ordered_qty;
-                        $price = (float) $soLine->unit_price;
-                        $taxRate = (float) ($soLine->tax_rate ?? 0);
-                        $discountRate = (float) ($soLine->discount_rate ?? 0);
+                        // Recalculate line totals using BCMath — no floats.
+                        $soLine->discount_amount = FinancialMath::soLineDiscount(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0
+                        );
+                        $soLine->tax_amount = FinancialMath::soLineTax(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
+                        );
+                        $soLine->subtotal = FinancialMath::soLineSubtotal(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
+                        );
 
-                        $base = $qty * $price;
-                        $discount = $base * ($discountRate / 100);
-                        $taxable = $base - $discount;
-                        $tax = $taxable * ($taxRate / 100);
-
-                        $soLine->discount_amount = round($discount, 8);
-                        $soLine->tax_amount = round($tax, 8);
-                        $soLine->subtotal = round($taxable + $tax, 8);
-
-                        // Prepare Credit Note Line for refunds
+                        // Credit Note line values
                         $creditNoteLines[] = [
-                            'product_id' => $soLine->product_id,
+                            'product_id'         => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity' => round($returnedQty, 8),
-                            'unit_price' => round((float) $soLine->unit_price, 8),
-                            'subtotal' => round($returnedQty * (float) $soLine->unit_price, 8),
+                            'quantity'            => FinancialMath::round($returnedQty, FinancialMath::LINE_SCALE),
+                            'unit_price'          => (string) $soLine->unit_price,
+                            'subtotal'            => FinancialMath::round(FinancialMath::mul($returnedQty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE),
                         ];
                     }
 

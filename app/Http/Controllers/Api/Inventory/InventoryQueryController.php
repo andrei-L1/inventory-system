@@ -133,7 +133,7 @@ class InventoryQueryController extends Controller
                     'formatted_original_qty' => UomHelper::format($receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (float) $layer->remaining_qty,
                     'formatted_remaining_qty' => UomHelper::format($remainingScaled, $targetUomId, $product->id, false),
-                    'total_value' => round((float) $layer->remaining_qty * (float) $layer->unit_cost, 8),
+                    'total_value' => FinancialMath::round(FinancialMath::mul((string) $layer->remaining_qty, (string) $layer->unit_cost), FinancialMath::LINE_SCALE),
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,
                 ];

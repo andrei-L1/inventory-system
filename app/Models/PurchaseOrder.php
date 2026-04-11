@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -104,7 +105,8 @@ class PurchaseOrder extends Model
     public function isCompleted(): bool
     {
         return $this->lines->every(function ($line) {
-            return ((float) $line->received_qty + 0.00000001) >= (float) $line->ordered_qty;
+            // FinancialMath::gte uses cmp() at scale=0 — strictly deterministic, no epsilon.
+            return FinancialMath::gte((string) $line->received_qty, (string) $line->ordered_qty);
         });
     }
 }

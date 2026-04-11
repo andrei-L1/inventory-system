@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Finance;
 
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -70,27 +71,25 @@ class PaymentController extends Controller
             DB::transaction(function () use ($request, $payment) {
                 foreach ($request->allocations as $item) {
                     $invoice = Invoice::lockForUpdate()->findOrFail($item['invoice_id']);
-                    $amountToAllocate = (float) $item['amount'];
+                    $amountToAllocate = (string) $item['amount'];
 
-                    if ($amountToAllocate > ($payment->unallocated_amount + 0.00000001)) {
+                    if (FinancialMath::gt($amountToAllocate, (string) $payment->unallocated_amount)) {
                         abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Only {$payment->unallocated_amount} unallocated remains on this payment.");
                     }
 
-                    if ($amountToAllocate > ($invoice->balance + 0.00000001)) {
+                    if (FinancialMath::gt($amountToAllocate, (string) $invoice->balance)) {
                         abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Current balance is {$invoice->balance}.");
                     }
 
-                    // Create allocation
                     PaymentAllocation::create([
                         'payment_id' => $payment->id,
                         'invoice_id' => $invoice->id,
-                        'amount' => $amountToAllocate,
+                        'amount'     => $amountToAllocate,
                     ]);
 
-                    // Update invoice paid amount and status
-                    $invoice->paid_amount += $amountToAllocate;
+                    $invoice->paid_amount = FinancialMath::add((string) $invoice->paid_amount, $amountToAllocate);
 
-                    if ($invoice->paid_amount >= ($invoice->total_amount - 0.000001)) {
+                    if (FinancialMath::gte((string) $invoice->paid_amount, (string) $invoice->total_amount)) {
                         $invoice->status = Invoice::STATUS_PAID;
                     }
 
