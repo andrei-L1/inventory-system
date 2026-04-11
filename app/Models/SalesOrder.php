@@ -53,7 +53,7 @@ class SalesOrder extends Model
         'sent_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
-        'total_amount' => 'decimal:8',
+        'total_amount' => 'decimal:2',
     ];
 
     /**

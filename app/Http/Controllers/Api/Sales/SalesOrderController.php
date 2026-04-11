@@ -92,7 +92,7 @@ class SalesOrderController extends Controller
                 ]);
             }
 
-            $so->update(['total_amount' => round($totalAmount, 8)]);
+            $so->update(['total_amount' => round($totalAmount, 2)]);
 
             return $so;
         });
@@ -143,7 +143,7 @@ class SalesOrderController extends Controller
                 ]);
             }
 
-            $salesOrder->update(['total_amount' => round($totalAmount, 8)]);
+            $salesOrder->update(['total_amount' => round($totalAmount, 2)]);
 
             return $salesOrder;
         });

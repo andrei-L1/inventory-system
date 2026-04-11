@@ -23,7 +23,7 @@ class PurchaseOrderLineResource extends JsonResource
             'formatted_received_qty' => $this->formatted_received_qty,
             'returned_qty' => (float) $this->returned_qty,
             'formatted_returned_qty' => $this->formatted_returned_qty,
-            'pending_qty' => (float) ($this->ordered_qty - $this->received_qty),
+            'pending_qty' => (float) max(0, $this->ordered_qty - $this->received_qty), // H-6: guard against negative after credit return
             'formatted_pending_qty' => $this->formatted_pending_qty,
             'unit_cost' => (float) $this->unit_cost,
             'formatted_unit_cost' => $this->formatted_unit_cost,

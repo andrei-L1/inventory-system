@@ -64,7 +64,13 @@ const createBulkPO = async () => {
         const res = await axios.post('/api/replenishment/suggestions/bulk-po', {
             suggestion_ids: selectedSuggestions.value.map(s => s.id)
         });
-        // Success
+        
+        toast.add({ severity: 'success', summary: 'Success', detail: res.data.message, life: 3000 });
+        
+        if (res.data.skipped_message) {
+            toast.add({ severity: 'warn', summary: 'Some Items Skipped', detail: res.data.skipped_message, life: 7000 });
+        }
+
         activeTab.value = 'orders';
         await loadPurchaseOrders();
         selectedSuggestions.value = [];
