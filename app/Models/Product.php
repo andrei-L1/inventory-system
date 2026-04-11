@@ -50,7 +50,9 @@ class Product extends Model
     protected $appends = [
         'formatted_total_qoh',
         'formatted_average_cost',
+        'formatted_average_cost_8dp',
         'formatted_selling_price',
+        'formatted_total_stock_value_8dp',
     ];
 
     protected static function boot()
@@ -226,11 +228,26 @@ class Product extends Model
         return $symbol.\App\Helpers\FinancialMath::format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
+    public function getFormattedAverageCost8dpAttribute(): string
+    {
+        $symbol = '₱'; // Default currency symbol
+
+        return $symbol.\App\Helpers\FinancialMath::format($this->average_cost, 8).' / '.($this->uom->abbreviation ?? 'pcs');
+    }
+
     public function getFormattedSellingPriceAttribute(): string
     {
         $symbol = '₱'; // Default currency symbol
         $price = $this->selling_price ? (string) $this->selling_price : '0';
 
         return $symbol.\App\Helpers\FinancialMath::format($price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+    }
+
+    public function getFormattedTotalStockValue8dpAttribute(): string
+    {
+        $symbol = '₱';
+        $totalValue = \App\Helpers\FinancialMath::mul((string) $this->total_qoh, (string) $this->average_cost);
+
+        return $symbol.\App\Helpers\FinancialMath::format($totalValue, 8);
     }
 }

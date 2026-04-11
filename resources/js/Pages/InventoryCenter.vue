@@ -64,6 +64,7 @@ const uomConversions = ref([]);
 const selectedViewUomId = ref(null);
 const stockOp = ref(null);
 const selectedLineForStock = ref(null);
+const showHighPrecision = ref(false);
 
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id == id);
@@ -616,13 +617,20 @@ const tablePt = {
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
                                         <span class="text-white font-bold text-lg tracking-tight">~ {{ selectedProduct.formatted_selling_price }}</span>
                                     </div>
-                                    <div class="flex flex-col gap-2">
-                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
-                                        <span class="text-sky-400 font-bold text-lg tracking-tight">~ {{ selectedProduct.formatted_average_cost }}</span>
+                                    <div class="flex flex-col gap-2 group/cost cursor-help">
+                                        <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono flex items-center gap-2">
+                                            Weighted Avg Cost
+                                            <i v-if="showHighPrecision" class="pi pi-shield text-[10px] text-sky-400/50"></i>
+                                        </label>
+                                        <span v-if="!showHighPrecision" class="text-sky-400 font-bold text-lg tracking-tight">~ {{ selectedProduct.formatted_average_cost }}</span>
+                                        <span v-else class="text-sky-300 font-mono font-bold text-lg tracking-tight animate-in fade-in duration-300">{{ selectedProduct.formatted_average_cost_8dp }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
-                                        <span class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency(Number(selectedProduct.total_qoh ?? 0) * Number(selectedProduct.average_cost ?? 0)) }}</span>
+                                        <span v-if="!showHighPrecision" class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency(Number(selectedProduct.total_qoh ?? 0) * Number(selectedProduct.average_cost ?? 0)) }}</span>
+                                        <span v-else class="text-amber-300 font-mono font-bold text-lg tracking-tight animate-in fade-in duration-300">
+                                            {{ selectedProduct.formatted_total_stock_value_8dp }}
+                                        </span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reorder Point</label>
@@ -749,14 +757,16 @@ const tablePt = {
                                             <span class="font-mono font-bold text-zinc-200">{{ data.formatted_remaining_qty }}</span>
                                         </template>
                                     </Column>
-                                    <Column field="unit_cost" header="Unit Cost" style="width: 120px">
+                                    <Column field="unit_cost" header="Unit Cost" style="width: 130px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">~ {{ data.formatted_unit_cost }}</span>
+                                            <span v-if="!showHighPrecision" class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">~ {{ data.formatted_unit_cost }}</span>
+                                            <span v-else class="font-mono font-bold text-sky-300 tracking-tighter text-[11px] animate-in fade-in duration-300">{{ data.formatted_unit_cost_8dp }}</span>
                                         </template>
                                     </Column>
-                                    <Column header="Layer Value" style="width: 130px">
+                                    <Column header="Layer Value" style="width: 150px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-amber-400 tracking-tighter text-[11px]">{{ formatCurrency(data.total_value) }}</span>
+                                            <span v-if="!showHighPrecision" class="font-mono font-bold text-amber-400 tracking-tighter text-[11px]">{{ formatCurrency(data.total_value) }}</span>
+                                            <span v-else class="font-mono font-bold text-amber-300 tracking-tighter text-[11px] animate-in fade-in duration-300">₱{{ data.total_value_8dp }}</span>
                                         </template>
                                     </Column>
                                     <Column header="Source PO" style="width: 160px">
@@ -789,7 +799,15 @@ const tablePt = {
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
                                 <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History</span>
                             </div>
-                            <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg group hover:border-sky-500/30 transition-all cursor-pointer" @click="showHighPrecision = !showHighPrecision">
+                                    <div class="w-6 h-3 rounded-full bg-zinc-800 relative transition-colors duration-300" :class="showHighPrecision ? 'bg-sky-500/20' : ''">
+                                        <div class="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-zinc-500 transition-all duration-300 shadow-lg" :class="showHighPrecision ? 'translate-x-3 !bg-sky-400' : ''"></div>
+                                    </div>
+                                    <span class="text-[9px] font-bold uppercase tracking-widest font-mono transition-colors" :class="showHighPrecision ? 'text-sky-400' : 'text-zinc-600'">Audit Mode</span>
+                                </div>
+                                <span class="bg-zinc-800/60 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
+                            </div>
                         </div>
 
                         <!-- Filter Bar -->
@@ -897,19 +915,26 @@ const tablePt = {
                                     </template>
                                 </Column>
 
-                                <Column header="Unit Cost" style="width: 120px">
+                                <Column header="Unit Cost" style="width: 140px">
                                     <template #body="{ data }">
-                                        <span class="font-mono text-[11px] font-bold text-sky-400">
+                                        <span v-if="!showHighPrecision" class="font-mono text-[11px] font-bold text-sky-400">
                                             {{ data.formatted_unit_cost }}
+                                        </span>
+                                        <span v-else class="font-mono text-[11px] font-bold text-sky-300 animate-in fade-in duration-300">
+                                            {{ data.formatted_unit_cost_8dp }}
                                         </span>
                                     </template>
                                 </Column>
 
-                                <Column header="Total Value" style="width: 130px">
+                                <Column header="Total Value" style="width: 150px">
                                     <template #body="{ data }">
-                                        <span class="font-mono text-[11px] font-bold"
+                                        <span v-if="!showHighPrecision" class="font-mono text-[11px] font-bold"
                                               :class="data.quantity < 0 ? 'text-rose-400' : 'text-amber-400'">
                                             {{ data.total_cost > 0 ? formatCurrency(data.total_cost) : '—' }}
+                                        </span>
+                                        <span v-else class="font-mono text-[11px] font-bold animate-in fade-in duration-300"
+                                              :class="data.quantity < 0 ? 'text-rose-300' : 'text-amber-300'">
+                                            {{ data.total_cost > 0 ? '₱' + data.total_cost_8dp : '—' }}
                                         </span>
                                     </template>
                                 </Column>

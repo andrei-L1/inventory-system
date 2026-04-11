@@ -148,4 +148,44 @@ The frontend (Vue 3) follows the **Explicit Casting** protocol:
 - **Visual Arithmetic**: When the frontend must perform real-time math (e.g., subtotaling a draft order), it explicitly casts backend strings using `Number()` at the moment of calculation.
 - **Form Submission**: Native `InputNumber` components handle high-precision decimals (up to 8 places), and the resulting values are sent back to the API as clean numbers/strings for the `FinancialMath` engine to process.
 
-> **Zero-Float Boundary**: Native JavaScript floating-point arithmetic is restricted to "Display-Only" logic. No critical warehouse status (e.g., "Is the order fully picked?") is ever determined by frontend float comparisons.
+
+---
+
+## 10. The "Water Bottle" Example (Non-Technical Walkthrough)
+
+To visualize how the system handles math without using complex jargon, let's look at a simple scenario:
+
+### **Step 1: Where we start**
+You have **10 bottles** of water in your fridge. You bought them for **₱10.00** each.
+*   **Total Inventory Value**: 10 bottles times ₱10.00 = **₱100.00**
+
+### **Step 2: Buying more (The New Receipt)**
+You buy **1 Box** of water from a premium supplier for **₱150.00** (this includes delivery).
+*   **Box Size**: 12 bottles per box.
+
+### **Step 3: How the system does the math**
+
+1.  **Opening the Box**: The system treats the box as individual items immediately.
+    *   1 Box becomes **12 new bottles**.
+2.  **Finding the exact bottle price**: The system calculates the price of a single bottle from that new box.
+    *   ₱150.00 divided by 12 bottles = **₱12.50 per bottle**.
+3.  **Mixing the stock (The Average)**:
+    *   **Old Bottles (10)**: ₱100.00 value.
+    *   **New Bottles (12)**: ₱150.00 value.
+    *   **Total Money Spent**: ₱100.00 + ₱150.00 = **₱250.00**.
+    *   **Total Bottles owned**: 10 old + 12 new = **22 bottles**.
+4.  **The new average price**:
+    *   ₱250.00 divided by 22 bottles = **11.36363636...**
+
+### **Step 4: How you see this in the app**
+
+| Mode | What you see | Why? |
+| :--- | :--- | :--- |
+| **Standard Mode** | `~ ₱11.36 / pcs` | Clean and readable for daily sales. |
+| **Audit Mode** | `₱11.36363636 / pcs` | **The Honest Truth.** Shows the exact math. |
+
+**Why the "Honest Truth" matters:**
+*   **With 8 decimals**: 22 bottles times 11.36363636 = **₱250.00** (Exactly what you spent).
+*   **With 2 decimals**: 22 bottles times 11.36 = **₱249.92** (**₱0.08 is missing!**).
+
+This is why we keep all those extra numbers: to make sure not a single centavo is lost when calculating the value of your warehouse.

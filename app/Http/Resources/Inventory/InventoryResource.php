@@ -32,6 +32,7 @@ class InventoryResource extends JsonResource
             'formatted_quantity_on_hand' => $formattedQuantityOnHand,
             'average_cost' => (string) $this->average_cost,
             'formatted_average_cost' => $this->formatted_average_cost,
+            'formatted_average_cost_8dp' => $this->formatted_average_cost_8dp,
             'total_value' => \App\Helpers\FinancialMath::mul($qoh, (string) $this->average_cost),
             'last_movement_date' => $this->updated_at,
 

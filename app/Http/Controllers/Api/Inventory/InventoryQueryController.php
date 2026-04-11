@@ -97,6 +97,8 @@ class InventoryQueryController extends Controller
                     'quantity_on_hand' => (string) $qoh,
                     'formatted_quantity_on_hand' => UomHelper::format((string) $scaledQoh, $targetUomId, $product->id, false),
                     'average_cost' => (string) $inv->average_cost,
+                    'formatted_average_cost' => $inv->formatted_average_cost,
+                    'formatted_average_cost_8dp' => $inv->formatted_average_cost_8dp,
                     'last_movement_date' => $inv->updated_at,
                 ];
             });
@@ -133,6 +135,7 @@ class InventoryQueryController extends Controller
 
                 $roundedUnitCost = FinancialMath::round($unitCostScaled, 2);
                 $totalValue = FinancialMath::round(FinancialMath::mul((string) $layer->remaining_qty, (string) $layer->unit_cost), 2);
+                $totalValue8dp = FinancialMath::mul((string) $layer->remaining_qty, (string) $layer->unit_cost);
 
                 $targetUom = UnitOfMeasure::find($targetUomId);
 
@@ -142,11 +145,13 @@ class InventoryQueryController extends Controller
                     'receipt_date' => $layer->receipt_date,
                     'unit_cost' => (string) $layer->unit_cost,
                     'formatted_unit_cost' => '₱'.\App\Helpers\FinancialMath::format($unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
+                    'formatted_unit_cost_8dp' => '₱'.\App\Helpers\FinancialMath::format($unitCostScaled, 8).' / '.($targetUom->abbreviation ?? 'pcs'),
                     'original_qty' => (string) $layer->received_qty,
                     'formatted_original_qty' => UomHelper::format((string) $receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (string) $layer->remaining_qty,
                     'formatted_remaining_qty' => UomHelper::format((string) $remainingScaled, $targetUomId, $product->id, false),
                     'total_value' => (string) $totalValue,
+                    'total_value_8dp' => (string) $totalValue8dp,
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,
                 ];

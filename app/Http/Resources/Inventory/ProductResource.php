@@ -26,6 +26,7 @@ class ProductResource extends JsonResource
         $reorderQuantity = (string) $this->reorder_quantity;
         $formattedSellingPrice = $this->formatted_selling_price;
         $formattedAverageCost = $this->formatted_average_cost;
+        $formattedAverageCost8dp = $this->formatted_average_cost_8dp;
         $targetUomAbbr = $this->uom->abbreviation ?? 'pcs';
 
         if ($targetUomId) {
@@ -58,6 +59,7 @@ class ProductResource extends JsonResource
             $targetUomAbbr = $targetUom->abbreviation ?? 'pcs';
             $formattedSellingPrice = '₱'.FinancialMath::format($sellingPrice, 2).' / '.$targetUomAbbr;
             $formattedAverageCost = '₱'.FinancialMath::format($averageCost, 2).' / '.$targetUomAbbr;
+            $formattedAverageCost8dp = '₱'.FinancialMath::format($averageCost, 8).' / '.$targetUomAbbr;
         } else {
             $formattedTotalQoh = $this->formatted_total_qoh;
         }
@@ -74,10 +76,12 @@ class ProductResource extends JsonResource
             'formatted_selling_price' => $formattedSellingPrice,
             'average_cost' => $averageCost,
             'formatted_average_cost' => $formattedAverageCost,
+            'formatted_average_cost_8dp' => $formattedAverageCost8dp,
             'total_qoh' => $qoh,
             'formatted_total_qoh' => $formattedTotalQoh,
             'reorder_point' => $reorderPoint,
             'reorder_quantity' => $reorderQuantity,
+            'formatted_total_stock_value_8dp' => '₱' . FinancialMath::format(FinancialMath::mul($averageCost, $qoh), 8),
 
             'is_active' => (bool) $this->is_active,
             'category_id' => $this->category_id,

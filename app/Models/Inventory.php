@@ -49,6 +49,7 @@ class Inventory extends Model
         'formatted_reserved_qty',
         'formatted_available_qty',
         'formatted_average_cost',
+        'formatted_average_cost_8dp',
     ];
 
     /**
@@ -128,5 +129,15 @@ class Inventory extends Model
         $symbol = '₱';
 
         return $symbol.\App\Helpers\FinancialMath::format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
+    }
+
+    /**
+     * Get the formatted average cost scaled to the product's UOM (High Precision 8DP).
+     */
+    public function getFormattedAverageCost8dpAttribute(): string
+    {
+        $symbol = '₱';
+
+        return $symbol.\App\Helpers\FinancialMath::format($this->scaled_average_cost, 8).' / '.($this->product->uom->abbreviation ?? 'pcs');
     }
 }
