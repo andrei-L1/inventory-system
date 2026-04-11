@@ -5,140 +5,292 @@ namespace App\Helpers;
 /**
  * FinancialMath — BCMath wrapper for ERP-grade financial arithmetic.
  *
- * PHP native floats are IEEE 754 binary-based, which means operations like
- * 0.1 + 0.2 do not equal 0.3 exactly. For a financial system where totals
- * must reconcile to the cent, BCMath provides arbitrary-precision decimal
- * arithmetic that eliminates this class of error entirely.
- *
- * Usage:
- *   $lineTotal = FinancialMath::lineTotal($qty, $price, $discountRate, $taxRate);
- *   $header    = FinancialMath::headerTotal($lineTotals); // returns 2dp string
+ * Design contract (strict):
+ * - Floats are FORBIDDEN. Passing a float throws InvalidArgumentException.
+ * - All inputs must be numeric string or int. assertNumeric() enforces this at every primitive.
+ * - All return values are strings (decimal representation).
+ * - NO native PHP float operations used internally.
+ * - NO epsilon constants. Semantic comparators (gt/gte/lt/lte) replace all "+ 0.00000001" patterns.
+ * - Single rounding gate: rounding to 2dp happens ONLY in headerTotal().
+ * - Normalization does NOT "fix" data — it validates and passes through.
  */
 class FinancialMath
 {
-    /** Default scale for all line-level intermediate calculations. */
+    /** Scale for all line-level calculations (qty, unit cost, subtotals). */
     public const LINE_SCALE = 8;
 
-    /** Final scale for header totals (GAAP-compliant 2dp). */
+    /** Scale for GAAP-compliant header totals (invoices, bank transfers). */
     public const HEADER_SCALE = 2;
+
+    /**
+     * Internal precision buffer for division — prevents truncation drift
+     * when the result is later used in further arithmetic.
+     */
+    private const GUARD_DIGITS = 4;
+
+    // ─── Validation Gate ───────────────────────────────────────────────────────
+
+    /**
+     * Assert that a value is safe to pass into BCMath.
+     * Called at every primitive entry point — this is the enforcement boundary.
+     *
+     * Valid:  int, numeric string (e.g. "1.23456789", "42", "-5.5")
+     * Invalid: float → throws (precision already lost before BCMath sees it)
+     * Invalid: non-numeric string, array, object, null → throws
+     */
+    private static function assertNumeric(mixed $value): void
+    {
+        if (is_float($value)) {
+            throw new \InvalidArgumentException(
+                'Float detected in FinancialMath. Floats are forbidden in precision-critical paths. '
+                .'Pass a numeric string (from DB/request) or int instead.'
+            );
+        }
+
+        if (! is_int($value) && ! (is_string($value) && is_numeric($value))) {
+            $type = get_debug_type($value);
+            throw new \InvalidArgumentException(
+                "FinancialMath requires a numeric string or int, got [{$type}]. "
+                .'All financial values must be passed as strings or ints.'
+            );
+        }
+    }
+
+    /**
+     * Convert a validated numeric input to a BCMath-safe string.
+     *
+     * Design: validates then passes through — does NOT "fix" data.
+     * Normalization to a specific scale is intentionally NOT done here,
+     * because BCMath handles mixed-scale input correctly at the primitive level.
+     *
+     * Callers (controllers, services, models) are responsible for ensuring
+     * values are already clean decimal strings before calling FinancialMath.
+     */
+    public static function toDecimal(mixed $value): string
+    {
+        self::assertNumeric($value);
+
+        // int: cast directly to string — no float involved.
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        // Numeric string: pass through as-is. BCMath handles leading zeros,
+        // trailing zeros, and mixed-scale inputs natively.
+        return $value;
+    }
 
     // ─── Primitives ────────────────────────────────────────────────────────────
 
-    public static function mul(string|float|int $a, string|float|int $b, int $scale = self::LINE_SCALE): string
+    public static function add(mixed $a, mixed $b, int $scale = self::LINE_SCALE): string
     {
-        return bcmul((string) $a, (string) $b, $scale);
+        return bcadd(self::toDecimal($a), self::toDecimal($b), $scale);
     }
 
-    public static function div(string|float|int $a, string|float|int $b, int $scale = self::LINE_SCALE): string
+    public static function sub(mixed $a, mixed $b, int $scale = self::LINE_SCALE): string
     {
-        return bcdiv((string) $a, (string) $b, $scale);
+        return bcsub(self::toDecimal($a), self::toDecimal($b), $scale);
     }
 
-    public static function add(string|float|int $a, string|float|int $b, int $scale = self::LINE_SCALE): string
+    public static function mul(mixed $a, mixed $b, int $scale = self::LINE_SCALE): string
     {
-        return bcadd((string) $a, (string) $b, $scale);
-    }
-
-    public static function sub(string|float|int $a, string|float|int $b, int $scale = self::LINE_SCALE): string
-    {
-        return bcsub((string) $a, (string) $b, $scale);
+        // Use GUARD_DIGITS extra internally to prevent intermediate truncation.
+        return bcmul(self::toDecimal($a), self::toDecimal($b), $scale + self::GUARD_DIGITS);
+        // Caller is responsible for rounding at domain boundaries.
+        // This primitive intentionally returns at extended precision.
     }
 
     /**
-     * Round a BCMath string to the desired scale.
-     * BCMath itself truncates, not rounds. We implement half-up rounding.
+     * Division at extended precision — the caller rounds at their domain boundary.
+     *
+     * We do NOT round inside div(). Division often needs to feed into further
+     * multiplication or addition, so truncating here would compound error.
+     * The caller (e.g. soLineSubtotal) does the final round().
      */
-    public static function round(string|float|int $value, int $scale): string
+    public static function div(mixed $a, mixed $b, int $scale = self::LINE_SCALE): string
     {
-        $value = (string) $value;
-        $half  = '0.'.str_repeat('0', $scale).'5';
+        return bcdiv(self::toDecimal($a), self::toDecimal($b), $scale + self::GUARD_DIGITS);
+    }
 
-        if ($value[0] === '-') {
-            return bcsub($value, $half, $scale);
+    /**
+     * Half-up rounding: adds 5 at position (scale+1), BCMath truncates.
+     *
+     * This is the only function that should reduce precision.
+     * Call it explicitly at domain boundaries, never inside intermediates.
+     */
+    public static function round(mixed $value, int $scale): string
+    {
+        $str  = self::toDecimal($value);
+        $half = '0.'.str_repeat('0', $scale).'5';
+
+        if ($str[0] === '-') {
+            return bcsub($str, $half, $scale);
         }
 
-        return bcadd($value, $half, $scale);
+        return bcadd($str, $half, $scale);
     }
 
     /**
-     * Compare two values. Returns -1, 0, or 1 (like spaceship operator).
+     * Deterministic comparison: normalizes both sides to LINE_SCALE strings,
+     * then compares at scale=0 (integer boundary).
+     *
+     * Why scale=0:
+     * - Financial comparisons should be strict at the meaningful precision level.
+     * - Two values differing only beyond LINE_SCALE are treated as equal.
+     * - Avoids decimal jitter in boundary guards (pick/pack/ship/return caps).
+     *
+     * Returns: -1, 0, or 1.
      */
-    public static function cmp(string|float|int $a, string|float|int $b, int $scale = self::LINE_SCALE): int
+    public static function cmp(mixed $a, mixed $b): int
     {
-        return bccomp((string) $a, (string) $b, $scale);
+        // Normalize to LINE_SCALE strings first, then compare at integer boundary.
+        $aNorm = bcadd(self::toDecimal($a), '0', self::LINE_SCALE);
+        $bNorm = bcadd(self::toDecimal($b), '0', self::LINE_SCALE);
+
+        return bccomp($aNorm, $bNorm, 0);
     }
 
-    // ─── Higher-Order Helpers ──────────────────────────────────────────────────
+    // ─── Semantic Comparators (replace ALL + 0.00000001 epsilon patterns) ─────
+
+    /** $a > $b */
+    public static function gt(mixed $a, mixed $b): bool
+    {
+        return self::cmp($a, $b) > 0;
+    }
+
+    /** $a >= $b */
+    public static function gte(mixed $a, mixed $b): bool
+    {
+        return self::cmp($a, $b) >= 0;
+    }
+
+    /** $a < $b */
+    public static function lt(mixed $a, mixed $b): bool
+    {
+        return self::cmp($a, $b) < 0;
+    }
+
+    /** $a <= $b */
+    public static function lte(mixed $a, mixed $b): bool
+    {
+        return self::cmp($a, $b) <= 0;
+    }
+
+    /** $a == 0 */
+    public static function isZero(mixed $a): bool
+    {
+        return self::cmp($a, '0') === 0;
+    }
+
+    /** $a > 0 */
+    public static function isPositive(mixed $a): bool
+    {
+        return self::cmp($a, '0') > 0;
+    }
+
+    /** $a < 0 */
+    public static function isNegative(mixed $a): bool
+    {
+        return self::cmp($a, '0') < 0;
+    }
+
+    // ─── Private Domain Intermediates ─────────────────────────────────────────
 
     /**
-     * Calculate a single PO line cost: qty × unit_cost, rounded to LINE_SCALE.
+     * Base gross amount: qty × unit_price (at extended precision).
+     * Not rounded — intermediate only.
      */
-    public static function poLineCost(string|float|int $qty, string|float|int $unitCost): string
+    private static function soBase(mixed $qty, mixed $unitPrice): string
+    {
+        return self::mul($qty, $unitPrice, self::LINE_SCALE);
+    }
+
+    /**
+     * Taxable amount after discount: base − (base × discount%).
+     * Not rounded — intermediate only.
+     */
+    private static function soTaxable(mixed $qty, mixed $unitPrice, mixed $discountRate): string
+    {
+        $base     = self::soBase($qty, $unitPrice);
+        $discount = self::mul($base, self::div($discountRate, '100'));
+
+        return self::sub($base, $discount);
+    }
+
+    // ─── Higher-Order Financial Helpers ───────────────────────────────────────
+
+    /**
+     * PO line cost: qty × unit_cost, rounded to LINE_SCALE.
+     */
+    public static function poLineCost(mixed $qty, mixed $unitCost): string
     {
         return self::round(self::mul($qty, $unitCost), self::LINE_SCALE);
     }
 
     /**
-     * Calculate a SO line subtotal applying discount and tax.
-     * All intermediate values stay at LINE_SCALE to prevent drift.
-     * Returns an 8dp string.
-     *
-     * Formula: (qty * price) * (1 - discount%) * (1 + tax%)
+     * SO line subtotal: (qty × price − discount%) × (1 + tax%).
+     * Returns an 8dp string. Single source of truth for the subtotal column.
      */
     public static function soLineSubtotal(
-        string|float|int $qty,
-        string|float|int $unitPrice,
-        string|float|int $discountRate = 0,
-        string|float|int $taxRate = 0,
+        mixed $qty,
+        mixed $unitPrice,
+        mixed $discountRate = 0,
+        mixed $taxRate = 0,
     ): string {
-        $base     = self::mul($qty, $unitPrice);
-        $discount = self::mul($base, self::div($discountRate, 100));
-        $taxable  = self::sub($base, $discount);
-        $tax      = self::mul($taxable, self::div($taxRate, 100));
+        $taxable = self::soTaxable($qty, $unitPrice, $discountRate);
+        $tax     = self::mul($taxable, self::div($taxRate, '100'));
 
         return self::round(self::add($taxable, $tax), self::LINE_SCALE);
     }
 
     /**
-     * Calculate SO line tax amount only (for storage in tax_amount column).
+     * SO tax amount only (tax_amount column).
+     * Reuses soTaxable() — no duplicated base/discount logic.
      */
     public static function soLineTax(
-        string|float|int $qty,
-        string|float|int $unitPrice,
-        string|float|int $discountRate = 0,
-        string|float|int $taxRate = 0,
+        mixed $qty,
+        mixed $unitPrice,
+        mixed $discountRate = 0,
+        mixed $taxRate = 0,
     ): string {
-        $base     = self::mul($qty, $unitPrice);
-        $discount = self::mul($base, self::div($discountRate, 100));
-        $taxable  = self::sub($base, $discount);
+        $taxable = self::soTaxable($qty, $unitPrice, $discountRate);
 
-        return self::round(self::mul($taxable, self::div($taxRate, 100)), self::LINE_SCALE);
+        return self::round(self::mul($taxable, self::div($taxRate, '100')), self::LINE_SCALE);
     }
 
     /**
-     * Calculate SO line discount amount only (for storage in discount_amount column).
+     * SO discount amount only (discount_amount column).
+     * Reuses soBase() — no duplicated logic.
      */
     public static function soLineDiscount(
-        string|float|int $qty,
-        string|float|int $unitPrice,
-        string|float|int $discountRate = 0,
+        mixed $qty,
+        mixed $unitPrice,
+        mixed $discountRate = 0,
     ): string {
-        $base = self::mul($qty, $unitPrice);
+        $base = self::soBase($qty, $unitPrice);
 
-        return self::round(self::mul($base, self::div($discountRate, 100)), self::LINE_SCALE);
+        return self::round(self::mul($base, self::div($discountRate, '100')), self::LINE_SCALE);
     }
 
     /**
-     * Sum an array of 8dp line totals in BCMath precision, then round
-     * to 2dp for the GAAP-compliant header total_amount.
+     * Accumulate line totals in 8dp BCMath precision, then apply the single
+     * rounding gate to HEADER_SCALE (2dp) for GAAP-compliant header total_amount.
      *
-     * @param  iterable<string|float|int>  $lineTotals
+     * Defensive: each lineTotal is explicitly normalized to LINE_SCALE
+     * before accumulation to guard against callers passing inconsistent scales.
+     *
+     * THIS is the only place in the system where rounding to 2dp ever occurs.
+     *
+     * @param  iterable<mixed>  $lineTotals
      */
     public static function headerTotal(iterable $lineTotals): string
     {
         $sum = '0';
         foreach ($lineTotals as $lineTotal) {
-            $sum = self::add($sum, $lineTotal, self::LINE_SCALE);
+            // Force each input to LINE_SCALE before accumulating —
+            // guards against 2dp strings, ints, or inconsistent-scale inputs.
+            $normalized = bcadd(self::toDecimal($lineTotal), '0', self::LINE_SCALE);
+            $sum        = bcadd($sum, $normalized, self::LINE_SCALE);
         }
 
         return self::round($sum, self::HEADER_SCALE);

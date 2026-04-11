@@ -4,6 +4,7 @@ namespace App\Services\Inventory;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use App\Models\Inventory;
 use App\Models\Location;
@@ -22,7 +23,7 @@ class StockService
 {
     use ManagesCostLayers;
 
-    private const QTY_EPSILON = 0.00000001;
+    // QTY_EPSILON removed — FinancialMath::isPositive() / gt() / lte() replace all epsilon guards.
 
     public const TYPE_SALES_RETURN = 'SRET';
 
@@ -76,8 +77,8 @@ class StockService
                     $this->applyLineToInventory($line, [
                         'product_id' => $line->product_id,
                         'location_id' => $line->location_id,
-                        'quantity' => (float) $line->quantity,
-                        'unit_cost' => (float) $line->unit_cost,
+                        'quantity' => (string) $line->quantity,
+                        'unit_cost' => (string) ($line->unit_cost ?? '0'),
                     ]);
                 }
             }
@@ -304,8 +305,8 @@ class StockService
                     return [
                         'product_id' => $line->product_id,
                         'location_id' => $line->location_id,
-                        'quantity' => -((float) $line->quantity),
-                        'unit_cost' => (float) $line->unit_cost,
+                        'quantity' => '-'.ltrim((string) $line->quantity, '-'), // negate safely
+                        'unit_cost' => (string) $line->unit_cost,
                         'uom_id' => $line->uom_id,
                     ];
                 })->toArray(),
@@ -330,7 +331,6 @@ class StockService
     // -------------------------------------------------------------------------
     private function applyLineToInventory(TransactionLine $line, array $lineData): void
     {
-        // Optimized Locking: find or create, THEN lock in one sweep
         $inventory = Inventory::where('product_id', $lineData['product_id'])
             ->where('location_id', $lineData['location_id'])
             ->lockForUpdate()
@@ -343,57 +343,60 @@ class StockService
                 'quantity_on_hand' => 0,
                 'average_cost' => 0,
             ]);
-            // Re-fetch model with lock AFTER creation
             $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
         }
 
-        $qtyMove = (float) $lineData['quantity'];
-        $isReceipt = $qtyMove > 0;
+        // Normalize quantity — must be a string for FinancialMath.
+        $qtyMove  = (string) $lineData['quantity'];
+        $unitCost = (string) ($lineData['unit_cost'] ?? '0');
+        $isReceipt = FinancialMath::isPositive($qtyMove);
 
-        // HIGH PRIORITY: Validating stock availability before any consumption logic begins.
-        // We now check against Unreserved Stock (QOH - Reserved) to ensure that manual
-        // issues or other transactions do not "steal" stock promised to a Sales Order.
-        $availableForIssue = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+        // Check unreserved availability before any consumption.
+        $availableForIssue = FinancialMath::sub(
+            (string) $inventory->quantity_on_hand,
+            (string) $inventory->reserved_qty
+        );
 
-        if (! $isReceipt && $availableForIssue < (abs($qtyMove) - self::QTY_EPSILON)) {
+        if (! $isReceipt && FinancialMath::lt($availableForIssue, FinancialMath::round(ltrim($qtyMove, '-'), FinancialMath::LINE_SCALE))) {
             throw new InsufficientStockException(
                 "Insufficient unreserved stock for product #{$lineData['product_id']}. "
-                .'Required: '.abs($qtyMove).", Available (Unreserved): {$availableForIssue}."
+                .'Required: '.ltrim($qtyMove, '-').", Available (Unreserved): {$availableForIssue}."
             );
         }
 
-        // Resolving the proper costing strategy for this specific product.
         $strategy = CostingStrategyFactory::resolve($inventory->product);
 
         if ($isReceipt) {
-            // Receipt Path: Strategy handles averaging math, layer creation, and leveling.
-            $strategy->onReceipt($inventory, $line, $qtyMove, (float) $lineData['unit_cost']);
+            $strategy->onReceipt($inventory, $line, $qtyMove, $unitCost);
 
-            // Increment physical stock
-            $inventory->quantity_on_hand += $qtyMove;
+            $inventory->quantity_on_hand = FinancialMath::add(
+                (string) $inventory->quantity_on_hand, $qtyMove
+            );
             $inventory->save();
 
-            // Refresh global cost after the location row is saved
             $this->updateProductGlobalAverageCost($inventory->product);
 
-            // Ensure the transaction line records the final receipt value
-            $line->unit_cost = round((float) $lineData['unit_cost'], 8);
-            $line->total_cost = round($qtyMove * (float) $lineData['unit_cost'], 8);
+            $line->unit_cost  = $unitCost;
+            $line->total_cost = FinancialMath::round(
+                FinancialMath::mul($qtyMove, $unitCost),
+                FinancialMath::LINE_SCALE
+            );
             $line->save();
         } else {
-            // Issue Path: Strategy handles valuation for the issue (FIFO/LIFO/Average).
-            $unitCost = $strategy->onIssue($inventory, abs($qtyMove));
+            $unitCost = $strategy->onIssue($inventory, ltrim($qtyMove, '-'));
 
-            // Decrement physical stock
-            $inventory->quantity_on_hand += $qtyMove; // $qtyMove is negative
+            $inventory->quantity_on_hand = FinancialMath::add(
+                (string) $inventory->quantity_on_hand, $qtyMove // $qtyMove is negative string
+            );
             $inventory->save();
 
-            // Refresh global cost after the location row is saved
             $this->updateProductGlobalAverageCost($inventory->product);
 
-            // Record the issue value and total COGS
-            $line->unit_cost = round($unitCost, 8);
-            $line->total_cost = round($unitCost * abs($qtyMove), 8);
+            $line->unit_cost  = $unitCost;
+            $line->total_cost = FinancialMath::round(
+                FinancialMath::mul($unitCost, ltrim($qtyMove, '-')),
+                FinancialMath::LINE_SCALE
+            );
             $line->save();
         }
     }
@@ -418,8 +421,12 @@ class StockService
             ->selectRaw('SUM(quantity_on_hand * average_cost) as total_value, SUM(quantity_on_hand) as total_qty')
             ->first();
 
-        if ($stats && (float) $stats->total_qty > 0) {
-            $newAvg = round((float) $stats->total_value / (float) $stats->total_qty, 8);
+        // selectRaw SUM() returns a numeric string from MySQL — safe for FinancialMath.
+        if ($stats && FinancialMath::isPositive((string) ($stats->total_qty ?? '0'))) {
+            $newAvg = FinancialMath::round(
+                FinancialMath::div((string) $stats->total_value, (string) $stats->total_qty),
+                FinancialMath::LINE_SCALE
+            );
             $product->update(['average_cost' => $newAvg]);
         }
     }
@@ -444,10 +451,18 @@ class StockService
                 throw new UomConversionException($e->getMessage());
             }
 
-            // Apply high-precision conversion (matching DB decimal 18,8)
-            $lineData['quantity'] = round($lineData['quantity'] * $factor, 8);
+            // Apply high-precision BCMath conversion — no float math.
+            $qtyStr  = (string) $lineData['quantity'];
+            $factor  = (string) UomHelper::getConversionFactor($fromId, $toId, $product->id);
+            $lineData['quantity'] = FinancialMath::round(
+                FinancialMath::mul($qtyStr, $factor),
+                FinancialMath::LINE_SCALE
+            );
             if (isset($lineData['unit_cost'])) {
-                $lineData['unit_cost'] = round($lineData['unit_cost'] / $factor, 8);
+                $lineData['unit_cost'] = FinancialMath::round(
+                    FinancialMath::div((string) $lineData['unit_cost'], $factor),
+                    FinancialMath::LINE_SCALE
+                );
             }
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Helpers\FinancialMath;
 use App\Models\UnitOfMeasure;
 use App\Models\UomConversion;
 use Illuminate\Support\Collection;
@@ -63,9 +64,9 @@ class UomHelper
     {
         $uom = self::getUom($uomId);
         $absQty = abs($quantity);
-        $isNegative = $quantity < -0.00000001;
+        $isNegative = $quantity < -0.00000001; // display only — float ok here
 
-        // Base case: If it's a whole number, just show it
+        // Base case: whole number check (display only — float epsilon ok here)
         if (abs($absQty - round($absQty)) < 0.00000001) {
             $res = round($absQty).' '.$uom->abbreviation;
 
@@ -100,7 +101,7 @@ class UomHelper
         }
 
         $multiplier = $conversion->conversion_factor;
-        $wholeUnits = floor($absQty + 0.00000001);
+        $wholeUnits = floor($absQty + 0.00000001); // display only — float epsilon ok here
         $remainder = $absQty - $wholeUnits;
         $smallerQty = $remainder * $multiplier;
 
@@ -167,21 +168,23 @@ class UomHelper
 
     /**
      * Calculate the multiplier to get from any UOM cleanly to its base unit.
+     * Returns a BCMath string — safe to pass directly into FinancialMath::mul/div.
      */
-    public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null, bool $throw = true): float
+    public static function getMultiplierToSmallest(?int $fromUomId, ?int $productId = null, bool $throw = true): string
     {
         if (! $fromUomId) {
-            return 1.0;
+            return '1';
         }
 
         self::ensureCacheLoaded();
         $uom = self::getUom($fromUomId);
         if (! $uom || $uom->is_base) {
-            return 1.0;
+            return '1';
         }
 
         if ($uom->category !== 'count') {
-            return (float) ($uom->conversion_factor_to_base ?? 1.0);
+            // conversion_factor_to_base comes from DB as string — pass directly to BCMath.
+            return (string) ($uom->conversion_factor_to_base ?? '1');
         }
 
         // Contextual Counting layer uses the Product-aware conversions table
@@ -196,11 +199,11 @@ class UomHelper
         }
 
         if ($bestConv) {
-            return (float) $bestConv->conversion_factor;
+            return (string) $bestConv->conversion_factor;
         }
 
         if (! $throw) {
-            return 1.0;
+            return '1';
         }
 
         throw ValidationException::withMessages([
@@ -226,23 +229,26 @@ class UomHelper
     }
 
     /**
-     * Get the conversion factor from one UOM to another by dividing their base multipliers.
+     * Get the conversion factor from one UOM to another.
+     * Returns a BCMath string — safe to pass directly into FinancialMath::mul/div
+     * in StockService::applyUomConversion() without any (float) cast.
      */
-    public static function getConversionFactor(int $fromId, int $toId, ?int $productId = null): float
+    public static function getConversionFactor(int $fromId, int $toId, ?int $productId = null): string
     {
         self::ensureCacheLoaded();
 
         $fromBase = self::getSmallestUnitId($fromId, $productId);
-        $toBase = self::getSmallestUnitId($toId, $productId);
+        $toBase   = self::getSmallestUnitId($toId, $productId);
 
         if ($fromBase !== $toBase) {
             throw new \Exception("No conversion defined between UOM #{$fromId} and #{$toId} (different base units: {$fromBase} vs {$toBase}).");
         }
 
         $fromMult = self::getMultiplierToSmallest($fromId, $productId);
-        $toMult = self::getMultiplierToSmallest($toId, $productId);
+        $toMult   = self::getMultiplierToSmallest($toId, $productId);
 
-        return $fromMult / $toMult;
+        // BCMath division — no float arithmetic.
+        return FinancialMath::div($fromMult, $toMult, FinancialMath::LINE_SCALE);
     }
 
     private static function getUom(int $id): ?UnitOfMeasure
