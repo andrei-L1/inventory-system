@@ -634,7 +634,7 @@ class PurchaseOrderController extends Controller
                     'total_amount' => 0,
                 ]);
 
-                $totalAmount = 0.0;
+                $totalAmount = '0';
                 foreach ($vendorSuggestions as $suggestion) {
                     /** @var ReplenishmentSuggestion $suggestion */
                     // Try to get the last unit cost from cost layers (actual procurement cost)
@@ -643,18 +643,19 @@ class PurchaseOrderController extends Controller
                         ->value('unit_cost');
 
                     $unitCost = $lastCost
-                        ?? ($suggestion->product->average_cost > 0 ? $suggestion->product->average_cost : null)
-                        ?? ($suggestion->product->selling_price * 0.6); // Fallback estimate
+                        ?? (FinancialMath::isPositive((string) $suggestion->product->average_cost) ? (string) $suggestion->product->average_cost : null)
+                        ?? FinancialMath::mul((string) $suggestion->product->selling_price, '0.6'); // Fallback estimate
 
-                    $lineCost = round($suggestion->suggested_qty * $unitCost, 8);
-                    $totalAmount += $lineCost;
+                    $suggestedQtyStr = (string) $suggestion->suggested_qty;
+                    $lineCost = FinancialMath::round(FinancialMath::mul($suggestedQtyStr, (string) $unitCost), FinancialMath::LINE_SCALE);
+                    $totalAmount = FinancialMath::add($totalAmount, $lineCost);
 
                     $po->lines()->create([
                         'product_id' => $suggestion->product_id,
                         'uom_id' => $suggestion->product->uom_id,
-                        'ordered_qty' => round($suggestion->suggested_qty, 8),
+                        'ordered_qty' => FinancialMath::round($suggestedQtyStr, FinancialMath::LINE_SCALE),
                         'received_qty' => 0,
-                        'unit_cost' => round($unitCost, 8),
+                        'unit_cost' => FinancialMath::round((string) $unitCost, FinancialMath::LINE_SCALE),
                     ]);
 
                     // Link and update suggestion
@@ -664,7 +665,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                $po->update(['total_amount' => round($totalAmount, 8)]);
+                $po->update(['total_amount' => $totalAmount]);
                 $posCreated[] = $po->po_number;
             }
         });
