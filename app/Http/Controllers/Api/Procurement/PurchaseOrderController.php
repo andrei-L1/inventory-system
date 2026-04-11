@@ -507,11 +507,13 @@ class PurchaseOrderController extends Controller
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
-                    $poLine->received_qty = max(0, (float) $poLine->received_qty - $qtyToUpdatePO);
-                    $poLine->returned_qty = (float) $poLine->returned_qty + $qtyToUpdatePO;
+                    $newReceived = FinancialMath::sub((string) $poLine->received_qty, (string) $qtyToUpdatePO);
+                    $poLine->received_qty = FinancialMath::isNegative($newReceived) ? '0' : $newReceived;
+                    $poLine->returned_qty = FinancialMath::add((string) $poLine->returned_qty, (string) $qtyToUpdatePO);
 
                     if ($item['resolution'] === 'credit') {
-                        $poLine->ordered_qty = max(0, (float) $poLine->ordered_qty - $qtyToUpdatePO);
+                        $newOrdered = FinancialMath::sub((string) $poLine->ordered_qty, (string) $qtyToUpdatePO);
+                        $poLine->ordered_qty = FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered;
                     }
 
                     $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');

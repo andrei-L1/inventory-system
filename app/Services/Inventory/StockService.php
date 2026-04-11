@@ -119,8 +119,9 @@ class StockService
                 $lineData = [
                     'product_id' => $line->product_id,
                     'location_id' => $line->location_id,
-                    'quantity' => (float) $line->quantity,
-                    'unit_cost' => (float) $line->unit_cost,
+                    // DB decimal:8 cast returns string — safe for FinancialMath directly.
+                    'quantity'   => (string) $line->quantity,
+                    'unit_cost'  => (string) ($line->unit_cost ?? '0'),
                 ];
                 $this->applyLineToInventory($line, $lineData);
             }
@@ -155,9 +156,13 @@ class StockService
                     'notes' => 'Transfer Out: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => collect($data['lines'])->map(function ($line) use ($data) {
+                    $qty = (string) $line['quantity'];
+                    // Negate the quantity string without (float) cast
+                    $negQty = FinancialMath::isNegative($qty) ? $qty : '-'.$qty;
+
                     return array_merge($line, [
                         'location_id' => $data['from_location_id'],
-                        'quantity' => -abs($line['quantity']),
+                        'quantity'    => $negQty,
                     ]);
                 })->toArray(),
             ];
@@ -175,12 +180,16 @@ class StockService
                     'notes' => 'Transfer In: '.($data['header']['notes'] ?? ''),
                 ]),
                 'lines' => $outgoing->lines->map(function ($outLine) use ($data) {
+                    $qty = (string) $outLine->quantity;
+                    // Strip leading minus to get the absolute (positive) inbound qty
+                    $absQty = ltrim($qty, '-');
+
                     return [
-                        'product_id' => $outLine->product_id,
+                        'product_id'  => $outLine->product_id,
                         'location_id' => $data['to_location_id'],
-                        'quantity' => abs($outLine->quantity),
-                        'unit_cost' => $outLine->unit_cost, // Preserve the COGS
-                        'uom_id' => $outLine->uom_id,
+                        'quantity'    => $absQty,
+                        'unit_cost'   => (string) $outLine->unit_cost, // Preserve COGS
+                        'uom_id'      => $outLine->uom_id,
                     ];
                 })->toArray(),
             ];

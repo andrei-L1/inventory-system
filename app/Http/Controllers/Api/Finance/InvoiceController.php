@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Finance;
 
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\SalesOrder;
@@ -62,17 +63,17 @@ class InvoiceController extends Controller
                     'type' => Invoice::TYPE_INVOICE,
                 ]);
 
-                $totalAmount = 0;
+                $totalAmount = '0';
                 foreach ($request->lines as $item) {
                     $soLine = SalesOrderLine::findOrFail($item['so_line_id']);
-                    $qty = (float) $item['quantity'];
+                    $qty = (string) $item['quantity'];
 
                     // Validation: cannot invoice more than was shipped?
                     // Actually, business rules vary, but usually you invoice what was shipped.
                     // For now, we'll allow it but maybe add a warning later.
 
-                    $subtotal = $qty * (float) $soLine->unit_price;
-                    $totalAmount += $subtotal;
+                    $subtotal = FinancialMath::round(FinancialMath::mul($qty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE);
+                    $totalAmount = FinancialMath::add($totalAmount, $subtotal);
 
                     $invoice->lines()->create([
                         'sales_order_line_id' => $soLine->id,
