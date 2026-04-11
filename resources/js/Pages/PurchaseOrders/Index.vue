@@ -9,8 +9,10 @@ import Tag from 'primevue/tag';
 import Button from 'primevue/button';
 import axios from 'axios';
 import { usePermissions } from '@/Composables/usePermissions';
+import { useToast } from "primevue/usetoast";
 
 const { can } = usePermissions();
+const toast = useToast();
 const purchaseOrders = ref([]);
 const suggestions = ref([]);
 const selectedSuggestions = ref([]);
@@ -97,6 +99,19 @@ const getStatusColor = (statusName) => {
         'cancelled': 'danger'
     };
     return map[statusName] || 'info';
+};
+
+const formatQuantity = (val) => {
+    if (!val) return '0';
+    return parseFloat(val).toString();
+};
+
+const formatReason = (reason) => {
+    if (!reason) return '';
+    // Removes trailing zeroes strictly from the number inside the parentheses
+    return reason.replace(/\(([\d.]+)\)/, (match, p1) => {
+        return `(${parseFloat(p1)})`;
+    });
 };
 </script>
 
@@ -286,19 +301,19 @@ const getStatusColor = (statusName) => {
 
                     <Column field="current_stock" header="CURRENT STOCK">
                         <template #body="{ data }">
-                            <span class="text-zinc-400 text-xs font-mono">{{ data.current_stock }} {{ data.product?.uom?.name }}</span>
+                            <span class="text-zinc-400 text-xs font-mono">{{ formatQuantity(data.current_stock) }} {{ data.product?.uom?.name }}</span>
                         </template>
                     </Column>
 
                     <Column field="suggested_qty" header="SUGGESTED ORDER">
                         <template #body="{ data }">
-                            <span class="text-orange-400 text-xs font-bold font-mono">{{ data.suggested_qty }} {{ data.product?.uom?.name }}</span>
+                            <span class="text-orange-400 text-xs font-bold font-mono">{{ formatQuantity(data.suggested_qty) }} {{ data.product?.uom?.name }}</span>
                         </template>
                     </Column>
 
                     <Column field="reason" header="REASON">
                         <template #body="{ data }">
-                            <span class="text-[10px] text-zinc-500 font-medium italic">{{ data.reason }}</span>
+                            <span class="text-[10px] text-zinc-500 font-medium italic">{{ formatReason(data.reason) }}</span>
                         </template>
                     </Column>
                 </DataTable>
