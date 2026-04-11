@@ -84,18 +84,22 @@ class SalesOrderReturnController extends Controller
 
                     $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $returnedQty);
                     $soLine->shipped_qty  = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
+                    $newPacked = FinancialMath::sub((string) $soLine->packed_qty, $returnedQty);
                     $soLine->packed_qty   = FinancialMath::round(
-                        max('0', FinancialMath::sub((string) $soLine->packed_qty, $returnedQty)),
+                        FinancialMath::isNegative($newPacked) ? '0' : $newPacked,
                         FinancialMath::LINE_SCALE
                     );
+
+                    $newPicked = FinancialMath::sub((string) $soLine->picked_qty, $returnedQty);
                     $soLine->picked_qty   = FinancialMath::round(
-                        max('0', FinancialMath::sub((string) $soLine->picked_qty, $returnedQty)),
+                        FinancialMath::isNegative($newPicked) ? '0' : $newPicked,
                         FinancialMath::LINE_SCALE
                     );
 
                     if ($item['resolution'] === 'refund') {
+                        $newOrdered = FinancialMath::sub((string) $soLine->ordered_qty, $returnedQty);
                         $soLine->ordered_qty = FinancialMath::round(
-                            max('0', FinancialMath::sub((string) $soLine->ordered_qty, $returnedQty)),
+                            FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered,
                             FinancialMath::LINE_SCALE
                         );
 
