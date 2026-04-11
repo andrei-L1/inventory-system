@@ -58,12 +58,14 @@ While invoices and payments are rounded to 2 decimals (₱10.50), the "Internal 
 
 ## 5. UI & Display Rules
 
-To keep the system user-friendly, we "mask" the precision in the interface:
-1.  **Money**: Always displayed as 2 decimals (e.g., ₱10.50) using `Intl.NumberFormat`.
-2.  **Quantities**: 
-    *   **Discrete (Pieces)**: Shown as whole numbers.
-    *   **Continuous (Kilograms/Liters)**: Shown as up to 4 decimals in most views.
-3.  **The Master View**: The **Inventory Center** exposes the full average cost to ensure transparency for managers.
+To maintain professional financial standards while preserving mathematical integrity, we use a **Layered Display Strategy**:
+
+1.  **Grand Totals & Headers (2DP)**: Always displayed as 2 decimal places to comply with GAAP and standard currency (PHP ₱) formatting. These are calculated on the backend and emitted via `formatted_` accessors (e.g., `formatted_total_amount`).
+2.  **Line Item Unit Costs (8DP)**: Exposes the full resolution in the grid to allow managers to see exact average costs (e.g., `₱10,016.66666667 / pcs`).
+3.  **Quantities**: 
+    *   **Discrete (Pieces)**: Shown as whole numbers via `formatted_` strings.
+    *   **Continuous (Kg/Liters)**: Shown with up to 4-8 decimals depending on the UOM context.
+4.  **Tilde (~) Marker**: Used when a unit cost is an average that has been rounded for display, signaling to the user that internal math is more precise than visual presentation.
 
 ---
 
@@ -128,3 +130,22 @@ To ensure absolute audit integrity, our system prioritizes **Ledger Truth** over
 *   **Ledger Truth (The Total)**: The "Total Value" displayed always reflects the hard assets in the database (₱120,200.00).
 *   **Visual Cues**: To signal that unit costs are averages, we use the **Tilde (~)** prefix (e.g., `~ ₱10,016.67 / pcs`).
 *   **Precision Hygiene**: We never use the rounded display price for internal accounting; we always use the the high-resolution 8-decimal string stored in the ledger.
+
+---
+
+## 9. Frontend/Backend Handshake (The String Contract)
+
+To ensure that floating-point errors never "bleed" into the system from the user interface, we enforce a strict data contract between the API and the Vue components.
+
+### 9.1 Backend Emission
+The backend (Laravel Resources) acts as the **Precision Authority**. It emits two types of numeric data:
+- **Raw Strings**: The absolute 8-decimal value from the database (e.g., `"125.50000000"`).
+- **Formatted Strings**: Pre-rounded, human-readable values (e.g., `"125.50"` or `"~ 125.50"`).
+
+### 9.2 Frontend Reception
+The frontend (Vue 3) follows the **Explicit Casting** protocol:
+- **Direct Display**: Always prefers the backend's `formatted_` fields to avoid frontend-side rounding drift.
+- **Visual Arithmetic**: When the frontend must perform real-time math (e.g., subtotaling a draft order), it explicitly casts backend strings using `Number()` at the moment of calculation.
+- **Form Submission**: Native `InputNumber` components handle high-precision decimals (up to 8 places), and the resulting values are sent back to the API as clean numbers/strings for the `FinancialMath` engine to process.
+
+> **Zero-Float Boundary**: Native JavaScript floating-point arithmetic is restricted to "Display-Only" logic. No critical warehouse status (e.g., "Is the order fully picked?") is ever determined by frontend float comparisons.

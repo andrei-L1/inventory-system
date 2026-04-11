@@ -95,25 +95,24 @@ When an "Issue" (Outbound) occurs:
 
 ---
 
-## 5. Atomic Storage Model (The Piece Ledger)
+## 5. High-Precision Storage Model (The 8-Decimal Ledger)
 
-To maintain 100% mathematical integrity and eliminate rounding errors common in traditional ERP systems, this system uses an **Atomic Storage** model.
+To maintain 100% mathematical integrity and eliminate rounding errors common in traditional ERP systems, this system uses a **High-Precision Decimal** model.
 
-### A. The "Piece" Standard
-- All inventory quantities in the database (`inventories`, `inventory_cost_layers`, `transaction_lines`) are stored as **raw integers** representing the absolute smallest unit (e.g., "Pieces").
-- Even if a user transacts in "Boxes", "Cases", or "Pallets", the `StockService` calculates the equivalent "Pieces" using the UOM conversion tree before writing to the database.
+### A. The 8-Decimal Standard
+- All inventory quantities and financial values in the database (`inventories`, `inventory_cost_layers`, `transaction_lines`) are stored using `decimal(18, 8)`.
+- This ensures that even for extremely small fractional units (e.g., grams, milliliters), the system maintains a resolution sharp enough that rounding errors do not accumulate into financial discrepancies.
 
-### B. Scaled Display Logic
-Because users rarely want to see "4800 Pieces" when they actually have "200 Boxes", the system uses **Display Scaling**:
-- Models (`Product` and `Inventory`) use `scaled_` attributes (e.g., `$inventory->scaled_quantity_on_hand`) to convert raw integers back into the product's preferred unit for the UI.
-- Calculation: `Raw Pieces / (Multiplier to Smallest) = Scaled Quantity`.
+### B. Display Scaling & Business Logic
+The system maintains a rigid separation between **Commercial Units** and **Ledger Reality**:
+- **Ledger Reality**: The database always stores values in the "Base Unit" (Pieces, Grams) at 8-decimal precision.
+- **Commercial Units**: Orders and Invoices allow users to transact in larger units (Boxes, Pallets). The `UomHelper` bridges these layers by scaling the input quantity into the 8-decimal base ledger before any arithmetic occurs.
 
 ### C. Contextual Scaling (Product-Aware Rules)
 To support diverse packaging across the catalog, the UOM engine is **Context-Aware**:
 - **Rule Prioritization**: Lookups prioritize product-specific rules (e.g., "Box of 12" for SKU-A) over global defaults (e.g., "Box of 24" as a system-wide standard).
-- **Isolation**: This allows generic unit names like "Box" or "Carton" to coexist with different mathematical values for different products without data contamination.
-- **Backend Enforcement**: Controllers for Sales, Procurement, and Logistics strictly inject the `product_id` context into all scaling operations to ensure ledger integrity.
+- **Isolation**: This allows generic unit names like "Box" to coexist with different mathematical values for different products without data contamination.
 
-### D. Financial Precision
-- **Atomic Costing**: Unit costs are similarly normalized. If a Box of 10 costs $100, the ledger records a unit cost of $10 per "Piece".
-- **Zero-Loss Reversals**: By using integers for the base ledger, the system avoids floating-point drift, ensuring that reversing a "Box" movement always returns exactly the same "Piece" count to the shelves.
+### D. Financial Precision & The "No Float" Rule
+- **Zero-Float Boundary**: The system enforces a strict "No Float" rule. All arithmetic is performed using PHP's `BCMath` extension via the `FinancialMath` helper.
+- **String Handshake**: Frontend and Backend communicate using high-precision numeric strings. Frontend components explicitly cast these strings to `Number()` only for visual arithmetic or comparison, ensuring that data never "silently" rounds before it reaches the ledger.
