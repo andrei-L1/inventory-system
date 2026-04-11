@@ -252,7 +252,7 @@
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">Line Subtotal:</span>
                                                     <span class="text-[11px] font-mono font-black text-white">
-                                                        ₱ {{ ((parseFloat(line.quantity) || 0) * (parseFloat(line.unit_cost) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}
+                                                        ₱ {{ ((Number(line.quantity) || 0) * (Number(line.unit_cost) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -356,7 +356,7 @@ const getFactorToBase = (uomId, productId = null) => {
             rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
         }
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -400,7 +400,7 @@ const getConversionDetails = (uomId, productId) => {
 const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product?.id);
-    const scaled = (parseFloat(rawPieces) / factor);
+    const scaled = (Number(rawPieces) / factor);
     
     return isUomIdDiscrete(line.uom_id) 
         ? Math.floor(scaled + 0.0001).toLocaleString() 
@@ -462,8 +462,8 @@ const submitForm = async () => {
                 product_id: line.product?.id,
                 location_id: form.to_location?.id,
                 uom_id: line.uom_id,
-                quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.unit_cost)
+                quantity: Number(line.quantity),
+                unit_cost: Number(line.unit_cost)
             }))
         };
         
@@ -483,7 +483,7 @@ const onProductSelect = async (line) => {
     if (product) {
         line.uom_id = product.uom_id;
         line.prev_uom_id = product.uom_id;
-        line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        line.unit_cost = Number(product.average_cost) > 0 ? Number(product.average_cost) : Number(product.selling_price);
         
         // Fetch inventory breakdown immediately
         try {
@@ -504,7 +504,7 @@ const onUomChange = (line) => {
 
     // CASE A: Cost is ZERO - Suggest base cost scaled to this UOM
     if (!line.unit_cost || line.unit_cost == 0) {
-        const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        const baseCost = Number(product.average_cost) > 0 ? Number(product.average_cost) : Number(product.selling_price);
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
             line.unit_cost = baseCost * effectiveFactor;

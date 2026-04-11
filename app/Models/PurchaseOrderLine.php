@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -55,9 +56,9 @@ class PurchaseOrderLine extends Model
     /**
      * Get the remaining quantity to be received.
      */
-    public function getRemainingQtyAttribute(): float
+    public function getRemainingQtyAttribute(): string
     {
-        return max(0, (float) $this->ordered_qty - (float) $this->received_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty));
     }
 
     public function getFormattedOrderedQtyAttribute(): string
@@ -84,6 +85,6 @@ class PurchaseOrderLine extends Model
     {
         $currency = $this->purchaseOrder->currency ?? 'USD';
 
-        return $currency.' '.number_format($this->unit_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $currency.' '.FinancialMath::format($this->unit_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

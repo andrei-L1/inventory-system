@@ -47,7 +47,7 @@ const getFactorToBase = (uomId, productId = null) => {
         }
         
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -94,7 +94,7 @@ const onProductSelect = (line) => {
         line.prev_uom_id = product.uom_id;
         // Only suggest cost if current cost is zero or unset
         if (!line.unit_cost || line.unit_cost == 0) {
-            line.unit_cost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+            line.unit_cost = Number(product.average_cost) > 0 ? Number(product.average_cost) : Number(product.selling_price);
         }
     }
 };
@@ -149,7 +149,7 @@ const onUomChange = (line) => {
     
     // CASE A: Cost is ZERO - Suggest the corresponding cost for this UOM based on the Product's base Average Cost
     if (!line.unit_cost || line.unit_cost == 0) {
-        const baseCost = product.average_cost > 0 ? product.average_cost : product.selling_price;
+        const baseCost = Number(product.average_cost) > 0 ? Number(product.average_cost) : Number(product.selling_price);
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
             line.unit_cost = baseCost * effectiveFactor;
@@ -207,7 +207,7 @@ const removeLine = (index) => {
 
 const grandTotal = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        return sum + (line.ordered_qty * line.unit_cost);
+        return sum + (Number(line.ordered_qty) * Number(line.unit_cost));
     }, 0);
 });
 

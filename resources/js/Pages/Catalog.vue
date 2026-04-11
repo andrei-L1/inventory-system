@@ -202,12 +202,12 @@ const getFactorToBase = (uomId, productId = null) => {
     // Check product-specific rules first
     if (productId) {
         const prodRule = allConversions.value.find(c => c.product_id === productId && c.from_uom_id === uomId);
-        if (prodRule) return { factor: parseFloat(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
+        if (prodRule) return { factor: Number(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
     }
     
     // Check global rules
     const globalRule = allConversions.value.find(c => !c.product_id && c.from_uom_id === uomId);
-    if (globalRule) return { factor: parseFloat(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
+    if (globalRule) return { factor: Number(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
     
     return { factor: 1, baseId: uom.id };
 };
@@ -215,7 +215,7 @@ const getFactorToBase = (uomId, productId = null) => {
 const getScaledQty = (productObj, rawPieces) => {
     if (!productObj || rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(productObj.uom_id, productObj.id).factor;
-    const scaled = (parseFloat(rawPieces) / factor);
+    const scaled = (Number(rawPieces) / factor);
     return isUomIdDiscrete(productObj.uom_id) 
         ? Math.floor(scaled + 0.0001).toString() 
         : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
@@ -475,7 +475,7 @@ const deleteProduct = (p) => {
 };
 
 const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value || 0);
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(value) || 0);
 };
 
 const getStatusSeverity = (isActive) => isActive ? 'success' : 'secondary';
@@ -490,7 +490,7 @@ const goToInventory = (product) => {
 const stats = computed(() => ({
     total: products.value.length,
     active: products.value.filter(p => p.is_active).length,
-    totalValue: products.value.reduce((sum, p) => sum + (p.selling_price || 0), 0)
+    totalValue: products.value.reduce((sum, p) => sum + (Number(p.selling_price) || 0), 0)
 }));
 
 const isNonBaseUOMMissingRule = computed(() => {
@@ -683,14 +683,14 @@ const getBaseUomForSelected = computed(() => {
                             <div class="flex flex-col items-start gap-1" @click.stop>
                                 <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStock($event, data)">
                                     <div class="px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-sky-500/30">
-                                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
-                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="(data.total_qoh || 0) > (data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
+                                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="Number(data.total_qoh || 0) > Number(data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
+                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="Number(data.total_qoh || 0) > Number(data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
                                             {{ data.formatted_total_qoh }}
                                         </span>
                                     </div>
                                     <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-sky-500/50 transition-colors"></i>
                                 </div>
-                                <div v-if="(data.total_qoh || 0) <= (data.reorder_point || 0)" class="flex items-center gap-1">
+                                <div v-if="Number(data.total_qoh || 0) <= Number(data.reorder_point || 0)" class="flex items-center gap-1">
                                     <i class="pi pi-exclamation-triangle text-[8px] text-amber-600"></i>
                                     <span class="text-[8px] font-bold text-amber-600/80 uppercase tracking-tighter">Below Reorder Point</span>
                                 </div>

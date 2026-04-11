@@ -67,31 +67,31 @@ class Inventory extends Model
     /**
      * Get the scaled quantity on hand based on the product's UOM.
      */
-    public function getScaledQuantityOnHandAttribute(): float
+    public function getScaledQuantityOnHandAttribute(): string
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return $multiplier > 0 ? (float) $this->getRawOriginal('quantity_on_hand') / $multiplier : (float) $this->getRawOriginal('quantity_on_hand');
+        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div((string) $this->getRawOriginal('quantity_on_hand'), $multiplierStr) : (string) $this->getRawOriginal('quantity_on_hand');
     }
 
     /**
      * Get the scaled average cost based on the product's UOM.
      */
-    public function getScaledAverageCostAttribute(): float
+    public function getScaledAverageCostAttribute(): string
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return $multiplier > 0 ? (float) $this->getRawOriginal('average_cost') * $multiplier : (float) $this->getRawOriginal('average_cost');
+        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->getRawOriginal('average_cost'), $multiplierStr) : (string) $this->getRawOriginal('average_cost');
     }
 
     /**
      * Get the scaled reserved quantity based on the product's UOM.
      */
-    public function getScaledReservedQtyAttribute(): float
+    public function getScaledReservedQtyAttribute(): string
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return $multiplier > 0 ? (float) $this->getRawOriginal('reserved_qty') / $multiplier : (float) $this->getRawOriginal('reserved_qty');
+        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div((string) $this->getRawOriginal('reserved_qty'), $multiplierStr) : (string) $this->getRawOriginal('reserved_qty');
     }
 
     /**
@@ -115,7 +115,7 @@ class Inventory extends Model
      */
     public function getFormattedAvailableQtyAttribute(): string
     {
-        $availableRecord = $this->scaled_quantity_on_hand - $this->scaled_reserved_qty;
+        $availableRecord = \App\Helpers\FinancialMath::sub((string) $this->scaled_quantity_on_hand, (string) $this->scaled_reserved_qty);
 
         return UomHelper::format($availableRecord, $this->product->uom_id, $this->product_id, false);
     }
@@ -127,6 +127,6 @@ class Inventory extends Model
     {
         $symbol = '₱';
 
-        return $symbol.number_format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
+        return $symbol.\App\Helpers\FinancialMath::format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
     }
 }

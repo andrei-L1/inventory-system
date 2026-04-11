@@ -177,7 +177,7 @@
                                                 >
                                                     <template #value="slotProps">
                                                         <div v-if="slotProps.value" class="flex items-center gap-2">
-                                                            <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
+                                                            <span class="font-bold text-[11px] uppercase">{{ getUomAbbr(slotProps.value) }}</span>
                                                             <span 
                                                                 v-if="getConversionDetails(slotProps.value, line.product?.id)" 
                                                                 class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
@@ -289,7 +289,7 @@
             <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
                 <div class="text-[9px] font-black text-violet-500 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
                     <span>Stock Availability</span>
-                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
+                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
                 </div>
                 
                 <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
@@ -366,7 +366,7 @@ const getFactorToBase = (uomId, productId = null) => {
             rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
         }
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -459,10 +459,6 @@ const loadData = async () => {
     }
 };
 
-onMounted(() => {
-    loadData();
-});
-
 const form = useForm({
     from_location: null,
     to_location: null,
@@ -501,7 +497,7 @@ const getConversionDetails = (uomId, productId) => {
 const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product?.id);
-    const scaled = (parseFloat(rawPieces) / factor);
+    const scaled = (Number(rawPieces) / factor);
     
     return isUomIdDiscrete(line.uom_id) 
         ? Math.floor(scaled + 0.0001).toLocaleString() 
@@ -511,7 +507,7 @@ const getScaledQty = (line, rawPieces) => {
 const getLocalStock = (line) => {
     if (!line.inventories || !form.from_location) return 0;
     const inv = line.inventories.find(i => i.location_id === form.from_location.id);
-    return inv ? inv.quantity_on_hand : 0;
+    return Number(inv?.quantity_on_hand) || 0;
 };
 
 const getUomAbbr = (id) => {
@@ -521,16 +517,20 @@ const getUomAbbr = (id) => {
 
 const isInsufficient = (line) => {
     if (!line.product || !form.from_location) return false;
-    let qtyInBase = parseFloat(line.quantity) || 0;
+    let qtyInBase = Number(line.quantity) || 0;
     const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
     const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
     if (targetInfo.baseId === productBaseInfo.baseId) {
         const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-        qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+        qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
     }
     
     return qtyInBase > getLocalStock(line);
+};
+
+const onUomChange = (line) => {
+    // Optional scaling logic if needed
 };
 
 const submitForm = async () => {
@@ -545,14 +545,14 @@ const submitForm = async () => {
     for (const line of form.lines) {
         if (!line.product) continue;
 
-        let qtyInBase = parseFloat(line.quantity) || 0;
+        let qtyInBase = Number(line.quantity) || 0;
         
         const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
         const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+            qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
         } else {
             toast.add({ severity: 'error', summary: 'UOM Error', detail: `No conversion path from ${line.uom_id} to product base.`, life: 5000 });
             isSubmitting.value = false;
@@ -582,8 +582,8 @@ const submitForm = async () => {
             lines: form.lines.map(line => ({
                 product_id: line.product?.id,
                 uom_id: line.uom_id,
-                quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.product?.average_cost || 0)
+                quantity: Number(line.quantity),
+                unit_cost: Number(line.product?.average_cost || 0)
             }))
         };
         
@@ -613,5 +613,9 @@ const removeLine = (index) => {
     form.lines.splice(index, 1);
 };
 
-const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (Number(l.quantity) || 0), 0));
+
+onMounted(() => {
+    loadData();
+});
 </script>

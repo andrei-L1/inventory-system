@@ -59,7 +59,7 @@ const isQuotation = computed(() => so.value?.status?.name === 'quotation' || so.
 const canCancel = computed(() => so.value && !['shipped', 'cancelled', 'closed'].includes(so.value.status.name));
 
 const getTotalAvailable = (line) => {
-    return line.total_available_qty || 0;
+    return Number(line.total_available_qty || 0);
 };
 
 const getFormattedTotalAvailable = (line) => {
@@ -68,7 +68,8 @@ const getFormattedTotalAvailable = (line) => {
 
 const getAvailabilityStatus = (line) => {
     const total = getTotalAvailable(line);
-    if (total >= line.ordered_qty) return { severity: 'success', label: 'In Stock' };
+    const ordered = Number(line.ordered_qty);
+    if (total >= ordered) return { severity: 'success', label: 'In Stock' };
     if (total > 0) return { severity: 'warn', label: 'Limited' };
     return { severity: 'danger', label: 'Out of Stock' };
 };
@@ -190,14 +191,14 @@ const editOrder = () => {
 
 const openPickDialog = () => {
     pickForm.value.lines = so.value.lines
-        .filter(l => l.picked_qty < l.ordered_qty)
+        .filter(l => Number(l.picked_qty) < Number(l.ordered_qty))
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
-            ordered_qty: l.ordered_qty,
-            picked_qty: l.picked_qty, // already picked
-            to_pick: l.remaining_pick_qty, // from accessor
+            ordered_qty: Number(l.ordered_qty),
+            picked_qty: Number(l.picked_qty), // already picked
+            to_pick: Number(l.remaining_pick_qty), // from accessor
             uom: l.uom?.abbreviation
         }));
     pickDialog.value = true;
@@ -207,7 +208,7 @@ const submitPick = async () => {
     try {
         pickLoading.value = true;
         const payload = {
-            lines: pickForm.value.lines.filter(l => l.to_pick > 0).map(l => ({
+            lines: pickForm.value.lines.filter(l => Number(l.to_pick) > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 picked_qty: l.to_pick
             }))
@@ -229,14 +230,14 @@ const submitPick = async () => {
 
 const openPackDialog = () => {
     packForm.value.lines = so.value.lines
-        .filter(l => l.packed_qty < l.picked_qty)
+        .filter(l => Number(l.packed_qty) < Number(l.picked_qty))
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
-            picked_qty: l.picked_qty,
-            packed_qty: l.packed_qty,
-            to_pack: l.remaining_pack_qty,
+            picked_qty: Number(l.picked_qty),
+            packed_qty: Number(l.packed_qty),
+            to_pack: Number(l.remaining_pack_qty),
             uom: l.uom?.abbreviation
         }));
     packDialog.value = true;
@@ -246,7 +247,7 @@ const submitPack = async () => {
     try {
         packLoading.value = true;
         const payload = {
-            lines: packForm.value.lines.filter(l => l.to_pack > 0).map(l => ({
+            lines: packForm.value.lines.filter(l => Number(l.to_pack) > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 packed_qty: l.to_pack
             }))
@@ -268,14 +269,14 @@ const printVoucher = () => {
 
 const openShipDialog = () => {
     shipForm.value.lines = so.value.lines
-        .filter(l => l.shipped_qty < l.packed_qty)
+        .filter(l => Number(l.shipped_qty) < Number(l.packed_qty))
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
-            packed_qty: l.packed_qty,
-            shipped_qty: l.shipped_qty,
-            to_ship: l.remaining_ship_qty,
+            packed_qty: Number(l.packed_qty),
+            shipped_qty: Number(l.shipped_qty),
+            to_ship: Number(l.remaining_ship_qty),
             uom: l.uom?.abbreviation
         }));
     shipDialog.value = true;
@@ -292,7 +293,7 @@ const fulfill = async () => {
         const payload = {
             carrier: shipForm.value.carrier,
             tracking_number: shipForm.value.tracking_number,
-            lines: shipForm.value.lines.filter(l => l.to_ship > 0).map(l => ({
+            lines: shipForm.value.lines.filter(l => Number(l.to_ship) > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 shipped_qty: l.to_ship
             }))
@@ -310,13 +311,13 @@ const fulfill = async () => {
 
 const openReturnDialog = () => {
     returnForm.value.lines = so.value.lines
-        .filter(l => l.shipped_qty > 0)
+        .filter(l => Number(l.shipped_qty) > 0)
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
-            shipped_qty: l.shipped_qty,
-            returned_qty: l.returned_qty, // already returned
+            shipped_qty: Number(l.shipped_qty),
+            returned_qty: Number(l.returned_qty), // already returned
             to_return: 0,
             uom: l.uom?.abbreviation,
             resolution: 'replacement',
@@ -337,7 +338,7 @@ const submitReturn = async () => {
         const payload = {
             location_id: returnForm.value.location_id,
             notes: returnForm.value.notes,
-            lines: returnForm.value.lines.filter(l => l.to_return > 0).map(l => ({
+            lines: returnForm.value.lines.filter(l => Number(l.to_return) > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 returned_qty: l.to_return,
                 resolution: l.resolution,
@@ -381,15 +382,15 @@ const canShip = computed(() => {
 const canReturn = computed(() => so.value?.lines?.some(l => Number(l.shipped_qty) > 0));
 
 const subtotal = computed(() => {
-    return so.value?.lines?.reduce((sum, line) => sum + (line.ordered_qty * line.unit_price), 0) || 0;
+    return so.value?.lines?.reduce((sum, line) => sum + (Number(line.ordered_qty) * Number(line.unit_price)), 0) || 0;
 });
 
 const totalTax = computed(() => {
-    return so.value?.lines?.reduce((sum, line) => sum + (line.tax_amount || 0), 0) || 0;
+    return so.value?.lines?.reduce((sum, line) => sum + Number(line.tax_amount || 0), 0) || 0;
 });
 
 const totalDiscount = computed(() => {
-    return so.value?.lines?.reduce((sum, line) => sum + (line.discount_amount || 0), 0) || 0;
+    return so.value?.lines?.reduce((sum, line) => sum + Number(line.discount_amount || 0), 0) || 0;
 });
 
 
@@ -610,8 +611,8 @@ const totalDiscount = computed(() => {
                                                  class="flex items-center justify-between px-0.5 border-b border-zinc-800/30 last:border-0 pb-0.5 mb-0.5 last:pb-0 last:mb-0">
                                                 <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">{{ loc.location_name }}</span>
                                                 <div class="flex items-center gap-2">
-                                                    <span :class="loc.available_qty > 0 ? 'text-teal-400' : 'text-zinc-600'" class="text-[10px] font-mono font-bold">{{ loc.formatted_available_qty }}</span>
-                                                    <span v-if="loc.reserved_qty > 0" class="text-[8px] text-amber-500/60 font-mono">({{ loc.formatted_reserved_qty }} RSV)</span>
+                                                    <span :class="Number(loc.available_qty) > 0 ? 'text-teal-400' : 'text-zinc-600'" class="text-[10px] font-mono font-bold">{{ loc.formatted_available_qty }}</span>
+                                                    <span v-if="Number(loc.reserved_qty) > 0" class="text-[8px] text-amber-500/60 font-mono">({{ loc.formatted_reserved_qty }} RSV)</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -631,13 +632,13 @@ const totalDiscount = computed(() => {
                                     <div class="flex flex-col gap-2 w-36">
                                         <div class="h-2 bg-zinc-950 rounded-full overflow-hidden relative border border-zinc-800/80 p-[1px] shadow-inner">
                                             <!-- Picked Bar (Background layer) -->
-                                            <div :style="{ width: (data.picked_qty / data.ordered_qty * 100) + '%' }" class="absolute top-0 left-0 h-full bg-teal-500/30 transition-all duration-500 rounded-full"></div>
+                                            <div :style="{ width: (Number(data.picked_qty) / Number(data.ordered_qty) * 100) + '%' }" class="absolute top-0 left-0 h-full bg-teal-500/30 transition-all duration-500 rounded-full"></div>
                                             <!-- Shipped Bar (Foreground layer) -->
-                                            <div :style="{ width: (data.shipped_qty / data.ordered_qty * 100) + '%' }" class="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-700 shadow-[0_0_10px_rgba(16,185,129,0.5)] rounded-full"></div>
+                                            <div :style="{ width: (Number(data.shipped_qty) / Number(data.ordered_qty) * 100) + '%' }" class="absolute top-0 left-0 h-full bg-emerald-500 transition-all duration-700 shadow-[0_0_10px_rgba(16,185,129,0.5)] rounded-full"></div>
                                         </div>
                                         <div class="flex justify-between items-center px-1">
                                             <span class="text-[8px] font-black text-zinc-600 font-mono uppercase tracking-widest">Fulfillment</span>
-                                            <span class="text-[10px] font-black text-emerald-400 font-mono">{{ Math.round(data.shipped_qty / data.ordered_qty * 100) }}%</span>
+                                            <span class="text-[10px] font-black text-emerald-400 font-mono">{{ Math.round(Number(data.shipped_qty) / Number(data.ordered_qty) * 100) }}%</span>
                                         </div>
                                     </div>
                                 </template>
@@ -722,7 +723,7 @@ const totalDiscount = computed(() => {
                         </Column>
                         <Column field="formatted_quantity" header="QUANTITY">
                              <template #body="{ data }">
-                                <span class="text-[11px] font-mono font-black text-white" :class="{ 'text-amber-500': data.quantity < 0 }">{{ data.formatted_quantity }}</span>
+                                <span class="text-[11px] font-mono font-black text-white" :class="{ 'text-amber-500': Number(data.quantity) < 0 }">{{ data.formatted_quantity }}</span>
                             </template>
                         </Column>
                         <Column header="COGS AUDIT">
@@ -776,7 +777,7 @@ const totalDiscount = computed(() => {
                             <template #body="{ data }">
                                 <div class="flex flex-col gap-1 items-center">
                                     <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-800 shadow-inner">
-                                        {{ data.picked_qty }} / {{ data.ordered_qty }}
+                                        {{ Number(data.picked_qty) }} / {{ Number(data.ordered_qty) }}
                                     </span>
                                     <span class="text-[8px] font-black text-zinc-600 uppercase">{{ data.uom }}</span>
                                 </div>
@@ -788,7 +789,7 @@ const totalDiscount = computed(() => {
                                      <InputNumber 
                                         v-model="data.to_pick" 
                                         :min="0" 
-                                        :max="data.ordered_qty - data.picked_qty" 
+                                        :max="Number(data.ordered_qty) - Number(data.picked_qty)" 
                                         :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
                                         class="p-inputtext-sm text-center font-mono font-black text-teal-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
                                         :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#14b8a6', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"

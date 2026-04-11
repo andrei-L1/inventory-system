@@ -164,7 +164,7 @@
                                                     v-model="line.quantity" 
                                                     class="w-full h-full"
                                                     :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
-                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: line.quantity < 0 ? '#f87171' : '#34d399', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: Number(line.quantity) < 0 ? '#f87171' : '#34d399', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
                                                     placeholder="0"
                                                 />
                                             </div>
@@ -214,12 +214,12 @@
                                             </div>
 
                                             <!-- Impact Result -->
-                                            <div v-if="line.quantity !== 0 && form.location" class="flex-1 flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
+                                            <div v-if="Number(line.quantity) !== 0 && form.location" class="flex-1 flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
                                                 <i class="pi pi-sync text-[10px] text-zinc-700"></i>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">New Local Balance:</span>
                                                     <span class="text-[11px] font-mono font-black" :class="isInsufficient(line) ? 'text-red-500 animate-pulse' : 'text-zinc-300'">
-                                                        {{ (parseFloat(getScaledQty(line, getLocalStock(line))) + (parseFloat(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
+                                                        {{ (Number(getScaledQty(line, getLocalStock(line)).replace(/,/g, '')) + (Number(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
                                                     </span>
                                                 </div>
                                                 <div v-if="isInsufficient(line)" class="ml-auto text-[8px] font-black text-red-500/60 uppercase tracking-widest">
@@ -319,7 +319,7 @@ const getFactorToBase = (uomId, productId = null) => {
             rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
         }
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -344,7 +344,7 @@ const getConversionDetails = (uomId, productId) => {
 const getScaledCost = (line) => {
     if (!line.product) return 0;
     const { factor } = getFactorToBase(line.uom_id, line.product.id);
-    return (parseFloat(line.product.average_cost) || 0) * factor;
+    return (Number(line.product.average_cost) || 0) * factor;
 };
 
 const getAvailableUoms = (productId) => {
@@ -416,10 +416,6 @@ const loadData = async () => {
     }
 };
 
-onMounted(() => {
-    loadData();
-});
-
 const reasons = ref([
     { label: 'Physical Count Difference', id: 1 },
     { label: 'Damaged Items', id: 2 },
@@ -443,14 +439,14 @@ const postAdjustment = async () => {
     for (const line of form.lines) {
         if (!line.product) continue;
         
-        let adjustmentQtyInBase = parseFloat(line.quantity) || 0;
+        let adjustmentQtyInBase = Number(line.quantity) || 0;
         
         const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
         const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            adjustmentQtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+            adjustmentQtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
         } else {
             toast.add({ severity: 'error', summary: 'UOM Error', detail: `No conversion path from ${line.uom_id} to product base.`, life: 5000 });
             isSubmitting.value = false;
@@ -481,8 +477,8 @@ const postAdjustment = async () => {
                 product_id: line.product?.id,
                 location_id: form.location?.id,
                 uom_id: line.uom_id,
-                quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.product?.average_cost || 0)
+                quantity: Number(line.quantity),
+                unit_cost: Number(line.product?.average_cost || 0)
             }))
         };
         
@@ -514,4 +510,51 @@ const fetchProductInventory = async (line) => {
     }
 };
 
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (Number(l.quantity) || 0), 0));
+
+const getScaledQty = (line, rawPieces) => {
+    if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
+    const { factor } = getFactorToBase(line.uom_id, line.product?.id);
+    const scaled = (Number(rawPieces) / factor);
+    
+    return isUomIdDiscrete(line.uom_id) 
+        ? Math.floor(scaled + 0.0001).toLocaleString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+};
+
+const getLocalStock = (line) => {
+    if (!line.inventories || !form.location) return 0;
+    const inv = line.inventories.find(i => i.location_id === form.location.id);
+    return Number(inv?.quantity_on_hand) || 0;
+};
+
+const isInsufficient = (line) => {
+    if (!line.product || !form.location) return false;
+    let qtyInBase = Number(line.quantity) || 0;
+    const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
+    const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
+
+    if (targetInfo.baseId === productBaseInfo.baseId) {
+        const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
+        qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
+    }
+    
+    // Only check insufficiency for deductions (negative adjustment)
+    if (qtyInBase < 0) {
+        return Math.abs(qtyInBase) > getLocalStock(line);
+    }
+    return false;
+};
+
+const addLine = () => {
+    form.lines.push({ product: null, uom_id: null, quantity: 0, inventories: [] });
+};
+
+const removeLine = (index) => {
+    form.lines.splice(index, 1);
+};
+
+onMounted(() => {
+    loadData();
+});
 </script>

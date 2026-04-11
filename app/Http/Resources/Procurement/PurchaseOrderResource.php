@@ -18,7 +18,7 @@ class PurchaseOrderResource extends JsonResource
             'is_editable' => $this->status->is_editable ?? false,
             'order_date' => $this->order_date ? $this->order_date->format('Y-m-d') : null,
             'expected_delivery_date' => $this->expected_delivery_date ? $this->expected_delivery_date->format('Y-m-d') : null,
-            'total_amount' => (float) $this->total_amount,
+            'total_amount' => (string) $this->total_amount,
             'currency' => $this->currency,
             'notes' => $this->notes,
             'created_by' => $this->creator->name ?? 'System',
@@ -39,7 +39,7 @@ class PurchaseOrderResource extends JsonResource
                     'lines' => $t->lines->map(fn ($l) => [
                         'sku' => $l->product->sku ?? 'N/A',
                         'product_name' => $l->product->name ?? 'Unknown',
-                        'quantity' => (float) $l->quantity,
+                        'quantity' => (string) $l->quantity,
                         'formatted_quantity' => $l->formatted_quantity,
                         'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
                     ]),
@@ -65,7 +65,7 @@ class PurchaseOrderResource extends JsonResource
                         return [
                             'sku' => $l->product->sku ?? 'N/A',
                             'product_name' => $l->product->name ?? 'Unknown',
-                            'quantity' => (float) abs($l->quantity),
+                            'quantity' => str_replace('-', '', (string) $l->quantity),
                             'formatted_quantity' => $l->formatted_quantity,
                             'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
                             'notes' => $notes,

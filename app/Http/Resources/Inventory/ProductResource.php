@@ -56,8 +56,8 @@ class ProductResource extends JsonResource
             
             $targetUom = UnitOfMeasure::find($targetUomId);
             $targetUomAbbr = $targetUom->abbreviation ?? 'pcs';
-            $formattedSellingPrice = '₱'.number_format((float) $sellingPrice, 2).' / '.$targetUomAbbr;
-            $formattedAverageCost = '₱'.number_format((float) $averageCost, 2).' / '.$targetUomAbbr;
+            $formattedSellingPrice = '₱'.FinancialMath::format($sellingPrice, 2).' / '.$targetUomAbbr;
+            $formattedAverageCost = '₱'.FinancialMath::format($averageCost, 2).' / '.$targetUomAbbr;
         } else {
             $formattedTotalQoh = $this->formatted_total_qoh;
         }

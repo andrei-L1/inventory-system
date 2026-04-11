@@ -64,9 +64,9 @@ class Invoice extends Model
         return $this->hasMany(PaymentAllocation::class);
     }
 
-    public function getBalanceAttribute(): float
+    public function getBalanceAttribute(): string
     {
-        return (float) $this->total_amount - (float) $this->paid_amount;
+        return \App\Helpers\FinancialMath::sub((string) $this->total_amount, (string) $this->paid_amount);
     }
 
     public function isDraft(): bool

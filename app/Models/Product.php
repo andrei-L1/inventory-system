@@ -95,6 +95,13 @@ class Product extends Model
         });
     }
 
+    protected $casts = [
+        'average_cost' => 'decimal:8',
+        'selling_price' => 'decimal:8',
+        'reorder_point' => 'decimal:8',
+        'reorder_quantity' => 'decimal:8',
+    ];
+
     protected $fillable = [
         'product_code',
         'name',
@@ -175,24 +182,32 @@ class Product extends Model
      * Get the average cost scaled to the primary unit of measure.
      * Stored value is now "Cost per Piece" (Atomic).
      */
-    public function getAverageCostAttribute($value): float
+    public function getAverageCostAttribute($value): string
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
+        $v = $value ? (string) $value : '0';
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
 
-        return $multiplier > 0 ? (float) $value * $multiplier : (float) $value;
+        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul($v, $multiplierStr) : $v;
     }
 
     /**
      * Get the total quantity on hand across all locations.
      */
-    public function getTotalQohAttribute(): float
+    public function getTotalQohAttribute(): string
     {
         // Internal QOH is now stored in Atomic Pieces.
         // We convert it back to the Product's Base UOM for catalog display.
-        $pieces = (float) $this->inventories()->sum('quantity_on_hand');
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
+        $pieces = '0';
+        $qtys = $this->relationLoaded('inventories') 
+            ? $this->inventories->pluck('quantity_on_hand') 
+            : $this->inventories()->pluck('quantity_on_hand');
+            
+        foreach ($qtys as $qty) {
+            $pieces = \App\Helpers\FinancialMath::add($pieces, (string) $qty);
+        }
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
 
-        return $multiplier > 0 ? $pieces / $multiplier : $pieces;
+        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div($pieces, $multiplierStr) : $pieces;
     }
 
     /**
@@ -208,13 +223,14 @@ class Product extends Model
     {
         $symbol = '₱'; // Default currency symbol
 
-        return $symbol.number_format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.\App\Helpers\FinancialMath::format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedSellingPriceAttribute(): string
     {
         $symbol = '₱'; // Default currency symbol
+        $price = $this->selling_price ? (string) $this->selling_price : '0';
 
-        return $symbol.number_format($this->selling_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.\App\Helpers\FinancialMath::format($price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

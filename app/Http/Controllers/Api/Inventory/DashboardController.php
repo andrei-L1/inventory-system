@@ -81,7 +81,7 @@ class DashboardController extends Controller
             $date = now()->subDays($i)->format('Y-m-d');
             $trend[] = [
                 'date' => $date,
-                'value' => (float) FinancialMath::round($tempValue, 2),
+                'value' => FinancialMath::round($tempValue, 2),
             ];
             // Subtract the change that happened ON that day to get the value at the START of that day (which is the value at the END of the previous day)
             $changeOnThisDay = (string) $netChanges->get($date, '0');
@@ -95,7 +95,7 @@ class DashboardController extends Controller
             'stats' => [
                 'total_products' => $totalProducts,
                 'total_vendors' => $totalVendors,
-                'inventory_value' => (float) FinancialMath::round($currentValue, 2),
+                'inventory_value' => FinancialMath::round($currentValue, 2),
                 'low_stock_count' => $lowStockCount,
                 'transactions_today' => $transactionsToday,
                 'pending_po_count' => $pendingPoCount,

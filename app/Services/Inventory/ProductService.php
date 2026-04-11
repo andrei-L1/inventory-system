@@ -67,7 +67,7 @@ class ProductService
                         'product_id' => $product->id,
                         'from_uom_id' => $product->uom_id,
                         'to_uom_id' => $toUomId,
-                        'conversion_factor' => (float) $data['initial_conversion_factor'],
+                        'conversion_factor' => (string) $data['initial_conversion_factor'],
                     ]);
 
                     // Clear cache to ensure the new rule is visible in the current request (e.g. for Resource response)
@@ -117,7 +117,7 @@ class ProductService
                     // Update existing or create if missing
                     UomConversion::updateOrCreate(
                         ['product_id' => $product->id, 'from_uom_id' => $product->uom_id],
-                        ['to_uom_id' => $toUomId, 'conversion_factor' => (float) $data['initial_conversion_factor']]
+                        ['to_uom_id' => $toUomId, 'conversion_factor' => (string) $data['initial_conversion_factor']]
                     );
 
                     UomHelper::clearCache();

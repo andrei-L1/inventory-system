@@ -107,12 +107,12 @@ const getFactorToBase = (uomId, productId = null) => {
     // Check product-specific rules first
     if (productId) {
         const prodRule = uomConversions.value.find(c => c.product_id === productId && c.from_uom_id === uomId);
-        if (prodRule) return { factor: parseFloat(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
+        if (prodRule) return { factor: Number(prodRule.conversion_factor), baseId: prodRule.to_uom_id };
     }
     
     // Check global rules
     const globalRule = uomConversions.value.find(c => !c.product_id && c.from_uom_id === uomId);
-    if (globalRule) return { factor: parseFloat(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
+    if (globalRule) return { factor: Number(globalRule.conversion_factor), baseId: globalRule.to_uom_id };
     
     return { factor: 1, baseId: uom.id };
 };
@@ -120,7 +120,7 @@ const getFactorToBase = (uomId, productId = null) => {
 const getScaledQty = (uomId, rawPieces, productId = null) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(uomId, productId).factor;
-    const scaled = (parseFloat(rawPieces) / factor);
+    const scaled = (Number(rawPieces) / factor);
     return isUomIdDiscrete(uomId) 
         ? Math.floor(scaled + 0.0001).toString() 
         : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
@@ -403,18 +403,18 @@ const getTransactionSeverity = (type) => {
 };
 
 const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(val));
 };
 
 const getStockStatusClass = (p) => {
-    if (p.total_qoh === 0) return 'status-danger';
-    if (p.total_qoh < p.reorder_point) return 'status-warning';
+    if (Number(p.total_qoh) === 0) return 'status-danger';
+    if (Number(p.total_qoh) < Number(p.reorder_point)) return 'status-warning';
     return 'status-success';
 };
 
 const getStockStatusLabel = (p) => {
-    if (p.total_qoh === 0) return 'CRITICAL: ZERO STOCK';
-    if (p.total_qoh < p.reorder_point) return 'LOW STOCK: REPLENISH';
+    if (Number(p.total_qoh) === 0) return 'CRITICAL: ZERO STOCK';
+    if (Number(p.total_qoh) < Number(p.reorder_point)) return 'LOW STOCK: REPLENISH';
     return 'STOCK BALANCED';
 };
 
@@ -537,8 +537,8 @@ const tablePt = {
                                           <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-emerald-500/50 transition-colors" 
                                                 @click.stop="toggleStockInfo($event, option)"
                                                 :class="[
-                                                    option.total_qoh === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                                    option.total_qoh < option.reorder_point ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
+                                                    Number(option.total_qoh) === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                    Number(option.total_qoh) < Number(option.reorder_point) ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
                                                     'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                                 ]">
                                               {{ option.formatted_total_qoh }}
@@ -580,24 +580,24 @@ const tablePt = {
                                     <!-- Stock Status Summary -->
                                     <div class="p-4 bg-zinc-950/80 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center min-w-[180px] shadow-lg"
                                          :class="[
-                                             selectedProduct.total_qoh === 0 ? 'ring-1 ring-red-500/20' : 
-                                             selectedProduct.total_qoh < selectedProduct.reorder_point ? 'ring-1 ring-amber-500/20' : 
+                                             Number(selectedProduct.total_qoh) === 0 ? 'ring-1 ring-red-500/20' : 
+                                             Number(selectedProduct.total_qoh) < Number(selectedProduct.reorder_point) ? 'ring-1 ring-amber-500/20' : 
                                              'ring-1 ring-emerald-500/20'
                                          ]">
                                         <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-2 font-mono">Current Stock</span>
                                         <span class="text-4xl font-bold tracking-tighter font-mono cursor-help hover:opacity-80 transition-opacity" 
                                               @click="toggleStockInfo($event, selectedProduct)"
                                               :class="[
-                                                  selectedProduct.total_qoh === 0 ? 'text-red-400' : 
-                                                  selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400' : 
+                                                  Number(selectedProduct.total_qoh) === 0 ? 'text-red-400' : 
+                                                  Number(selectedProduct.total_qoh) < Number(selectedProduct.reorder_point) ? 'text-amber-400' : 
                                                   'text-emerald-400'
                                               ]">
                                             {{ selectedProduct.formatted_total_qoh }}
                                         </span>
                                         <span class="text-[10px] font-bold font-mono mt-2" 
                                               :class="[
-                                                  selectedProduct.total_qoh === 0 ? 'text-red-400/80' : 
-                                                  selectedProduct.total_qoh < selectedProduct.reorder_point ? 'text-amber-400/80' : 
+                                                  Number(selectedProduct.total_qoh) === 0 ? 'text-red-400/80' : 
+                                                  Number(selectedProduct.total_qoh) < Number(selectedProduct.reorder_point) ? 'text-amber-400/80' : 
                                                   'text-emerald-400/80'
                                               ]">
                                             {{ getStockStatusLabel(selectedProduct) }}
@@ -622,7 +622,7 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
-                                        <span class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency((selectedProduct.total_qoh ?? 0) * (selectedProduct.average_cost ?? 0)) }}</span>
+                                        <span class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency(Number(selectedProduct.total_qoh ?? 0) * Number(selectedProduct.average_cost ?? 0)) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reorder Point</label>
@@ -690,9 +690,9 @@ const tablePt = {
                                 <span class="text-[9px] font-bold text-emerald-500 font-mono tracking-tighter uppercase">Available in these areas</span>
                             </div>
                             <div class="p-4 flex-1">
-                                <template v-if="locationBreakdown.length > 0 && locationBreakdown.some(l => l.quantity_on_hand > 0)">
+                                <template v-if="locationBreakdown.length > 0 && locationBreakdown.some(l => Number(l.quantity_on_hand) > 0)">
                                     <div class="space-y-2">
-                                        <div v-for="loc in locationBreakdown.filter(l => l.quantity_on_hand > 0)" :key="loc.id" class="flex items-center justify-between p-3 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
+                                        <div v-for="loc in locationBreakdown.filter(l => Number(l.quantity_on_hand) > 0)" :key="loc.id" class="flex items-center justify-between p-3 bg-zinc-950/50 border border-zinc-800/60 rounded-xl group hover:border-emerald-500/20 transition-all duration-300">
                                             <div class="flex flex-col">
                                                 <span class="text-white font-bold text-[11px] tracking-tight uppercase">{{ loc.location_name }}</span>
                                                 <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest">{{ loc.location_code }}</span>
@@ -773,7 +773,7 @@ const tablePt = {
                                         <template #body="{ data }">
                                             <div class="inline-flex items-center gap-2">
                                                 <span class="w-1 h-1 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.8)]"></span>
-                                                <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ data.remaining_qty > 0 ? 'ACTIVE' : 'DEPLETED' }}</span>
+                                                <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ Number(data.remaining_qty) > 0 ? 'ACTIVE' : 'DEPLETED' }}</span>
                                             </div>
                                         </template>
                                     </Column>

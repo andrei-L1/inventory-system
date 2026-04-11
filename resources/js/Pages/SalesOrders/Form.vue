@@ -49,7 +49,7 @@ const getFactorToBase = (uomId, productId = null) => {
         }
         
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -173,7 +173,7 @@ const getScaledCost = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product) return 0;
     const scale = getFactorToBase(line.uom_id, line.product_id).factor;
-    return (product.average_cost || 0) * scale;
+    return (Number(product.average_cost) || 0) * scale;
 };
 
 const checkStock = async (line) => {
@@ -311,32 +311,32 @@ const removeLine = (index) => {
 };
 
 const lineSubtotal = (line) => {
-    const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-    const discount = base * ((line.discount_rate || 0) / 100);
-    const tax = (base - discount) * ((line.tax_rate || 0) / 100);
+    const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+    const discount = base * ((Number(line.discount_rate) || 0) / 100);
+    const tax = (base - discount) * ((Number(line.tax_rate) || 0) / 100);
     return base - discount + tax;
 };
 
 const untaxedSubtotal = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        const discount = base * ((Number(line.discount_rate) || 0) / 100);
         return sum + (base - discount);
     }, 0);
 });
 
 const totalTax = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
-        return sum + ((base - discount) * ((line.tax_rate || 0) / 100));
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        const discount = base * ((Number(line.discount_rate) || 0) / 100);
+        return sum + ((base - discount) * ((Number(line.tax_rate) || 0) / 100));
     }, 0);
 });
 
 const totalDiscount = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        return sum + (base * ((line.discount_rate || 0) / 100));
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        return sum + (base * ((Number(line.discount_rate) || 0) / 100));
     }, 0);
 });
 

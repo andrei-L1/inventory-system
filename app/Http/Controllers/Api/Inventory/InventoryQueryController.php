@@ -58,11 +58,11 @@ class InventoryQueryController extends Controller
                     'name' => $product->name,
                     'category' => $product->category->name ?? 'N/A',
                     'uom' => $product->uom->abbreviation ?? 'pcs',
-                    'quantity_on_hand' => (float) $product->total_qoh,
+                    'quantity_on_hand' => (string) $product->total_qoh,
                     'formatted_quantity_on_hand' => $product->formatted_total_qoh,
-                    'reorder_point' => (float) $product->reorder_point,
-                    'shortage' => (float) $shortage,
-                    'formatted_shortage' => UomHelper::format((float) $shortage, $product->uom_id, $product->id, false),
+                    'reorder_point' => (string) $product->reorder_point,
+                    'shortage' => (string) $shortage,
+                    'formatted_shortage' => UomHelper::format((string) $shortage, $product->uom_id, $product->id, false),
                     'preferred_vendor' => $product->preferredVendor->name ?? 'None',
                     'status' => 'critical',
                 ];
@@ -94,9 +94,9 @@ class InventoryQueryController extends Controller
                     'location_id' => $inv->location_id,
                     'location_name' => $inv->location->name ?? 'Unknown Location',
                     'location_code' => $inv->location->code ?? 'N/A',
-                    'quantity_on_hand' => (float) $qoh,
-                    'formatted_quantity_on_hand' => UomHelper::format((float) $scaledQoh, $targetUomId, $product->id, false),
-                    'average_cost' => (float) $inv->average_cost,
+                    'quantity_on_hand' => (string) $qoh,
+                    'formatted_quantity_on_hand' => UomHelper::format((string) $scaledQoh, $targetUomId, $product->id, false),
+                    'average_cost' => (string) $inv->average_cost,
                     'last_movement_date' => $inv->updated_at,
                 ];
             });
@@ -140,13 +140,13 @@ class InventoryQueryController extends Controller
                     'id' => $layer->id,
                     'location_name' => $layer->location?->name ?? 'Unknown Location',
                     'receipt_date' => $layer->receipt_date,
-                    'unit_cost' => (float) $layer->unit_cost,
-                    'formatted_unit_cost' => '₱'.number_format((float) $unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
-                    'original_qty' => (float) $layer->received_qty,
-                    'formatted_original_qty' => UomHelper::format((float) $receivedScaled, $targetUomId, $product->id, false),
-                    'remaining_qty' => (float) $layer->remaining_qty,
-                    'formatted_remaining_qty' => UomHelper::format((float) $remainingScaled, $targetUomId, $product->id, false),
-                    'total_value' => (float) $totalValue,
+                    'unit_cost' => (string) $layer->unit_cost,
+                    'formatted_unit_cost' => '₱'.\App\Helpers\FinancialMath::format($unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
+                    'original_qty' => (string) $layer->received_qty,
+                    'formatted_original_qty' => UomHelper::format((string) $receivedScaled, $targetUomId, $product->id, false),
+                    'remaining_qty' => (string) $layer->remaining_qty,
+                    'formatted_remaining_qty' => UomHelper::format((string) $remainingScaled, $targetUomId, $product->id, false),
+                    'total_value' => (string) $totalValue,
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,
                 ];
@@ -192,9 +192,9 @@ class InventoryQueryController extends Controller
         }
 
         return response()->json([
-            'qoh' => (float) $qoh,
-            'reserved_qty' => (float) $reserved,
-            'available_qty' => (float) FinancialMath::round($availableTarget, 8),
+            'qoh' => (string) $qoh,
+            'reserved_qty' => (string) $reserved,
+            'available_qty' => (string) FinancialMath::round($availableTarget, 8),
             'uom_id' => $targetUomId,
             'uom_abbr' => $targetUom->abbreviation ?? 'pcs',
         ]);

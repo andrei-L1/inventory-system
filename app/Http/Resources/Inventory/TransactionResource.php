@@ -17,7 +17,7 @@ class TransactionResource extends JsonResource
 
         // Enhanced type name for better ledger distinction
         $typeName = strtolower($this->type->name ?? 'unknown');
-        $isReturn = ($line && (float) $line->quantity < 0 && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
+        $isReturn = ($line && \App\Helpers\FinancialMath::isNegative((string) $line->quantity) && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
 
         if ($this->purchase_order_id && $typeName === 'receipt' && ! $isReturn) {
             $typeName = 'good_receipt';
@@ -65,14 +65,14 @@ class TransactionResource extends JsonResource
             // Line specific data (for Inventory Center history - single product view)
             'product_id' => $line->product_id ?? null,
             'product_name' => $line->product->name ?? null,
-            'quantity' => (float) ($line->quantity ?? null),
+            'quantity' => $line && $line->quantity !== null ? (string) $line->quantity : null,
             'formatted_quantity' => $line->formatted_quantity ?? null,
             'uom_abbreviation' => $line->uom->abbreviation ?? 'PCS',
-            'unit_cost' => (float) ($line->unit_cost ?? 0),
+            'unit_cost' => $line && $line->unit_cost ? (string) $line->unit_cost : '0',
             'formatted_unit_cost' => $line->formatted_unit_cost ?? null,
-            'unit_price' => (float) ($line->unit_price ?? 0),
+            'unit_price' => $line && $line->unit_price ? (string) $line->unit_price : '0',
             'formatted_unit_price' => $line->formatted_unit_price ?? null,
-            'total_cost' => (float) ($line->total_cost ?? 0),
+            'total_cost' => $line && $line->total_cost ? (string) $line->total_cost : '0',
 
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];

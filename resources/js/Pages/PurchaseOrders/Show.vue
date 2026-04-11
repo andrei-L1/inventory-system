@@ -69,15 +69,15 @@ const fetchProductInventory = async (line) => {
 
 const getScaledQty = (line, rawPieces) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
-    const factor = getFactorToBase(line.uom_id, line.product_id).factor;
-    const scaled = (parseFloat(rawPieces) / factor);
+    const factor = Number(getFactorToBase(line.uom_id, line.product_id).factor);
+    const scaled = Number(rawPieces) / factor;
     return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {
     if (!line.inventories || !grnForm.value.location_id) return 0;
-    const inv = line.inventories.find(i => i.location_id === grnForm.value.location_id);
-    return inv ? inv.quantity_on_hand : 0;
+    const inv = line.inventories.find(i => Number(i.location_id) === Number(grnForm.value.location_id));
+    return inv ? Number(inv.quantity_on_hand) : 0;
 };
 
 const getUomAbbr = (id) => {
@@ -144,7 +144,7 @@ const getFactorToBase = (uomId, productId = null) => {
         }
         
         if (!rule || processed.includes(Number(rule.to_uom_id))) break;
-        factor *= Number(rule.conversion_factor);
+        factor = Number(factor) * Number(rule.conversion_factor);
         current = Number(rule.to_uom_id);
         processed.push(current);
     }
@@ -158,9 +158,9 @@ const onGrnUomChange = (line) => {
     const targetInfo = getFactorToBase(line.uom_id, line.product_id);
     const poBaseInfo = getFactorToBase(poLine.uom_id, poLine.product_id);
 
-    if (targetInfo.baseId === poBaseInfo.baseId) {
-        const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
-        line.received_qty = poLine.pending_qty * effectiveFactor;
+    if (Number(targetInfo.baseId) === Number(poBaseInfo.baseId)) {
+        const effectiveFactor = Number(poBaseInfo.factor) / Number(targetInfo.factor);
+        line.received_qty = Number(poLine.pending_qty) * effectiveFactor;
         return;
     }
 
@@ -174,10 +174,10 @@ const onReturnUomChange = (line) => {
     const targetInfo = getFactorToBase(line.uom_id, line.product_id);
     const poBaseInfo = getFactorToBase(poLine.uom_id, poLine.product_id);
 
-    if (targetInfo.baseId === poBaseInfo.baseId) {
-        const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
+    if (Number(targetInfo.baseId) === Number(poBaseInfo.baseId)) {
+        const effectiveFactor = Number(poBaseInfo.factor) / Number(targetInfo.factor);
         // L-3: Scale the current return_qty to the new UOM instead of resetting to max.
-        line.return_qty = (line.received_qty_in_po_unit * effectiveFactor);
+        line.return_qty = Number(line.received_qty_in_po_unit) * effectiveFactor;
         return;
     }
 
@@ -337,9 +337,9 @@ const openGrnMode = async () => {
                 sku: l.sku,
                 product_name: l.product_name,
                 product_code: l.product_code,
-                pending_qty: l.pending_qty,
+                pending_qty: Number(l.pending_qty),
                 formatted_pending_qty: l.formatted_pending_qty,
-                received_qty: l.pending_qty,
+                received_qty: Number(l.pending_qty),
                 unit: l.uom || 'PCS',
                 uom_id: l.uom_id,
                 product_uom: l.uom || 'PCS',
@@ -375,7 +375,7 @@ const postReceipt = async () => {
         return;
     }
 
-    const payloadLines = grnForm.value.lines.filter(l => l.received_qty > 0);
+    const payloadLines = grnForm.value.lines.filter(l => Number(l.received_qty) > 0);
     if (payloadLines.length === 0) {
         toast.add({ severity: 'warn', summary: 'Validation', detail: 'No quantities specified to receive', life: 3000 });
         return;
@@ -420,9 +420,9 @@ const openReturnMode = async () => {
                 product_id: l.product_id, // ensure ID is available for filtering
                 product_name: l.product_name,
                 sku: l.sku,
-                received_qty: l.received_qty,
+                received_qty: Number(l.received_qty),
                 formatted_received_qty: l.formatted_received_qty,
-                received_qty_in_po_unit: l.received_qty, // Keep track of base received qty
+                received_qty_in_po_unit: Number(l.received_qty), // Keep track of base received qty
                 uom: l.uom,
                 uom_id: l.uom_id,
                 product_uom: l.uom || 'PCS',
@@ -455,9 +455,9 @@ const filteredReturnLocations = computed(() => {
 const getStockInSelectedLocation = (productId) => {
     if (!returnForm.value.location_id) return 0;
     const inv = availableInventory.value.find(
-        i => i.product?.id === productId && i.location?.id === returnForm.value.location_id
+        i => Number(i.product?.id) === Number(productId) && Number(i.location?.id) === Number(returnForm.value.location_id)
     );
-    return inv ? inv.quantity_on_hand : 0;
+    return inv ? Number(inv.quantity_on_hand) : 0;
 };
 
 const postReturn = async () => {
@@ -466,7 +466,7 @@ const postReturn = async () => {
         return;
     }
 
-    const payloadLines = returnForm.value.lines.filter(l => l.return_qty > 0);
+    const payloadLines = returnForm.value.lines.filter(l => Number(l.return_qty) > 0);
     if (payloadLines.length === 0) {
         toast.add({ severity: 'warn', summary: 'Validation', detail: 'Please specify items and quantities to return.', life: 3000 });
         return;
@@ -623,7 +623,7 @@ const openPrint = () => {
 
                     <!-- L-4: po.status is a plain string from the API; removed redundant .name fallback -->
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && po.lines.some(l => l.received_qty > 0) && can('manage-purchase-orders')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && po.lines.some(l => Number(l.received_qty) > 0) && can('manage-purchase-orders')" 
                         label="Return Items (RTV)" 
                         icon="pi pi-replay" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -795,7 +795,7 @@ const openPrint = () => {
 
                             <Column field="received_qty" header="RCV QTY">
                                 <template #body="{ data }">
-                                    <span :class="[data.received_qty >= data.ordered_qty ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
+                                    <span :class="[Number(data.received_qty) >= Number(data.ordered_qty) ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
                                         {{ data.formatted_received_qty || data.received_qty }}
                                     </span>
                                 </template>
@@ -811,7 +811,7 @@ const openPrint = () => {
                             
                             <Column field="pending_qty" header="REM QTY">
                                 <template #body="{ data }">
-                                    <span :class="[data.pending_qty === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
+                                    <span :class="[Number(data.pending_qty) === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
                                         {{ data.formatted_pending_qty || data.pending_qty }}
                                     </span>
                                 </template>
@@ -962,7 +962,7 @@ const openPrint = () => {
                 <div v-if="popoverLine.inventories && popoverLine.inventories.length > 0">
                     <div v-for="inv in popoverLine.inventories" :key="inv.location_id" class="flex justify-between items-center py-1">
                         <span class="text-[10px] text-zinc-400 font-mono">{{ inv.location_name || inv.location?.name || 'Unknown' }}</span>
-                        <span class="text-[10px] font-bold" :class="inv.quantity_on_hand > 0 ? 'text-emerald-400' : 'text-zinc-600'">{{ inv.quantity_on_hand }}</span>
+                        <span class="text-[10px] font-bold" :class="Number(inv.quantity_on_hand) > 0 ? 'text-emerald-400' : 'text-zinc-600'">{{ inv.quantity_on_hand }}</span>
                     </div>
                 </div>
                 <span v-else class="text-[10px] text-zinc-600 italic">No stock in any location.</span>
@@ -1141,9 +1141,9 @@ const openPrint = () => {
                     />
                     
                     <div class="flex items-center gap-6">
-                        <span v-if="returnForm.lines.some(l => l.return_qty > 0)" class="text-[10px] font-mono text-red-400 font-bold uppercase tracking-widest flex items-center gap-2">
+                        <span v-if="returnForm.lines.some(l => Number(l.return_qty) > 0)" class="text-[10px] font-mono text-red-400 font-bold uppercase tracking-widest flex items-center gap-2">
                             <div class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                            {{ returnForm.lines.filter(l => l.return_qty > 0).length }} Items Ready for Reversal
+                            {{ returnForm.lines.filter(l => Number(l.return_qty) > 0).length }} Items Ready for Reversal
                         </span>
                         <Button 
                             label="Process Return" 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -75,41 +76,41 @@ class SalesOrderLine extends Model
     /**
      * Quantity to be picked (Ordered - Picked)
      */
-    public function getRemainingPickQtyAttribute(): float
+    public function getRemainingPickQtyAttribute(): string
     {
-        return max(0, (float) $this->ordered_qty - (float) $this->picked_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->picked_qty));
     }
 
     /**
      * Quantity to be packed (Picked - Packed)
      */
-    public function getRemainingPackQtyAttribute(): float
+    public function getRemainingPackQtyAttribute(): string
     {
-        return max(0, (float) $this->picked_qty - (float) $this->packed_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->picked_qty, (string) $this->packed_qty));
     }
 
     /**
      * Quantity to be shipped (Packed - Shipped)
      */
-    public function getRemainingShipQtyAttribute(): float
+    public function getRemainingShipQtyAttribute(): string
     {
-        return max(0, (float) $this->packed_qty - (float) $this->shipped_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->packed_qty, (string) $this->shipped_qty));
     }
 
     /**
      * Legacy accessor for total remaining to ship (Ordered - Shipped)
      */
-    public function getRemainingQtyAttribute(): float
+    public function getRemainingQtyAttribute(): string
     {
-        return max(0, (float) $this->ordered_qty - (float) $this->shipped_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->shipped_qty));
     }
 
     /**
      * Quantity that can be returned (Shipped - Returned)
      */
-    public function getRemainingReturnQtyAttribute(): float
+    public function getRemainingReturnQtyAttribute(): string
     {
-        return max(0, (float) $this->shipped_qty - (float) $this->returned_qty);
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->shipped_qty, (string) $this->returned_qty));
     }
 
     public function getFormattedOrderedQtyAttribute(): string
@@ -173,6 +174,6 @@ class SalesOrderLine extends Model
             default => '₱',
         };
 
-        return $symbol.number_format($this->unit_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($this->unit_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

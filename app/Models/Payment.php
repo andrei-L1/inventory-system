@@ -37,10 +37,13 @@ class Payment extends Model
         return $this->hasMany(PaymentAllocation::class);
     }
 
-    public function getUnallocatedAmountAttribute(): float
+    public function getUnallocatedAmountAttribute(): string
     {
-        $allocated = (float) $this->allocations()->sum('amount');
+        $allocated = '0';
+        foreach ($this->allocations as $allocation) {
+            $allocated = \App\Helpers\FinancialMath::add($allocated, (string) $allocation->amount);
+        }
 
-        return (float) $this->amount - $allocated;
+        return \App\Helpers\FinancialMath::sub((string) $this->amount, $allocated);
     }
 }
