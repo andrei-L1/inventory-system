@@ -13,23 +13,21 @@ class LifoCostingStrategy implements CostingStrategy
 {
     use ManagesCostLayers;
 
-    public function onReceipt(Inventory $inventory, TransactionLine $line, float $qty, float $unitCost): void
+    public function onReceipt(Inventory $inventory, TransactionLine $line, string $qty, string $unitCost): void
     {
-        // 1. Maintain running average cost (global invariant)
         $this->updateRunningAverage($inventory, $qty, $unitCost);
 
-        // 2. Create the specific layer for LIFO tracking
         InventoryCostLayer::create([
-            'product_id' => $inventory->product_id,
-            'location_id' => $inventory->location_id,
-            'transaction_line_id' => $line->id,
-            'received_qty' => $qty,
-            'unit_cost' => $unitCost,
-            'receipt_date' => Carbon::now(),
+            'product_id'         => $inventory->product_id,
+            'location_id'        => $inventory->location_id,
+            'transaction_line_id'=> $line->id,
+            'received_qty'       => $qty,
+            'unit_cost'          => $unitCost,
+            'receipt_date'       => Carbon::now(),
         ]);
     }
 
-    public function onIssue(Inventory $inventory, float $qty): float
+    public function onIssue(Inventory $inventory, string $qty): string
     {
         return $this->consumeLayers($inventory, $qty, 'desc');
     }

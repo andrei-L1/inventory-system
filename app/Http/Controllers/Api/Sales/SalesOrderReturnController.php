@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Invoice;

@@ -208,7 +208,7 @@ class StockService
     // PUBLIC: Reserve stock for a product at a specific location.
     // DOES NOT move physical QOH, only increments reserved_qty.
     // -------------------------------------------------------------------------
-    public function reserveStock(Product $product, Location $location, float $quantity): void
+    public function reserveStock(Product $product, Location $location, string $quantity): void
     {
         DB::transaction(function () use ($product, $location, $quantity) {
             $inventory = Inventory::where('product_id', $product->id)
@@ -227,16 +227,19 @@ class StockService
                 $inventory = Inventory::where('id', $inventory->id)->lockForUpdate()->first();
             }
 
-            $availableToReserve = (float) $inventory->quantity_on_hand - (float) $inventory->reserved_qty;
+            $availableToReserve = FinancialMath::sub(
+                (string) $inventory->quantity_on_hand,
+                (string) $inventory->reserved_qty
+            );
 
-            if ($quantity > ($availableToReserve + self::QTY_EPSILON)) {
+            if (FinancialMath::gt($quantity, $availableToReserve)) {
                 throw new InsufficientStockException(
                     "Cannot reserve {$quantity} units for product #{$product->id}. "
                     ."Available (Unreserved): {$availableToReserve}."
                 );
             }
 
-            $inventory->reserved_qty += $quantity;
+            $inventory->reserved_qty = FinancialMath::add((string) $inventory->reserved_qty, $quantity);
             $inventory->save();
         });
     }
@@ -244,9 +247,9 @@ class StockService
     // -------------------------------------------------------------------------
     // PUBLIC: Release a stock reservation.
     // -------------------------------------------------------------------------
-    public function releaseReservation(Product $product, Location $location, float $quantity): void
+    public function releaseReservation(Product $product, Location $location, string $quantity): void
     {
-        if ($quantity < self::QTY_EPSILON) {
+        if (! FinancialMath::isPositive($quantity)) {
             return;
         }
 
@@ -257,12 +260,11 @@ class StockService
                 ->first();
 
             if (! $inventory) {
-                // If it doesn't exist, we can't release anything, but we'll log it instead of crashing
-                // to allow cancellation of edge-case orphaned records.
                 return;
             }
 
-            $inventory->reserved_qty = max(0, (float) $inventory->reserved_qty - $quantity);
+            $newReserved = FinancialMath::sub((string) $inventory->reserved_qty, $quantity);
+            $inventory->reserved_qty = FinancialMath::isNegative($newReserved) ? '0' : $newReserved;
             $inventory->save();
         });
     }

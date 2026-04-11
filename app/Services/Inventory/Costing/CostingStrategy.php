@@ -9,12 +9,14 @@ interface CostingStrategy
 {
     /**
      * Handle stock receipt (Inbound) logic.
-     * Strategies fully own layer creation and averaging math.
+     * $qty and $unitCost must be BCMath-safe numeric strings or ints.
      */
-    public function onReceipt(Inventory $inventory, TransactionLine $line, float $qty, float $unitCost): void;
+    public function onReceipt(Inventory $inventory, TransactionLine $line, string $qty, string $unitCost): void;
 
     /**
-     * Handle stock issue (Outbound) logic and return the unit cost to be used for the issue line.
+     * Handle stock issue (Outbound) logic.
+     * $qty must be a BCMath-safe numeric string or int (always positive).
+     * Returns the unit cost as an 8dp BCMath string.
      */
-    public function onIssue(Inventory $inventory, float $qty): float;
+    public function onIssue(Inventory $inventory, string $qty): string;
 }
