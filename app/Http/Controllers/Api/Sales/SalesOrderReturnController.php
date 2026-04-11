@@ -147,12 +147,17 @@ class SalesOrderReturnController extends Controller
                 // Automatically generate a Draft Credit Note if there are refunds
                 $creditNote = null;
                 if (! empty($creditNoteLines)) {
+                    $totalAmount = '0';
+                    foreach ($creditNoteLines as $line) {
+                        $totalAmount = FinancialMath::add($totalAmount, $line['subtotal']);
+                    }
+
                     $creditNote = Invoice::create([
                         'invoice_number' => 'CN-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
                         'customer_id' => $salesOrder->customer_id,
                         'sales_order_id' => $salesOrder->id,
                         'invoice_date' => now()->toDateString(),
-                        'total_amount' => round(collect($creditNoteLines)->sum('subtotal'), 8),
+                        'total_amount' => FinancialMath::round($totalAmount, FinancialMath::LINE_SCALE),
                         'status' => Invoice::STATUS_DRAFT,
                         'type' => Invoice::TYPE_CREDIT_NOTE,
                         'notes' => 'Generated from Return: '.$transaction->reference_number,
