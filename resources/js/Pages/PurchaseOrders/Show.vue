@@ -563,7 +563,7 @@ const openPrint = () => {
                         <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
                             <span @click="router.visit(`/vendor-center?vendor_id=${po.vendor_id}`)" class="text-zinc-500 hover:text-sky-400 cursor-pointer transition-colors">{{ po.vendor_name }}</span>
                             <span class="text-zinc-700 mx-2">&bull;</span>
-                            <span class="text-zinc-500">₱{{ Number(po.total_amount).toFixed(2) }}</span>
+                            <span class="text-zinc-500">₱{{ po.formatted_total_amount }}</span>
                         </p>
                     </div>
                 </div>

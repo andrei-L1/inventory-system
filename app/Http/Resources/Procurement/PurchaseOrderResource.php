@@ -19,6 +19,7 @@ class PurchaseOrderResource extends JsonResource
             'order_date' => $this->order_date ? $this->order_date->format('Y-m-d') : null,
             'expected_delivery_date' => $this->expected_delivery_date ? $this->expected_delivery_date->format('Y-m-d') : null,
             'total_amount' => (string) $this->total_amount,
+            'formatted_total_amount' => \App\Helpers\FinancialMath::format($this->total_amount, 2),
             'currency' => $this->currency,
             'notes' => $this->notes,
             'created_by' => $this->creator->name ?? 'System',

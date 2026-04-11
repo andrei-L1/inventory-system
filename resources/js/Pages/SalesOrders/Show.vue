@@ -424,7 +424,7 @@ const totalDiscount = computed(() => {
                         <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono flex items-center gap-3">
                             <span @click="router.visit(`/customer-center?customer_id=${so.customer_id}`)" class="text-teal-400 hover:text-teal-300 cursor-pointer transition-colors">{{ so.customer_name }}</span>
                             <span class="w-1 h-1 rounded-full bg-zinc-700"></span>
-                            <span class="text-zinc-500">₱{{ Number(so.total_amount).toFixed(2) }} Revenue</span>
+                            <span class="text-zinc-500">₱{{ so.formatted_total_amount }} Revenue</span>
                         </p>
                     </div>
                 </div>
@@ -545,20 +545,23 @@ const totalDiscount = computed(() => {
                     </div>
 
                     <!-- Financial Summary -->
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2">Financial Summary</span>
-                        
-                        <div class="flex justify-between items-center py-0.5">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">Untaxed Amount</span>
-                            <span class="text-xs font-bold text-white">₱{{ Number(so.subtotal || 0).toFixed(2) }}</span>
+                    <div class="flex flex-col gap-5 p-6 bg-zinc-950/50 rounded-2xl border border-zinc-800/50 shadow-inner">
+                        <div class="flex justify-between items-center text-zinc-400">
+                            <span class="text-[10px] font-bold tracking-widest uppercase font-mono">Subtotal</span>
+                            <span class="text-xs font-bold text-white">₱{{ so.formatted_subtotal }}</span>
                         </div>
-                        <div class="flex justify-between items-center py-1">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">Tax Amount</span>
-                            <span class="text-xs font-bold text-white">₱{{ Number(so.total_tax || 0).toFixed(2) }}</span>
+                        <div class="flex justify-between items-center text-zinc-400">
+                            <span class="text-[10px] font-bold tracking-widest uppercase font-mono">Tax Amount</span>
+                            <span class="text-xs font-bold text-white">₱{{ so.formatted_total_tax }}</span>
                         </div>
-                        <div class="flex justify-between items-center py-1 text-emerald-400">
-                            <span class="text-[10px] font-bold font-mono uppercase">Total</span>
-                            <span class="text-sm font-black">₱{{ Number(so.total_amount || 0).toFixed(2) }}</span>
+                        <div class="flex justify-between items-center text-zinc-400">
+                            <span class="text-[10px] font-bold tracking-widest uppercase font-mono">Discounts</span>
+                            <span class="text-xs font-bold text-white">₱{{ so.formatted_total_discount }}</span>
+                        </div>
+                        <div class="h-px bg-zinc-800/50 my-1"></div>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-[11px] font-black text-white tracking-widest uppercase font-mono">Grand Total</span>
+                            <span class="text-lg font-black text-teal-400 font-mono shadow-teal-500/20 drop-shadow-md">₱{{ so.formatted_total_amount }}</span>
                         </div>
                     </div>
 

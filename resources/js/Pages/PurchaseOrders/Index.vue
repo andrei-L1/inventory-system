@@ -248,7 +248,7 @@ const formatReason = (reason) => {
 
                     <Column field="total_amount" header="TOTAL VALUE">
                         <template #body="{ data }">
-                            <span class="text-emerald-400 font-mono text-xs font-bold">₱{{ Number(data.total_amount).toFixed(2) }}</span>
+                            <span class="text-emerald-400 font-mono text-xs font-bold">₱{{ data.formatted_total_amount }}</span>
                         </template>
                     </Column>
 
