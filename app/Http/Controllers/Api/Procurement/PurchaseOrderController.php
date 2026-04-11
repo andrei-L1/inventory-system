@@ -687,10 +687,10 @@ class PurchaseOrderController extends Controller
     /**
      * Helper to find a conversion factor between two UOMs.
      */
-    private function getUomConversionFactor(int $fromId, int $toId, ?int $productId = null): float
+    private function getUomConversionFactor(int $fromId, int $toId, ?int $productId = null): string
     {
         try {
-            return UomHelper::getConversionFactor($fromId, $toId, $productId);
+            return (string) UomHelper::getConversionFactor($fromId, $toId, $productId);
         } catch (\Exception $e) {
             throw new UomConversionException($e->getMessage());
         }
