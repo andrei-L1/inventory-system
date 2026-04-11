@@ -908,7 +908,7 @@ const openPrint = () => {
                                     <!-- Simple Divider -->
                                     <div class="w-px h-5 bg-zinc-800 group-focus-within:bg-orange-500/20"></div>
                                     
-                                    <div class="w-20">
+                                    <div class="w-24">
                                         <Select 
                                             v-model="data.uom_id" 
                                             :options="getFilteredUoms(data)" 
@@ -921,15 +921,23 @@ const openPrint = () => {
                                             pt:label:class="!text-amber-500 !p-1.5 !text-center !uppercase font-black"
                                             pt:dropdown:class="!text-zinc-600 !w-6"
                                         >
+                                            <template #value="slotProps">
+                                                <span v-if="slotProps.value" class="text-amber-500 uppercase font-black">
+                                                    {{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}
+                                                </span>
+                                                <span v-else class="text-amber-500/50 uppercase font-black">?</span>
+                                            </template>
                                             <template #option="slotProps">
-                                                <div class="flex items-center justify-between w-full min-w-[120px] py-0.5">
-                                                    <div class="flex flex-col">
-                                                        <span class="text-[11px] font-bold text-white">{{ slotProps.option.abbreviation.toUpperCase() }}</span>
-                                                        <span class="text-[9px] text-zinc-500">{{ slotProps.option.name }}</span>
+                                                <div class="flex flex-col gap-1 w-full py-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-[11px] font-bold text-zinc-100 uppercase tracking-tight">{{ slotProps.option.abbreviation }}</span>
+                                                        <span v-if="slotProps.option.is_custom" 
+                                                              class="text-[8px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-black tracking-widest leading-none">
+                                                            CUSTOM
+                                                        </span>
                                                     </div>
-                                                    <div class="flex flex-col items-end gap-1">
-                                                        <span v-if="slotProps.option.conversion_text" class="text-[9px] font-black text-amber-500 font-mono tracking-tighter">{{ slotProps.option.conversion_text }}</span>
-                                                        <Tag v-if="slotProps.option.is_custom" value="CUSTOM" class="text-[7px] px-1 py-0 font-bold" severity="warn" />
+                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-zinc-500 font-mono italic">
+                                                        {{ slotProps.option.conversion_text }}
                                                     </div>
                                                 </div>
                                             </template>
@@ -1066,9 +1074,29 @@ const openPrint = () => {
                                             optionValue="id" 
                                             @change="onReturnUomChange(line)"
                                             class="!bg-transparent !border-0 !shadow-none !h-full w-24 !text-[11px] font-black"
-                                            pt:label:class="!text-zinc-400 !font-black !p-0 !flex !items-center !justify-center !text-center !uppercase !h-full"
+                                            pt:label:class="!text-red-400 !font-black !p-0 !flex !items-center !justify-center !text-center !uppercase !h-full"
                                             pt:dropdown:class="!text-zinc-700 !w-4"
-                                        />
+                                        >
+                                            <template #value="slotProps">
+                                                <span v-if="slotProps.value" class="text-red-400 uppercase font-black">
+                                                    {{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}
+                                                </span>
+                                            </template>
+                                            <template #option="slotProps">
+                                                <div class="flex flex-col gap-1 w-full py-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-[11px] font-bold text-zinc-100 uppercase tracking-tight">{{ slotProps.option.abbreviation }}</span>
+                                                        <span v-if="slotProps.option.is_custom" 
+                                                              class="text-[8px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded font-black tracking-widest leading-none">
+                                                            CUSTOM
+                                                        </span>
+                                                    </div>
+                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-zinc-500 font-mono italic">
+                                                        {{ slotProps.option.conversion_text }}
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </Select>
                                     </div>
 
                                     <!-- Resolution (3) -->

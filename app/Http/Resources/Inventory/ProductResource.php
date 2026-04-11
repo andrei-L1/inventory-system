@@ -2,7 +2,9 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,32 +18,66 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $targetUomId = $request->query('target_uom_id');
-        $qoh = (float) ($this->inventories_sum_quantity_on_hand ?? ($this->relationLoaded('inventories') ? $this->inventories->sum('quantity_on_hand') : $this->inventories()->sum('quantity_on_hand')));
+        $qoh = (string) ($this->inventories_sum_quantity_on_hand ?? ($this->relationLoaded('inventories') ? $this->inventories->sum('quantity_on_hand') : $this->inventories()->sum('quantity_on_hand')));
+
+        $sellingPrice = (string) $this->selling_price;
+        $averageCost = (string) $this->average_cost;
+        $reorderPoint = (string) $this->reorder_point;
+        $reorderQuantity = (string) $this->reorder_quantity;
+        $formattedSellingPrice = $this->formatted_selling_price;
+        $formattedAverageCost = $this->formatted_average_cost;
+        $targetUomAbbr = $this->uom->abbreviation ?? 'pcs';
 
         if ($targetUomId) {
-            $multiplier = UomHelper::getMultiplierToSmallest((int) $targetUomId, $this->id, false);
-            $scaledQoh = $multiplier > 0 ? $qoh / $multiplier : $qoh;
-            $formattedTotalQoh = UomHelper::format($scaledQoh, (int) $targetUomId, $this->id, false);
+            $targetUomId = (int) $targetUomId;
+            $targetMultiplier = UomHelper::getMultiplierToSmallest($targetUomId, $this->id, false);
+            $productMultiplier = UomHelper::getMultiplierToSmallest((int) $this->uom_id, $this->id, false);
+            
+            // Normalize to Atomic (Price per Piece) then scale to Target
+            if (FinancialMath::gt($productMultiplier, '0')) {
+                // Selling Price scaling
+                $perPiecePrice = FinancialMath::div($sellingPrice, $productMultiplier);
+                $sellingPrice = FinancialMath::mul($perPiecePrice, $targetMultiplier);
+                
+                // Average Cost scaling
+                $perPieceCost = FinancialMath::div($averageCost, $productMultiplier);
+                $averageCost = FinancialMath::mul($perPieceCost, $targetMultiplier);
+
+                // Reorder Point/Qty scaling (Quantity context)
+                $reorderPoint = FinancialMath::div(FinancialMath::mul($reorderPoint, $productMultiplier), $targetMultiplier);
+                $reorderQuantity = FinancialMath::div(FinancialMath::mul($reorderQuantity, $productMultiplier), $targetMultiplier);
+            }
+
+            $scaledQoh = FinancialMath::gt($targetMultiplier, '0') 
+                ? FinancialMath::div($qoh, $targetMultiplier) 
+                : $qoh;
+                
+            $formattedTotalQoh = UomHelper::format((float) $scaledQoh, $targetUomId, $this->id, false);
+            
+            $targetUom = UnitOfMeasure::find($targetUomId);
+            $targetUomAbbr = $targetUom->abbreviation ?? 'pcs';
+            $formattedSellingPrice = '₱'.number_format((float) $sellingPrice, 2).' / '.$targetUomAbbr;
+            $formattedAverageCost = '₱'.number_format((float) $averageCost, 2).' / '.$targetUomAbbr;
         } else {
             $formattedTotalQoh = $this->formatted_total_qoh;
         }
 
         return [
             'id' => $this->id,
-            'sku' => $this->sku ?? $this->product_code, // Guaranteed display ID
+            'sku' => $this->sku ?? $this->product_code,
             'product_code' => $this->product_code,
             'name' => $this->name,
             'description' => $this->description,
             'barcode' => $this->barcode,
             'brand' => $this->brand,
-            'selling_price' => (float) $this->selling_price,
-            'formatted_selling_price' => $this->formatted_selling_price,
-            'average_cost' => (float) $this->average_cost,
-            'formatted_average_cost' => $this->formatted_average_cost,
+            'selling_price' => $sellingPrice,
+            'formatted_selling_price' => $formattedSellingPrice,
+            'average_cost' => $averageCost,
+            'formatted_average_cost' => $formattedAverageCost,
             'total_qoh' => $qoh,
             'formatted_total_qoh' => $formattedTotalQoh,
-            'reorder_point' => (float) $this->reorder_point,
-            'reorder_quantity' => (float) $this->reorder_quantity,
+            'reorder_point' => $reorderPoint,
+            'reorder_quantity' => $reorderQuantity,
 
             'is_active' => (bool) $this->is_active,
             'category_id' => $this->category_id,
@@ -59,7 +95,7 @@ class ProductResource extends JsonResource
                 'lifo' => 'LIFO (Last-In, First-Out)',
                 default => $this->costingMethod->label ?? 'unknown',
             },
-            'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/'.$this->attachmentsIn('main_image')->first()->file_path) : null,
+            'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/' . $this->attachmentsIn('main_image')->first()->file_path) : null,
             'has_history' => (bool) ($this->transaction_lines_count ?? $this->transactionLines()->exists()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -329,7 +329,10 @@ const validateForm = () => {
     if (isNonBaseUOMMissingRule.value) {
         const uomName = uoms.value.find(u => u.id === product.value.uom_id)?.name || 'this unit';
         if (!product.value.id) {
-            newErrors.packaging = `No global rule found for ${uomName}. Save with a base unit first, then you can add custom packaging here.`;
+            // New logic: If the user hasn't provided an initial factor, block it.
+            if (!product.value.initial_conversion_factor) {
+                newErrors.packaging = `No global rule found for ${uomName}. Please define the conversion factor (1 ${uomName} = ? pieces) in the Packaging tab.`;
+            }
         } else {
             newErrors.packaging = `A conversion rule (e.g. 1 ${uomName} = X base units) must be defined in the Packaging tab.`;
         }
@@ -497,10 +500,13 @@ const isNonBaseUOMMissingRule = computed(() => {
 
     // A rule is missing if there is no global rule FOR THIS UOM 
     // AND no product-specific rule for THIS product.
-    return !allConversions.value.some(c => 
+    // AND no initial factor provided in the current form.
+    const hasRule = allConversions.value.some(c => 
         c.from_uom_id === uom.id && 
         (!c.product_id || c.product_id === product.value.id)
     );
+
+    return !hasRule && !product.value.initial_conversion_factor;
 });
 
 const getBaseUomForSelected = computed(() => {
@@ -831,17 +837,7 @@ const getBaseUomForSelected = computed(() => {
                                                 class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12"
                                                 :class="{'!border-red-500/50': errors.category_id}" />
                                     </div>
-                                    <div class="flex flex-col gap-3">
-                                        <div class="flex justify-between items-center">
-                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit of Measure</label>
-                                            <span v-if="errors.uom_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
-                                        </div>
-                                        <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
-                                                :disabled="isEditing && product.has_history"
-                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 disabled:opacity-50"
-                                                :class="{'!border-red-500/50': errors.uom_id}" />
-                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">UOM locked due to audit history</p>
-                                    </div>
+
                                     <div class="flex flex-col gap-3">
                                         <div class="flex justify-between items-center">
                                             <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Preferred Vendor (Owner)</label>
@@ -851,6 +847,41 @@ const getBaseUomForSelected = computed(() => {
                                                 placeholder="Link to a supplier..."
                                                 showClear
                                                 class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12" />
+                                    </div>
+
+                                    <div class="flex flex-col gap-3 md:col-span-2">
+                                        <div class="flex justify-between items-center">
+                                            <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Unit of Measure</label>
+                                            <span v-if="errors.uom_id" class="text-red-400 text-[9px] font-bold uppercase tracking-widest font-mono">Required</span>
+                                        </div>
+                                        <Select v-model="product.uom_id" :options="uoms" optionLabel="name" optionValue="id" 
+                                                :disabled="isEditing && product.has_history"
+                                                class="!bg-zinc-900/50 !border-zinc-800 !text-white !h-12 disabled:opacity-50"
+                                                :class="{'!border-red-500/50': errors.uom_id}" />
+                                        
+                                        <!-- Inline Quick Conversion for New Products -->
+                                        <div v-if="!product.id && isNonBaseUOMMissingRule" class="mt-2 p-3 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div class="flex items-center justify-between mb-3 border-b border-sky-500/10 pb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="pi pi-bolt text-sky-400 text-[10px]"></i>
+                                                    <span class="text-[8px] font-black text-sky-400 uppercase tracking-widest font-mono italic">Quick Conversion Define</span>
+                                                </div>
+                                                <span class="text-[8px] font-bold text-zinc-500 font-mono tracking-tighter">1 {{ uoms.find(u => u.id === product.uom_id)?.abbreviation }} =</span>
+                                            </div>
+                                            <div class="flex items-center gap-4">
+                                                <div class="relative flex-1">
+                                                    <InputNumber v-model="product.initial_conversion_factor" placeholder="Enter quantity..." 
+                                                                inputClass="!bg-zinc-950 !border-sky-500/30 !text-white !h-11 !w-full !px-3 !font-black !font-mono !text-lg focus:!border-sky-500 shadow-inner" />
+                                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-tighter">{{ getBaseUomForSelected?.abbreviation || 'pcs' }}</div>
+                                                </div>
+                                                <div class="flex flex-col gap-0.5 max-w-[120px]">
+                                                    <span class="text-[7px] text-zinc-500 font-bold uppercase tracking-[0.1em] font-mono leading-none">Atomic Rule</span>
+                                                    <p class="text-[7px] text-sky-400/60 font-mono italic m-0 tracking-tighter leading-tight">Scale factors are applied at creation.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-zinc-700 uppercase tracking-widest font-mono mt-1 italic">UOM locked due to audit history</p>
                                     </div>
                                     <div class="flex flex-col gap-3 md:col-span-2">
                                         <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Description</label>
@@ -937,12 +968,7 @@ const getBaseUomForSelected = computed(() => {
                             </div>
 
                             <div v-show="activeTab === 'packaging'" class="animate-in slide-in-from-right-4 duration-500 h-full flex flex-col">
-                                <div v-if="false" class="flex-1 border-2 border-dashed border-zinc-900 bg-zinc-950/50 rounded-2xl flex flex-col items-center justify-center p-10 text-center opacity-70">
-                                    <i class="pi pi-save text-4xl text-zinc-600 mb-4"></i>
-                                    <h4 class="text-white font-bold text-lg m-0">Save Product First</h4>
-                                    <p class="text-zinc-500 text-sm mt-2 max-w-md">You must create and save the basic product record before you can define custom packaging conversions.</p>
-                                </div>
-                                <div v-else class="flex flex-col gap-6">
+                                <div v-if="product.uom_id" class="flex flex-col gap-6">
                                     <div class="flex justify-between items-center bg-zinc-900/30 p-4 border border-zinc-800/80 rounded-xl">
                                         <div class="flex flex-col">
                                             <span class="text-white font-bold text-sm tracking-tight uppercase">Product Packaging Equivalency</span>
@@ -950,18 +976,42 @@ const getBaseUomForSelected = computed(() => {
                                         </div>
                                         <Button v-if="!addingRule" 
                                                 label="ADD PACKAGING" icon="pi pi-plus" 
-                                                :disabled="!product.id || !product.uom_id"
+                                                :disabled="!product.id"
                                                 class="!bg-fuchsia-500 hover:!bg-fuchsia-400 !border-none !text-[10px] !font-bold !h-10 !px-4 disabled:!opacity-30 disabled:!bg-zinc-800 disabled:!text-zinc-500 transition-all font-mono" 
                                                 @click="addingRule = true" 
-                                                :title="!product.id ? 'Save product first to unlock custom packaging' : (!product.uom_id ? 'Select a UOM first' : '')" />
+                                                :title="!product.id ? 'Save product first to unlock custom packaging' : ''" />
                                     </div>
 
-                                    <!-- Contextual Info for New Products -->
-                                    <div v-if="!product.id && !addingRule" class="p-4 bg-sky-500/5 border border-sky-500/20 rounded-xl flex gap-4 items-start animate-in fade-in duration-700">
-                                        <i class="pi pi-lock text-sky-400 text-sm mt-0.5"></i>
-                                        <div class="flex flex-col gap-1">
-                                            <span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest font-mono">Precision Lock</span>
-                                            <p class="text-[10px] text-zinc-400 font-mono leading-relaxed m-0">Custom packaging configuration will <span class="text-white">Unlock Automatically</span> after you save this product. This ensures rules are strictly associated with this item's unique identity.</p>
+                                    <!-- Atomic Onboarding for New Products -->
+                                    <div v-if="!product.id && isNonBaseUOMMissingRule" class="bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 p-8 rounded-xl flex flex-col gap-6 shadow-inner animate-in fade-in zoom-in duration-500">
+                                        <div class="flex items-start gap-4 pb-4 border-b border-sky-500/10">
+                                            <div class="w-10 h-10 rounded bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                                                <i class="pi pi-bolt"></i>
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest font-mono">Atomic Onboarding</span>
+                                                <p class="text-[10px] text-zinc-400 font-mono leading-relaxed m-0 italic">No global rule found for <span class="text-white">{{ uoms.find(u => u.id === product.uom_id)?.abbreviation }}</span>. Define it now to save this product.</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
+                                            <div class="flex flex-col gap-3">
+                                                <div class="flex justify-between items-center px-1">
+                                                    <label class="text-[9px] font-black text-zinc-500 uppercase tracking-widest font-mono italic">Configuration Rule</label>
+                                                    <span class="text-[8px] font-bold text-sky-500 uppercase font-mono">1 {{ uoms.find(u => u.id === product.uom_id)?.abbreviation }} =</span>
+                                                </div>
+                                                <div class="relative">
+                                                     <InputNumber v-model="product.initial_conversion_factor" placeholder="E.g. 12" 
+                                                                 class="!w-full"
+                                                                 inputClass="!bg-zinc-900/80 !border-sky-500/30 !text-white !h-12 !px-4 !font-black !text-lg !font-mono focus:!border-sky-500 shadow-[0_0_15px_rgba(56,189,248,0.1)]" />
+                                                     <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 tracking-tighter uppercase font-mono">{{ getBaseUomForSelected?.abbreviation || 'pcs' }}</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="bg-zinc-900/40 border border-zinc-800 p-5 rounded-lg flex items-center gap-4">
+                                                <i class="pi pi-lock-open text-zinc-700 text-lg"></i>
+                                                <p class="text-[9px] text-zinc-500 font-mono leading-relaxed m-0">This rule will be saved <span class="text-sky-400 font-bold italic">Atopically</span> with the product. No global settings will be affected.</p>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1003,6 +1053,10 @@ const getBaseUomForSelected = computed(() => {
                                     <div v-if="loadingConversions" class="flex justify-center py-16">
                                         <i class="pi pi-spin pi-spinner text-fuchsia-400 text-3xl opacity-50"></i>
                                     </div>
+                                </div>
+                                <div v-else class="p-8 border-2 border-dashed border-zinc-900 bg-zinc-950/50 rounded-2xl flex flex-col items-center justify-center text-center opacity-60">
+                                    <i class="pi pi-info-circle text-3xl text-zinc-600 mb-4 font-light"></i>
+                                    <p class="text-[10px] font-mono uppercase tracking-[0.2em] leading-relaxed m-0 text-zinc-400">Select a Unit of Measure in the Basic Info tab<br/><span class="opacity-70 text-[8px]">Then you can configure packaging here.</span></p>
                                 </div>
                             </div>
                         </div>

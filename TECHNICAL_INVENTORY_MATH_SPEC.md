@@ -105,3 +105,26 @@ The `FinancialMath` engine bridges these layers at 8-decimal precision, ensuring
 
 > [!CAUTION]
 > **Code Sync Constraint**: Any new calculation (Invoicing, Discounts, Tax) **MUST** use the `FinancialMath` wrapper (`FinancialMath::add`, `FinancialMath::mul`, etc.). Using internal PHP operators (`+`, `-`, `*`) or native `round()` will instantly decouple quantities from the String Boundary and is strictly forbidden.
+
+---
+
+## 8. The Calculator Parity Paradox (Rounding Drift)
+
+A common point of confusion for users is the **"Ghost Cent"** discrepancy between a manual calculator and the system dashboard.
+
+### 8.1 The Phenomenon (The ₱0.04 Problem)
+If a user multiplies a rounded display price (e.g., ₱10,016.67) by a quantity (e.g., 12), they may get a result (₱120,200.04) that differs from the system's listed total (₱120,200.00).
+
+### 8.2 The Technical Origin: Rounding Increments
+This discrepancy is a mathematically inevitable result of **High-Precision Division**:
+
+1.  **The Transaction**: 12 units bought for a total of **₱120,200.00**.
+2.  **The Actual Unit Cost**: $120,200.00 \div 12 = \mathbf{10,016.66666667...}$
+3.  **The Display Cost**: To make the number "human-readable," we round it UP to **₱10,016.67**.
+4.  **The Multiplier Effect**: When we rounded up, we technically added a "rounding increment" of $\approx 0.0033...$ to each unit. Across 12 units, these tiny increments sum up to exactly **₱0.04**.
+
+### 8.3 Our Financial Standard: "The Honest Truth"
+To ensure absolute audit integrity, our system prioritizes **Ledger Truth** over **Calculator Parity**:
+*   **Ledger Truth (The Total)**: The "Total Value" displayed always reflects the hard assets in the database (₱120,200.00).
+*   **Visual Cues**: To signal that unit costs are averages, we use the **Tilde (~)** prefix (e.g., `~ ₱10,016.67 / pcs`).
+*   **Precision Hygiene**: We never use the rounded display price for internal accounting; we always use the the high-resolution 8-decimal string stored in the ledger.

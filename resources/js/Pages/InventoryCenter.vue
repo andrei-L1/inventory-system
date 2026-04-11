@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTable from 'primevue/datatable';
@@ -70,6 +70,35 @@ const isUomIdDiscrete = (id) => {
     return uom ? uom.category === 'count' : true;
 };
 
+const filteredUoms = computed(() => {
+    if (!selectedProduct.value) return uoms.value;
+    
+    const cat = selectedProduct.value.uom?.category;
+    return uoms.value.filter(u => {
+        // Must be in same category to even be a candidate
+        if (u.category !== cat) return false;
+
+        // Base units are always allowed
+        if (u.is_base) return true;
+        
+        // Product-specific conversions
+        const hasProdRule = uomConversions.value.some(c => 
+            c.product_id === selectedProduct.value.id && 
+            (c.from_uom_id === u.id || c.to_uom_id === u.id)
+        );
+        if (hasProdRule) return true;
+        
+        // Global conversions
+        const hasGlobalRule = uomConversions.value.some(c => 
+            !c.product_id && 
+            (c.from_uom_id === u.id || c.to_uom_id === u.id)
+        );
+        if (hasGlobalRule) return true;
+        
+        return false;
+    });
+});
+
 const getFactorToBase = (uomId, productId = null) => {
     const uom = uoms.value.find(u => u.id == uomId);
     if (!uom) return { factor: 1, baseId: uomId };
@@ -129,7 +158,15 @@ const loadProducts = async () => {
         if (selectedViewUomId.value) params.target_uom_id = selectedViewUomId.value;
         const res = await axios.get('/api/products', { params });
         products.value = res.data.data;
-        if (products.value.length > 0 && !selectedProduct.value) {
+
+        // Selection Sync: Ensure the detail view uses the fresh, scaled data from the API
+        if (selectedProduct.value) {
+            const freshProduct = products.value.find(p => p.id === selectedProduct.value.id);
+            if (freshProduct) {
+                selectedProduct.value = freshProduct;
+                // No need to explicitly reload intelligence here if we have a watch on selectedProduct
+            }
+        } else if (products.value.length > 0) {
             const urlParams = new URLSearchParams(window.location.search);
             const productId = urlParams.get('product_id');
             if (productId) {
@@ -310,6 +347,14 @@ watch(selectedProduct, () => {
     loadIntelligenceData();
 });
 
+// Refresh all intelligence/history data when the View Unit changes
+watch(selectedViewUomId, () => {
+    if (selectedProduct.value) {
+        loadHistory(1);
+        loadIntelligenceData();
+    }
+});
+
 const handleLinkClick = (type, name, id) => {
     console.log(`Navigating to ${type} [ID: ${id}]`);
     
@@ -412,16 +457,37 @@ const tablePt = {
                         <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono">View Unit</span>
                         <Select 
                             v-model="selectedViewUomId" 
-                            :options="uoms" 
+                            :options="filteredUoms" 
                             optionLabel="abbreviation" 
                             optionValue="id" 
                             placeholder="Native"
                             showClear
                             @change="loadProducts"
-                            class="!bg-transparent !border-none !h-full !text-[10px] font-mono font-black !w-24 !shadow-none !flex !items-center"
+                            class="!bg-transparent !border-none !h-full !text-[10px] font-mono font-black !w-32 !shadow-none !flex !items-center"
                             pt:label:class="!text-emerald-500 !p-0 !text-left !uppercase font-black !flex !items-center !h-full"
                             pt:dropdown:class="!text-zinc-600 !w-4 !flex !items-center"
-                        />
+                        >
+                            <template #value="slotProps">
+                                <span v-if="slotProps.value" class="text-emerald-500 uppercase font-black">
+                                    {{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}
+                                </span>
+                                <span v-else class="text-emerald-500/50 uppercase font-black">Native</span>
+                            </template>
+                            <template #option="slotProps">
+                                <div class="flex flex-col gap-1 w-full py-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[11px] font-bold text-zinc-100 uppercase tracking-tight">{{ slotProps.option.abbreviation }}</span>
+                                        <span v-if="uomConversions.find(c => c.product_id === selectedProduct?.id && c.from_uom_id === slotProps.option.id)" 
+                                              class="text-[8px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded font-black tracking-widest leading-none">
+                                            CUSTOM
+                                        </span>
+                                    </div>
+                                    <div v-if="!slotProps.option.is_base" class="text-[9px] text-zinc-500 font-mono italic">
+                                        = {{ getFactorToBase(slotProps.option.id, selectedProduct?.id).factor }} {{ uoms.find(u => u.is_base && u.category === slotProps.option.category)?.abbreviation || 'pcs' }}
+                                    </div>
+                                </div>
+                            </template>
+                        </Select>
                     </div>
                     <button @click="toggleMenu" 
                             class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
@@ -548,11 +614,11 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Selling Price</label>
-                                        <span class="text-white font-bold text-lg tracking-tight">{{ selectedProduct.formatted_selling_price }}</span>
+                                        <span class="text-white font-bold text-lg tracking-tight">~ {{ selectedProduct.formatted_selling_price }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Weighted Avg Cost</label>
-                                        <span class="text-sky-400 font-bold text-lg tracking-tight">{{ selectedProduct.formatted_average_cost }}</span>
+                                        <span class="text-sky-400 font-bold text-lg tracking-tight">~ {{ selectedProduct.formatted_average_cost }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
@@ -560,11 +626,13 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reorder Point</label>
-                                        <span class="text-zinc-300 font-mono font-bold text-lg tracking-tight">{{ selectedProduct.reorder_point ?? '—' }}</span>
+                                        <span class="text-zinc-300 font-mono font-bold text-lg tracking-tight">{{ getScaledQty(selectedViewUomId || selectedProduct.uom_id, selectedProduct.reorder_point, selectedProduct.id) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Unit of Measure</label>
-                                        <span class="text-zinc-300 font-bold uppercase text-xs">{{ selectedProduct.uom?.name || 'Unit' }}</span>
+                                        <span class="text-zinc-300 font-bold uppercase text-xs">
+                                            {{ selectedViewUomId ? uoms.find(u => u.id === selectedViewUomId)?.name : selectedProduct.uom?.name }}
+                                        </span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Valuation Method</label>
@@ -683,7 +751,7 @@ const tablePt = {
                                     </Column>
                                     <Column field="unit_cost" header="Unit Cost" style="width: 120px">
                                         <template #body="{ data }">
-                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">{{ data.formatted_unit_cost }}</span>
+                                            <span class="font-mono font-bold text-sky-400 tracking-tighter text-[11px]">~ {{ data.formatted_unit_cost }}</span>
                                         </template>
                                     </Column>
                                     <Column header="Layer Value" style="width: 130px">

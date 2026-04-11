@@ -50,9 +50,9 @@ class InventoryCostLayer extends Model
     /**
      * Calculate current remaining quantity on-the-fly.
      */
-    public function getRemainingQtyAttribute(): float
+    public function getRemainingQtyAttribute(): string
     {
-        return (float) ($this->received_qty - $this->issued_qty);
+        return \App\Helpers\FinancialMath::sub((string) $this->received_qty, (string) $this->issued_qty);
     }
 
     /**
