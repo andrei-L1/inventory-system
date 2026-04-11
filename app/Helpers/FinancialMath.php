@@ -194,6 +194,16 @@ class FinancialMath
         return self::cmp($a, '0') < 0;
     }
 
+    public static function max(mixed $a, mixed $b): string
+    {
+        return self::gte($a, $b) ? self::toDecimal($a) : self::toDecimal($b);
+    }
+
+    public static function min(mixed $a, mixed $b): string
+    {
+        return self::lte($a, $b) ? self::toDecimal($a) : self::toDecimal($b);
+    }
+
     // ─── Private Domain Intermediates ─────────────────────────────────────────
 
     /**

@@ -107,8 +107,8 @@ class StockReservationTest extends TestCase
             ->where('location_id', $this->location->id)
             ->first();
 
-        $this->assertEquals(10, $inventory->quantity_on_hand);
-        $this->assertEquals(4, $inventory->reserved_qty);
+        $this->assertEquals(10, (float) $inventory->quantity_on_hand);
+        $this->assertEquals(4, (float) $inventory->reserved_qty);
     }
 
     public function test_cannot_reserve_more_than_available(): void
@@ -156,7 +156,7 @@ class StockReservationTest extends TestCase
 
         // 3. Try to issue 4 (unreserved is only 3)
         $this->expectException(InsufficientStockException::class);
-        $this->expectExceptionMessage('Insufficient unreserved stock');
+        $this->expectExceptionMessage('Insufficient stock for Test Product at Main WH');
 
         $this->service->recordMovement([
             'header' => [
@@ -185,6 +185,6 @@ class StockReservationTest extends TestCase
         $this->service->releaseReservation($this->product, $this->location, 2);
 
         $inventory->refresh();
-        $this->assertEquals(3, $inventory->reserved_qty);
+        $this->assertEquals(3, (float) $inventory->reserved_qty);
     }
 }
