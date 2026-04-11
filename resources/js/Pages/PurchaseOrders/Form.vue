@@ -187,6 +187,7 @@ onMounted(async () => {
             lines: props.purchaseOrder.lines.map(l => ({
                 product_id: l.product_id,
                 uom_id: l.uom_id,
+                prev_uom_id: l.uom_id,
                 ordered_qty: l.ordered_qty,
                 unit_cost: l.unit_cost
             }))

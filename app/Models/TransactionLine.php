@@ -125,7 +125,8 @@ class TransactionLine extends Model
         $scaledCost = $multiplier > 0 ? (float) $this->unit_cost * $multiplier : (float) $this->unit_cost;
 
         $symbol = '₱';
-        return $symbol . number_format($scaledCost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($scaledCost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedUnitPriceAttribute(): ?string
@@ -138,6 +139,7 @@ class TransactionLine extends Model
         $scaledPrice = $multiplier > 0 ? (float) $this->unit_price * $multiplier : (float) $this->unit_price;
 
         $symbol = '₱';
-        return $symbol . number_format($scaledPrice, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($scaledPrice, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

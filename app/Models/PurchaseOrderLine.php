@@ -82,7 +82,8 @@ class PurchaseOrderLine extends Model
 
     public function getFormattedUnitCostAttribute(): string
     {
-        $symbol = '₱';
-        return $symbol . number_format($this->unit_cost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+        $currency = $this->purchaseOrder->currency ?? 'USD';
+
+        return $currency.' '.number_format($this->unit_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

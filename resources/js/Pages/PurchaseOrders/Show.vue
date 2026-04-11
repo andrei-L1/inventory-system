@@ -6,6 +6,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
+import Popover from 'primevue/popover';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
@@ -26,6 +27,7 @@ const loading = ref(true);
 const approveLoading = ref(false);
 const sendLoading = ref(false);
 const shipLoading = ref(false);
+const cancelLoading = ref(false);
 const grnDialog = ref(false);
 const grnDetailDialog = ref(false);
 const returnDetailDialog = ref(false);
@@ -40,6 +42,15 @@ const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const uomConversions = ref([]);
 const loadingConversions = ref(false);
+
+// H-1: Popover for per-location stock breakdown in the GRN dialog
+const stockPopover = ref(null);
+const popoverLine = ref(null);
+
+const toggleStockInfo = (event, line) => {
+    popoverLine.value = line;
+    stockPopover.value.toggle(event);
+};
 // UOM Configs
 
 const selectedLineForStock = ref(null);
@@ -165,9 +176,7 @@ const onReturnUomChange = (line) => {
 
     if (targetInfo.baseId === poBaseInfo.baseId) {
         const effectiveFactor = poBaseInfo.factor / targetInfo.factor;
-        line.return_qty = line.received_qty_in_po_unit / (poBaseInfo.factor / targetInfo.factor); // Reset to max? or keep? 
-        // Actually, let's just use the factor to adjust the QTY RETURNED if it was already set, but here it's simpler to just reset or scale.
-        // Let's just scale it.
+        // L-3: Scale the current return_qty to the new UOM instead of resetting to max.
         line.return_qty = (line.received_qty_in_po_unit * effectiveFactor);
         return;
     }
@@ -503,6 +512,27 @@ const deletePO = async () => {
     });
 };
 
+const cancelPO = async () => {
+    confirm.require({
+        message: 'Are you sure you want to cancel this Purchase Order? This action cannot be undone.',
+        header: 'Confirm Cancellation',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger',
+        accept: async () => {
+            try {
+                cancelLoading.value = true;
+                await axios.patch(`/api/purchase-orders/${po.value.id}/cancel`);
+                toast.add({ severity: 'success', summary: 'Cancelled', detail: 'Purchase Order has been cancelled.', life: 3000 });
+                loadPO();
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Cancellation failed', life: 3000 });
+            } finally {
+                cancelLoading.value = false;
+            }
+        }
+    });
+};
+
 const openPrint = () => {
     window.open(`/purchase-orders/${po.value.id}/print`, '_blank');
 };
@@ -546,6 +576,14 @@ const openPrint = () => {
                         class="p-button-danger p-button-text p-button-sm !font-bold" 
                         @click="deletePO"
                     />
+
+                    <Button 
+                        v-if="po.status === 'draft' && can('manage-purchase-orders')" 
+                        label="Edit" 
+                        icon="pi pi-pen-to-square" 
+                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="router.visit(`/purchase-orders/${po.id}/edit`)"
+                    />
                     
                     <Button 
                         v-if="po.status === 'draft' && can('manage-purchase-orders')" 
@@ -573,8 +611,19 @@ const openPrint = () => {
                         @click="shipDialog = true"
                     />
 
+                    <!-- M-1: Cancel button — only for non-terminal states with no received stock -->
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && po.lines.some(l => l.received_qty > 0) && can('manage-purchase-orders')" 
+                        v-if="['draft', 'open', 'sent', 'in_transit'].includes(po.status) && can('manage-purchase-orders')" 
+                        label="Cancel PO" 
+                        icon="pi pi-ban" 
+                        :loading="cancelLoading"
+                        class="p-button-sm !bg-zinc-800 hover:!bg-red-900/30 !text-red-400 !border-red-500/20 font-bold tracking-widest uppercase font-mono transition-all" 
+                        @click="cancelPO"
+                    />
+
+                    <!-- L-4: po.status is a plain string from the API; removed redundant .name fallback -->
+                    <Button 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && po.lines.some(l => l.received_qty > 0) && can('manage-purchase-orders')" 
                         label="Return Items (RTV)" 
                         icon="pi pi-replay" 
                         class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -582,7 +631,7 @@ const openPrint = () => {
                     />
 
                     <Button 
-                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].some(s => po.status === s || po.status.name === s) && can('manage-purchase-orders')" 
+                        v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Print PO" 
                         icon="pi pi-print" 
                         class="p-button-sm !bg-white/5 hover:!bg-white/10 !text-white !border-white/10 font-bold tracking-widest uppercase font-mono transition-all" 
@@ -897,6 +946,20 @@ const openPrint = () => {
                 <Button label="Post Receipt" icon="pi pi-check" @click="postReceipt" :loading="grnLoading" class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
             </template>
         </Dialog>
+
+        <!-- H-1: Popover for per-location stock breakdown -->
+        <Popover ref="stockPopover">
+            <div v-if="popoverLine" class="flex flex-col gap-2 p-1 min-w-[200px]">
+                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800 pb-1">Stock by Location</span>
+                <div v-if="popoverLine.inventories && popoverLine.inventories.length > 0">
+                    <div v-for="inv in popoverLine.inventories" :key="inv.location_id" class="flex justify-between items-center py-1">
+                        <span class="text-[10px] text-zinc-400 font-mono">{{ inv.location_name || inv.location?.name || 'Unknown' }}</span>
+                        <span class="text-[10px] font-bold" :class="inv.quantity_on_hand > 0 ? 'text-emerald-400' : 'text-zinc-600'">{{ inv.quantity_on_hand }}</span>
+                    </div>
+                </div>
+                <span v-else class="text-[10px] text-zinc-600 italic">No stock in any location.</span>
+            </div>
+        </Popover>
         <!-- Return Items (RTV) Dialog (Surgical Precision Redesign) -->
         <Dialog v-model:visible="returnDialog" modal :closable="false" :style="{ width: '65rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:header:class="!hidden" pt:content:class="!p-0 !bg-transparent !overflow-hidden">
             <div class="flex flex-col bg-zinc-950 border border-red-900/40 rounded-2xl overflow-hidden relative shadow-[0_0_50px_rgba(220,38,38,0.15)] ring-1 ring-white/5">

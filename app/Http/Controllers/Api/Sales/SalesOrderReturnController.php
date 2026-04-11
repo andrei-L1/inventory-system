@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Invoice;
 use App\Models\SalesOrder;
+use App\Models\SalesOrderLine;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
 use App\Services\Inventory\StockService;
@@ -61,7 +62,7 @@ class SalesOrderReturnController extends Controller
                 $creditNoteLines = [];
 
                 foreach ($request->lines as $item) {
-                    /** @var \App\Models\SalesOrderLine $soLine */
+                    /** @var SalesOrderLine $soLine */
                     $soLine = $soLines->get($item['so_line_id']);
                     $returnedQty = (float) $item['returned_qty'];
 
@@ -70,7 +71,7 @@ class SalesOrderReturnController extends Controller
                     }
 
                     // Add to inventory transaction (Receipt)
-                    // We use the location specified by the user (e.g. a Quarantine or Returns bin) 
+                    // We use the location specified by the user (e.g. a Quarantine or Returns bin)
                     // instead of the original picking bin.
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
@@ -79,7 +80,7 @@ class SalesOrderReturnController extends Controller
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    // Update SO Line pipeline quantities. The item physically returned, 
+                    // Update SO Line pipeline quantities. The item physically returned,
                     // so it must be picked/packed/shipped again if it's a replacement.
                     $soLine->returned_qty += $returnedQty;
                     $soLine->shipped_qty -= $returnedQty;
@@ -89,7 +90,7 @@ class SalesOrderReturnController extends Controller
                     // If refund, we cancel this portion of the order and refund them
                     if ($item['resolution'] === 'refund') {
                         $soLine->ordered_qty = max(0, (float) $soLine->ordered_qty - $returnedQty);
-                        
+
                         // Recalculate line totals
                         $qty = (float) $soLine->ordered_qty;
                         $price = (float) $soLine->unit_price;
@@ -114,7 +115,7 @@ class SalesOrderReturnController extends Controller
                             'subtotal' => round($returnedQty * (float) $soLine->unit_price, 8),
                         ];
                     }
-                    
+
                     $soLine->notes = trim(($soLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
                     $soLine->save();
                 }
@@ -137,7 +138,7 @@ class SalesOrderReturnController extends Controller
 
                 // Automatically generate a Draft Credit Note if there are refunds
                 $creditNote = null;
-                if (!empty($creditNoteLines)) {
+                if (! empty($creditNoteLines)) {
                     $creditNote = Invoice::create([
                         'invoice_number' => 'CN-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
                         'customer_id' => $salesOrder->customer_id,

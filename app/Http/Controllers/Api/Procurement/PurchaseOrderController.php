@@ -40,6 +40,15 @@ class PurchaseOrderController extends Controller
             });
         }
 
+        // M-5: Full-text search across PO number and vendor name
+        if ($request->filled('query')) {
+            $term = $request->query('query');
+            $query->where(function ($q) use ($term) {
+                $q->where('po_number', 'like', "%{$term}%")
+                    ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$term}%"));
+            });
+        }
+
         return PurchaseOrderResource::collection($query->paginate($request->get('limit', 15)));
     }
 
@@ -51,8 +60,10 @@ class PurchaseOrderController extends Controller
             'status',
             'creator',
             'approver',
+            'transactions.type',       // M-6: required by PurchaseOrderResource receipt/return filter
             'transactions.createdBy',
             'transactions.toLocation',
+            'transactions.fromLocation',
             'transactions.lines.product.uom',
         ]);
 
@@ -66,12 +77,12 @@ class PurchaseOrderController extends Controller
 
         $po = DB::transaction(function () use ($data, $statusId, $request) {
             $po = PurchaseOrder::create([
-                'po_number' => 'PO-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
+                'po_number' => 'PO-'.now()->format('Ymd-His').'-'.substr(uniqid(), -4),
                 'vendor_id' => $data['vendor_id'],
                 'status_id' => $statusId,
                 'order_date' => now(),
                 'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $request->user()->id,
                 'total_amount' => 0,
@@ -114,10 +125,17 @@ class PurchaseOrderController extends Controller
                 return $purchaseOrder;
             }
 
+            // H-2: Guard against editing a draft that already has received stock.
+            // This prevents wiping GRN-linked received_qty back to 0.
+            $hasReceipts = $purchaseOrder->lines()->where('received_qty', '>', 0)->exists();
+            if ($hasReceipts) {
+                abort(403, 'This purchase order has received stock. Lines can no longer be modified — use the Return (RTV) flow to adjust quantities.');
+            }
+
             $purchaseOrder->update([
                 'vendor_id' => $data['vendor_id'],
                 'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
             ]);
 
@@ -148,11 +166,16 @@ class PurchaseOrderController extends Controller
 
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
     {
-        if (! $purchaseOrder->status->is_editable) {
-            abort(403, 'Purchase order cannot be deleted in its current status.');
-        }
+        DB::transaction(function () use ($purchaseOrder) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing('status');
 
-        $purchaseOrder->delete();
+            if (! $po->status->is_editable) {
+                abort(403, 'Purchase order cannot be deleted in its current status.');
+            }
+
+            $po->delete();
+        });
 
         return response()->json(null, 204);
     }
@@ -246,8 +269,9 @@ class PurchaseOrderController extends Controller
             $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
             $po->loadMissing('status');
 
-            if (in_array($po->status->name, ['closed', 'cancelled'])) {
-                abort(400, "Purchase order is already {$po->status->name}.");
+            // H-4: Prevent closing a draft (must go through approval workflow) or already terminal states.
+            if (in_array($po->status->name, ['draft', 'closed', 'cancelled'])) {
+                abort(400, "Purchase order cannot be manually closed from '{$po->status->name}' status.");
             }
 
             $closedStatus = PurchaseOrderStatus::where('name', 'closed')->firstOrFail();
@@ -370,7 +394,10 @@ class PurchaseOrderController extends Controller
                 $transaction = $stockService->recordMovement($transactionData);
 
                 // Update PO Status
+                // C-3: Must load('lines') after refresh() so isCompleted() uses fresh data,
+                // not the stale in-memory collection from before the receive loop.
                 $purchaseOrder->refresh();
+                $purchaseOrder->load('lines');
                 $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
                 $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
 
@@ -410,6 +437,12 @@ class PurchaseOrderController extends Controller
 
         try {
             $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
+                $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+                $po->loadMissing('status', 'lines');
+
+                // R-H2: Detect if the PO was manually closed (closed despite not being fully received)
+                $wasManuallyClosed = $po->status->name === 'closed' && ! $po->isCompleted();
+
                 $pretType = TransactionType::where('code', 'PRET')->firstOrFail();
                 $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
@@ -458,7 +491,8 @@ class PurchaseOrderController extends Controller
                         $receivedInReturnUnit = $poLine->received_qty;
                         if ((int) $returnUomId !== (int) $lineUomId) {
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
-                            $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 4);
+                            // C-4: Use 8-decimal precision in the error message, matching the DB standard.
+                            $receivedInReturnUnit = round($poLine->received_qty * $revFactor, 8);
                         }
                         abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
                     }
@@ -484,13 +518,20 @@ class PurchaseOrderController extends Controller
                     $poLine->save();
                 }
 
-                $this->recalculatePurchaseOrderTotal($purchaseOrder);
-
+                // H-7: Record movement FIRST, then recalculate total.
+                // This guarantees all line saves have committed before summing.
                 $transaction = $stockService->recordMovement($transactionData);
+
+                $this->recalculatePurchaseOrderTotal($purchaseOrder);
 
                 $purchaseOrder->refresh();
                 $purchaseOrder->load('lines');
+
                 $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+
+                if ($wasManuallyClosed) {
+                    $newStatusName = 'closed';
+                }
 
                 $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
                 $purchaseOrder->status_id = $poStatus->id;
@@ -523,7 +564,7 @@ class PurchaseOrderController extends Controller
             ->get()
             ->sum(fn ($line) => round((float) $line->ordered_qty * (float) $line->unit_cost, 8));
 
-        $purchaseOrder->update(['total_amount' => round($total, 8)]);
+        $purchaseOrder->update(['total_amount' => round($total, 2)]);
     }
 
     /**
@@ -563,22 +604,30 @@ class PurchaseOrderController extends Controller
         });
 
         $posCreated = [];
+        // L-5: Track suggestions that were skipped due to missing vendor
+        $skippedSkus = [];
 
-        DB::transaction(function () use ($grouped, &$posCreated) {
+        DB::transaction(function () use ($grouped, &$posCreated, &$skippedSkus) {
             $statusId = PurchaseOrderStatus::where('name', 'draft')->value('id');
 
             foreach ($grouped as $vendorId => $vendorSuggestions) {
                 if ($vendorId == 0) {
-                    continue; // Skip items without a vendor for now or handle specifically
+                    // L-5: Collect skipped items so the caller can inform the user
+                    foreach ($vendorSuggestions as $s) {
+                        $skippedSkus[] = $s->product->sku ?? "Product #{$s->product_id}";
+                    }
+
+                    continue;
                 }
 
+                // H-5: Use microsecond-based uniqid to prevent PO number collision during bulk creation
                 $po = PurchaseOrder::create([
-                    'po_number' => 'PO-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
+                    'po_number' => 'PO-'.now()->format('Ymd-His').'-'.substr(uniqid(), -4),
                     'vendor_id' => $vendorId,
                     'status_id' => $statusId,
                     'order_date' => now(),
                     'expected_delivery_date' => now()->addDays(7),
-                    'currency' => 'USD',
+                    'currency' => 'PHP',
                     'notes' => 'Auto-generated from replenishment suggestions.',
                     'created_by' => auth()->id(),
                     'total_amount' => 0,
@@ -619,10 +668,18 @@ class PurchaseOrderController extends Controller
             }
         });
 
-        return response()->json([
-            'message' => 'Successfully generated '.count($posCreated).' Purchase Orders.',
+        $response = [
+            'message' => 'Successfully generated '.count($posCreated).' Purchase Order(s).',
             'po_numbers' => $posCreated,
-        ]);
+        ];
+
+        // L-5: Inform caller about skipped items so the UI can surface a warning
+        if (! empty($skippedSkus)) {
+            $response['skipped_skus'] = $skippedSkus;
+            $response['skipped_message'] = count($skippedSkus).' item(s) were skipped because their products have no preferred vendor assigned: '.implode(', ', $skippedSkus);
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -635,6 +692,40 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             throw new UomConversionException($e->getMessage());
         }
+    }
+
+    /**
+     * M-1: Cancel a purchase order.
+     * Only allowed when no stock has been received. Terminal states (closed/cancelled) are blocked.
+     */
+    public function cancel(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
+    {
+        $purchaseOrder = DB::transaction(function () use ($purchaseOrder, $request) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing(['status', 'lines']);
+
+            if (in_array($po->status->name, ['closed', 'cancelled'])) {
+                abort(400, "Purchase order is already {$po->status->name} and cannot be cancelled.");
+            }
+
+            // Guard: if any stock has been received, require returns first
+            // R-H3: Use DB query to avoid evaluating stale in-memory collection
+            $hasReceipts = $po->lines()->where('received_qty', '>', 0)->exists();
+            if ($hasReceipts) {
+                abort(422, 'This purchase order has received stock. Process an RTV return for all received items before cancelling.');
+            }
+
+            $cancelledStatus = PurchaseOrderStatus::where('name', 'cancelled')->firstOrFail();
+
+            $po->update([
+                'status_id' => $cancelledStatus->id,
+                'notes' => trim(($po->notes ?? '').' | Cancelled by '.$request->user()->name.' on '.now()->toDateString()),
+            ]);
+
+            return $po;
+        });
+
+        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
     /**

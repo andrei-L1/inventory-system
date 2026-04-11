@@ -15,8 +15,8 @@ return new class extends Migration
         Schema::table('sales_order_lines', function (Blueprint $table) {
             $table->decimal('tax_amount', 18, 8)->default(0)->change();
             $table->decimal('discount_amount', 18, 8)->default(0)->change();
-            
-            // Keeping rate multipliers at (8,4) as they are percentage constants (e.g. 12.5000), 
+
+            // Keeping rate multipliers at (8,4) as they are percentage constants (e.g. 12.5000),
             // but explicitly standardizing them here for audit visibility.
             $table->decimal('tax_rate', 8, 4)->default(0)->change();
             $table->decimal('discount_rate', 8, 4)->default(0)->change();

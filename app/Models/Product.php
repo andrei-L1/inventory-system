@@ -207,12 +207,14 @@ class Product extends Model
     public function getFormattedAverageCostAttribute(): string
     {
         $symbol = '₱'; // Default currency symbol
-        return $symbol . number_format($this->average_cost, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedSellingPriceAttribute(): string
     {
         $symbol = '₱'; // Default currency symbol
-        return $symbol . number_format($this->selling_price, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($this->selling_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

@@ -53,7 +53,7 @@ class SalesOrder extends Model
         'sent_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
-        'total_amount' => 'decimal:8',
+        'total_amount' => 'decimal:2',
     ];
 
     /**
@@ -176,8 +176,8 @@ class SalesOrder extends Model
 
         $totalOrdered = (float) $lines->sum(fn ($l) => (float) $l->ordered_qty);
         $totalShipped = (float) $lines->sum(fn ($l) => (float) $l->shipped_qty);
-        $totalPacked  = (float) $lines->sum(fn ($l) => (float) $l->packed_qty);
-        $totalPicked  = (float) $lines->sum(fn ($l) => (float) $l->picked_qty);
+        $totalPacked = (float) $lines->sum(fn ($l) => (float) $l->packed_qty);
+        $totalPicked = (float) $lines->sum(fn ($l) => (float) $l->picked_qty);
 
         // Walk down the fulfillment hierarchy from the top.
         // The highest milestone that is fully satisfied wins.

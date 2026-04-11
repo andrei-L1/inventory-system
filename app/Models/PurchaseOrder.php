@@ -47,7 +47,7 @@ class PurchaseOrder extends Model
         'approved_at' => 'datetime',
         'sent_at' => 'datetime',
         'shipped_at' => 'datetime',
-        'total_amount' => 'decimal:2',
+        'total_amount' => 'decimal:2', // DB column is decimal(18,2); GAAP compliant header total
     ];
 
     /**
@@ -104,7 +104,7 @@ class PurchaseOrder extends Model
     public function isCompleted(): bool
     {
         return $this->lines->every(function ($line) {
-            return $line->received_qty >= $line->ordered_qty;
+            return ((float) $line->received_qty + 0.00000001) >= (float) $line->ordered_qty;
         });
     }
 }

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Inventory\TransactionLineResource;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use App\Models\Transaction;
+use App\Models\TransactionLine;
 use App\Models\Vendor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -39,8 +41,8 @@ class DashboardController extends Controller
         $transactionsToday = Transaction::whereDate('transaction_date', today())->count();
 
         // Activity Feed: Using TransactionLine model & resource to ensure UOM formatting is applied.
-        $recentTransactions = \App\Http\Resources\Inventory\TransactionLineResource::collection(
-            \App\Models\TransactionLine::with(['product.uom', 'transaction.type', 'location', 'uom'])
+        $recentTransactions = TransactionLineResource::collection(
+            TransactionLine::with(['product.uom', 'transaction.type', 'location', 'uom'])
                 ->latest()
                 ->limit(5)
                 ->get()

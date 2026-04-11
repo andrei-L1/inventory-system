@@ -57,7 +57,7 @@ class ReorderRuleController extends Controller
         } catch (QueryException $e) {
             // Unique constraint violation (race condition caught at DB level)
             if (str_contains($e->getMessage(), 'reorder_rules_product_location_unique')
-                || $e->getCode() === '23000') {
+                || str_contains($e->getMessage(), 'Duplicate entry')) {
                 return response()->json([
                     'message' => 'A reorder rule for this product and location already exists.',
                 ], 422);
