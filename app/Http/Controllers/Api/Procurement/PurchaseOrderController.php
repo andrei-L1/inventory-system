@@ -45,7 +45,7 @@ class PurchaseOrderController extends Controller
             $term = $request->query('query');
             $query->where(function ($q) use ($term) {
                 $q->where('po_number', 'like', "%{$term}%")
-                  ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$term}%"));
+                    ->orWhereHas('vendor', fn ($v) => $v->where('name', 'like', "%{$term}%"));
             });
         }
 
@@ -439,7 +439,7 @@ class PurchaseOrderController extends Controller
             $transaction = DB::transaction(function () use ($request, $purchaseOrder, $stockService) {
                 $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
                 $po->loadMissing('status', 'lines');
-                
+
                 // R-H2: Detect if the PO was manually closed (closed despite not being fully received)
                 $wasManuallyClosed = $po->status->name === 'closed' && ! $po->isCompleted();
 
@@ -526,9 +526,9 @@ class PurchaseOrderController extends Controller
 
                 $purchaseOrder->refresh();
                 $purchaseOrder->load('lines');
-                
+
                 $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
-                
+
                 if ($wasManuallyClosed) {
                     $newStatusName = 'closed';
                 }
@@ -616,6 +616,7 @@ class PurchaseOrderController extends Controller
                     foreach ($vendorSuggestions as $s) {
                         $skippedSkus[] = $s->product->sku ?? "Product #{$s->product_id}";
                     }
+
                     continue;
                 }
 

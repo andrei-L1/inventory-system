@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -78,7 +79,7 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     })->name('purchase-orders.create');
 
     Route::get('/purchase-orders/{id}/edit', function (Request $request, $id) {
-        $po = \App\Models\PurchaseOrder::with(['lines.product', 'lines.uom', 'status'])->find($id);
+        $po = PurchaseOrder::with(['lines.product', 'lines.uom', 'status'])->find($id);
         if (! $po) {
             abort(404);
         }
@@ -87,6 +88,7 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
             return redirect()->route('purchase-orders.show', $id)
                 ->with('error', 'This purchase order is no longer editable.');
         }
+
         return Inertia::render('PurchaseOrders/Form', ['purchaseOrder' => $po]);
     })->name('purchase-orders.edit')->middleware('permission:manage-purchase-orders');
 

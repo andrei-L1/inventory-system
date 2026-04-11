@@ -318,7 +318,7 @@ class SalesOrderController extends Controller
                 SalesOrderStatus::PARTIALLY_PICKED,
                 SalesOrderStatus::PICKED,
                 SalesOrderStatus::PARTIALLY_PACKED,
-                SalesOrderStatus::PACKED
+                SalesOrderStatus::PACKED,
             ];
             if (in_array($so->status->name, $packStatuses)) {
                 $statusName = $allPacked ? SalesOrderStatus::PACKED : SalesOrderStatus::PARTIALLY_PACKED;

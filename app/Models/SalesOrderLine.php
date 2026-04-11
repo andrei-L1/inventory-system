@@ -103,7 +103,7 @@ class SalesOrderLine extends Model
     {
         return max(0, (float) $this->ordered_qty - (float) $this->shipped_qty);
     }
-    
+
     /**
      * Quantity that can be returned (Shipped - Returned)
      */
@@ -165,6 +165,7 @@ class SalesOrderLine extends Model
     public function getFormattedUnitPriceAttribute(): string
     {
         $symbol = '₱';
-        return $symbol . number_format($this->unit_price, 2) . ' / ' . ($this->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($this->unit_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

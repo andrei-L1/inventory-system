@@ -5,7 +5,6 @@ namespace Tests\Feature\Sales;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
-use App\Models\Inventory;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\SalesOrder;
@@ -94,7 +93,7 @@ class FulfillmentWorkflowTest extends TestCase
         // 3. Verify PICK success
         $this->assertEquals(10, (float) $soLine->picked_qty);
         // CRITICAL: Status must NOT have downgraded to 'picked' or 'partially_picked'
-        $this->assertEquals(SalesOrderStatus::PARTIALLY_SHIPPED, $so->status->name, "Status should remain partially_shipped after picking more items.");
+        $this->assertEquals(SalesOrderStatus::PARTIALLY_SHIPPED, $so->status->name, 'Status should remain partially_shipped after picking more items.');
 
         // 4. Attempt to PACK the remaining 5
         $packResponse = $this->patchJson("/api/sales-orders/{$so->id}/pack", [
@@ -112,6 +111,6 @@ class FulfillmentWorkflowTest extends TestCase
 
         // 5. Verify PACK success
         $this->assertEquals(10, (float) $soLine->packed_qty);
-        $this->assertEquals(SalesOrderStatus::PARTIALLY_SHIPPED, $so->status->name, "Status should remain partially_shipped after packing more items.");
+        $this->assertEquals(SalesOrderStatus::PARTIALLY_SHIPPED, $so->status->name, 'Status should remain partially_shipped after packing more items.');
     }
 }

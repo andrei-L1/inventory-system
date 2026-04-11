@@ -49,7 +49,7 @@ class PrecisionReturnTest extends TestCase
         ]);
 
         $location = Location::where('code', 'WH-A-Z1')->firstOrFail();
-        
+
         $precisionPrice = 123.45678901;
         $product = Product::create([
             'product_code' => 'PREC-PART-7',
@@ -89,7 +89,7 @@ class PrecisionReturnTest extends TestCase
 
         // 3. Perform High Precision Partial Return
         $returnQty = 0.54321098;
-        
+
         // Expected credit note amount = 0.54321098 * 123.45678901 = 67.06299313437298
         // Rounded to 8 decimals = 67.06299313
         $expectedCreditTotal = round($returnQty * $precisionPrice, 8);
@@ -112,15 +112,15 @@ class PrecisionReturnTest extends TestCase
         // 4. Verify Quantities in SO Line
         $soLine->refresh();
         $expectedNewShipped = round($orderQty - $returnQty, 8);
-        
-        $this->assertEquals($expectedNewShipped, (float) $soLine->shipped_qty, "Shipped quantity should be decremented precisely");
-        $this->assertEquals($returnQty, (float) $soLine->returned_qty, "Returned quantity should match exactly");
+
+        $this->assertEquals($expectedNewShipped, (float) $soLine->shipped_qty, 'Shipped quantity should be decremented precisely');
+        $this->assertEquals($returnQty, (float) $soLine->returned_qty, 'Returned quantity should match exactly');
 
         // 5. Verify Inventory QOH
         $inventory = Inventory::where('product_id', $product->id)
             ->where('location_id', $location->id)
             ->first();
-        $this->assertEquals($returnQty, (float) $inventory->quantity_on_hand, "Stock should have increased by the precise return amount");
+        $this->assertEquals($returnQty, (float) $inventory->quantity_on_hand, 'Stock should have increased by the precise return amount');
 
         // 6. Verify Credit Note precision
         $this->assertDatabaseHas('invoices', [
@@ -128,7 +128,7 @@ class PrecisionReturnTest extends TestCase
             'type' => 'CREDIT_NOTE',
             'total_amount' => $expectedCreditTotal,
         ]);
-        
+
         // Detailed check on credit note line
         $this->assertDatabaseHas('invoice_lines', [
             'product_id' => $product->id,

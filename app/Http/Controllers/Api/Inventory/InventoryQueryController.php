@@ -116,7 +116,7 @@ class InventoryQueryController extends Controller
             ->get()
             ->map(function ($layer) use ($targetUomId, $multiplier, $product) {
                 $po = $layer->transactionLine?->transaction?->purchaseOrder;
-                
+
                 $receivedScaled = $multiplier > 0 ? (float) $layer->received_qty / $multiplier : (float) $layer->received_qty;
                 $remainingScaled = $multiplier > 0 ? (float) $layer->remaining_qty / $multiplier : (float) $layer->remaining_qty;
                 $unitCostScaled = $multiplier > 0 ? (float) $layer->unit_cost * $multiplier : (float) $layer->unit_cost;
@@ -128,7 +128,7 @@ class InventoryQueryController extends Controller
                     'location_name' => $layer->location?->name ?? 'Unknown Location',
                     'receipt_date' => $layer->receipt_date,
                     'unit_cost' => (float) $layer->unit_cost,
-                    'formatted_unit_cost' => '₱' . number_format($unitCostScaled, 2) . ' / ' . ($targetUom->abbreviation ?? 'pcs'),
+                    'formatted_unit_cost' => '₱'.number_format($unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
                     'original_qty' => (float) $layer->received_qty,
                     'formatted_original_qty' => UomHelper::format($receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (float) $layer->remaining_qty,

@@ -116,6 +116,7 @@ class Inventory extends Model
     public function getFormattedAvailableQtyAttribute(): string
     {
         $availableRecord = $this->scaled_quantity_on_hand - $this->scaled_reserved_qty;
+
         return UomHelper::format($availableRecord, $this->product->uom_id, $this->product_id, false);
     }
 
@@ -125,6 +126,7 @@ class Inventory extends Model
     public function getFormattedAverageCostAttribute(): string
     {
         $symbol = '₱';
-        return $symbol . number_format($this->scaled_average_cost, 2) . ' / ' . ($this->product->uom->abbreviation ?? 'pcs');
+
+        return $symbol.number_format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
     }
 }
