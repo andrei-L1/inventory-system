@@ -1,5 +1,5 @@
 # Technical Specification: Inventory Mathematics & Financial Precision
-*Version 3.0: Enterprise-Grade Accuracy (BCMath String Standard)*
+*Version 3.1: Hardened Precision & Dual-Layer UOM Accounting*
 
 ## 1. Business Context: Why 8 Decimals?
 
@@ -52,6 +52,7 @@ While invoices and payments are rounded to 2 decimals (₱10.50), the "Internal 
  *   **The Problem with Floats**: Native PHP floats suffer from IEEE 754 precision loss (`0.1 + 0.2 = 0.30000000000000004`).
  *   **The BCMath Standard**: All arithmetic operations (Add, Subtract, Multiply, Divide, Compare) are now routed exclusively through the `FinancialMath` wrapper which natively utilizes PHP's `BCMath` extension.
  *   **String Strictness**: All mathematical quantities are explicitly typed and passed as `string`. The system enforces a strict "data boundary" preventing native floats from bleeding into precision-critical accumulator loops. If `FinancialMath` detects a PHP `(float)`, it fires an immediate `InvalidArgumentException`.
+ *   **Precision-Aware Comparisons**: All system logic (e.g., "Is this PO fully received?") uses `FinancialMath::cmp()` at a strict scale of 8. This ensures that fractional quantities (like 0.5 Boxes) are never truncated to zero during boundary checks, resolving "Integer Blindness" bugs.
 
 ---
 
@@ -73,7 +74,7 @@ To keep the system user-friendly, we "mask" the precision in the interface:
 | **Averaging Algorithm** | `App\Services\Inventory\Costing\Traits\ManagesCostLayers` |
 | **Precision Core (BCMath)** | `App\Helpers\FinancialMath` |
 | **UOM Scaling Engine** | `App\Helpers\UomHelper` |
-| **Schema Definition** | `database/migrations/2026_04_04_000001_upgrade_quantity_precision.php` |
+| **Schema Definition** | `database/migrations/2026_04_11_...` |
 
 ---
 
@@ -91,8 +92,16 @@ When the system calculates the "Base Multiplier" for a product movement, it foll
 For any transaction involving a custom UOM, the resulting atomic stock change is calculated as:
 $$ \Delta \text{AtomicQty} = \text{TransactionQty} \times \text{UomHelper::getMultiplierToSmallest}(\text{uom\_id}, \text{product\_id}) $$
 
-> [!IMPORTANT]
 > **Data Isolation**: This mechanism ensures that a "Box of 12" for *Bolt A* never conflicts with a "Box of 50" for *Bolt B*, even though both use the same UOM ID. This prevents global rule pollution and keeps the inventory math surgical.
+
+### 7.3 The Dual-Layer Standard (Commercial vs. Atomic)
+
+The system maintains a rigid separation between **Commercial Contracts** and **Atomic Reality**:
+
+1.  **Atomic Layer (Inventory)**: The `inventories` table and Stock Ledger strictly use the **Base Unit** (e.g., Pieces). This ensures warehouse staff always see the lowest possible denominator of stock.
+2.  **Commercial Layer (Orders/Invoices)**: Purchase and Sales Orders use **Selected UOMs** (e.g., Boxes, Pallets). This preserves the integrity of the vendor's invoice and prevents rounding errors when applying unit costs to bulk quantities.
+
+The `FinancialMath` engine bridges these layers at 8-decimal precision, ensuring that "0.5 Boxes" correctly translates to "2 Pieces" without losing fractional value in either direction.
 
 > [!CAUTION]
 > **Code Sync Constraint**: Any new calculation (Invoicing, Discounts, Tax) **MUST** use the `FinancialMath` wrapper (`FinancialMath::add`, `FinancialMath::mul`, etc.). Using internal PHP operators (`+`, `-`, `*`) or native `round()` will instantly decouple quantities from the String Boundary and is strictly forbidden.

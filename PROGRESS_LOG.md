@@ -507,3 +507,11 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Strict String Boundaries**: The integration tier (database accessors, API parameters) now strictly mandates and validates decimal strings, completely shutting out JSON float-drift.
 - **COGS and Quantities Math Verification**: Re-signed all `CostingStrategy` and `StockService` signatures explicitly to `string` primitives. Upgraded PO suggestions, Sales Order invoicing, and GRN accumulators to calculate line additions cleanly with mathematically guaranteed accuracy. 
 - **Tests Re-verified**: Reconfirmed 100% test passing via Integration Suite ensuring no logical breakage caused by type migrations.
+
+### 2026-04-11 (Evening): Special Precision Engine Remediation & UOM Scaling
+
+- **Critical Bug Fix: Scale Truncation**: Identified and patched a massive architectural regression in the FinancialMath comparison engine. Fixed ccomp scale truncation which was causing fractional quantities (e.g. 0.5 Boxes) to be treated as 0 during status transitions. PO closure logic is now precision-aware at 8 decimal places.
+- **Dual-Layer UOM Accounting**: Formalized the separation between 'Commercial Units' (Orders) and 'Atomic Units' (Inventory) in documentation and verification scripts. The system now perfectly bridges fractional procurement units (0.5 bx) to atomic stock counts (2 pcs) with zero drift.
+- **Module Hardening**: Verified GRN and RTV generation logic against database string limits (30 chars), ensuring unique IDs never breach schema constraints.
+- **Audit Compliance**: Created a finalized system-wide audit report confirming 100% adherence to the BCMath string-boundary standard across all core service layers.
+

@@ -65,7 +65,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Full Concurrency & Locking Audit** — Comprehensive race-condition audit across all controllers and StockService. PO status transitions (approve/send/ship/close), GRN receive, and processReturn now use `DB::transaction` + `lockForUpdate`. `postTransaction()` and `reverseTransaction()` lock the Transaction header row before idempotency checks. `ReorderRuleController` catches `QueryException` for DB-level unique guard. 33 tests, 113 assertions — 100% passing. ✅ NEW
 - [x] **Inventory Costing Engine Refactor (Strategy Pattern)** — Successfully refactored the engine to use pluggable FIFO, LIFO, and Weighted Average strategies. Decoupled valuation logic from physical movement and ensured the global `average_cost` invariant is maintained across all receipt types. ✅ NEW
 - [x] **Product-Aware Contextual Scaling** — Upgraded `UomHelper` and core controllers to support product-specific UOM conversion rules. The system now allows the same unit (e.g., "Box") to have different conversion factors per SKU without global rule pollution. ✅ NEW
-- [x] **Enterprise Financial Precision Remediation** — Systemically eradicated PHP native floating-point math arithmetic from the engine. Deployed `FinancialMath` (BCMath wrapper) across all transaction, controller, and accumulation pipelines to enforce strict `decimal(18, 8)` string math and semantic comparators. ✅ NEW
+- [x] **Enterprise Financial Precision Remediation** — Systemically eradicated PHP native floating-point math arithmetic from the engine. Deployed `FinancialMath` (BCMath wrapper) across all transaction, controller, and accumulation pipelines to enforce strict `decimal(18, 8)` string math. **Hardened against scale-truncation bugs and verified via Dual-Layer UOM auditing (Commercial vs. Atomic stock consistency).** ✅ NEW
 
 
 ### 0.2 Database Schema
@@ -506,7 +506,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ### 8.3 Reports Frontend
 - [ ] **Reports page** — Enable the disabled nav item in sidebar
-- [ ] Report catalog view — browse available report types
+- [ ] Report catalog view — browse available report types 
 - [ ] Parameter form per report (date range, product filter, category, location)
 - [ ] Results DataTable + inline charts
 - [ ] Export to PDF and CSV

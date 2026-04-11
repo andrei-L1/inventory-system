@@ -984,156 +984,119 @@ const openPrint = () => {
 
                 <div class="p-6 flex flex-col gap-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
                     
-                    <!-- Technical Alert -->
-                    <div class="bg-red-500/5 border border-red-500/20 p-4 rounded-xl flex items-start gap-4">
-                        <i class="pi pi-exclamation-triangle text-red-500 mt-0.5"></i>
-                        <div class="flex flex-col">
-                            <span class="text-[10px] font-bold text-red-400 uppercase tracking-widest font-mono mb-1">System Protocol: Stock Reversal</span>
-                            <p class="text-[11px] text-zinc-400 leading-relaxed font-medium">
-                                Executing a return generates a <span class="text-white font-mono font-bold px-1 py-0.5 rounded bg-zinc-900">PRET</span> movement ledger. 
-                                <span class="text-emerald-400 font-bold text-[10px] tracking-wide uppercase mx-1">Replacement</span> resets line receipt status. 
-                                <span class="text-sky-400 font-bold text-[10px] tracking-wide uppercase mx-1">Credit</span> adjusts accounting valuation layers natively.
-                            </p>
-                        </div>
+                    <!-- Technical Alert (Sleeker integration) -->
+                    <div class="bg-red-500/5 border-l-2 border-l-red-500/50 p-4 rounded-r-xl flex items-center gap-4">
+                        <i class="pi pi-shield text-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.2)]"></i>
+                        <p class="text-[11px] text-zinc-400 font-medium leading-relaxed">
+                            <span class="text-white font-mono font-black mr-2 tracking-tighter uppercase opacity-80">System Protocol: Stock Reversal</span>
+                            Executing a return generates a <span class="text-white font-mono font-bold">PRET</span> ledger. 
+                            <span class="text-emerald-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Replacement</span> resets status. 
+                            <span class="text-sky-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Credit</span> adjusts valuation layers.
+                        </p>
                     </div>
 
-                    <!-- Filter Configuration -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[9px] font-bold text-zinc-500 tracking-widest uppercase font-mono">Source Picking Location</label>
-                            <Select 
-                                v-model="returnForm.location_id" 
-                                :options="filteredReturnLocations" 
-                                optionLabel="name" 
-                                optionValue="id" 
-                                placeholder="SELECT BIN..." 
-                                filter
-                                class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-12 !px-2 !flex !items-center !text-sm font-mono focus-within:!border-red-500/50 shadow-inner"
-                            >
-                                <template #option="slotProps">
-                                    <div class="flex items-center justify-between w-full">
-                                        <span class="text-[10px] font-bold text-zinc-300 uppercase tracking-tight">{{ slotProps.option.name }}</span>
-                                        <span class="text-[10px] font-mono font-bold text-sky-500">{{ slotProps.option.code }}</span>
-                                    </div>
-                                </template>
-                            </Select>
-                        </div>
+                    <!-- Filter Configuration (More Integrated) -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[9px] font-black text-zinc-600 tracking-widest uppercase font-mono pl-1">Source Picking Location</label>
+                        <Select 
+                            v-model="returnForm.location_id" 
+                            :options="filteredReturnLocations" 
+                            optionLabel="name" 
+                            optionValue="id" 
+                            placeholder="SELECT ORIGIN BIN..." 
+                            filter
+                            class="!w-full !bg-zinc-900/30 !border-zinc-800/80 !rounded-xl !h-12 !flex !items-center font-mono focus-within:!border-red-500/30 shadow-none transition-all"
+                        >
+                            <template #option="slotProps">
+                                <div class="flex items-center justify-between w-full">
+                                    <span class="text-[11px] font-bold text-zinc-300 uppercase tracking-tight">{{ slotProps.option.name }}</span>
+                                    <span class="text-[10px] font-mono font-black text-red-500/60">{{ slotProps.option.code }}</span>
+                                </div>
+                            </template>
+                        </Select>
                     </div>
 
-                    <!-- Item Matrix -->
-                    <div class="flex flex-col gap-3">
-                        <label class="text-[9px] font-bold text-zinc-600 tracking-widest uppercase font-mono">Inventory Context</label>
+                    <!-- Item Matrix (Box-less Design) -->
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Inventory Position Context</label>
                         
-                        <div class="border border-zinc-800 rounded-xl bg-black overflow-hidden shadow-inner">
+                        <div class="flex flex-col gap-3">
                             <div v-for="(line, index) in returnForm.lines" :key="line.po_line_id" 
-                                 class="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 items-center hover:bg-zinc-900/50 transition-colors"
-                                 :class="{ 'border-b border-zinc-800/80': index !== returnForm.lines.length - 1 }"
+                                 class="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 items-center bg-zinc-900/20 border border-zinc-800/40 rounded-2xl hover:bg-zinc-900/40 transition-all hover:border-red-500/20 group/row"
                             >
-                                <!-- Product Identity -->
-                                <div class="lg:col-span-3 flex flex-col gap-1">
-                                    <span class="text-xs font-bold text-white truncate">{{ line.product_name }}</span>
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-[9px] font-mono font-bold text-sky-400 uppercase tracking-widest"><i class="pi pi-box text-[8px] mr-1"></i>{{ line.sku }}</span>
-                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-500 uppercase">MPN: {{ line.product_code }}</span>
+                                <!-- Product Identity (Col 3) -->
+                                <div class="xl:col-span-3 flex flex-col gap-1">
+                                    <span class="text-xs font-black text-white group-hover/row:text-red-400 transition-colors">{{ line.product_name }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[9px] font-mono font-black text-sky-500/60 uppercase tracking-tighter bg-sky-500/5 px-1.5 py-0.5 rounded border border-sky-500/10">{{ line.sku }}</span>
+                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-tighter">REF: {{ line.product_code }}</span>
                                     </div>
                                 </div>
 
-                                <!-- Status Badges -->
-                                <div class="lg:col-span-2 flex gap-2">
-                                    <div class="flex flex-col items-center flex-1 border border-zinc-800 bg-zinc-950 py-1.5 rounded-lg overflow-hidden">
-                                        <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest whitespace-nowrap">Original RCV</span>
-                                        <span class="text-[10px] font-mono font-bold text-white mt-0.5 whitespace-nowrap px-2">{{ line.formatted_received_qty || (line.received_qty + ' ' + line.uom) }}</span>
+                                <!-- Status Indicators (Col 2 - Simplified) -->
+                                <div class="xl:col-span-2 flex items-center gap-3">
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Orig RCV</span>
+                                        <span class="text-[11px] font-mono font-bold text-zinc-300">{{ line.formatted_received_qty || line.received_qty }}</span>
                                     </div>
-                                    <div class="flex flex-col items-center flex-1 border py-1.5 rounded-lg transition-colors"
-                                         :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/5 border-red-500/20']">
-                                        <span class="text-[8px] font-bold uppercase tracking-widest" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-600' : 'text-red-500/50']">Stock In Bin</span>
-                                        <div class="flex items-center gap-1.5 mt-0.5">
-                                            <div class="w-1.5 h-1.5 rounded-full" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-red-500']"></div>
-                                            <span class="text-[10px] font-mono font-bold" :class="[getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-400' : 'text-red-400']">
-                                                {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
-                                            </span>
-                                        </div>
+                                    <div class="w-px h-6 bg-zinc-800/50"></div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] font-black uppercase tracking-widest" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-500/60' : 'text-zinc-700'">In Bin</span>
+                                        <span class="text-[11px] font-mono font-bold" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-400' : 'text-zinc-600'">
+                                            {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <!-- Inputs -->
-                                <div class="lg:col-span-3">
-                                    <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg focus-within:border-red-500/50 focus-within:ring-1 focus-within:ring-red-500/50 transition-all shadow-inner h-10 group overflow-hidden">
-                                        <div class="flex-1 flex items-center px-1">
-                                            <InputNumber 
-                                                v-model="line.return_qty" 
-                                                :min="0" 
-                                                :minFractionDigits="0" 
-                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
-                                                class="p-inputtext-sm text-center font-mono font-bold text-red-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                                :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f87171', width: '100%', boxShadow: 'none', height: '2rem', fontSize: '1rem' }"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                        
-                                        <!-- Simple Divider -->
-                                        <div class="w-px h-6 bg-zinc-800 group-focus-within:bg-red-500/30"></div>
-                                        
-                                        <div class="w-24">
-                                            <Select 
-                                                v-model="line.uom_id" 
-                                                :options="getFilteredUoms(line)" 
-                                                optionLabel="abbreviation" 
-                                                optionValue="id" 
-                                                placeholder="Unit"
-                                                @change="onReturnUomChange(line)"
-                                                class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black group-focus-within:bg-red-500/5"
-                                                pt:root:class="!border-0 !bg-transparent !shadow-none"
-                                                pt:label:class="!text-red-400 !p-2 !text-center !uppercase font-black !text-[11px]"
-                                                pt:dropdown:class="!text-zinc-600 !w-6"
-                                            >
-                                                <template #option="slotProps">
-                                                    <div class="flex items-center justify-between w-full min-w-[120px] py-0.5">
-                                                        <div class="flex flex-col">
-                                                            <span class="text-[11px] font-bold text-white">{{ slotProps.option.abbreviation.toUpperCase() }}</span>
-                                                            <span class="text-[9px] text-zinc-500">{{ slotProps.option.name }}</span>
-                                                        </div>
-                                                        <div class="flex flex-col items-end gap-1">
-                                                            <span v-if="slotProps.option.conversion_text" class="text-[9px] font-black text-red-500 font-mono tracking-tighter">{{ slotProps.option.conversion_text }}</span>
-                                                            <Tag v-if="slotProps.option.is_custom" value="CUSTOM" class="text-[7px] px-1 py-0 font-bold" severity="danger" />
-                                                        </div>
-                                                    </div>
-                                                </template>
-                                            </Select>
-                                        </div>
+                                <!-- Entries (Col 7 - Unified Action Bar) -->
+                                <div class="xl:col-span-7 grid grid-cols-12 gap-2 h-10">
+                                    <!-- Qty + UOM (5) -->
+                                    <div class="col-span-5 flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-red-500/50 transition-all overflow-hidden h-full group/input">
+                                        <InputNumber 
+                                            v-model="line.return_qty" 
+                                            class="w-full h-full"
+                                            :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f87171', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                            placeholder="0"
+                                        />
+                                        <div class="w-px h-4 bg-zinc-800/50 group-focus-within/input:bg-red-500/20"></div>
+                                        <Select 
+                                            v-model="line.uom_id" 
+                                            :options="getFilteredUoms(line)" 
+                                            optionLabel="abbreviation" 
+                                            optionValue="id" 
+                                            @change="onReturnUomChange(line)"
+                                            class="!bg-transparent !border-0 !shadow-none !h-full w-24 !text-[11px] font-black"
+                                            pt:label:class="!text-zinc-400 !font-black !p-0 !flex !items-center !justify-center !text-center !uppercase !h-full"
+                                            pt:dropdown:class="!text-zinc-700 !w-4"
+                                        />
                                     </div>
-                                </div>
 
-                                <div class="lg:col-span-2">
-                                    <Select 
-                                        v-model="line.resolution" 
-                                        :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'CREDIT', value: 'credit'}]" 
-                                        optionLabel="label" 
-                                        optionValue="value" 
-                                        class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-lg !h-10 !flex !items-center !text-[10px] !font-bold tracking-widest text-white shadow-inner focus-within:!border-zinc-600" 
-                                        pt:label:class="!pl-3"
-                                    >
-                                        <template #option="slotProps">
-                                            <span class="text-[10px] font-bold tracking-widest uppercase" :class="slotProps.option.value === 'replacement' ? 'text-emerald-400' : 'text-sky-400'">
-                                                <i class="mr-2 text-[9px]" :class="slotProps.option.value === 'replacement' ? 'pi pi-sync' : 'pi pi-wallet'"></i>
-                                                {{ slotProps.option.label }}
-                                            </span>
-                                        </template>
-                                        <template #value="slotProps">
-                                            <span v-if="slotProps.value" class="text-[10px] font-bold tracking-widest uppercase" :class="slotProps.value === 'replacement' ? 'text-emerald-400' : 'text-sky-400'">
-                                                {{ slotProps.value === 'replacement' ? 'REPLACE' : 'CREDIT' }}
-                                            </span>
-                                            <span v-else>{{ slotProps.placeholder }}</span>
-                                        </template>
-                                    </Select>
-                                </div>
+                                    <!-- Resolution (3) -->
+                                    <div class="col-span-3">
+                                        <Select 
+                                            v-model="line.resolution" 
+                                            :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'CREDIT', value: 'credit'}]" 
+                                            optionLabel="label" 
+                                            optionValue="value" 
+                                            class="!w-full !bg-zinc-950/80 !border-zinc-800 !rounded-xl !h-full !flex !items-center !text-[10px] !font-black tracking-widest focus-within:!border-red-500/20" 
+                                            pt:label:class="!pl-3 !flex !items-center !h-full"
+                                        >
+                                            <template #value="slotProps">
+                                                <span v-if="slotProps.value" class="text-[9px] font-black tracking-widest uppercase" :class="slotProps.value === 'replacement' ? 'text-emerald-500/60' : 'text-sky-500/60'">
+                                                    {{ slotProps.value === 'replacement' ? 'REPLACE' : 'CREDIT' }}
+                                                </span>
+                                            </template>
+                                        </Select>
+                                    </div>
 
-                                <div class="lg:col-span-2">
-                                    <InputText 
-                                        v-model="line.reason" 
-                                        placeholder="Reason..." 
-                                        class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-lg !text-xs !font-medium !py-0 !h-10 focus:!border-red-500/50 shadow-inner text-white placeholder:text-zinc-600" 
-                                    />
+                                    <!-- Reason (4) -->
+                                    <div class="col-span-4">
+                                        <InputText 
+                                            v-model="line.reason" 
+                                            placeholder="Reason..." 
+                                            class="!w-full !bg-zinc-950/80 !border-zinc-800 !rounded-xl !text-[11px] !font-bold !h-full !px-4 focus:!border-red-500/30 text-zinc-300 placeholder:text-zinc-700 placeholder:font-bold" 
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

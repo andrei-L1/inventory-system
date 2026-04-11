@@ -36,7 +36,7 @@
                     </div>
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_VALUE</span>
-                        <div class="text-2xl font-bold text-emerald-400 tracking-tight text-center lg:text-left">₱ {{ totalValue.toLocaleString() }}</div>
+                        <div class="text-2xl font-bold text-emerald-400 tracking-tight text-center lg:text-left">₱ {{ totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</div>
                     </div>
                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-sky-500 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-sky-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">LOCATION</span>
@@ -71,6 +71,7 @@
                                       v-model="form.to_location" 
                                       :options="locations" 
                                       optionLabel="name" 
+                                      dataKey="id"
                                       placeholder="Select Location" 
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                  />
@@ -113,135 +114,194 @@
                             </button>
                         </div>
 
-                        <div class="flex-1 overflow-y-auto custom-scrollbar">
-                            <DataTable :value="form.lines" class="receipt-grid border-none" :pt="{
-                                header: { class: 'hidden' },
-                                bodyrow: { class: 'hover:!bg-white/[0.02] border-b border-zinc-800/50 transition-all duration-200' }
-                            }">
-                                <Column field="product" header="PRODUCT" class="!py-6 !px-8">
-                                    <template #body="{ index }">
-                                        <div class="flex flex-col gap-2 min-w-[300px]">
+                        <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                            <div class="flex flex-col gap-3">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-900/20 border border-zinc-800/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-sky-500/20 hover:bg-zinc-900/40">
+                                    <div class="grid grid-cols-12 gap-4 items-center">
+                                        <!-- Product Selection (Col 4) -->
+                                        <div class="col-span-12 lg:col-span-4 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Product</span>
                                             <Select 
-                                                v-model="form.lines[index].product" 
+                                                v-model="line.product" 
                                                 :options="products" 
                                                 optionLabel="name" 
-                                                placeholder="Search Catalog..." 
+                                                placeholder="Search products..." 
                                                 filter 
-                                                @change="onProductSelect(form.lines[index])"
-                                                class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                                @change="onProductSelect(line)"
+                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-sky-500/30"
                                             />
                                         </div>
-                                    </template>
-                                </Column>
 
-                                <Column field="uom" header="UNIT" class="!py-6 !px-4">
-                                     <template #body="{ index }">
-                                         <Select 
-                                             v-model="form.lines[index].uom_id" 
-                                             :options="getAvailableUoms(form.lines[index].product?.id)" 
-                                             optionLabel="abbreviation" 
-                                             optionValue="id"
-                                             placeholder="UOM" 
-                                             @change="onUomChange(form.lines[index])"
-                                             class="!w-24 !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
-                                         />
-                                     </template>
-                                 </Column>
-
-                                 <Column field="stock_level" header="STOCK LEVEL" class="!py-6 !px-4">
-                                     <template #body="{ data }">
-                                        <div class="flex flex-col items-center gap-1">
-                                            <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border leading-none cursor-help hover:border-sky-500/50 transition-colors"
-                                                  @click="toggleStockInfo($event, data)"
-                                                  :class="[
-                                                      (data.product?.total_qoh || 0) === 0 ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
-                                                      (data.product?.total_qoh || 0) < (data.product?.reorder_point || 0) ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
-                                                      'bg-sky-500/10 text-sky-400 border-sky-500/20'
-                                                  ]">
-                                                {{ getScaledAvailableStock(data) }}
-                                            </span>
-                                            <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Current Global</span>
+                                        <!-- Unit Selection (Col 2) -->
+                                        <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Unit</span>
+                                            <Select 
+                                                v-model="line.uom_id" 
+                                                :options="getAvailableUoms(line.product?.id)" 
+                                                optionLabel="abbreviation" 
+                                                optionValue="id" 
+                                                placeholder="Unit" 
+                                                dataKey="id"
+                                                @change="onUomChange(line)"
+                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-[11px] !font-black !flex !items-center focus-within:!border-sky-500/30"
+                                            >
+                                                <template #value="slotProps">
+                                                    <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                        <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
+                                                        <span 
+                                                            v-if="getConversionDetails(slotProps.value, line.product?.id)" 
+                                                            class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                        >
+                                                            {{ getConversionDetails(slotProps.value, line.product?.id).text }}
+                                                        </span>
+                                                    </div>
+                                                    <span v-else>{{ slotProps.placeholder }}</span>
+                                                </template>
+                                                <template #option="slotProps">
+                                                    <div class="flex flex-col">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="font-bold text-[11px] uppercase">{{ slotProps.option.abbreviation }}</span>
+                                                            <span 
+                                                                v-if="getConversionDetails(slotProps.option.id, line.product?.id)?.isCustom" 
+                                                                class="px-1.5 py-[1px] bg-rose-500/20 text-rose-400 text-[8px] font-mono rounded tracking-widest border border-rose-500/30 uppercase"
+                                                            >
+                                                                Custom
+                                                            </span>
+                                                        </div>
+                                                        <span 
+                                                            v-if="getConversionDetails(slotProps.option.id, line.product?.id)" 
+                                                            class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                        >
+                                                            {{ getConversionDetails(slotProps.option.id, line.product?.id).text }}
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </Select>
                                         </div>
-                                     </template>
-                                 </Column>
 
-                                 <Column field="quantity" header="QUANTITY" class="!py-6 !px-4">
-                                     <template #body="{ index }">
-                                         <InputNumber 
-                                             v-model="form.lines[index].quantity" 
-                                             :min="0"
-                                             :maxFractionDigits="isUomIdDiscrete(form.lines[index].uom_id) ? 0 : 8"
-                                             placeholder="0" 
-                                             class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                             :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'center', color: 'white', width: '100%', borderRadius: '0.75rem', height: '3rem' }"
-                                         />
-                                     </template>
-                                 </Column>
+                                        <!-- Quantity Input (Col 2) -->
+                                        <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Quantity</span>
+                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-sky-500/50 transition-all overflow-hidden h-10 group/input">
+                                                <InputNumber 
+                                                    v-model="line.quantity" 
+                                                    class="w-full h-full"
+                                                    :min="0"
+                                                    :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
+                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#fff', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
 
-                                 <Column field="unit_cost" header="COST PER UNIT" class="!py-6 !px-4">
-                                     <template #body="{ index }">
-                                         <div class="relative w-32">
-                                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 text-[10px] font-mono z-10">₱</span>
-                                             <InputNumber 
-                                                 v-model="form.lines[index].unit_cost" 
-                                                 :min="0"
-                                                 :minFractionDigits="2"
-                                                 :maxFractionDigits="8"
-                                                 placeholder="0.00" 
-                                                 class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                                 :inputStyle="{ background: '#09090b', border: '1px solid #27272a', textAlign: 'right', color: '#34d399', width: '100%', borderRadius: '0.75rem', height: '3rem', paddingLeft: '2rem' }"
-                                             />
-                                         </div>
-                                     </template>
-                                 </Column>
+                                        <!-- Unit Cost Input (Col 3) -->
+                                        <div class="col-span-12 lg:col-span-3 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Cost per Unit (₱)</span>
+                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-emerald-500/50 transition-all overflow-hidden h-10 group/input">
+                                                <div class="px-3 text-[10px] text-zinc-600 font-black border-r border-zinc-900 bg-zinc-950 h-full flex items-center">₱</div>
+                                                <InputNumber 
+                                                    v-model="line.unit_cost" 
+                                                    class="w-full h-full"
+                                                    :min="0"
+                                                    :minFractionDigits="2"
+                                                    :maxFractionDigits="8"
+                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'right', color: '#34d399', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace', paddingRight: '12px' }"
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+                                        </div>
 
-                                <Column header="SUBTOTAL" class="!py-6 !px-8 text-right">
-                                    <template #body="{ index }">
-                                        <div class="flex items-center justify-end gap-6">
-                                            <span class="text-xs font-bold font-mono text-white">₱ {{ (form.lines[index].quantity * form.lines[index].unit_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</span>
-                                            <button @click="removeLine(index)" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-zinc-700 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20">
+                                        <!-- Actions (Col 1) -->
+                                        <div class="col-span-12 lg:col-span-1 flex items-end justify-center h-10 mt-5 lg:mt-0">
+                                            <button 
+                                                @click="removeLine(index)" 
+                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/20 hover:text-red-400 hover:bg-red-500/10 transition-all border border-red-500/0 hover:border-red-500/10"
+                                            >
                                                 <i class="pi pi-trash text-[10px]" />
                                             </button>
                                         </div>
-                                    </template>
-                                </Column>
-
-                                <template #empty>
-                                    <div class="py-32 flex flex-col items-center justify-center opacity-10 filter grayscale">
-                                        <i class="pi pi-inbox text-5xl mb-4" />
-                                        <p class="text-[9px] font-black uppercase tracking-[0.4em] font-mono">No Items Added</p>
                                     </div>
-                                </template>
-                            </DataTable>
+
+                                    <!-- Context Indicator Bar -->
+                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-zinc-800/40 pt-3 mt-1">
+                                        <div class="flex items-center gap-6">
+                                            <!-- Availability Stat (CLICKABLE) -->
+                                            <div 
+                                                @click="(e) => toggleStockInfo(e, line)"
+                                                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-sky-500/50 transition-all group/stat"
+                                            >
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">At Target</span>
+                                                    <span class="text-[10px] font-black font-mono text-zinc-200">
+                                                        {{ getScaledQty(line, (line.inventories?.find(i => i.location_id === form.to_location?.id)?.quantity_on_hand || 0)) }}
+                                                    </span>
+                                                </div>
+                                                <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">Global Pool</span>
+                                                    <span class="text-[10px] font-black text-zinc-400 font-mono">
+                                                        {{ getScaledQty(line, line.product.total_qoh) }}
+                                                    </span>
+                                                </div>
+                                                <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover/stat:text-sky-400"></i>
+                                            </div>
+
+                                            <!-- Financial Result -->
+                                            <div v-if="line.quantity > 0" class="flex-1 flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
+                                                <i class="pi pi-calculator text-[10px] text-zinc-700"></i>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">Line Subtotal:</span>
+                                                    <span class="text-[11px] font-mono font-black text-white">
+                                                        ₱ {{ ((parseFloat(line.quantity) || 0) * (parseFloat(line.unit_cost) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div v-if="form.lines.length === 0" class="py-32 flex flex-col items-center justify-center opacity-10 filter grayscale">
+                                <i class="pi pi-download text-5xl mb-4" />
+                                <p class="text-[9px] font-black uppercase tracking-[0.4em] font-mono">No items added to receive</p>
+                            </div>
                         </div>
                     </main>
                 </div>
             </div>
         </div>
 
+        <!-- Location Breakdown Popover -->
         <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
             <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
-                <div class="text-[9px] font-black text-sky-500 uppercase tracking-widest mb-3 border-b border-zinc-800 pb-2 flex justify-between">
-                    <span>Location Breakdown</span>
-                    <span>{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
+                <div class="text-[9px] font-black text-sky-400 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
+                    <span>Stock Availability</span>
+                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
                 </div>
-                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                    <div v-for="loc in selectedLineForStock.inventories" :key="loc.location_id" class="flex justify-between items-center text-[10px]"
-                         :class="{'bg-sky-500/10 -mx-2 px-2 py-1 rounded': loc.location_id === form.to_location?.id}">
-                        <span class="text-zinc-400 truncate pr-2 uppercase font-bold flex items-center gap-2">
-                            {{ loc.location_name }}
-                            <Tag v-if="loc.location_id === form.to_location?.id" value="TARGET" class="!text-[7px] !bg-sky-500 !text-white !px-1 !h-3" />
-                        </span>
-                        <span class="font-mono text-zinc-200">
-                            {{ getScaledQty(selectedLineForStock.product.uom_id, loc.quantity_on_hand, selectedLineForStock.uom_id) }}
+                
+                <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
+                    <div v-for="loc in selectedLineForStock.inventories" 
+                         :key="loc.location_id" 
+                         @click="selectLocation(loc)"
+                         class="group flex justify-between items-center px-2 py-2 rounded-lg border border-transparent hover:border-sky-500/20 hover:bg-sky-500/5 transition-all cursor-pointer">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-tight"
+                                  :class="[loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-zinc-400 group-hover:text-zinc-200']">
+                                {{ loc.location_name }}
+                            </span>
+                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-if="loc.location_id === form.to_location?.id">Target Warehouse</span>
+                        </div>
+                        <span class="font-mono text-[10px] font-bold text-zinc-500 group-hover:text-white">
+                            {{ getScaledQty(selectedLineForStock, loc.quantity_on_hand) }}
                         </span>
                     </div>
                 </div>
-                <div class="mt-3 pt-2 border-t border-zinc-800 flex justify-between items-center font-mono text-[9px]">
-                    <span class="font-bold text-zinc-600 uppercase italic">Total Global Stock</span>
-                    <span class="font-black text-white px-2 py-0.5 bg-zinc-900 rounded">
-                        {{ getScaledAvailableStock(selectedLineForStock) }}
-                    </span>
+
+                <div class="mt-4 pt-3 border-t border-zinc-900 text-center">
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase italic leading-tight">
+                        <i class="pi pi-info-circle text-[7px] mr-1"></i>
+                        Click a location to switch target warehouse.
+                    </p>
                 </div>
             </div>
         </Popover>
@@ -255,8 +315,6 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
 import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
 import ToggleSwitch from 'primevue/toggleswitch';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -324,22 +382,29 @@ const getAvailableUoms = (productId) => {
     });
 };
 
-const getScaledQty = (productUomId, rawPieces, targetUomId, productId = null) => {
-    if (!productUomId || rawPieces === undefined || rawPieces === null) return '0';
+const getConversionDetails = (uomId, productId) => {
+    if (!productId || !uomId) return null;
+    const baseAuth = getFactorToBase(uomId, productId);
+    if (baseAuth.factor === 1) return null;
+
+    const directRule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(uomId) && c.product_id === productId);
+    const baseUom = uoms.value.find(u => u.id === baseAuth.baseId);
+    const baseAbbr = baseUom ? baseUom.abbreviation : '';
+
+    return {
+        text: `= ${baseAuth.factor} ${baseAbbr}`,
+        isCustom: !!directRule
+    };
+};
+
+const getScaledQty = (line, rawPieces) => {
+    if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
+    const { factor } = getFactorToBase(line.uom_id, line.product?.id);
+    const scaled = (parseFloat(rawPieces) / factor);
     
-    const targetUom = uoms.value.find(u => u.id == targetUomId);
-    const targetAbbr = targetUom ? targetUom.abbreviation : '';
-
-    const targetInfo = getFactorToBase(targetUomId, productId);
-    const productBaseInfo = getFactorToBase(productUomId, productId);
-
-    if (targetInfo.baseId !== productBaseInfo.baseId) {
-        return `${Number(rawPieces).toFixed(2)} (?)`;
-    }
-
-    const scaled = (Number(rawPieces) / targetInfo.factor);
-    const formatted = isUomIdDiscrete(targetUomId) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
-    return `${formatted} ${targetAbbr}`;
+    return isUomIdDiscrete(line.uom_id) 
+        ? Math.floor(scaled + 0.0001).toLocaleString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 };
 
 const getScaledAvailableStock = (line) => {
@@ -361,6 +426,11 @@ const toggleStockInfo = async (event, line) => {
     
     selectedLineForStock.value = line;
     stockOp.value.toggle(event);
+};
+
+const selectLocation = (loc) => {
+    form.to_location = { id: loc.location_id, name: loc.location_name };
+    toast.add({ severity: 'info', summary: 'Warehouse Switched', detail: `Target warehouse set to ${loc.location_name}`, life: 2000 });
 };
 
 const form = useForm({
@@ -504,17 +574,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.receipt-grid :deep(.p-datatable-thead) {
-    display: table-header-group !important;
-}
-.receipt-grid :deep(.p-datatable-thead > tr > th) {
-    background: rgba(24, 24, 27, 0.4) !important;
-    border-color: rgba(39, 39, 42, 0.5) !important;
-    color: rgba(113, 113, 122, 1) !important;
-    font-size: 8px !important;
-    text-transform: uppercase !important;
-    font-weight: 900 !important;
-    letter-spacing: 0.3em !important;
-    padding: 1rem 2rem !important;
-}
 </style>

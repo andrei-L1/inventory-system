@@ -47,6 +47,7 @@ class ProductResource extends JsonResource
             'category_id' => $this->category_id,
             'uom_id' => $this->uom_id,
             'costing_method_id' => $this->costing_method_id,
+            'costing_method_name' => $this->costingMethod->name ?? 'average',
             'preferred_vendor_id' => $this->preferred_vendor_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'uom' => new UnitOfMeasureResource($this->whenLoaded('uom')),

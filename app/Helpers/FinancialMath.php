@@ -147,7 +147,7 @@ class FinancialMath
         $aNorm = bcadd(self::toDecimal($a), '0', self::LINE_SCALE);
         $bNorm = bcadd(self::toDecimal($b), '0', self::LINE_SCALE);
 
-        return bccomp($aNorm, $bNorm, 0);
+        return bccomp($aNorm, $bNorm, self::LINE_SCALE);
     }
 
     // ─── Semantic Comparators (replace ALL + 0.00000001 epsilon patterns) ─────

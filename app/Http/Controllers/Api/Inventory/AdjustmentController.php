@@ -42,6 +42,14 @@ class AdjustmentController extends Controller
 
             $data['header'] = $header;
 
+            // Normalize numeric inputs to strings for FinancialMath compliance
+            $data['lines'] = collect($data['lines'])->map(function ($line) {
+                return array_merge($line, [
+                    'quantity' => (string) ($line['quantity'] ?? '0'),
+                    'unit_cost' => \App\Helpers\FinancialMath::round((string) ($line['unit_cost'] ?? '0'), \App\Helpers\FinancialMath::LINE_SCALE),
+                ]);
+            })->toArray();
+
             $transaction = $stockService->recordMovement($data);
 
             return response()->json(
