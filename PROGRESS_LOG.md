@@ -498,3 +498,12 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Quantity-Based Status Engine**: Restructured the Order Status engine to be entirely mathematically derived. SalesOrder::recalculateStatus() now governs UI visibility based on the true ratio of ordered_qty vs shipped_qty, completely eliminating split-brain workflow lockups.
 - **System-Wide Decimal Precision Standardization (Batch 3)**: Discovered and patched the final fractional stragglers. Upgraded Sales Order 	ax_amount and discount_amount across the whole schema to absolute decimal(18, 8) precision, guaranteeing zero truncation on reporting metrics.
 - **Testing**: Executed and verified the PrecisionReturnTest and InvoicingAndReturnsTest, closing this phase with 166 passing assertions.
+
+---
+
+### 2026-04-11: Enterprise Financial Precision Remediation
+
+- **Float Eradication**: Systematically audited and eradicated all native PHP scalar floats `(float)` and fuzzy EPSILON constants throughout the core transaction lifecycle. All operational ledgers now strictly rely on BCMath via the `FinancialMath` primitive wrapper.
+- **Strict String Boundaries**: The integration tier (database accessors, API parameters) now strictly mandates and validates decimal strings, completely shutting out JSON float-drift.
+- **COGS and Quantities Math Verification**: Re-signed all `CostingStrategy` and `StockService` signatures explicitly to `string` primitives. Upgraded PO suggestions, Sales Order invoicing, and GRN accumulators to calculate line additions cleanly with mathematically guaranteed accuracy. 
+- **Tests Re-verified**: Reconfirmed 100% test passing via Integration Suite ensuring no logical breakage caused by type migrations.
