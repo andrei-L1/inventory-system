@@ -1,5 +1,5 @@
 # Technical Specification: Inventory Mathematics & Financial Precision
-*Version 2.1: Enterprise-Grade Accuracy (8-Decimal Standard)*
+*Version 3.0: Enterprise-Grade Accuracy (BCMath String Standard)*
 
 ## 1. Business Context: Why 8 Decimals?
 
@@ -46,12 +46,12 @@ While invoices and payments are rounded to 2 decimals (₱10.50), the "Internal 
 *   **Database Standard**: All quantity and cost columns use `decimal(18, 8)`.
 *   **Migration Reference**: [2026_04_04_...](file:///c:/xampp/htdocs/inventory-system/database/migrations/2026_04_04_000001_upgrade_quantity_precision.php)
 
-### 4.2 The "Infinity Zero" (Epsilon)
-Computers can sometimes have tiny math "dust" (e.g., 0.333333334). To prevent "Ghost Stock" (records of 0.000000001 items that you can't sell), we use a threshold called **Epsilon**.
-
-*   **Threshold**: `0.00000001` ($10^{-8}$)
-*   **The Rule**: Any stock quantity smaller than this threshold is mathematically treated as **Zero**.
-*   **Trigger**: This is used whenever the system checks if a stock layer is "Exhausted."
+### 4.2 The Eradication of PHP Floats and "Epsilon"
+ Historically, the system relied on PHP's native floating-point math and "Epsilon" thresholds to handle tiny mathematical dust. **This has been completely eradicated.**
+ 
+ *   **The Problem with Floats**: Native PHP floats suffer from IEEE 754 precision loss (`0.1 + 0.2 = 0.30000000000000004`).
+ *   **The BCMath Standard**: All arithmetic operations (Add, Subtract, Multiply, Divide, Compare) are now routed exclusively through the `FinancialMath` wrapper which natively utilizes PHP's `BCMath` extension.
+ *   **String Strictness**: All mathematical quantities are explicitly typed and passed as `string`. The system enforces a strict "data boundary" preventing native floats from bleeding into precision-critical accumulator loops. If `FinancialMath` detects a PHP `(float)`, it fires an immediate `InvalidArgumentException`.
 
 ---
 
@@ -71,7 +71,7 @@ To keep the system user-friendly, we "mask" the precision in the interface:
 | Logic Component | Path |
 | :--- | :--- |
 | **Averaging Algorithm** | `App\Services\Inventory\Costing\Traits\ManagesCostLayers` |
-| **Precision Constants** | `App\Services\Inventory\StockService::QTY_EPSILON` |
+| **Precision Core (BCMath)** | `App\Helpers\FinancialMath` |
 | **UOM Scaling Engine** | `App\Helpers\UomHelper` |
 | **Schema Definition** | `database/migrations/2026_04_04_000001_upgrade_quantity_precision.php` |
 
@@ -95,4 +95,4 @@ $$ \Delta \text{AtomicQty} = \text{TransactionQty} \times \text{UomHelper::getMu
 > **Data Isolation**: This mechanism ensures that a "Box of 12" for *Bolt A* never conflicts with a "Box of 50" for *Bolt B*, even though both use the same UOM ID. This prevents global rule pollution and keeps the inventory math surgical.
 
 > [!CAUTION]
-> **Code Sync Constraint**: Any new calculation (Invoicing, Discounts, Tax) **MUST** be wrapped in `round(..., 8)` in PHP. Failing to do this will cause "Rounding Drift" and corrupt the inventory ledger over time.
+> **Code Sync Constraint**: Any new calculation (Invoicing, Discounts, Tax) **MUST** use the `FinancialMath` wrapper (`FinancialMath::add`, `FinancialMath::mul`, etc.). Using internal PHP operators (`+`, `-`, `*`) or native `round()` will instantly decouple quantities from the String Boundary and is strictly forbidden.

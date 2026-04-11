@@ -3,6 +3,7 @@
 namespace App\Services\Inventory\Costing\Traits;
 
 use App\Exceptions\InsufficientStockException;
+use App\Helpers\FinancialMath;
 use App\Models\Inventory;
 use App\Models\InventoryCostLayer;
 
@@ -10,13 +11,14 @@ trait ManagesCostLayers
 {
     /**
      * Consumes cost layers using FIFO or LIFO.
-     * Returns the weighted-average unit cost of all layers consumed.
+     * Returns the weighted-average unit cost of all layers consumed, as an 8dp string.
+     *
+     * All arithmetic uses BCMath via FinancialMath — no PHP floats, no epsilon constants.
+     * Loop accumulation uses string variables initialized to '0' to prevent drift.
      */
-    protected function consumeLayers(Inventory $inventory, float $quantity, string $direction = 'asc'): float
+    protected function consumeLayers(Inventory $inventory, string $quantity, string $direction = 'asc'): string
     {
         $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-        $qtyEpsilon = 0.00000001;
-        $costEpsilon = 0.00000001;
 
         $layers = InventoryCostLayer::where('product_id', $inventory->product_id)
             ->where('location_id', $inventory->location_id)
@@ -28,40 +30,57 @@ trait ManagesCostLayers
             ->lockForUpdate()
             ->get();
 
+        // Initialize accumulators as BCMath strings — never floats.
         $remainingToConsume = $quantity;
-        $totalCostConsumed = 0.0;
-        $totalQtyConsumed = 0.0;
+        $totalCostConsumed = '0';
+        $totalQtyConsumed = '0';
 
         foreach ($layers as $layer) {
             /** @var InventoryCostLayer $layer */
-            if ($remainingToConsume <= $qtyEpsilon) {
+            if (! FinancialMath::isPositive($remainingToConsume)) {
                 break;
             }
 
-            $availableInLayer = (float) $layer->calc_remaining_qty;
-            $consumeAmount = min($availableInLayer, $remainingToConsume);
+            // DB decimal:8 casts return strings — safe to pass directly.
+            $availableInLayer = (string) $layer->calc_remaining_qty;
 
-            $totalCostConsumed += $consumeAmount * (float) $layer->unit_cost;
-            $totalQtyConsumed += $consumeAmount;
+            // Deterministic min() replacement: avoids PHP's float min() for decimal strings.
+            $consumeAmount = FinancialMath::lte($availableInLayer, $remainingToConsume)
+                ? $availableInLayer
+                : $remainingToConsume;
 
-            $layer->issued_qty = round((float) $layer->issued_qty + $consumeAmount, 8);
-            $remainingToConsume -= $consumeAmount;
+            $totalCostConsumed = FinancialMath::add(
+                $totalCostConsumed,
+                FinancialMath::mul($consumeAmount, (string) $layer->unit_cost)
+            );
+            $totalQtyConsumed = FinancialMath::add($totalQtyConsumed, $consumeAmount);
+            $remainingToConsume = FinancialMath::sub($remainingToConsume, $consumeAmount);
 
-            if (($layer->received_qty - $layer->issued_qty) <= $qtyEpsilon) {
+            $layer->issued_qty = FinancialMath::round(
+                FinancialMath::add((string) $layer->issued_qty, $consumeAmount),
+                FinancialMath::LINE_SCALE
+            );
+
+            // Layer is exhausted when remaining ≤ 0 (no epsilon needed with BCMath).
+            $remaining = FinancialMath::sub((string) $layer->received_qty, (string) $layer->issued_qty);
+            if (! FinancialMath::isPositive($remaining)) {
                 $layer->is_exhausted = true;
             }
 
             $layer->save();
         }
 
-        if ($remainingToConsume > $qtyEpsilon) {
+        if (FinancialMath::isPositive($remainingToConsume)) {
             throw new InsufficientStockException(
                 "Insufficient stock to consume {$quantity} for product ID: {$inventory->product_id} "
                 ."at location ID: {$inventory->location_id}. Missing: {$remainingToConsume}"
             );
         }
 
-        return $totalQtyConsumed > 0 ? round($totalCostConsumed / $totalQtyConsumed, 8) : 0.0;
+        // Weighted-average unit cost of consumed layers.
+        return FinancialMath::isPositive($totalQtyConsumed)
+            ? FinancialMath::round(FinancialMath::div($totalCostConsumed, $totalQtyConsumed), FinancialMath::LINE_SCALE)
+            : '0';
     }
 
     /**
@@ -70,7 +89,8 @@ trait ManagesCostLayers
      */
     protected function levelCostLayers(Inventory $inventory): void
     {
-        $avg = round((float) $inventory->average_cost, 8);
+        // DB decimal:8 cast returns string — safe to pass directly.
+        $avg = FinancialMath::round((string) $inventory->average_cost, FinancialMath::LINE_SCALE);
 
         InventoryCostLayer::where('product_id', $inventory->product_id)
             ->where('location_id', $inventory->location_id)
@@ -80,21 +100,29 @@ trait ManagesCostLayers
     }
 
     /**
-     * Common logic to update the running weighted average cost on the Inventory record.
-     * This is an absolute requirement for reporting and system-wide valuation,
-     * regardless of the specific costing strategy used for COGS on issue.
+     * Update the running weighted-average cost on the Inventory record.
+     *
+     * Formula: (current_value + inbound_value) / (current_qty + inbound_qty)
+     * All arithmetic in BCMath — no PHP floats.
      */
-    protected function updateRunningAverage(Inventory $inventory, float $newQty, float $newUnitCost): void
+    protected function updateRunningAverage(Inventory $inventory, string $newQty, string $newUnitCost): void
     {
-        $currentQty = (float) $inventory->getRawOriginal('quantity_on_hand');
-        $currentAvgCost = (float) $inventory->getRawOriginal('average_cost');
+        // getRawOriginal() returns the raw DB string — safe for BCMath.
+        $currentQty = (string) $inventory->getRawOriginal('quantity_on_hand');
+        $currentAvgCost = (string) $inventory->getRawOriginal('average_cost');
 
-        $totalValueBefore = $currentQty * $currentAvgCost;
-        $newValueInbound = $newQty * $newUnitCost;
-        $totalQtyAfter = $currentQty + $newQty;
+        $totalValueBefore = FinancialMath::mul($currentQty, $currentAvgCost);
+        $newValueInbound = FinancialMath::mul($newQty, $newUnitCost);
+        $totalQtyAfter = FinancialMath::add($currentQty, $newQty);
 
-        if ($totalQtyAfter > 0) {
-            $inventory->average_cost = round(($totalValueBefore + $newValueInbound) / $totalQtyAfter, 8);
+        if (FinancialMath::isPositive($totalQtyAfter)) {
+            $inventory->average_cost = FinancialMath::round(
+                FinancialMath::div(
+                    FinancialMath::add($totalValueBefore, $newValueInbound),
+                    $totalQtyAfter
+                ),
+                FinancialMath::LINE_SCALE
+            );
         }
     }
 }

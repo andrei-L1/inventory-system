@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Sales;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\SalesOrderStoreRequest;
@@ -67,32 +68,37 @@ class SalesOrderController extends Controller
                 'status_id' => $statusId,
                 'order_date' => $data['order_date'],
                 'expected_shipping_date' => $data['expected_shipping_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $request->user()->id,
                 'total_amount' => 0,
             ]);
 
-            $totalAmount = 0.0;
+            $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineTotal = $this->calculateLineSubtotal($lineData);
-                $totalAmount += $lineTotal;
+                $lineTotal = FinancialMath::soLineSubtotal(
+                    $lineData['ordered_qty'],
+                    $lineData['unit_price'],
+                    $lineData['discount_rate'] ?? 0,
+                    $lineData['tax_rate'] ?? 0,
+                );
+                $lineTotals[] = $lineTotal;
 
                 $so->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => round($lineData['ordered_qty'], 8),
-                    'unit_price' => round($lineData['unit_price'], 8),
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
                     'tax_rate' => $lineData['tax_rate'] ?? 0,
-                    'tax_amount' => $this->calculateTaxAmount($lineData),
+                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
                     'discount_rate' => $lineData['discount_rate'] ?? 0,
-                    'discount_amount' => $this->calculateDiscountAmount($lineData),
+                    'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
                     'subtotal' => $lineTotal,
                 ]);
             }
 
-            $so->update(['total_amount' => round($totalAmount, 2)]);
+            $so->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
 
             return $so;
         });
@@ -118,32 +124,37 @@ class SalesOrderController extends Controller
                 'customer_id' => $data['customer_id'],
                 'order_date' => $data['order_date'],
                 'expected_shipping_date' => $data['expected_shipping_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
             ]);
 
             $salesOrder->lines()->delete();
 
-            $totalAmount = 0.0;
+            $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineTotal = $this->calculateLineSubtotal($lineData);
-                $totalAmount += $lineTotal;
+                $lineTotal = FinancialMath::soLineSubtotal(
+                    $lineData['ordered_qty'],
+                    $lineData['unit_price'],
+                    $lineData['discount_rate'] ?? 0,
+                    $lineData['tax_rate'] ?? 0,
+                );
+                $lineTotals[] = $lineTotal;
 
                 $salesOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => round($lineData['ordered_qty'], 8),
-                    'unit_price' => round($lineData['unit_price'], 8),
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
                     'tax_rate' => $lineData['tax_rate'] ?? 0,
-                    'tax_amount' => $this->calculateTaxAmount($lineData),
+                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
                     'discount_rate' => $lineData['discount_rate'] ?? 0,
-                    'discount_amount' => $this->calculateDiscountAmount($lineData),
+                    'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
                     'subtotal' => $lineTotal,
                 ]);
             }
 
-            $salesOrder->update(['total_amount' => round($totalAmount, 2)]);
+            $salesOrder->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
 
             return $salesOrder;
         });
@@ -153,11 +164,15 @@ class SalesOrderController extends Controller
 
     public function destroy(SalesOrder $salesOrder): JsonResponse
     {
-        if (! $salesOrder->status->is_editable) {
-            abort(403, 'Sales order cannot be deleted in its current status.');
-        }
+        DB::transaction(function () use ($salesOrder) {
+            $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
 
-        $salesOrder->delete();
+            if (! $so->status->is_editable) {
+                abort(403, 'Sales order cannot be deleted in its current status.');
+            }
+
+            $so->delete();
+        });
 
         return response()->json(null, 204);
     }
@@ -175,11 +190,10 @@ class SalesOrderController extends Controller
             // CREDIT LIMIT ENFORCEMENT
             $customer = $so->customer;
             if ($customer->credit_limit > 0) {
-                $exposure = (float) $customer->exposure;
-                $newTotal = round($exposure + (float) $so->total_amount, 8);
+                $newTotal = FinancialMath::add((string) $customer->exposure, (string) $so->total_amount);
 
-                if ($newTotal > ((float) $customer->credit_limit + 0.00000001)) {
-                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$exposure}, New Order: {$so->total_amount}.");
+                if (FinancialMath::gt($newTotal, (string) $customer->credit_limit)) {
+                    abort(422, "Credit Limit Exceeded. Customer Limit: {$customer->credit_limit}, Current Exposure: {$customer->exposure}, New Order: {$so->total_amount}.");
                 }
             }
 
@@ -192,10 +206,10 @@ class SalesOrderController extends Controller
 
                 // Convert ordered qty to base UOM for reservation
                 // round(..., 8) prevents floating-point dust from UOM chain multiplication
-                $baseQty = (float) $line->ordered_qty;
+                $baseQty = (string) $line->ordered_qty;
                 if ($line->uom_id !== $product->uom_id) {
                     $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
-                    $baseQty = round($baseQty * $factor, 8);
+                    $baseQty = FinancialMath::round(FinancialMath::mul($baseQty, $factor), FinancialMath::LINE_SCALE);
                 }
 
                 $stockService->reserveStock($product, $location, $baseQty);
@@ -205,6 +219,33 @@ class SalesOrderController extends Controller
                 'status_id' => $confirmedStatus->id,
                 'approved_by' => $request->user()->id,
                 'approved_at' => now(),
+            ]);
+
+            return $so;
+        });
+
+        return new SalesOrderResource($salesOrder->load('lines', 'status'));
+    }
+
+    /**
+     * S-M2: Send a quotation to the customer (quotation → quotation_sent).
+     * This was a registered route with no implementation — now resolved.
+     */
+    public function send(Request $request, SalesOrder $salesOrder): SalesOrderResource
+    {
+        $salesOrder = DB::transaction(function () use ($salesOrder) {
+            $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
+            $so->loadMissing('status');
+
+            if ($so->status->name !== SalesOrderStatus::QUOTATION) {
+                abort(400, 'Only quotations can be sent. Current status: '.$so->status->name);
+            }
+
+            $sentStatus = SalesOrderStatus::where('name', SalesOrderStatus::QUOTATION_SENT)->firstOrFail();
+
+            $so->update([
+                'status_id' => $sentStatus->id,
+                'sent_at' => now(),
             ]);
 
             return $so;
@@ -230,25 +271,25 @@ class SalesOrderController extends Controller
             $allPicked = true;
             foreach ($request->lines as $item) {
                 $line = $so->lines()->findOrFail($item['so_line_id']);
-                $newPicked = (float) $item['picked_qty'];
+                $newPicked = (string) $item['picked_qty'];
 
                 // Enforce cap: cannot pick more than ordered
-                $remainingToPick = (float) $line->ordered_qty - (float) $line->picked_qty;
-                if ($newPicked > ($remainingToPick + 0.00000001)) {
+                $remainingToPick = FinancialMath::sub((string) $line->ordered_qty, (string) $line->picked_qty);
+                if (FinancialMath::gt($newPicked, $remainingToPick)) {
                     abort(422, "Cannot pick more than ordered for product: {$line->product->name}. Remaining to pick: {$remainingToPick}");
                 }
 
-                $line->picked_qty += $newPicked;
+                $line->picked_qty = FinancialMath::add((string) $line->picked_qty, $newPicked);
                 $line->save();
 
-                if ($line->picked_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->picked_qty, (string) $line->ordered_qty)) {
                     $allPicked = false;
                 }
             }
 
             // Global check across all lines
             foreach ($so->lines as $line) {
-                if ($line->picked_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->picked_qty, (string) $line->ordered_qty)) {
                     $allPicked = false;
                     break;
                 }
@@ -287,25 +328,25 @@ class SalesOrderController extends Controller
             $allPacked = true;
             foreach ($request->lines as $item) {
                 $line = $so->lines()->findOrFail($item['so_line_id']);
-                $newPacked = (float) $item['packed_qty'];
+                $newPacked = (string) $item['packed_qty'];
 
                 // Enforce cap: cannot pack more than picked
-                $remainingToPack = (float) $line->picked_qty - (float) $line->packed_qty;
-                if ($newPacked > ($remainingToPack + 0.00000001)) {
+                $remainingToPack = FinancialMath::sub((string) $line->picked_qty, (string) $line->packed_qty);
+                if (FinancialMath::gt($newPacked, $remainingToPack)) {
                     abort(422, "Cannot pack more than picked for product: {$line->product->name}. Remaining to pack: {$remainingToPack}");
                 }
 
-                $line->packed_qty += $newPacked;
+                $line->packed_qty = FinancialMath::add((string) $line->packed_qty, $newPacked);
                 $line->save();
 
-                if ($line->packed_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->packed_qty, (string) $line->ordered_qty)) {
                     $allPacked = false;
                 }
             }
 
             // Global check
             foreach ($so->lines as $line) {
-                if ($line->packed_qty < $line->ordered_qty) {
+                if (FinancialMath::lt((string) $line->packed_qty, (string) $line->ordered_qty)) {
                     $allPacked = false;
                     break;
                 }
@@ -374,31 +415,33 @@ class SalesOrderController extends Controller
 
                 foreach ($request->lines as $item) {
                     $soLine = $soLines->get($item['so_line_id']);
-                    $shippedQtyRaw = (float) $item['shipped_qty'];
+                    $shippedQtyRaw = (string) $item['shipped_qty'];
                     $product = $soLine->product;
 
-                    if ($shippedQtyRaw > ($soLine->packed_qty - $soLine->shipped_qty + 0.00000001)) {
-                        $remaining = $soLine->packed_qty - $soLine->shipped_qty;
-                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remaining}");
+                    $remainingToShip = FinancialMath::sub((string) $soLine->packed_qty, (string) $soLine->shipped_qty);
+                    if (FinancialMath::gt($shippedQtyRaw, $remainingToShip)) {
+                        abort(422, "Cannot ship more than what was packed for line: {$product->name}. Remaining: {$remainingToShip}");
                     }
 
                     // Convert to base UOM
-                    $factor = 1.0;
+                    $factor = '1';
                     if ($soLine->uom_id !== $product->uom_id) {
                         $factor = UomHelper::getConversionFactor($soLine->uom_id, $product->uom_id, $product->id);
                     }
-                    $baseShippedQty = round($shippedQtyRaw * $factor, 8);
+                    $baseShippedQty = FinancialMath::round(FinancialMath::mul($shippedQtyRaw, $factor), FinancialMath::LINE_SCALE);
 
                     $stockService->releaseReservation($product, $soLine->location, $baseShippedQty);
 
+                    // Negate safely without (float) cast
+                    $negQty = '-'.ltrim($shippedQtyRaw, '-');
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $soLine->location_id,
-                        'quantity' => -abs($shippedQtyRaw),
+                        'quantity' => $negQty,
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    $soLine->shipped_qty += $shippedQtyRaw;
+                    $soLine->shipped_qty = FinancialMath::add((string) $soLine->shipped_qty, $shippedQtyRaw);
                     $soLine->save();
                 }
 
@@ -406,7 +449,7 @@ class SalesOrderController extends Controller
                 $salesOrder->unsetRelation('lines');
                 $allShipped = true;
                 foreach ($salesOrder->lines as $line) {
-                    if ($line->shipped_qty < $line->ordered_qty) {
+                    if (FinancialMath::lt((string) $line->shipped_qty, (string) $line->ordered_qty)) {
                         $allShipped = false;
                         break;
                     }
@@ -463,11 +506,11 @@ class SalesOrderController extends Controller
                     $product = $line->product;
                     $location = $line->location;
 
-                    $baseQty = (float) $line->ordered_qty - (float) $line->shipped_qty;
-                    if ($baseQty > 0.00000001) {
+                    $baseQty = FinancialMath::sub((string) $line->ordered_qty, (string) $line->shipped_qty);
+                    if (FinancialMath::isPositive($baseQty)) {
                         if ($line->uom_id !== $product->uom_id) {
                             $factor = UomHelper::getConversionFactor($line->uom_id, $product->uom_id, $product->id);
-                            $baseQty = round($baseQty * $factor, 8);
+                            $baseQty = FinancialMath::round(FinancialMath::mul($baseQty, $factor), FinancialMath::LINE_SCALE);
                         }
                         $stockService->releaseReservation($product, $location, $baseQty);
                     }
@@ -504,46 +547,32 @@ class SalesOrderController extends Controller
         return view('sales.sales-order-print', compact('salesOrder', 'company'));
     }
 
-    private function calculateLineSubtotal(array $data): float
+    private function calculateLineSubtotal(array $data): string
     {
-        $qty = (float) $data['ordered_qty'];
-        $price = (float) $data['unit_price'];
-        $taxRate = (float) ($data['tax_rate'] ?? 0);
-        $discountRate = (float) ($data['discount_rate'] ?? 0);
-
-        // All intermediate values are kept at full float precision.
-        // Only the final result is rounded to 8 decimals to prevent drift
-        // when summing many lines into a total_amount.
-        $base = $qty * $price;
-        $discount = $base * ($discountRate / 100);
-        $taxable = $base - $discount;
-        $tax = $taxable * ($taxRate / 100);
-
-        return round($taxable + $tax, 8);
+        return FinancialMath::soLineSubtotal(
+            $data['ordered_qty'],
+            $data['unit_price'],
+            $data['discount_rate'] ?? 0,
+            $data['tax_rate'] ?? 0,
+        );
     }
 
-    private function calculateTaxAmount(array $data): float
+    private function calculateTaxAmount(array $data): string
     {
-        $qty = (float) $data['ordered_qty'];
-        $price = (float) $data['unit_price'];
-        $taxRate = (float) ($data['tax_rate'] ?? 0);
-        $discountRate = (float) ($data['discount_rate'] ?? 0);
-
-        $base = $qty * $price;
-        $discount = $base * ($discountRate / 100);
-        $taxable = $base - $discount;
-
-        // round to 8 to match the 8-decimal DB standard
-        return round($taxable * ($taxRate / 100), 8);
+        return FinancialMath::soLineTax(
+            $data['ordered_qty'],
+            $data['unit_price'],
+            $data['discount_rate'] ?? 0,
+            $data['tax_rate'] ?? 0,
+        );
     }
 
-    private function calculateDiscountAmount(array $data): float
+    private function calculateDiscountAmount(array $data): string
     {
-        $qty = (float) $data['ordered_qty'];
-        $price = (float) $data['unit_price'];
-        $discountRate = (float) ($data['discount_rate'] ?? 0);
-
-        // round to 8 to match the 8-decimal DB standard
-        return round(($qty * $price) * ($discountRate / 100), 8);
+        return FinancialMath::soLineDiscount(
+            $data['ordered_qty'],
+            $data['unit_price'],
+            $data['discount_rate'] ?? 0,
+        );
     }
 }

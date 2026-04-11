@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\InventoryResource;
@@ -133,7 +134,7 @@ class InventoryQueryController extends Controller
                     'formatted_original_qty' => UomHelper::format($receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (float) $layer->remaining_qty,
                     'formatted_remaining_qty' => UomHelper::format($remainingScaled, $targetUomId, $product->id, false),
-                    'total_value' => round((float) $layer->remaining_qty * (float) $layer->unit_cost, 8),
+                    'total_value' => FinancialMath::round(FinancialMath::mul((string) $layer->remaining_qty, (string) $layer->unit_cost), FinancialMath::LINE_SCALE),
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,
                 ];
@@ -159,27 +160,29 @@ class InventoryQueryController extends Controller
             ->where('location_id', $request->location_id)
             ->first();
 
-        $qoh = $inventory ? (float) $inventory->quantity_on_hand : 0;
-        $reserved = $inventory ? (float) $inventory->reserved_qty : 0;
-        $availableBase = max(0, $qoh - $reserved);
+        $qoh = $inventory ? (string) $inventory->quantity_on_hand : '0';
+        $reserved = $inventory ? (string) $inventory->reserved_qty : '0';
+        $baseDiff = FinancialMath::sub($qoh, $reserved);
+        $availableBase = FinancialMath::isNegative($baseDiff) ? '0' : $baseDiff;
 
         $targetUomId = $request->uom_id ?? $product->uom_id;
         $targetUom = UnitOfMeasure::find($targetUomId);
 
         $availableTarget = $availableBase;
-        if ($targetUomId != $product->uom_id) {
+        if ((int) $targetUomId !== (int) $product->uom_id) {
             try {
                 $factor = UomHelper::getConversionFactor($product->uom_id, $targetUomId, $product->id);
-                $availableTarget *= $factor;
+                // factor is a string from getConversionFactor
+                $availableTarget = FinancialMath::mul($availableBase, $factor);
             } catch (\Exception $e) {
                 // Fallback to base if conversion fails
             }
         }
 
         return response()->json([
-            'qoh' => $qoh,
-            'reserved_qty' => $reserved,
-            'available_qty' => round($availableTarget, 8),
+            'qoh' => (float) $qoh,
+            'reserved_qty' => (float) $reserved,
+            'available_qty' => (float) FinancialMath::round($availableTarget, 8),
             'uom_id' => $targetUomId,
             'uom_abbr' => $targetUom->abbreviation ?? 'pcs',
         ]);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -172,29 +173,35 @@ class SalesOrder extends Model
             return;
         }
 
-        $epsilon = 0.00000001;
+        // Accumulate quantities in BCMath strings — no float summation, no epsilon.
+        $totalOrdered = '0';
+        $totalShipped = '0';
+        $totalPacked = '0';
+        $totalPicked = '0';
 
-        $totalOrdered = (float) $lines->sum(fn ($l) => (float) $l->ordered_qty);
-        $totalShipped = (float) $lines->sum(fn ($l) => (float) $l->shipped_qty);
-        $totalPacked = (float) $lines->sum(fn ($l) => (float) $l->packed_qty);
-        $totalPicked = (float) $lines->sum(fn ($l) => (float) $l->picked_qty);
+        foreach ($lines as $l) {
+            $totalOrdered = FinancialMath::add($totalOrdered, (string) $l->ordered_qty);
+            $totalShipped = FinancialMath::add($totalShipped, (string) $l->shipped_qty);
+            $totalPacked = FinancialMath::add($totalPacked, (string) $l->packed_qty);
+            $totalPicked = FinancialMath::add($totalPicked, (string) $l->picked_qty);
+        }
 
-        // Walk down the fulfillment hierarchy from the top.
-        // The highest milestone that is fully satisfied wins.
-        if ($totalShipped >= $totalOrdered - $epsilon) {
+        // Walk the fulfillment hierarchy top-down.
+        // FinancialMath::gte/gt use cmp() at scale=0 — no epsilon needed.
+        if (FinancialMath::gte($totalShipped, $totalOrdered)) {
             $statusName = SalesOrderStatus::SHIPPED;
-        } elseif ($totalShipped > $epsilon) {
+        } elseif (FinancialMath::isPositive($totalShipped)) {
             $statusName = SalesOrderStatus::PARTIALLY_SHIPPED;
-        } elseif ($totalPacked >= $totalOrdered - $epsilon) {
+        } elseif (FinancialMath::gte($totalPacked, $totalOrdered)) {
             $statusName = SalesOrderStatus::PACKED;
-        } elseif ($totalPacked > $epsilon) {
+        } elseif (FinancialMath::isPositive($totalPacked)) {
             $statusName = SalesOrderStatus::PARTIALLY_PACKED;
-        } elseif ($totalPicked >= $totalOrdered - $epsilon) {
+        } elseif (FinancialMath::gte($totalPicked, $totalOrdered)) {
             $statusName = SalesOrderStatus::PICKED;
-        } elseif ($totalPicked > $epsilon) {
+        } elseif (FinancialMath::isPositive($totalPicked)) {
             $statusName = SalesOrderStatus::PARTIALLY_PICKED;
         } else {
-            // All progress has been reversed — order is back to confirmed/ready state.
+            // All progress reversed — order is back to confirmed/ready state.
             $statusName = SalesOrderStatus::CONFIRMED;
         }
 

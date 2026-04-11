@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Inventory;
 
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Inventory\TransactionLineResource;
 use App\Models\Product;
@@ -60,7 +61,7 @@ class DashboardController extends Controller
         })->count();
 
         // Calculate 7-day stock value trend
-        $currentValue = (float) ($valuation->total_value ?? 0);
+        $currentValue = (string) ($valuation->total_value ?? '0');
         $trend = [];
 
         // Get net changes per day for the last 7 days
@@ -80,11 +81,11 @@ class DashboardController extends Controller
             $date = now()->subDays($i)->format('Y-m-d');
             $trend[] = [
                 'date' => $date,
-                'value' => round($tempValue, 2),
+                'value' => (float) FinancialMath::round($tempValue, 2),
             ];
             // Subtract the change that happened ON that day to get the value at the START of that day (which is the value at the END of the previous day)
-            $changeOnThisDay = $netChanges->get($date, 0);
-            $tempValue -= $changeOnThisDay;
+            $changeOnThisDay = (string) $netChanges->get($date, '0');
+            $tempValue = FinancialMath::sub($tempValue, $changeOnThisDay);
         }
 
         // Reverse to chronological order (oldest to newest)
@@ -94,7 +95,7 @@ class DashboardController extends Controller
             'stats' => [
                 'total_products' => $totalProducts,
                 'total_vendors' => $totalVendors,
-                'inventory_value' => $currentValue,
+                'inventory_value' => (float) FinancialMath::round($currentValue, 2),
                 'low_stock_count' => $lowStockCount,
                 'transactions_today' => $transactionsToday,
                 'pending_po_count' => $pendingPoCount,

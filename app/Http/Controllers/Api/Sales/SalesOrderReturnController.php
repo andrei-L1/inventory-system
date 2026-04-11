@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Invoice;
@@ -39,6 +40,9 @@ class SalesOrderReturnController extends Controller
 
         try {
             $result = DB::transaction(function () use ($request, $salesOrder, $stockService) {
+                // S-H1: Lock the SO header row first to prevent concurrent status/total conflicts.
+                $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
+
                 $sretType = TransactionType::where('code', StockService::TYPE_SALES_RETURN)->firstOrFail();
                 $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
@@ -47,72 +51,76 @@ class SalesOrderReturnController extends Controller
                         'transaction_type_id' => $sretType->id,
                         'transaction_status_id' => $postedStatus->id,
                         'transaction_date' => now()->toDateString(),
-                        'reference_number' => 'RET-'.$salesOrder->so_number.'-'.substr(uniqid(), -4),
-                        'customer_id' => $salesOrder->customer_id,
-                        'sales_order_id' => $salesOrder->id,
-                        'reference_doc' => $salesOrder->so_number,
-                        'notes' => 'Return for SO: '.$salesOrder->so_number.'. '.($request->notes ?? ''),
+                        'reference_number' => 'RET-'.$so->so_number.'-'.substr(uniqid(), -4),
+                        'customer_id' => $so->customer_id,
+                        'sales_order_id' => $so->id,
+                        'reference_doc' => $so->so_number,
+                        'notes' => 'Return for SO: '.$so->so_number.'. '.($request->notes ?? ''),
                         'created_by' => $request->user()->id,
                         'return_reason' => $request->lines[0]['reason'] ?? null, // Primary reason
                     ],
                     'lines' => [],
                 ];
 
-                $soLines = $salesOrder->lines()->lockForUpdate()->get()->keyBy('id');
+                $soLines = $so->lines()->lockForUpdate()->get()->keyBy('id');
                 $creditNoteLines = [];
 
                 foreach ($request->lines as $item) {
                     /** @var SalesOrderLine $soLine */
                     $soLine = $soLines->get($item['so_line_id']);
-                    $returnedQty = (float) $item['returned_qty'];
+                    $returnedQty = (string) $item['returned_qty'];
 
-                    if ($returnedQty > ($soLine->shipped_qty - $soLine->returned_qty + 0.00000001)) {
+                    $maxReturnable = FinancialMath::sub((string) $soLine->shipped_qty, (string) $soLine->returned_qty);
+                    if (FinancialMath::gt($returnedQty, $maxReturnable)) {
                         abort(422, "Cannot return more than what was shipped for product: {$soLine->product->name}");
                     }
 
-                    // Add to inventory transaction (Receipt)
-                    // We use the location specified by the user (e.g. a Quarantine or Returns bin)
-                    // instead of the original picking bin.
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => abs($returnedQty), // Receipt is positive
+                        'quantity' => $returnedQty, // Receipt is positive string
                         'uom_id' => $soLine->uom_id,
                     ];
 
-                    // Update SO Line pipeline quantities. The item physically returned,
-                    // so it must be picked/packed/shipped again if it's a replacement.
-                    $soLine->returned_qty += $returnedQty;
-                    $soLine->shipped_qty -= $returnedQty;
-                    $soLine->packed_qty = max(0, $soLine->packed_qty - $returnedQty);
-                    $soLine->picked_qty = max(0, $soLine->picked_qty - $returnedQty);
+                    $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $returnedQty);
+                    $soLine->shipped_qty = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
+                    $newPacked = FinancialMath::sub((string) $soLine->packed_qty, $returnedQty);
+                    $soLine->packed_qty = FinancialMath::round(
+                        FinancialMath::isNegative($newPacked) ? '0' : $newPacked,
+                        FinancialMath::LINE_SCALE
+                    );
 
-                    // If refund, we cancel this portion of the order and refund them
+                    $newPicked = FinancialMath::sub((string) $soLine->picked_qty, $returnedQty);
+                    $soLine->picked_qty = FinancialMath::round(
+                        FinancialMath::isNegative($newPicked) ? '0' : $newPicked,
+                        FinancialMath::LINE_SCALE
+                    );
+
                     if ($item['resolution'] === 'refund') {
-                        $soLine->ordered_qty = max(0, (float) $soLine->ordered_qty - $returnedQty);
+                        $newOrdered = FinancialMath::sub((string) $soLine->ordered_qty, $returnedQty);
+                        $soLine->ordered_qty = FinancialMath::round(
+                            FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered,
+                            FinancialMath::LINE_SCALE
+                        );
 
-                        // Recalculate line totals
-                        $qty = (float) $soLine->ordered_qty;
-                        $price = (float) $soLine->unit_price;
-                        $taxRate = (float) ($soLine->tax_rate ?? 0);
-                        $discountRate = (float) ($soLine->discount_rate ?? 0);
+                        // Recalculate line totals using BCMath — no floats.
+                        $soLine->discount_amount = FinancialMath::soLineDiscount(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0
+                        );
+                        $soLine->tax_amount = FinancialMath::soLineTax(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
+                        );
+                        $soLine->subtotal = FinancialMath::soLineSubtotal(
+                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
+                        );
 
-                        $base = $qty * $price;
-                        $discount = $base * ($discountRate / 100);
-                        $taxable = $base - $discount;
-                        $tax = $taxable * ($taxRate / 100);
-
-                        $soLine->discount_amount = round($discount, 8);
-                        $soLine->tax_amount = round($tax, 8);
-                        $soLine->subtotal = round($taxable + $tax, 8);
-
-                        // Prepare Credit Note Line for refunds
+                        // Credit Note line values
                         $creditNoteLines[] = [
                             'product_id' => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity' => round($returnedQty, 8),
-                            'unit_price' => round((float) $soLine->unit_price, 8),
-                            'subtotal' => round($returnedQty * (float) $soLine->unit_price, 8),
+                            'quantity' => FinancialMath::round($returnedQty, FinancialMath::LINE_SCALE),
+                            'unit_price' => (string) $soLine->unit_price,
+                            'subtotal' => FinancialMath::round(FinancialMath::mul($returnedQty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE),
                         ];
                     }
 
@@ -120,10 +128,10 @@ class SalesOrderReturnController extends Controller
                     $soLine->save();
                 }
 
-                // Recalculate SO Header total_amount
-                $salesOrder->update([
-                    'total_amount' => round($soLines->sum('subtotal'), 8),
-                ]);
+                // S-M1: The SO total_amount is intentionally NOT recalculated here.
+                // Once an SO is approved, its total_amount is immutable (like an original contract).
+                // The generated Credit Note (below) solely represents the financial adjustment.
+                // Mutating the SO total AND issuing a credit note would double-count the loss.
 
                 // Record stock movement
                 $transaction = $stockService->recordMovement($transactionData);
@@ -133,18 +141,23 @@ class SalesOrderReturnController extends Controller
                 // re-evaluated from the actual line quantities. This allows the
                 // status to move backwards (e.g. SHIPPED → PARTIALLY_SHIPPED)
                 // so that warehouse staff can continue fulfilling the remainder.
-                $salesOrder->unsetRelation('lines'); // force a fresh load
-                $salesOrder->recalculateStatus();
+                $so->unsetRelation('lines'); // force a fresh load
+                $so->recalculateStatus();
 
                 // Automatically generate a Draft Credit Note if there are refunds
                 $creditNote = null;
                 if (! empty($creditNoteLines)) {
+                    $totalAmount = '0';
+                    foreach ($creditNoteLines as $line) {
+                        $totalAmount = FinancialMath::add($totalAmount, $line['subtotal']);
+                    }
+
                     $creditNote = Invoice::create([
                         'invoice_number' => 'CN-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
                         'customer_id' => $salesOrder->customer_id,
                         'sales_order_id' => $salesOrder->id,
                         'invoice_date' => now()->toDateString(),
-                        'total_amount' => round(collect($creditNoteLines)->sum('subtotal'), 8),
+                        'total_amount' => FinancialMath::round($totalAmount, FinancialMath::LINE_SCALE),
                         'status' => Invoice::STATUS_DRAFT,
                         'type' => Invoice::TYPE_CREDIT_NOTE,
                         'notes' => 'Generated from Return: '.$transaction->reference_number,

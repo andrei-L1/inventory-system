@@ -46,9 +46,9 @@ class SalesOrderLine extends Model
         'returned_qty' => 'decimal:8',
         'unit_price' => 'decimal:8',
         'tax_rate' => 'decimal:2',
-        'tax_amount' => 'decimal:6',
+        'tax_amount' => 'decimal:8',
         'discount_rate' => 'decimal:2',
-        'discount_amount' => 'decimal:6',
+        'discount_amount' => 'decimal:8',
         'subtotal' => 'decimal:8',
     ];
 
@@ -164,7 +164,14 @@ class SalesOrderLine extends Model
 
     public function getFormattedUnitPriceAttribute(): string
     {
-        $symbol = '₱';
+        // S-L2: Use the parent SO's currency code dynamically instead of hardcoding '₱'.
+        // Falls back to PHP if the relationship is not loaded to prevent N+1 errors.
+        $currencyCode = $this->salesOrder?->currency ?? 'PHP';
+        $symbol = match ($currencyCode) {
+            'USD' => '$',
+            'EUR' => '€',
+            default => '₱',
+        };
 
         return $symbol.number_format($this->unit_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
