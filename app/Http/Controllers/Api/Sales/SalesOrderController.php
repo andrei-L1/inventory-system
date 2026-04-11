@@ -67,7 +67,7 @@ class SalesOrderController extends Controller
                 'status_id' => $statusId,
                 'order_date' => $data['order_date'],
                 'expected_shipping_date' => $data['expected_shipping_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
                 'created_by' => $request->user()->id,
                 'total_amount' => 0,
@@ -118,7 +118,7 @@ class SalesOrderController extends Controller
                 'customer_id' => $data['customer_id'],
                 'order_date' => $data['order_date'],
                 'expected_shipping_date' => $data['expected_shipping_date'] ?? null,
-                'currency' => $data['currency'] ?? 'USD',
+                'currency' => $data['currency'] ?? 'PHP',
                 'notes' => $data['notes'] ?? null,
             ]);
 
@@ -153,11 +153,15 @@ class SalesOrderController extends Controller
 
     public function destroy(SalesOrder $salesOrder): JsonResponse
     {
-        if (! $salesOrder->status->is_editable) {
-            abort(403, 'Sales order cannot be deleted in its current status.');
-        }
+        DB::transaction(function () use ($salesOrder) {
+            $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
 
-        $salesOrder->delete();
+            if (! $so->status->is_editable) {
+                abort(403, 'Sales order cannot be deleted in its current status.');
+            }
+
+            $so->delete();
+        });
 
         return response()->json(null, 204);
     }
@@ -205,6 +209,33 @@ class SalesOrderController extends Controller
                 'status_id' => $confirmedStatus->id,
                 'approved_by' => $request->user()->id,
                 'approved_at' => now(),
+            ]);
+
+            return $so;
+        });
+
+        return new SalesOrderResource($salesOrder->load('lines', 'status'));
+    }
+
+    /**
+     * S-M2: Send a quotation to the customer (quotation → quotation_sent).
+     * This was a registered route with no implementation — now resolved.
+     */
+    public function send(Request $request, SalesOrder $salesOrder): SalesOrderResource
+    {
+        $salesOrder = DB::transaction(function () use ($salesOrder, $request) {
+            $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
+            $so->loadMissing('status');
+
+            if ($so->status->name !== SalesOrderStatus::QUOTATION) {
+                abort(400, 'Only quotations can be sent. Current status: '.$so->status->name);
+            }
+
+            $sentStatus = SalesOrderStatus::where('name', SalesOrderStatus::QUOTATION_SENT)->firstOrFail();
+
+            $so->update([
+                'status_id' => $sentStatus->id,
+                'sent_at' => now(),
             ]);
 
             return $so;

@@ -39,6 +39,9 @@ class SalesOrderReturnController extends Controller
 
         try {
             $result = DB::transaction(function () use ($request, $salesOrder, $stockService) {
+                // S-H1: Lock the SO header row first to prevent concurrent status/total conflicts.
+                $so = SalesOrder::lockForUpdate()->findOrFail($salesOrder->id);
+
                 $sretType = TransactionType::where('code', StockService::TYPE_SALES_RETURN)->firstOrFail();
                 $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
@@ -47,18 +50,18 @@ class SalesOrderReturnController extends Controller
                         'transaction_type_id' => $sretType->id,
                         'transaction_status_id' => $postedStatus->id,
                         'transaction_date' => now()->toDateString(),
-                        'reference_number' => 'RET-'.$salesOrder->so_number.'-'.substr(uniqid(), -4),
-                        'customer_id' => $salesOrder->customer_id,
-                        'sales_order_id' => $salesOrder->id,
-                        'reference_doc' => $salesOrder->so_number,
-                        'notes' => 'Return for SO: '.$salesOrder->so_number.'. '.($request->notes ?? ''),
+                        'reference_number' => 'RET-'.$so->so_number.'-'.substr(uniqid(), -4),
+                        'customer_id' => $so->customer_id,
+                        'sales_order_id' => $so->id,
+                        'reference_doc' => $so->so_number,
+                        'notes' => 'Return for SO: '.$so->so_number.'. '.($request->notes ?? ''),
                         'created_by' => $request->user()->id,
                         'return_reason' => $request->lines[0]['reason'] ?? null, // Primary reason
                     ],
                     'lines' => [],
                 ];
 
-                $soLines = $salesOrder->lines()->lockForUpdate()->get()->keyBy('id');
+                $soLines = $so->lines()->lockForUpdate()->get()->keyBy('id');
                 $creditNoteLines = [];
 
                 foreach ($request->lines as $item) {
@@ -120,10 +123,10 @@ class SalesOrderReturnController extends Controller
                     $soLine->save();
                 }
 
-                // Recalculate SO Header total_amount
-                $salesOrder->update([
-                    'total_amount' => round($soLines->sum('subtotal'), 8),
-                ]);
+                // S-M1: The SO total_amount is intentionally NOT recalculated here.
+                // Once an SO is approved, its total_amount is immutable (like an original contract).
+                // The generated Credit Note (below) solely represents the financial adjustment.
+                // Mutating the SO total AND issuing a credit note would double-count the loss.
 
                 // Record stock movement
                 $transaction = $stockService->recordMovement($transactionData);
@@ -133,8 +136,8 @@ class SalesOrderReturnController extends Controller
                 // re-evaluated from the actual line quantities. This allows the
                 // status to move backwards (e.g. SHIPPED → PARTIALLY_SHIPPED)
                 // so that warehouse staff can continue fulfilling the remainder.
-                $salesOrder->unsetRelation('lines'); // force a fresh load
-                $salesOrder->recalculateStatus();
+                $so->unsetRelation('lines'); // force a fresh load
+                $so->recalculateStatus();
 
                 // Automatically generate a Draft Credit Note if there are refunds
                 $creditNote = null;

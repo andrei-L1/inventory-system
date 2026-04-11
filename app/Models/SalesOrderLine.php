@@ -164,7 +164,14 @@ class SalesOrderLine extends Model
 
     public function getFormattedUnitPriceAttribute(): string
     {
-        $symbol = '₱';
+        // S-L2: Use the parent SO's currency code dynamically instead of hardcoding '₱'.
+        // Falls back to PHP if the relationship is not loaded to prevent N+1 errors.
+        $currencyCode = $this->salesOrder?->currency ?? 'PHP';
+        $symbol = match($currencyCode) {
+            'USD' => '$',
+            'EUR' => '€',
+            default => '₱',
+        };
 
         return $symbol.number_format($this->unit_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
