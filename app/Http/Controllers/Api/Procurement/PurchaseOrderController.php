@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Procurement;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
@@ -88,21 +89,21 @@ class PurchaseOrderController extends Controller
                 'total_amount' => 0,
             ]);
 
-            $totalAmount = 0.0;
+            $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = round($lineData['ordered_qty'] * $lineData['unit_cost'], 8);
-                $totalAmount += $lineCost;
+                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $lineTotals[] = $lineCost;
 
                 $po->lines()->create([
-                    'product_id' => $lineData['product_id'],
-                    'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => round($lineData['ordered_qty'], 8),
+                    'product_id'  => $lineData['product_id'],
+                    'uom_id'      => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => round($lineData['unit_cost'], 8),
+                    'unit_cost'   => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
                 ]);
             }
 
-            $po->update(['total_amount' => round($totalAmount, 8)]);
+            $po->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
 
             return $po;
         });
@@ -142,21 +143,21 @@ class PurchaseOrderController extends Controller
             // For simplicity, recreate lines
             $purchaseOrder->lines()->delete();
 
-            $totalAmount = 0.0;
+            $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = round($lineData['ordered_qty'] * $lineData['unit_cost'], 8);
-                $totalAmount += $lineCost;
+                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $lineTotals[] = $lineCost;
 
                 $purchaseOrder->lines()->create([
-                    'product_id' => $lineData['product_id'],
-                    'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => round($lineData['ordered_qty'], 8),
+                    'product_id'  => $lineData['product_id'],
+                    'uom_id'      => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => round($lineData['unit_cost'], 8),
+                    'unit_cost'   => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
                 ]);
             }
 
-            $purchaseOrder->update(['total_amount' => round($totalAmount, 8)]);
+            $purchaseOrder->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
 
             return $purchaseOrder;
         });
@@ -557,14 +558,13 @@ class PurchaseOrderController extends Controller
      */
     private function recalculatePurchaseOrderTotal(PurchaseOrder $purchaseOrder): void
     {
-        // Aggregate line costs at full 8-decimal precision first to prevent
-        // "penny bleeding" when summing many lines. The final total_amount
-        // (shown to users on headers/invoices) is then rounded to 2 decimals.
-        $total = PurchaseOrderLine::where('purchase_order_id', $purchaseOrder->id)
+        // Collect all line costs as BCMath strings, sum in 8dp, round to 2dp at the end.
+        $lineTotals = PurchaseOrderLine::where('purchase_order_id', $purchaseOrder->id)
             ->get()
-            ->sum(fn ($line) => round((float) $line->ordered_qty * (float) $line->unit_cost, 8));
+            ->map(fn ($line) => FinancialMath::poLineCost($line->ordered_qty, $line->unit_cost))
+            ->all();
 
-        $purchaseOrder->update(['total_amount' => round($total, 2)]);
+        $purchaseOrder->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
     }
 
     /**

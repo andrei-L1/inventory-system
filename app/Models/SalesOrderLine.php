@@ -45,10 +45,10 @@ class SalesOrderLine extends Model
         'packed_qty' => 'decimal:8',
         'returned_qty' => 'decimal:8',
         'unit_price' => 'decimal:8',
-        'tax_rate' => 'decimal:2',
-        'tax_amount' => 'decimal:6',
-        'discount_rate' => 'decimal:2',
-        'discount_amount' => 'decimal:6',
+        'tax_rate'        => 'decimal:2',
+        'tax_amount'      => 'decimal:8',
+        'discount_rate'   => 'decimal:2',
+        'discount_amount' => 'decimal:8',
         'subtotal' => 'decimal:8',
     ];
 
