@@ -170,6 +170,7 @@ const navSections = [
         items: [
             { label: 'Procurement', href: '/purchase-orders', icon: 'pi pi-shopping-bag', color: 'text-orange-400' },
             { label: 'Sales', href: '/sales-orders', icon: 'pi pi-receipt', color: 'text-teal-400' },
+            { label: 'Finance', href: '/finance-center', icon: 'pi pi-wallet', color: 'text-indigo-400' },
             { label: 'Vendors', href: '/vendor-center', icon: 'pi pi-users', color: 'text-rose-400' },
             { label: 'Customers', href: '/customer-center', icon: 'pi pi-id-card', color: 'text-cyan-400' },
         ]

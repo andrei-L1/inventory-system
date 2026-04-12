@@ -428,21 +428,22 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] Credit Note generation (links to Invoicing)
 
 ### 5.5 Invoicing & Customer Payments
-> Status: 🚧 PARTIALLY COMPLETE (Backend API Live)
+> Status: ✅ COMPLETE (Native support implemented)
 - [x] `InvoiceController` — CRUD (`/api/finance/invoices`) with Draft → Posted lifecycle.
 - [x] Invoice linked to Sales Order (supports partial invoicing and line-level selection).
 - [x] `PaymentController` — CRUD (`/api/finance/payments`).
 - [x] Payment allocation logic (Apply payment to one or more invoices with balance tracking).
 - [x] **Credit Notes** — Automatically generated via Sales Return resolution logic.
-- [ ] Customer Statement generation.
+- [x] Customer Statement generation.
 - [x] **Credit Limit enforcement** — Integrated into SO Approval gating (`SalesOrderController@approve`).
-- [ ] **Finance Center UI** — Build the frontend for Invoices, Payments, and Credit Notes.
+- [x] **Finance Center UI** — Build the frontend for Invoices, Payments, Credit Notes, and Document Viewers.
 
 ### 5.6 Backorder & Short-Fulfill Management
 > Status: ✅ COMPLETE (Native support implemented)
 - [x] **Backorder Tracking**: Visualized via progress indicators where `shipped_qty < ordered_qty`.
 - [x] **Split Fulfillment**: UI/API support for shipping partial quantities; natively supported by the Pick/Pack/Ship Mission Control.
-- [ ] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
+- [x] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
+- [x] Feature Complete: Polish UI/UX, verify test coverage, and complete integration phase 5.6.
 
 ---
 
@@ -600,7 +601,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
 | 5 | Sales (Sales Orders) | ✅ 100% — Mission Control Fulfillment + Customer Center live. |
-| 5.5 | Finance (Invoicing & Payments) | 🚧 70% — Backend API & Credit logic live; UI pending. |
+| 5.5 | Finance (Invoicing & Payments) | ✅ 100% — Full A/R, Payment Allocation, and Statements live. |
 | 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema & Models in place; Controllers pending. |
 | 7 | Pricing & Discounts | 🚧 5% — Schema & Models in place. |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — Schema + models only |
@@ -612,7 +613,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 ## Immediate Next Steps (Priority Order)
 
 1. **Reporting Engine (Phase 8)** — Develop the asynchronous valuation engine to calculate Total Inventory Value and Gross Margin historicals using our new 8-decimal precision standard.
-2. **Finance Center UI (Phase 5.5)** — Build the "Mission Control" for Invoices, Payments, and Credit Notes to utilize the existing backend A/R logic.
-3. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
+2. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
+3. **Logistics & Shipments (Phase 6.1)** — Shipments panel on SO Detail page, Carrier management.
 4. **User Management UI (Phase 9.1)** — Create the admin dashboard for managing staff roles and access permissions.
 

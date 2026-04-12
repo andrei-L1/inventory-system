@@ -140,9 +140,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::apiResource('invoices', InvoiceController::class)->only(['index', 'show', 'destroy'])->middleware('permission:view-sales-orders');
     Route::post('sales-orders/{salesOrder}/invoice', [InvoiceController::class, 'storeFromSalesOrder'])->middleware('permission:manage-sales-orders');
     Route::patch('invoices/{invoice}/post', [InvoiceController::class, 'post'])->middleware('permission:manage-sales-orders');
+    Route::patch('invoices/{invoice}/void', [InvoiceController::class, 'void'])->middleware('permission:manage-sales-orders');
+    Route::get('customers/{customer}/statement', [\App\Http\Controllers\Api\Finance\CustomerStatementController::class, 'show'])->middleware('permission:view-sales-orders');
 
     Route::apiResource('payments', PaymentController::class)->only(['index', 'show', 'store', 'destroy'])->middleware('permission:view-sales-orders');
     Route::post('payments/{payment}/allocate', [PaymentController::class, 'allocate'])->middleware('permission:manage-sales-orders');
+    Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->middleware('permission:manage-sales-orders');
+    Route::delete('payments/{payment}/unallocate/{allocation}', [PaymentController::class, 'unallocate'])->middleware('permission:manage-sales-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

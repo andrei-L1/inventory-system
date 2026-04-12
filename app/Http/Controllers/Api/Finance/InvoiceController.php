@@ -34,7 +34,28 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): JsonResponse
     {
-        return response()->json($invoice->load(['customer', 'salesOrder', 'lines.product']));
+        $invoice->load(['customer', 'salesOrder', 'lines.product']);
+        // Serialize dates as plain Y-m-d strings for the document viewer
+        $data = $invoice->toArray();
+        $data['invoice_date'] = $invoice->invoice_date?->format('Y-m-d');
+        $data['due_date'] = $invoice->due_date?->format('Y-m-d');
+        return response()->json($data);
+    }
+
+    public function print(Invoice $invoice)
+    {
+        $invoice->load(['customer', 'salesOrder', 'lines.product']);
+
+        $company = [
+            'name'    => config('app.company_name', 'Nexus Logistics Corp.'),
+            'address' => config('app.company_address', '123 Corporate Ave, Matrix City'),
+            'phone'   => config('app.company_phone', '+1 (800) 000-0000'),
+            'email'   => config('app.company_email', 'accounting@nexuscorp.com'),
+            'website' => config('app.company_website', 'www.nexuscorp.com'),
+            'tax_id'  => config('app.company_tax_id'), // Dynamic tax ID or N/A
+        ];
+
+        return view('finance.invoice-print', compact('invoice', 'company'));
     }
 
     /**
@@ -63,33 +84,59 @@ class InvoiceController extends Controller
                     'type' => Invoice::TYPE_INVOICE,
                 ]);
 
-                $totalAmount = '0';
+                $lineTotals = [];
                 foreach ($request->lines as $item) {
                     $soLine = SalesOrderLine::findOrFail($item['so_line_id']);
                     $qty = (string) $item['quantity'];
 
-                    // Hard Validation: Cannot invoice more than was physically shipped (menos what's already invoiced)
-                    // Note: In an MVP we might just check shipped_qty, but realistically we need to know 
-                    // how much of the shipped_qty has already been billed across other invoices.
-                    // For now, we will enforce a strict check against shipped_qty.
-                    // Future enhancement: track `invoiced_qty` on the SO Line.
-                    if (FinancialMath::gt($qty, (string) $soLine->shipped_qty)) {
-                        abort(422, "Cannot invoice {$qty} for product '{$soLine->product->name}'. Only {$soLine->shipped_qty} items have been shipped.");
+                    // Hard Validation: Cannot invoice more than was physically shipped minus already invoiced.
+                    $uninvoicedQty = $soLine->uninvoiced_qty;
+                    if (FinancialMath::gt($qty, $uninvoicedQty)) {
+                        if (FinancialMath::isZero($uninvoicedQty)) {
+                            abort(422, "Product '{$soLine->product->name}' is already fully invoiced for all shipped quantities.");
+                        }
+                        abort(422, "Cannot invoice {$qty} for product '{$soLine->product->name}'. Only {$uninvoicedQty} items remain uninvoiced.");
                     }
 
-                    $subtotal = FinancialMath::round(FinancialMath::mul($qty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE);
-                    $totalAmount = FinancialMath::add($totalAmount, $subtotal);
+                    // Precise calculation using FinancialMath source of truth
+                    $subtotal = FinancialMath::soLineSubtotal(
+                        $qty, 
+                        (string) $soLine->unit_price, 
+                        (string) $soLine->discount_rate, 
+                        (string) $soLine->tax_rate
+                    );
+
+                    $taxAmount = FinancialMath::soLineTax(
+                        $qty, 
+                        (string) $soLine->unit_price, 
+                        (string) $soLine->discount_rate, 
+                        (string) $soLine->tax_rate
+                    );
+
+                    $discountAmount = FinancialMath::soLineDiscount(
+                        $qty, 
+                        (string) $soLine->unit_price, 
+                        (string) $soLine->discount_rate
+                    );
 
                     $invoice->lines()->create([
                         'sales_order_line_id' => $soLine->id,
-                        'product_id' => $soLine->product_id,
-                        'quantity' => $qty,
-                        'unit_price' => $soLine->unit_price,
-                        'subtotal' => $subtotal,
+                        'product_id'          => $soLine->product_id,
+                        'quantity'            => $qty,
+                        'unit_price'          => $soLine->unit_price,
+                        'tax_rate'            => $soLine->tax_rate,
+                        'tax_amount'          => $taxAmount,
+                        'discount_rate'       => $soLine->discount_rate,
+                        'discount_amount'     => $discountAmount,
+                        'subtotal'            => $subtotal,
                     ]);
+
+                    $lineTotals[] = $subtotal;
                 }
 
-                $invoice->update(['total_amount' => $totalAmount]);
+                // Final Header Rounding (The "Dust" Slayer)
+                // Rounds the accumulated high-precision sum to exactly 2 decimal places.
+                $invoice->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
 
                 return $invoice;
             });

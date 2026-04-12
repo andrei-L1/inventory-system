@@ -24,6 +24,8 @@ class CustomerResource extends JsonResource
             'shipping_address' => $this->shipping_address,
             'tax_number' => $this->tax_number,
             'credit_limit' => (string) $this->credit_limit,
+            'exposure' => (string) $this->exposure,
+            'formatted_exposure' => \App\Helpers\FinancialMath::format($this->exposure, 2),
             'price_list_id' => $this->price_list_id,
             'is_active' => (bool) $this->is_active,
             'created_at' => $this->created_at,

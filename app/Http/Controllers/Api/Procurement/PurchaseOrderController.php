@@ -695,7 +695,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                $po->update(['total_amount' => $totalAmount]);
+                $po->update(['total_amount' => FinancialMath::headerTotal([$totalAmount])]);
                 $posCreated[] = $po->po_number;
             }
         });

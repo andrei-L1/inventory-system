@@ -96,12 +96,47 @@ class CustomerController extends Controller
      */
     public function transactions(Customer $customer)
     {
-        // Return sales orders for history tab
+        // Return sales orders and invoices for history tab
         $orders = $customer->salesOrders()
             ->with(['status'])
             ->latest()
             ->get();
 
-        return response()->json(['data' => $orders]);
+        $invoices = $customer->invoices()
+            ->latest()
+            ->get()
+            ->map(function ($invoice) {
+                return [
+                    'id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'invoice_date' => $invoice->invoice_date?->format('Y-m-d'),
+                    'total_amount' => (string) $invoice->total_amount,
+                    'paid_amount' => (string) $invoice->paid_amount,
+                    'balance_due' => (string) $invoice->balance_due,
+                    'status' => $invoice->status,
+                    'type' => $invoice->type,
+                ];
+            });
+
+        $payments = $customer->payments()
+            ->latest()
+            ->get()
+            ->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'payment_number' => $payment->payment_number,
+                    'payment_date' => $payment->payment_date?->format('Y-m-d'),
+                    'amount' => (string) $payment->amount,
+                    'unallocated_amount' => (string) $payment->unallocated_amount,
+                    'method' => $payment->payment_method,
+                    'reference' => $payment->reference_number,
+                ];
+            });
+
+        return response()->json([
+            'orders' => $orders,
+            'invoices' => $invoices,
+            'payments' => $payments
+        ]);
     }
 }

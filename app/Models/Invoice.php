@@ -39,10 +39,14 @@ class Invoice extends Model
     ];
 
     protected $casts = [
-        'invoice_date' => 'date',
-        'due_date' => 'date',
+        'invoice_date' => 'date:Y-m-d',
+        'due_date' => 'date:Y-m-d',
         'total_amount' => 'decimal:8',
         'paid_amount' => 'decimal:8',
+    ];
+
+    protected $appends = [
+        'balance_due',
     ];
 
     public function customer(): BelongsTo
@@ -65,7 +69,10 @@ class Invoice extends Model
         return $this->hasMany(PaymentAllocation::class);
     }
 
-    public function getBalanceAttribute(): string
+    /**
+     * The running balance owed on this invoice (exposed in JSON via $appends).
+     */
+    public function getBalanceDueAttribute(): string
     {
         return FinancialMath::sub((string) $this->total_amount, (string) $this->paid_amount);
     }
@@ -83,5 +90,10 @@ class Invoice extends Model
     public function isPaid(): bool
     {
         return $this->status === self::STATUS_PAID;
+    }
+
+    public function isVoid(): bool
+    {
+        return $this->status === self::STATUS_VOID;
     }
 }

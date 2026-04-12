@@ -24,8 +24,12 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'payment_date' => 'date',
+        'payment_date' => 'date:Y-m-d',
         'amount' => 'decimal:8',
+    ];
+
+    protected $appends = [
+        'unallocated_amount',
     ];
 
     public function customer(): BelongsTo
@@ -38,6 +42,11 @@ class Payment extends Model
         return $this->hasMany(PaymentAllocation::class);
     }
 
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(PaymentRefund::class);
+    }
+
     public function getUnallocatedAmountAttribute(): string
     {
         $allocated = '0';
@@ -45,6 +54,12 @@ class Payment extends Model
             $allocated = FinancialMath::add($allocated, (string) $allocation->amount);
         }
 
-        return FinancialMath::sub((string) $this->amount, $allocated);
+        $refunded = '0';
+        foreach ($this->refunds as $refund) {
+            $refunded = FinancialMath::add($refunded, (string) $refund->amount);
+        }
+
+        $spent = FinancialMath::add($allocated, $refunded);
+        return FinancialMath::sub((string) $this->amount, $spent);
     }
 }

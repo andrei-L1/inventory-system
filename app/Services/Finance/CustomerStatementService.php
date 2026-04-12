@@ -6,6 +6,7 @@ use App\Helpers\FinancialMath;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\PaymentRefund;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -48,7 +49,7 @@ class CustomerStatementService
             $transactions->push([
                 'id' => $invoice->id,
                 'date' => Carbon::parse($invoice->invoice_date)->toDateString(),
-                'type' => $isCreditNote ? 'Credit Note' : 'Invoice',
+                'type' => $isCreditNote ? 'CREDIT_NOTE' : 'INVOICE',
                 'reference' => $invoice->invoice_number,
                 'description' => $invoice->notes ?? ($isCreditNote ? 'Credit applied' : 'Sales Invoice'),
                 'debit' => $isCreditNote ? '0' : (string) $invoice->total_amount,
@@ -59,26 +60,101 @@ class CustomerStatementService
 
         foreach ($payments as $payment) {
             $transactions->push([
-                'id' => $payment->id,
-                'date' => Carbon::parse($payment->payment_date)->toDateString(),
-                'type' => 'Payment',
-                'reference' => $payment->payment_number,
+                'id'          => $payment->id,
+                'date'        => Carbon::parse($payment->payment_date)->toDateString(),
+                'type'        => 'PAYMENT',
+                'reference'   => $payment->payment_number,
                 'description' => $payment->notes ?? 'Payment received ' . ($payment->payment_method ? "({$payment->payment_method})" : ''),
-                'debit' => '0',
-                'credit' => (string) $payment->amount,
-                'raw_date' => Carbon::parse($payment->payment_date),
+                'debit'       => '0',
+                'credit'      => (string) $payment->amount,
+                'raw_date'    => Carbon::parse($payment->payment_date),
             ]);
         }
 
+        // Fetch Refunds (Debits — money going back to customer)
+        $refundsQuery = PaymentRefund::where('customer_id', $customerId);
+        if ($dateFrom) $refundsQuery->whereDate('refund_date', '>=', $dateFrom);
+        if ($dateTo) $refundsQuery->whereDate('refund_date', '<=', $dateTo);
+        $refunds = $refundsQuery->get();
+
+        foreach ($refunds as $refund) {
+            $transactions->push([
+                'id'          => $refund->payment_id,
+                'date'        => Carbon::parse($refund->refund_date)->toDateString(),
+                'type'        => 'REFUND',
+                'reference'   => $refund->refund_number,
+                'description' => $refund->notes ?? 'Cash refund issued' . ($refund->refund_method ? " ({$refund->refund_method})" : ''),
+                'debit'       => (string) $refund->amount,
+                'credit'      => '0',
+                'raw_date'    => Carbon::parse($refund->refund_date),
+            ]);
+        }
+
+        // 1. Calculate historical "Opening Balance" (transactions before dateFrom)
+        $startingBalance = '0';
+        if ($dateFrom) {
+            $preInvoices = Invoice::where('customer_id', $customerId)
+                ->whereIn('status', [Invoice::STATUS_OPEN, Invoice::STATUS_PAID])
+                ->whereDate('invoice_date', '<', $dateFrom)
+                ->get();
+            
+            foreach ($preInvoices as $inv) {
+                if ($inv->type === Invoice::TYPE_CREDIT_NOTE) {
+                    $startingBalance = FinancialMath::sub($startingBalance, (string) $inv->total_amount);
+                } else {
+                    $startingBalance = FinancialMath::add($startingBalance, (string) $inv->total_amount);
+                }
+            }
+
+            $prePayments = Payment::where('customer_id', $customerId)
+                ->whereDate('payment_date', '<', $dateFrom)
+                ->get();
+            foreach ($prePayments as $pay) {
+                $startingBalance = FinancialMath::sub($startingBalance, (string) $pay->amount);
+            }
+
+            $preRefunds = PaymentRefund::where('customer_id', $customerId)
+                ->whereDate('refund_date', '<', $dateFrom)
+                ->get();
+            foreach ($preRefunds as $ref) {
+                $startingBalance = FinancialMath::add($startingBalance, (string) $ref->amount);
+            }
+        }
+
         // Sort chronologically
+        // Priority logic: INVOICE appears before PAYMENT/REFUND on same day to reflect logical accrual flow.
         $sortedTransactions = $transactions->sortBy(function ($item) {
-            return $item['raw_date']->timestamp . '_' . ($item['type'] === 'Invoice' ? 'A' : 'B');
+            $priority = match($item['type']) {
+                'INVOICE'     => '1',
+                'REFUND'      => '2',
+                'PAYMENT'     => '3',
+                'CREDIT_NOTE' => '4',
+                default       => '9'
+            };
+            return $item['raw_date']->timestamp . '_' . $priority;
         })->values();
 
-        $runningBalance = '0';
+        $runningBalance = $startingBalance;
         $finalStatement = [];
-        $totalDebits = '0';
-        $totalCredits = '0';
+
+        // 2. Inject Virtual Opening Balance Row
+        if ($dateFrom) {
+            $finalStatement[] = [
+                'id'          => 0,
+                'date'        => $dateFrom,
+                'type'        => 'OPENING_BALANCE',
+                'reference'   => 'BAL-FWD',
+                'description' => 'Balance brought forward from previous period',
+                'debit'       => FinancialMath::gt($startingBalance, '0') ? $startingBalance : '0',
+                'credit'      => FinancialMath::lt($startingBalance, '0') ? FinancialMath::sub('0', $startingBalance) : '0',
+                'running_balance' => FinancialMath::round($startingBalance, 2),
+                'balance_raw' => $startingBalance,
+                'link'        => null,
+            ];
+        }
+
+        $totalDebits = FinancialMath::gt($startingBalance, '0') ? $startingBalance : '0';
+        $totalCredits = FinancialMath::lt($startingBalance, '0') ? FinancialMath::sub('0', $startingBalance) : '0';
 
         foreach ($sortedTransactions as $txn) {
             // Summary Totals
@@ -90,15 +166,17 @@ class CustomerStatementService
             $runningBalance = FinancialMath::sub($runningBalance, $txn['credit']);
 
             $finalStatement[] = [
-                'id' => $txn['id'],
-                'date' => $txn['date'],
-                'type' => $txn['type'],
-                'reference' => $txn['reference'],
+                'id'          => $txn['id'],
+                'date'        => $txn['date'],
+                'type'        => $txn['type'],
+                'reference'   => $txn['reference'],
                 'description' => $txn['description'],
-                'debit' => FinancialMath::round($txn['debit'], 2),
-                'credit' => FinancialMath::round($txn['credit'], 2),
-                'balance' => FinancialMath::round($runningBalance, 2),
+                'debit'       => FinancialMath::round($txn['debit'], 2),
+                'credit'      => FinancialMath::round($txn['credit'], 2),
+                'amount'      => FinancialMath::gt($txn['debit'], '0') ? $txn['debit'] : $txn['credit'],
+                'running_balance' => FinancialMath::round($runningBalance, 2),
                 'balance_raw' => $runningBalance,
+                'link'        => $this->getLink($txn['type'], $txn['id']),
             ];
         }
 
@@ -109,7 +187,7 @@ class CustomerStatementService
                 'code' => $customer->customer_code,
                 'exposure' => $customer->exposure,
             ],
-            'statement' => $finalStatement,
+            'lines' => $finalStatement,
             'summary' => [
                 'total_debits' => FinancialMath::round($totalDebits, 2),
                 'total_credits' => FinancialMath::round($totalCredits, 2),
@@ -120,5 +198,15 @@ class CustomerStatementService
                 'to' => $dateTo,
             ]
         ];
+    }
+
+    private function getLink(string $type, int $id): ?string
+    {
+        return match ($type) {
+            'INVOICE', 'CREDIT_NOTE' => "/finance/invoices/{$id}",
+            'PAYMENT'                => "/finance/payments/{$id}",
+            'REFUND'                 => "/finance/payments/{$id}", 
+            default                  => null,
+        };
     }
 }

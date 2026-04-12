@@ -16,12 +16,20 @@ class InvoiceLine extends Model
         'product_id',
         'quantity',
         'unit_price',
+        'tax_rate',
+        'tax_amount',
+        'discount_rate',
+        'discount_amount',
         'subtotal',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:8',
         'unit_price' => 'decimal:8',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:8',
+        'discount_rate' => 'decimal:2',
+        'discount_amount' => 'decimal:8',
         'subtotal' => 'decimal:8',
     ];
 

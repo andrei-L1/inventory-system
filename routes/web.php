@@ -140,7 +140,19 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         return Inertia::render('Finance/InvoiceForm');
     })->name('finance.invoices.create');
 
+    Route::get('/finance/invoices/{invoice}/print', [App\Http\Controllers\Api\Finance\InvoiceController::class, 'print'])->name('finance.invoices.print');
+
+    Route::get('/finance/invoices/{id}', function (Request $request, $id) {
+        return Inertia::render('Finance/InvoiceDocument', ['id' => $id]);
+    })->name('finance.invoices.show');
+
     Route::get('/finance/payments/create', function () {
         return Inertia::render('Finance/PaymentForm');
     })->name('finance.payments.create');
+
+    Route::get('/finance/payments/{payment}/print', [App\Http\Controllers\Api\Finance\PaymentController::class, 'print'])->name('finance.payments.print');
+
+    Route::get('/finance/payments/{id}', function (Request $request, $id) {
+        return Inertia::render('Finance/PaymentDocument', ['id' => $id]);
+    })->name('finance.payments.show');
 });
