@@ -109,4 +109,18 @@ class PurchaseOrder extends Model
             return FinancialMath::gte((string) $line->received_qty, (string) $line->ordered_qty);
         });
     }
+
+    /**
+     * Determine if the PO is in a state where it can be formally cancelled.
+     * Orders with existing receipts should be 'closed' instead.
+     */
+    public function getCanBeCancelledAttribute(): bool
+    {
+        if (in_array($this->status?->name, ['draft', 'cancelled', 'closed'])) {
+            return false;
+        }
+
+        // Must not have any received quantity across all lines
+        return $this->lines->every(fn($l) => FinancialMath::isZero((string) $l->received_qty));
+    }
 }

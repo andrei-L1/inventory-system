@@ -445,6 +445,30 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
 - [x] Feature Complete: Polish UI/UX, verify test coverage, and complete integration phase 5.6.
 
+### 🏁 Phase 5.5 - 5.6 Hardening (Ledger Integrity Audits)
+> Status: ✅ COMPLETE (As of 2026-04-12)
+- [x] **Audit v1-v3**: Rationalized all financial models for Honest Truth (8dp intermediate / 2dp header).
+- [x] **Audit v4**: Eliminated costing "Split-Brain" — migrated Global Avg Cost to 100% BCMath PHP engine.
+- [x] **Audit v5**: Aligned PO Lifecycle with SO — implemented formal CANCELLED status and billing bridges.
+- [x] **Exhaustive Schema Audit**: 100% pinpointing of all 57 database tables vs. strategic roadmap nodes.
+
+---
+
+## 💰 Phase 5.7 — Procurement Financials: Accounts Payable (A/P)
+> Status: ⬜ NOT STARTED
+> Bridge the gap between receiving goods and paying vendors.
+
+### 5.7.1 Vendor Billing (Bills)
+- [ ] `BillController` — CRUD (`/api/finance/bills`) linked to Receipts (GRN).
+- [ ] Logic: Convert specific PO lines into a Bill.
+- [ ] Support for **Partial Billing** (Bill only what was received).
+- [ ] `billable_qty` tracking on PO lines (already supported by lines model).
+
+### 5.7.2 Vendor Payments & Debit Notes
+- [ ] `VendorPaymentController` — Issue payments against vendor bills.
+- [ ] `DebitNoteController` — Handle financial reversals for Purchase Returns (PRET) using the `DebitNote` bridge.
+- [ ] **Vendor Statement generation**: High-precision statement of account for every supplier.
+
 ---
 
 ## 🚚 Phase 6 — Logistics: Shipments & Carriers
@@ -463,12 +487,16 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [ ] **Carriers lookup management page** (in Settings).
 
 ### 6.3 Serial / Batch Tracking
-- [ ] `ProductSerialController` — assign + query serial numbers.
-- [ ] On Receipt: auto-generate or manually enter serials per unit.
+- [ ] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
+- [ ] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
 - [ ] On Issue/Ship: select specific serial numbers to fulfill.
 - [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
 - [ ] **Serial Registry page** — search serials, view status, view transaction history per unit.
-- [ ] Serial scan input (keyboard wedge / barcode scanner compatible).
+
+### 6.4 Landed Costs & Valuation Adjustment
+- [ ] `LandedCostController` — allocation of freight, tax, and insurance.
+- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
+- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
 
 ---
 
@@ -493,11 +521,13 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 > Status: NOT STARTED — reports/report_runs tables exist, no engine or frontend
 
 ### 8.1 Reports API Engine
-- [ ] `ReportController` — list available reports, trigger a run, fetch results
-- [ ] Async report runs via Laravel Jobs (for heavy queries)
-- [ ] `ReportRunController` — check status + download result
+- [ ] `ReportController` — list available reports using the dormant `reports` table.
+- [ ] Async report runs via Laravel Jobs (activating `jobs` and `report_runs` tables).
+- [ ] `ReportRunController` — check status + download result.
 
-### 8.2 Core Reports
+### 8.2 Historical Valuation (Snapshot Engine)
+- [ ] **EOD/EOM Snapshot Engine**: Automate the population of the dormant `stock_snapshots` table.
+- [ ] Valuation Dashboard: Visualizing stock value over time (FIFO/LIFO/Average) using snapshots.
 
 | Report | Description |
 |--------|-------------|
@@ -549,10 +579,11 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Location Center page** — manage the warehouse network topology ✅ Completed in Phase 1.2
 - [ ] Stock view breakdown per location in Inventory Center (Phase 2.3 dependency)
 
-### 9.4 UOM & Category Admin
-- [x] **UOM Management frontend** — `UomCenter.vue` fully built & routed at `/uom-center` ✅
-- [x] **UOM Conversion management UI** — CRUD for conversion factors in `UomCenter.vue` ✅
-- [ ] Category Management frontend (currently used as dropdown only)
+### 9.4 Metadata & Management UI
+- [x] **UOM Management frontend** — `UomCenter.vue` fully built & routed.
+- [ ] **Adjustment Reason Management**: Add CRUD for `adjustment_reasons` to remove hardcoding.
+- [ ] **System Settings UI**: High-level config management for `system_settings` table.
+- [ ] **Attachments Expansion**: Integrate `attachments` into PO/SO Mission Control for document scans.
 
 ### 9.5 System Settings
 - [ ] `SettingsController` — Read/write key-value system config
@@ -591,9 +622,23 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ---
 
+## 🛡️ Phase 11 — System Governance & Auto-Audit
+> Status: ⬜ NOT STARTED
+> Continuous surveillance of mathematical and transactional integrity.
+
+### 11.1 Real-time Rounding Watchdog
+- [ ] Background job to verify line-sums vs header-totals daily.
+- [ ] Alerting on any detected drift exceeding `0.00000001`.
+
+### 11.2 Precision Audit Logs
+- [ ] Dedicated registry for transactions involving automatic Epsilon adjustments.
+- [ ] UI for administrators to review "Precision Events."
+
+---
+
 ## Overall Progress Tracker
 
-| Phase | Domain | Status |
+| phase | domain | status |
 |-------|---------|--------|
 | 0 | Core Stock Engine | ✅ Complete (Atomic Piece Ledger, Strategy Pattern, WAC, COGS) |
 | 1 | System Setup: Master Data & Auth | ✅ Complete (Nexus Branding & Sidebar Hierarchy Optimized) |
@@ -601,12 +646,14 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
 | 5 | Sales (Sales Orders) | ✅ 100% — Mission Control Fulfillment + Customer Center live. |
-| 5.5 | Finance (Invoicing & Payments) | ✅ 100% — Full A/R, Payment Allocation, and Statements live. |
-| 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema & Models in place; Controllers pending. |
-| 7 | Pricing & Discounts | 🚧 5% — Schema & Models in place. |
-| 8 | Reporting & Financial Analysis | ⬜ 0% — Schema + models only |
-| 9 | Administration & Security | 🚧 ~25% — Middleware + models + location UI done. |
+| 5.5 | Finance (A/R) | ✅ 100% — Full A/R, Payment Allocation, and Statements live. |
+| 5.7 | Finance (A/P) | ⬜ 0% — Strategic Bridge Created (billable_qty live). |
+| 6 | Logistics (Traceability) | 🚧 10% — Schema in place; `product_serials` ready for wire-up. |
+| 7 | Pricing & Discounts | 🚧 5% — Schema in place; `price_lists` ready for wire-up. |
+| 8 | Reporting & Snapshots | ⬜ 0% — Schema exists; `stock_snapshots` engine pending. |
+| 9 | Administration & Security | 🚧 ~25% — Middleware + models done; Metadata Management pending. |
 | 10 | Production Hardening | ⬜ 0% |
+| 11 | System Governance | ⬜ 0% — Strategic Engineering Plan Initiated. |
 
 ---
 

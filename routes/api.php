@@ -114,6 +114,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::apiResource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show'])->middleware('permission:view-purchase-orders');
     Route::apiResource('purchase-orders', PurchaseOrderController::class)->except(['index', 'show'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-purchase-orders');
+    Route::patch('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-purchase-orders');
