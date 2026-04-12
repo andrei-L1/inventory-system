@@ -49,9 +49,19 @@ class Customer extends Model
      */
     public function getExposureAttribute(): string
     {
-        $unpaidInvoices = '0';
+        $unpaidDebits = '0';
+        $unappliedCredits = '0';
+
         foreach ($this->invoices()->whereIn('status', [Invoice::STATUS_OPEN])->get() as $inv) {
-            $unpaidInvoices = FinancialMath::add($unpaidInvoices, FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount));
+            $balanceStr = FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount);
+            
+            if ($inv->type === Invoice::TYPE_CREDIT_NOTE) {
+                // An open credit note acts as negative exposure (a credit we owe the customer)
+                $unappliedCredits = FinancialMath::add($unappliedCredits, $balanceStr);
+            } else {
+                // A normal invoice adds to exposure
+                $unpaidDebits = FinancialMath::add($unpaidDebits, $balanceStr);
+            }
         }
 
         $unallocatedPayments = '0';
@@ -59,6 +69,9 @@ class Customer extends Model
             $unallocatedPayments = FinancialMath::add($unallocatedPayments, (string) $pay->unallocated_amount);
         }
 
-        return FinancialMath::max('0', FinancialMath::sub($unpaidInvoices, $unallocatedPayments));
+        // Total Credits = Payments + Credit Notes
+        $totalCredits = FinancialMath::add($unallocatedPayments, $unappliedCredits);
+
+        return FinancialMath::max('0', FinancialMath::sub($unpaidDebits, $totalCredits));
     }
 }

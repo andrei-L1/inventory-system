@@ -68,9 +68,14 @@ class InvoiceController extends Controller
                     $soLine = SalesOrderLine::findOrFail($item['so_line_id']);
                     $qty = (string) $item['quantity'];
 
-                    // Validation: cannot invoice more than was shipped?
-                    // Actually, business rules vary, but usually you invoice what was shipped.
-                    // For now, we'll allow it but maybe add a warning later.
+                    // Hard Validation: Cannot invoice more than was physically shipped (menos what's already invoiced)
+                    // Note: In an MVP we might just check shipped_qty, but realistically we need to know 
+                    // how much of the shipped_qty has already been billed across other invoices.
+                    // For now, we will enforce a strict check against shipped_qty.
+                    // Future enhancement: track `invoiced_qty` on the SO Line.
+                    if (FinancialMath::gt($qty, (string) $soLine->shipped_qty)) {
+                        abort(422, "Cannot invoice {$qty} for product '{$soLine->product->name}'. Only {$soLine->shipped_qty} items have been shipped.");
+                    }
 
                     $subtotal = FinancialMath::round(FinancialMath::mul($qty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE);
                     $totalAmount = FinancialMath::add($totalAmount, $subtotal);
@@ -122,5 +127,32 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Void an OPEN invoice.
+     * This zeroes out expected AR balance but keeps the invoice for auditing.
+     */
+    public function void(Invoice $invoice): JsonResponse
+    {
+        if (! $invoice->isOpen()) {
+            return response()->json(['message' => 'Only OPEN invoices can be voided.'], 400);
+        }
+
+        if (FinancialMath::gt((string) $invoice->paid_amount, '0')) {
+            return response()->json(['message' => 'Cannot void an invoice that has payments allocated. Remove payments first.'], 422);
+        }
+
+        $invoice->update([
+            'status' => Invoice::STATUS_VOID,
+            'notes' => trim(($invoice->notes ?? '') . ' [VOIDED on ' . now()->toDateString() . ']'),
+            // We do NOT technically alter total_amount because it represents the original invoice value, 
+            // but for statements, VOIDED invoices are ignored anyway.
+        ]);
+
+        return response()->json([
+            'message' => 'Invoice voided successfully.',
+            'invoice' => $invoice,
+        ]);
     }
 }

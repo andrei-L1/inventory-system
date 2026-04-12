@@ -208,5 +208,15 @@ class SalesOrder extends Model
         $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
         $this->update(['status_id' => $status->id]);
         $this->setRelation('status', $status);
+
+        // --- BACKORDER AUTOMATION (PHASE 5.6) ---
+        // Any time an SO recalculates its fulfillment status (whether backward or forward),
+        // ping the Replenishment Engine to ensure we aren't short.
+        if (app()->bound(\App\Services\Procurement\ReplenishmentService::class)) {
+            app(\App\Services\Procurement\ReplenishmentService::class)->generateSuggestions();
+        } else {
+            // Fallback for when bound via fresh app instance in tinker/tests
+            (new \App\Services\Procurement\ReplenishmentService)->generateSuggestions();
+        }
     }
 }

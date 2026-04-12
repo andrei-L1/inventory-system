@@ -130,4 +130,17 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
         return Inertia::render('SalesOrders/Show', ['id' => $id]);
     })->name('sales-orders.show');
+
+    // --- Finance (Phase 5.5) ---
+    Route::get('/finance-center', function () {
+        return Inertia::render('Finance/FinanceCenter');
+    })->name('finance.center');
+
+    Route::get('/finance/invoices/create', function () {
+        return Inertia::render('Finance/InvoiceForm');
+    })->name('finance.invoices.create');
+
+    Route::get('/finance/payments/create', function () {
+        return Inertia::render('Finance/PaymentForm');
+    })->name('finance.payments.create');
 });
