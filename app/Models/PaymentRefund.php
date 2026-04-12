@@ -20,7 +20,7 @@ class PaymentRefund extends Model
 
     protected $casts = [
         'refund_date' => 'date:Y-m-d',
-        'amount'      => 'decimal:8',
+        'amount' => 'decimal:8',
     ];
 
     public function payment(): BelongsTo

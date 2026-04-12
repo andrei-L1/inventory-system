@@ -39,6 +39,7 @@ class InvoiceController extends Controller
         $data = $invoice->toArray();
         $data['invoice_date'] = $invoice->invoice_date?->format('Y-m-d');
         $data['due_date'] = $invoice->due_date?->format('Y-m-d');
+
         return response()->json($data);
     }
 
@@ -47,12 +48,12 @@ class InvoiceController extends Controller
         $invoice->load(['customer', 'salesOrder', 'lines.product']);
 
         $company = [
-            'name'    => config('app.company_name', 'Nexus Logistics Corp.'),
+            'name' => config('app.company_name', 'Nexus Logistics Corp.'),
             'address' => config('app.company_address', '123 Corporate Ave, Matrix City'),
-            'phone'   => config('app.company_phone', '+1 (800) 000-0000'),
-            'email'   => config('app.company_email', 'accounting@nexuscorp.com'),
+            'phone' => config('app.company_phone', '+1 (800) 000-0000'),
+            'email' => config('app.company_email', 'accounting@nexuscorp.com'),
             'website' => config('app.company_website', 'www.nexuscorp.com'),
-            'tax_id'  => config('app.company_tax_id'), // Dynamic tax ID or N/A
+            'tax_id' => config('app.company_tax_id'), // Dynamic tax ID or N/A
         ];
 
         return view('finance.invoice-print', compact('invoice', 'company'));
@@ -100,35 +101,35 @@ class InvoiceController extends Controller
 
                     // Precise calculation using FinancialMath source of truth
                     $subtotal = FinancialMath::soLineSubtotal(
-                        $qty, 
-                        (string) $soLine->unit_price, 
-                        (string) $soLine->discount_rate, 
+                        $qty,
+                        (string) $soLine->unit_price,
+                        (string) $soLine->discount_rate,
                         (string) $soLine->tax_rate
                     );
 
                     $taxAmount = FinancialMath::soLineTax(
-                        $qty, 
-                        (string) $soLine->unit_price, 
-                        (string) $soLine->discount_rate, 
+                        $qty,
+                        (string) $soLine->unit_price,
+                        (string) $soLine->discount_rate,
                         (string) $soLine->tax_rate
                     );
 
                     $discountAmount = FinancialMath::soLineDiscount(
-                        $qty, 
-                        (string) $soLine->unit_price, 
+                        $qty,
+                        (string) $soLine->unit_price,
                         (string) $soLine->discount_rate
                     );
 
                     $invoice->lines()->create([
                         'sales_order_line_id' => $soLine->id,
-                        'product_id'          => $soLine->product_id,
-                        'quantity'            => $qty,
-                        'unit_price'          => $soLine->unit_price,
-                        'tax_rate'            => $soLine->tax_rate,
-                        'tax_amount'          => $taxAmount,
-                        'discount_rate'       => $soLine->discount_rate,
-                        'discount_amount'     => $discountAmount,
-                        'subtotal'            => $subtotal,
+                        'product_id' => $soLine->product_id,
+                        'quantity' => $qty,
+                        'unit_price' => $soLine->unit_price,
+                        'tax_rate' => $soLine->tax_rate,
+                        'tax_amount' => $taxAmount,
+                        'discount_rate' => $soLine->discount_rate,
+                        'discount_amount' => $discountAmount,
+                        'subtotal' => $subtotal,
                     ]);
 
                     $lineTotals[] = $subtotal;
@@ -192,8 +193,8 @@ class InvoiceController extends Controller
 
         $invoice->update([
             'status' => Invoice::STATUS_VOID,
-            'notes' => trim(($invoice->notes ?? '') . ' [VOIDED on ' . now()->toDateString() . ']'),
-            // We do NOT technically alter total_amount because it represents the original invoice value, 
+            'notes' => trim(($invoice->notes ?? '').' [VOIDED on '.now()->toDateString().']'),
+            // We do NOT technically alter total_amount because it represents the original invoice value,
             // but for statements, VOIDED invoices are ignored anyway.
         ]);
 

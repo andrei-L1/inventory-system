@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
@@ -92,8 +93,8 @@ class PrecisionReturnTest extends TestCase
 
         // Expected credit note amount
         // Note: For document headers, we use headerTotal (2dp). For lines, we use 8dp.
-        $expectedCreditTotalLine = \App\Helpers\FinancialMath::soLineSubtotal((string) $returnQty, (string) $precisionPrice);
-        $expectedCreditTotalHeader = \App\Helpers\FinancialMath::headerTotal([$expectedCreditTotalLine]);
+        $expectedCreditTotalLine = FinancialMath::soLineSubtotal((string) $returnQty, (string) $precisionPrice);
+        $expectedCreditTotalHeader = FinancialMath::headerTotal([$expectedCreditTotalLine]);
 
         $response = $this->postJson("/api/sales-orders/{$so->id}/return", [
             'location_id' => $location->id,

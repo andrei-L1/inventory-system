@@ -121,6 +121,6 @@ class PurchaseOrder extends Model
         }
 
         // Must not have any received quantity across all lines
-        return $this->lines->every(fn($l) => FinancialMath::isZero((string) $l->received_qty));
+        return $this->lines->every(fn ($l) => FinancialMath::isZero((string) $l->received_qty));
     }
 }

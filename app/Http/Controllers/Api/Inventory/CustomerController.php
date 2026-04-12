@@ -136,7 +136,7 @@ class CustomerController extends Controller
         return response()->json([
             'orders' => $orders,
             'invoices' => $invoices,
-            'payments' => $payments
+            'payments' => $payments,
         ]);
     }
 }

@@ -111,9 +111,10 @@ class SalesOrderLine extends Model
     {
         return (string) $this->invoiceLines()->with('invoice')->get()->reduce(function ($carry, $line) {
             // Only count if invoice exists (is not soft-deleted) and is not VOID
-            if (!$line->invoice || $line->invoice->isVoid()) {
+            if (! $line->invoice || $line->invoice->isVoid()) {
                 return $carry;
             }
+
             return FinancialMath::add($carry, (string) $line->quantity);
         }, '0');
     }

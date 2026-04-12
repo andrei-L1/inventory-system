@@ -27,9 +27,9 @@ class CustomerStatementController extends Controller
             );
 
             return response()->json($statement);
-            
+
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to generate statement: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Failed to generate statement: '.$e->getMessage()], 500);
         }
     }
 }

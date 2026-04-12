@@ -460,7 +460,7 @@ class StockService
                 'average_cost' => FinancialMath::round(
                     FinancialMath::div($totalValue, $totalQty),
                     FinancialMath::LINE_SCALE
-                )
+                ),
             ]);
         }
     }

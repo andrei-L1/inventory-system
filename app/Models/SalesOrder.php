@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\FinancialMath;
+use App\Services\Procurement\ReplenishmentService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -217,11 +218,11 @@ class SalesOrder extends Model
         // --- BACKORDER AUTOMATION (PHASE 5.6) ---
         // Any time an SO recalculates its fulfillment status (whether backward or forward),
         // ping the Replenishment Engine to ensure we aren't short.
-        if (app()->bound(\App\Services\Procurement\ReplenishmentService::class)) {
-            app(\App\Services\Procurement\ReplenishmentService::class)->generateSuggestions();
+        if (app()->bound(ReplenishmentService::class)) {
+            app(ReplenishmentService::class)->generateSuggestions();
         } else {
             // Fallback for when bound via fresh app instance in tinker/tests
-            (new \App\Services\Procurement\ReplenishmentService)->generateSuggestions();
+            (new ReplenishmentService)->generateSuggestions();
         }
     }
 
@@ -253,7 +254,7 @@ class SalesOrder extends Model
     public function getInvoiceStatusAttribute(): string
     {
         $this->loadMissing('lines');
-        
+
         $totalShipped = '0';
         $totalInvoiced = '0';
 
@@ -283,11 +284,12 @@ class SalesOrder extends Model
                 return true;
             }
         }
+
         return false;
     }
 
     /**
-     * Bridge for Phase 6 (Logistics). 
+     * Bridge for Phase 6 (Logistics).
      * Determines if the order is fully fulfilled and ready for the shipping lane metrics.
      */
     public function getShippableStatusAttribute(): bool

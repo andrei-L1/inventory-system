@@ -116,22 +116,22 @@ class SalesOrderReturnController extends Controller
 
                         // Credit Note line values (Capture tax/discount from original line)
                         $cnLineSubtotal = FinancialMath::soLineSubtotal(
-                            $returnedQty, 
-                            (string) $soLine->unit_price, 
-                            (string) $soLine->discount_rate, 
+                            $returnedQty,
+                            (string) $soLine->unit_price,
+                            (string) $soLine->discount_rate,
                             (string) $soLine->tax_rate
                         );
 
                         $creditNoteLines[] = [
-                            'product_id'          => $soLine->product_id,
+                            'product_id' => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity'            => $returnedQty,
-                            'unit_price'          => (string) $soLine->unit_price,
-                            'tax_rate'            => $soLine->tax_rate,
-                            'tax_amount'          => FinancialMath::soLineTax($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate, (string) $soLine->tax_rate),
-                            'discount_rate'       => $soLine->discount_rate,
-                            'discount_amount'     => FinancialMath::soLineDiscount($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate),
-                            'subtotal'            => $cnLineSubtotal,
+                            'quantity' => $returnedQty,
+                            'unit_price' => (string) $soLine->unit_price,
+                            'tax_rate' => $soLine->tax_rate,
+                            'tax_amount' => FinancialMath::soLineTax($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate, (string) $soLine->tax_rate),
+                            'discount_rate' => $soLine->discount_rate,
+                            'discount_amount' => FinancialMath::soLineDiscount($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate),
+                            'subtotal' => $cnLineSubtotal,
                         ];
 
                         $lineTotals[] = $cnLineSubtotal;
@@ -162,13 +162,13 @@ class SalesOrderReturnController extends Controller
                 if (! empty($creditNoteLines)) {
                     $creditNote = Invoice::create([
                         'invoice_number' => 'CN-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
-                        'customer_id'    => $salesOrder->customer_id,
+                        'customer_id' => $salesOrder->customer_id,
                         'sales_order_id' => $salesOrder->id,
-                        'invoice_date'   => now()->toDateString(),
-                        'total_amount'   => FinancialMath::headerTotal($lineTotals),
-                        'status'         => Invoice::STATUS_DRAFT,
-                        'type'           => Invoice::TYPE_CREDIT_NOTE,
-                        'notes'          => 'Generated from Return: '.$transaction->reference_number,
+                        'invoice_date' => now()->toDateString(),
+                        'total_amount' => FinancialMath::headerTotal($lineTotals),
+                        'status' => Invoice::STATUS_DRAFT,
+                        'type' => Invoice::TYPE_CREDIT_NOTE,
+                        'notes' => 'Generated from Return: '.$transaction->reference_number,
                     ]);
 
                     foreach ($creditNoteLines as $lineData) {

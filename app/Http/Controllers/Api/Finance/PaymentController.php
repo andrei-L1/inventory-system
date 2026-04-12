@@ -93,7 +93,7 @@ class PaymentController extends Controller
                     PaymentAllocation::create([
                         'payment_id' => $payment->id,
                         'invoice_id' => $invoice->id,
-                        'amount'     => $amountToAllocate,
+                        'amount' => $amountToAllocate,
                     ]);
 
                     // Deduct from our running budget so the next iteration is aware.
@@ -125,11 +125,11 @@ class PaymentController extends Controller
     public function refund(Request $request, Payment $payment): JsonResponse
     {
         $request->validate([
-            'amount'           => 'required|numeric|min:0.0001',
-            'refund_date'      => 'required|date',
-            'refund_method'    => 'nullable|string|max:50',
+            'amount' => 'required|numeric|min:0.0001',
+            'refund_date' => 'required|date',
+            'refund_method' => 'nullable|string|max:50',
             'reference_number' => 'nullable|string|max:50',
-            'notes'            => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         $payment->load(['allocations', 'refunds']);
@@ -138,24 +138,24 @@ class PaymentController extends Controller
 
         if (FinancialMath::gt($amountToRefund, $unallocated)) {
             return response()->json([
-                'message' => "Cannot refund {$amountToRefund}. Only {$unallocated} unallocated credit remains on this payment."
+                'message' => "Cannot refund {$amountToRefund}. Only {$unallocated} unallocated credit remains on this payment.",
             ], 422);
         }
 
         $refund = PaymentRefund::create([
-            'payment_id'       => $payment->id,
-            'customer_id'      => $payment->customer_id,
-            'amount'           => $amountToRefund,
-            'refund_number'    => 'REF-' . now()->format('Ymd-Hi') . '-' . rand(10, 99),
-            'refund_date'      => $request->input('refund_date'),
-            'refund_method'    => $request->input('refund_method'),
+            'payment_id' => $payment->id,
+            'customer_id' => $payment->customer_id,
+            'amount' => $amountToRefund,
+            'refund_number' => 'REF-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
+            'refund_date' => $request->input('refund_date'),
+            'refund_method' => $request->input('refund_method'),
             'reference_number' => $request->input('reference_number'),
-            'notes'            => $request->input('notes'),
+            'notes' => $request->input('notes'),
         ]);
 
         return response()->json([
             'message' => 'Refund issued successfully.',
-            'refund'  => $refund,
+            'refund' => $refund,
             'payment' => $payment->fresh(['allocations.invoice', 'refunds']),
         ], 201);
     }
@@ -171,7 +171,7 @@ class PaymentController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($payment, $allocation) {
+            DB::transaction(function () use ($allocation) {
                 $invoice = $allocation->invoice;
 
                 // 2. Decrement the invoice's recorded payment (Defensive floor at 0)
@@ -218,12 +218,12 @@ class PaymentController extends Controller
         $payment->load(['customer', 'allocations.invoice']);
 
         $company = [
-            'name'    => config('app.company_name', 'Nexus Logistics Corp.'),
+            'name' => config('app.company_name', 'Nexus Logistics Corp.'),
             'address' => config('app.company_address', '123 Corporate Ave, Matrix City'),
-            'phone'   => config('app.company_phone', '+1 (800) 000-0000'),
-            'email'   => config('app.company_email', 'accounting@nexuscorp.com'),
+            'phone' => config('app.company_phone', '+1 (800) 000-0000'),
+            'email' => config('app.company_email', 'accounting@nexuscorp.com'),
             'website' => config('app.company_website', 'www.nexuscorp.com'),
-            'tax_id'  => config('app.company_tax_id'),
+            'tax_id' => config('app.company_tax_id'),
         ];
 
         return view('finance.payment-print', compact('payment', 'company'));

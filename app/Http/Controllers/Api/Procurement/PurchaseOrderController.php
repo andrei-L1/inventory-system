@@ -748,7 +748,6 @@ class PurchaseOrderController extends Controller
         }
     }
 
-
     /**
      * Generate a printable view for the Purchase Order.
      */

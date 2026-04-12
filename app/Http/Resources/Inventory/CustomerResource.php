@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,7 +26,7 @@ class CustomerResource extends JsonResource
             'tax_number' => $this->tax_number,
             'credit_limit' => (string) $this->credit_limit,
             'exposure' => (string) $this->exposure,
-            'formatted_exposure' => \App\Helpers\FinancialMath::format($this->exposure, 2),
+            'formatted_exposure' => FinancialMath::format($this->exposure, 2),
             'price_list_id' => $this->price_list_id,
             'is_active' => (bool) $this->is_active,
             'created_at' => $this->created_at,

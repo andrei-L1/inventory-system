@@ -48,7 +48,7 @@ class Customer extends Model
      * Total exposure = Unpaid balance on all Open Invoices - Unallocated Payment balances.
      */
     /**
-     * Total exposure = Unpaid balance on all Open Invoices 
+     * Total exposure = Unpaid balance on all Open Invoices
      *                + Uninvoiced value of Approved Sales Orders
      *                - Unallocated Payment balances.
      */
@@ -61,7 +61,7 @@ class Customer extends Model
         $activeInvoices = $this->invoices()->whereIn('status', [Invoice::STATUS_OPEN])->get();
         foreach ($activeInvoices as $inv) {
             $balanceStr = FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount);
-            
+
             if ($inv->type === Invoice::TYPE_CREDIT_NOTE) {
                 // An open credit note acts as negative exposure
                 $openCreditNotes = FinancialMath::add($openCreditNotes, $balanceStr);
@@ -80,7 +80,7 @@ class Customer extends Model
             ])
             ->with('lines')
             ->get();
-            
+
         foreach ($openSOs as $so) {
             $pendingBilling = FinancialMath::add($pendingBilling, $so->uninvoiced_amount);
         }

@@ -53,7 +53,7 @@ class ReplenishmentService
 
             // 3. Evaluate against Reorder Rules (if any)
             $rule = ReorderRule::where('product_id', $product->id)->where('is_active', true)->first();
-            
+
             $minStockStr = $rule ? (string) $rule->min_stock : '0';
             $defaultReorderQty = $rule ? (string) $rule->reorder_qty : '0';
 
@@ -67,11 +67,11 @@ class ReplenishmentService
             if ($isBelowMin || $isShortForDemand) {
                 // How much do we actually need?
                 $shortfall = FinancialMath::max('0', FinancialMath::sub($unfulfilledDemand, $currentStock));
-                
+
                 // Suggested Qty = Max between standard reorder rule and actual shortfall
                 $suggestedQty = FinancialMath::max($defaultReorderQty, $shortfall);
 
-                $reason = $isShortForDemand 
+                $reason = $isShortForDemand
                     ? "Backorder Demand: Short by {$shortfall} units."
                     : "Stock below minimum rule ({$minStockStr}).";
 
@@ -92,7 +92,7 @@ class ReplenishmentService
                     ]);
                     $generatedCount++;
                 } else {
-                    // Strictly update existing ticket to prevent duplicates 
+                    // Strictly update existing ticket to prevent duplicates
                     $existing->update([
                         'current_stock' => $currentStock,
                         'suggested_qty' => $suggestedQty,

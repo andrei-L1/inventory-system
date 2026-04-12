@@ -60,6 +60,7 @@ class Payment extends Model
         }
 
         $spent = FinancialMath::add($allocated, $refunded);
+
         return FinancialMath::sub((string) $this->amount, $spent);
     }
 }
