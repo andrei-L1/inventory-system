@@ -76,24 +76,25 @@ class SalesOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineTotal = FinancialMath::soLineSubtotal(
-                    $lineData['ordered_qty'],
-                    $lineData['unit_price'],
-                    $lineData['discount_rate'] ?? 0,
-                    $lineData['tax_rate'] ?? 0,
-                );
+                // Cast all financial inputs to string immediately to satisfy FinancialMath strictness
+                $qty = (string) $lineData['ordered_qty'];
+                $price = (string) $lineData['unit_price'];
+                $discount = (string) ($lineData['discount_rate'] ?? 0);
+                $tax = (string) ($lineData['tax_rate'] ?? 0);
+
+                $lineTotal = FinancialMath::soLineSubtotal($qty, $price, $discount, $tax);
                 $lineTotals[] = $lineTotal;
 
                 $so->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
-                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
-                    'tax_rate' => $lineData['tax_rate'] ?? 0,
-                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
-                    'discount_rate' => $lineData['discount_rate'] ?? 0,
-                    'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($price, FinancialMath::LINE_SCALE),
+                    'tax_rate' => $tax,
+                    'tax_amount' => FinancialMath::soLineTax($qty, $price, $discount, $tax),
+                    'discount_rate' => $discount,
+                    'discount_amount' => FinancialMath::soLineDiscount($qty, $price, $discount),
                     'subtotal' => $lineTotal,
                 ]);
             }
@@ -103,7 +104,7 @@ class SalesOrderController extends Controller
             return $so;
         });
 
-        return (new SalesOrderResource($so->load('lines.product.uom')))->response()->setStatusCode(201);
+        return (new SalesOrderResource($so->refresh()->load('lines.product.uom')))->response()->setStatusCode(201);
     }
 
     public function update(SalesOrderUpdateRequest $request, SalesOrder $salesOrder): SalesOrderResource
@@ -132,24 +133,24 @@ class SalesOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineTotal = FinancialMath::soLineSubtotal(
-                    $lineData['ordered_qty'],
-                    $lineData['unit_price'],
-                    $lineData['discount_rate'] ?? 0,
-                    $lineData['tax_rate'] ?? 0,
-                );
+                $qty = (string) $lineData['ordered_qty'];
+                $price = (string) $lineData['unit_price'];
+                $discount = (string) ($lineData['discount_rate'] ?? 0);
+                $tax = (string) ($lineData['tax_rate'] ?? 0);
+
+                $lineTotal = FinancialMath::soLineSubtotal($qty, $price, $discount, $tax);
                 $lineTotals[] = $lineTotal;
 
                 $salesOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'location_id' => $lineData['location_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
-                    'unit_price' => FinancialMath::round($lineData['unit_price'], FinancialMath::LINE_SCALE),
-                    'tax_rate' => $lineData['tax_rate'] ?? 0,
-                    'tax_amount' => FinancialMath::soLineTax($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0, $lineData['tax_rate'] ?? 0),
-                    'discount_rate' => $lineData['discount_rate'] ?? 0,
-                    'discount_amount' => FinancialMath::soLineDiscount($lineData['ordered_qty'], $lineData['unit_price'], $lineData['discount_rate'] ?? 0),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'unit_price' => FinancialMath::round($price, FinancialMath::LINE_SCALE),
+                    'tax_rate' => $tax,
+                    'tax_amount' => FinancialMath::soLineTax($qty, $price, $discount, $tax),
+                    'discount_rate' => $discount,
+                    'discount_amount' => FinancialMath::soLineDiscount($qty, $price, $discount),
                     'subtotal' => $lineTotal,
                 ]);
             }
@@ -159,7 +160,7 @@ class SalesOrderController extends Controller
             return $salesOrder;
         });
 
-        return new SalesOrderResource($so->load('lines.product.uom'));
+        return new SalesOrderResource($so->refresh()->load('lines.product.uom'));
     }
 
     public function destroy(SalesOrder $salesOrder): JsonResponse

@@ -33,7 +33,7 @@ class TransactionLineResource extends JsonResource
             'formatted_unit_price' => $this->formatted_unit_price,
             'formatted_unit_price_8dp' => $this->formatted_unit_price_8dp,
             'total_cost' => \App\Helpers\FinancialMath::mul($this->unit_cost ? (string) $this->unit_cost : '0', str_replace('-', '', (string) $this->quantity)),
-            'total_cost_8dp' => \App\Helpers\FinancialMath::mul($this->unit_cost ? (string) $this->unit_cost : '0', str_replace('-', '', (string) $this->quantity)),
+            'total_cost_8dp' => \App\Helpers\FinancialMath::format(\App\Helpers\FinancialMath::mul($this->unit_cost ? (string) $this->unit_cost : '0', str_replace('-', '', (string) $this->quantity)), 8),
             'location_id' => $this->location_id,
             'location_name' => $this->location->name ?? null,
             'type_name' => $this->transaction->type->label ?? $this->transaction->type->name ?? 'MOVEMENT',

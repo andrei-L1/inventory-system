@@ -91,15 +91,18 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $qty = (string) $lineData['ordered_qty'];
+                $cost = (string) $lineData['unit_cost'];
+
+                $lineCost = FinancialMath::poLineCost($qty, $cost);
                 $lineTotals[] = $lineCost;
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
                 ]);
             }
 
@@ -108,7 +111,7 @@ class PurchaseOrderController extends Controller
             return $po;
         });
 
-        return (new PurchaseOrderResource($po->load('lines.product.uom')))->response()->setStatusCode(201);
+        return (new PurchaseOrderResource($po->refresh()->load('lines.product.uom')))->response()->setStatusCode(201);
     }
 
     public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
@@ -145,15 +148,18 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $qty = (string) $lineData['ordered_qty'];
+                $cost = (string) $lineData['unit_cost'];
+
+                $lineCost = FinancialMath::poLineCost($qty, $cost);
                 $lineTotals[] = $lineCost;
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
                 ]);
             }
 
@@ -162,7 +168,7 @@ class PurchaseOrderController extends Controller
             return $purchaseOrder;
         });
 
-        return new PurchaseOrderResource($po->load('lines.product.uom'));
+        return new PurchaseOrderResource($po->refresh()->load('lines.product.uom'));
     }
 
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse

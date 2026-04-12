@@ -151,7 +151,7 @@ class InventoryQueryController extends Controller
                     'remaining_qty' => (string) $layer->remaining_qty,
                     'formatted_remaining_qty' => UomHelper::format((string) $remainingScaled, $targetUomId, $product->id, false),
                     'total_value' => (string) $totalValue,
-                    'total_value_8dp' => (string) $totalValue8dp,
+                    'total_value_8dp' => '₱'.FinancialMath::format($totalValue8dp, 8),
                     'po_number' => $po?->po_number ?? null,
                     'po_id' => $po?->id ?? null,
                 ];

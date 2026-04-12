@@ -126,31 +126,35 @@ const getScaledQty = (rawPieces, line) => {
         : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 };
 
-const calculateEffectiveCost = (line) => {
-    if (!line.product_id || !line.costLayers?.length) {
+const simulateCosting = (line) => {
+    if (!line.product_id) return { unit: 0, total: 0 };
+
+    if (!line.costLayers?.length) {
         const product = products.value.find(p => p.id === line.product_id);
-        return product?.average_cost || 0;
+        const rawCost = product?.average_cost || 0;
+        const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+        const productScale = getFactorToBase(product?.uom_id, product?.id).factor;
+        const unit = (Number(rawCost) / productScale) * targetScale;
+        return { unit, total: unit * line.ordered_qty };
     }
 
     const product = products.value.find(p => p.id === line.product_id);
     const costingMethod = product?.costing_method_name?.toLowerCase() || 'average';
     
-    // Sort layers based on costing method
     let layers = [...line.costLayers];
     if (costingMethod === 'fifo') {
         layers.sort((a, b) => new Date(a.receipt_date) - new Date(b.receipt_date));
     } else if (costingMethod === 'lifo') {
         layers.sort((a, b) => new Date(b.receipt_date) - new Date(a.receipt_date));
     } else {
-        // For 'average', we use the standard average cost
-        return getScaledCost(line);
+        const avg = getScaledCost(line);
+        return { unit: avg, total: avg * line.ordered_qty };
     }
 
     let totalSimulatedCost = 0;
-    // Quantity in ordered UOM needs to be converted to Base for simulation
-    const scale = getFactorToBase(line.uom_id, line.product_id).factor;
-    let neededBase = line.ordered_qty * scale;
-    const initialNeeded = neededBase;
+    const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+    let neededBase = line.ordered_qty * targetScale;
+    const initialNeededBase = neededBase;
 
     for (const layer of layers) {
         const taken = Math.min(neededBase, layer.remaining_qty);
@@ -159,21 +163,64 @@ const calculateEffectiveCost = (line) => {
         if (neededBase <= 0) break;
     }
 
-    // If we sell more than we have, use the last layer price or average for the excess
     if (neededBase > 0 && layers.length > 0) {
         const fallbackCost = layers[layers.length - 1].unit_cost;
         totalSimulatedCost += neededBase * fallbackCost;
     }
 
-    // Convert total cost back to the Order UOM units
-    return initialNeeded > 0 ? (totalSimulatedCost / initialNeeded) * scale : 0;
+    const avgPieceCost = initialNeededBase > 0 ? (totalSimulatedCost / initialNeededBase) : 0;
+    return { 
+        unit: avgPieceCost * targetScale, 
+        total: totalSimulatedCost,
+        wasEstimated: neededBase > 0
+    };
+};
+
+const calculateEffectiveCost = (line) => {
+    return simulateCosting(line).unit;
+};
+
+const snapToCost = (line) => {
+    const product = products.value.find(p => p.id === line.product_id);
+    if (!product) return;
+
+    const result = simulateCosting(line);
+    // Check if we are currently snapped (with high precision epsilon)
+    const isCurrentlySnapped = Math.abs(line.unit_price - result.unit) < 0.000001;
+
+    if (isCurrentlySnapped) {
+        // REVERT TO CATALOG PRICE
+        const targetInfo = getFactorToBase(line.uom_id, product.id);
+        const defaultUnitFactor = getFactorToBase(product.uom_id, product.id).factor;
+        const piecePrice = (product.selling_price || 0) / defaultUnitFactor;
+        line.unit_price = piecePrice * targetInfo.factor;
+        
+        toast.add({ 
+            severity: 'secondary', 
+            summary: 'Reverted to Catalog', 
+            detail: 'Price reset to standard selling price.', 
+            life: 2000 
+        });
+    } else {
+        // SNAP TO COST
+        line.unit_price = result.unit;
+        toast.add({ 
+            severity: 'info', 
+            summary: 'Snapped to Cost', 
+            detail: `Price anchored to ${result.total.toLocaleString(undefined, {minimumFractionDigits: 2})} total value.`, 
+            life: 2000 
+        });
+    }
 };
 
 const getScaledCost = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product) return 0;
-    const scale = getFactorToBase(line.uom_id, line.product_id).factor;
-    return (Number(product.average_cost) || 0) * scale;
+    const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+    const productScale = getFactorToBase(product.uom_id, product.id).factor;
+    // product.average_cost is anchored to product.uom_id
+    const pieceCost = (Number(product.average_cost) || 0) / productScale;
+    return pieceCost * targetScale;
 };
 
 const checkStock = async (line) => {
@@ -247,22 +294,49 @@ const getAvailableUoms = (productId) => {
     });
 };
 
+const getMarginInfo = (line) => {
+    const cost = calculateEffectiveCost(line);
+    const price = line.unit_price || 0;
+    
+    if (!price || !cost) return { percentage: 0, status: 'none', label: '0%' };
+    
+    // Profit Margin = (Price - Cost) / Price
+    const margin = (price - cost) / price;
+    const percentage = (margin * 100).toFixed(2);
+    
+    // Status Logic: 
+    // Only turn Red (loss) if the price is more than 1 cent below the actual cost.
+    // Otherwise, if margin is low or just below zero, show Yellow (slim/break-even).
+    if (price < (cost - 0.01)) {
+        return { percentage, status: 'loss', label: `${percentage}%`, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' };
+    }
+    
+    if (margin < 0.15) {
+        return { percentage, status: 'slim', label: `${percentage}%`, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30' };
+    }
+    
+    return { percentage, status: 'profit', label: `${percentage}%`, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' };
+};
+
 const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
     const targetInfo = getFactorToBase(line.uom_id, product.id);
-    const productBaseInfo = getFactorToBase(product.uom_id, product.id);
     
+    // CASE A: Autofilling initial price from Catalog
+    // We treat product.selling_price as the price for product.uom_id (Default unit)
     if (!line.unit_price || line.unit_price == 0) {
-        const basePrice = product.selling_price || 0;
-        if (targetInfo.baseId === productBaseInfo.baseId) {
-            const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            line.unit_price = basePrice * effectiveFactor;
-            line.prev_uom_id = line.uom_id;
-            return;
-        }
+        const basePricePerDefaultUnit = product.selling_price || 0;
+        const defaultUnitFactor = getFactorToBase(product.uom_id, product.id).factor;
+        
+        // Normalize to Piece then scale to Box
+        const piecePrice = basePricePerDefaultUnit / defaultUnitFactor;
+        line.unit_price = piecePrice * targetInfo.factor;
+        line.prev_uom_id = line.uom_id;
+        return;
     } 
+    // CASE B: Scaling an existing price (manual override)
     else if (line.prev_uom_id) {
         const prevInfo = getFactorToBase(line.prev_uom_id, product.id);
         if (targetInfo.baseId === prevInfo.baseId) {
@@ -588,15 +662,25 @@ const cancel = () => {
                                     </div>
 
                                     <div v-if="line.product_id" 
-                                        class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg"
-                                        :class="line.unit_price < calculateEffectiveCost(line) ? 'border-red-500/30' : ''"
+                                        @click="snapToCost(line)"
+                                        class="flex items-center gap-3 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg transition-all cursor-pointer hover:border-teal-500/50 group/cost shadow-inner"
+                                        :class="getMarginInfo(line).border"
+                                        title="Click to snap Unit Price to exactly match historical cost total"
                                     >
                                         <div class="flex flex-col">
-                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono">EST_COST ({{ (products.find(p => p.id === line.product_id)?.costing_method_name || 'AVG').toUpperCase() }})</span>
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">EST_COST ({{ (products.find(p => p.id === line.product_id)?.costing_method_name || 'AVG').toUpperCase() }})</span>
+                                                <i class="pi pi-link text-[6px] text-zinc-600 group-hover/cost:text-teal-500 transition-opacity opacity-0 group-hover/cost:opacity-100"></i>
+                                            </div>
                                             <div class="flex items-center gap-1.5">
                                                 <span class="text-[10px] font-black font-mono text-zinc-300">₱{{ calculateEffectiveCost(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
-                                                <i v-if="line.unit_price < calculateEffectiveCost(line)" class="pi pi-exclamation-triangle text-[10px] text-red-500 animate-pulse" title="Selling below estimated cost!"></i>
+                                                <i v-if="getMarginInfo(line).status === 'loss'" class="pi pi-exclamation-triangle text-[10px] text-red-500 animate-pulse" title="Selling below estimated cost!"></i>
                                             </div>
+                                        </div>
+                                        <div class="w-px h-6 bg-zinc-800 group-hover/cost:bg-teal-500/20"></div>
+                                        <div class="flex flex-col">
+                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">Margin</span>
+                                            <span class="text-[10px] font-black font-mono" :class="getMarginInfo(line).color">{{ getMarginInfo(line).label }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -605,9 +689,9 @@ const cancel = () => {
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
                                         <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Price</label>
                                         <div class="relative">
-                                            <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" :inputClass="'w-full bg-zinc-950 border text-right text-white p-2 rounded-lg focus:border-teal-500/50 ' + (line.unit_price < calculateEffectiveCost(line) ? 'border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'border-zinc-800')" />
-                                            <div v-if="line.unit_price < calculateEffectiveCost(line)" class="absolute -top-1 -right-1">
-                                                <i class="pi pi-exclamation-circle text-red-500 text-[10px] bg-zinc-950 rounded-full shadow-lg"></i>
+                                            <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" :inputClass="'w-full bg-zinc-950 border text-right text-white p-2 rounded-lg transition-all focus:border-teal-500/50 ' + getMarginInfo(line).border" />
+                                            <div v-if="getMarginInfo(line).status !== 'none'" class="absolute -top-1 -right-1">
+                                                <div class="w-2.5 h-2.5 rounded-full border border-zinc-950 shadow-lg" :class="getMarginInfo(line).status === 'loss' ? 'bg-red-500' : getMarginInfo(line).status === 'slim' ? 'bg-amber-500' : 'bg-emerald-500'"></div>
                                             </div>
                                         </div>
                                     </div>

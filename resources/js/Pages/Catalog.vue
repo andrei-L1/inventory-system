@@ -493,10 +493,15 @@ const stats = computed(() => ({
     totalValue: products.value.reduce((sum, p) => sum + (Number(p.selling_price) || 0), 0)
 }));
 
-const isNonBaseUOMMissingRule = computed(() => {
+const isNonBaseUomSelected = computed(() => {
     if (!product.value.uom_id) return false;
     const uom = uoms.value.find(u => u.id === product.value.uom_id);
-    if (!uom || uom.is_base) return false;
+    return uom && !uom.is_base;
+});
+
+const isNonBaseUOMMissingRule = computed(() => {
+    if (!isNonBaseUomSelected.value) return false;
+    const uom = uoms.value.find(u => u.id === product.value.uom_id);
 
     // A rule is missing if there is no global rule FOR THIS UOM 
     // AND no product-specific rule for THIS product.
@@ -507,6 +512,10 @@ const isNonBaseUOMMissingRule = computed(() => {
     );
 
     return !hasRule && !product.value.initial_conversion_factor;
+});
+
+const isPackagingConfigured = computed(() => {
+    return !!product.value.initial_conversion_factor || productConversions.value.length > 0;
 });
 
 const getBaseUomForSelected = computed(() => {
@@ -767,7 +776,9 @@ const getBaseUomForSelected = computed(() => {
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
                                       :class="activeTab === 'packaging' ? 'border-fuchsia-500/40 bg-fuchsia-500/20 text-fuchsia-400' : 'border-zinc-700 bg-zinc-950 text-zinc-500 group-hover:text-zinc-300'">04</span>
                                 04. PACKAGING (UOM)
-                                <span v-if="isNonBaseUOMMissingRule" class="ml-auto w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse shadow-[0_0_8px_rgba(217,70,239,0.5)]"></span>
+                                <span v-if="isNonBaseUOMMissingRule || isPackagingConfigured" 
+                                      class="ml-auto w-2 h-2 rounded-full shadow-[0_0_8px_rgba(217,70,239,0.3)]"
+                                      :class="isNonBaseUOMMissingRule ? 'bg-fuchsia-500 animate-pulse shadow-[0_0_10px_rgba(217,70,239,0.6)]' : 'bg-fuchsia-400/80'"></span>
                             </button>
                         </nav>
 
@@ -860,7 +871,7 @@ const getBaseUomForSelected = computed(() => {
                                                 :class="{'!border-red-500/50': errors.uom_id}" />
                                         
                                         <!-- Inline Quick Conversion for New Products -->
-                                        <div v-if="!product.id && isNonBaseUOMMissingRule" class="mt-2 p-3 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div v-if="!product.id && isNonBaseUomSelected" class="mt-2 p-3 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
                                             <div class="flex items-center justify-between mb-3 border-b border-sky-500/10 pb-2">
                                                 <div class="flex items-center gap-2">
                                                     <i class="pi pi-bolt text-sky-400 text-[10px]"></i>
@@ -983,7 +994,7 @@ const getBaseUomForSelected = computed(() => {
                                     </div>
 
                                     <!-- Atomic Onboarding for New Products -->
-                                    <div v-if="!product.id && isNonBaseUOMMissingRule" class="bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 p-8 rounded-xl flex flex-col gap-6 shadow-inner animate-in fade-in zoom-in duration-500">
+                                    <div v-if="!product.id && isNonBaseUomSelected" class="bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.05),transparent)] border border-sky-500/20 p-8 rounded-xl flex flex-col gap-6 shadow-inner animate-in fade-in zoom-in duration-500">
                                         <div class="flex items-start gap-4 pb-4 border-b border-sky-500/10">
                                             <div class="w-10 h-10 rounded bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
                                                 <i class="pi pi-bolt"></i>

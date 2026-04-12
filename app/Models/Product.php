@@ -83,7 +83,7 @@ class Product extends Model
                 $category = Category::find($product->category_id);
                 $catPrefix = $category?->code ?: strtoupper(substr($category?->name ?: 'GEN', 0, 3));
 
-                $nextId = (self::max('id') ?? 0) + 1;
+                $nextId = (self::withTrashed()->max('id') ?? 0) + 1;
                 $serial = str_pad($nextId, 4, '0', STR_PAD_LEFT);
 
                 $product->sku = "{$catPrefix}-{$abbreviation}-{$serial}";

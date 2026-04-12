@@ -369,8 +369,18 @@ const handleLinkClick = (type, name, id) => {
         return;
     }
 
+    if (type === 'SO' && id) {
+        router.visit(`/sales-orders/${id}`);
+        return;
+    }
+
     if (type === 'Movement' && id) {
         router.visit(`/movements/${id}`);
+        return;
+    }
+
+    if (type === 'Customer' && id) {
+        router.visit(`/customer-center?customer_id=${id}`);
         return;
     }
 
@@ -627,7 +637,7 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Total Stock Value</label>
-                                        <span v-if="!showHighPrecision" class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency(Number(selectedProduct.total_qoh ?? 0) * Number(selectedProduct.average_cost ?? 0)) }}</span>
+                                        <span v-if="!showHighPrecision" class="text-amber-400 font-bold text-lg tracking-tight">{{ formatCurrency(selectedProduct.total_stock_value ?? 0) }}</span>
                                         <span v-else class="text-amber-300 font-mono font-bold text-lg tracking-tight animate-in fade-in duration-300">
                                             {{ selectedProduct.formatted_total_stock_value_8dp }}
                                         </span>

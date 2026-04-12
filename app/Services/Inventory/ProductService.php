@@ -93,7 +93,7 @@ class ProductService
                 ]);
             }
 
-            return $product;
+            return $product->refresh();
         });
     }
 

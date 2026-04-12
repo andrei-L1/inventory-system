@@ -75,7 +75,7 @@ class TransactionResource extends JsonResource
             'formatted_unit_price' => $line->formatted_unit_price ?? null,
             'formatted_unit_price_8dp' => $line->formatted_unit_price_8dp ?? null,
             'total_cost' => $line && $line->total_cost ? (string) $line->total_cost : '0',
-            'total_cost_8dp' => $line && $line->total_cost ? (string) $line->total_cost : '0',
+            'total_cost_8dp' => $line && $line->total_cost ? \App\Helpers\FinancialMath::format($line->total_cost, 8) : '0',
 
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];

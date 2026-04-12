@@ -81,6 +81,7 @@ class ProductResource extends JsonResource
             'formatted_total_qoh' => $formattedTotalQoh,
             'reorder_point' => $reorderPoint,
             'reorder_quantity' => $reorderQuantity,
+            'total_stock_value' => FinancialMath::mul($averageCost, $qoh),
             'formatted_total_stock_value_8dp' => '₱' . FinancialMath::format(FinancialMath::mul($averageCost, $qoh), 8),
 
             'is_active' => (bool) $this->is_active,
