@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -18,7 +19,7 @@ class InventoryResource extends JsonResource
 
         if ($targetUomId) {
             $multiplier = (string) UomHelper::getMultiplierToSmallest((int) $targetUomId, $this->product_id, false);
-            $scaledQoh = \App\Helpers\FinancialMath::isPositive($multiplier) ? \App\Helpers\FinancialMath::div($qoh, $multiplier) : $qoh;
+            $scaledQoh = FinancialMath::isPositive($multiplier) ? FinancialMath::div($qoh, $multiplier) : $qoh;
             $formattedQuantityOnHand = UomHelper::format($scaledQoh, (int) $targetUomId, $this->product_id, false);
         } else {
             $formattedQuantityOnHand = $this->formatted_quantity_on_hand;
@@ -33,7 +34,7 @@ class InventoryResource extends JsonResource
             'average_cost' => (string) $this->average_cost,
             'formatted_average_cost' => $this->formatted_average_cost,
             'formatted_average_cost_8dp' => $this->formatted_average_cost_8dp,
-            'total_value' => \App\Helpers\FinancialMath::mul($qoh, (string) $this->average_cost),
+            'total_value' => FinancialMath::mul($qoh, (string) $this->average_cost),
             'last_movement_date' => $this->updated_at,
 
             // Relationships

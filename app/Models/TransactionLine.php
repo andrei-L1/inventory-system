@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -110,7 +111,7 @@ class TransactionLine extends Model
     {
         $uomId = $this->uom_id ?? $this->product->uom_id;
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
-        $scaledQty = \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div((string) $this->quantity, $multiplierStr) : (string) $this->quantity;
+        $scaledQty = FinancialMath::isPositive($multiplierStr) ? FinancialMath::div((string) $this->quantity, $multiplierStr) : (string) $this->quantity;
 
         return UomHelper::format($scaledQty, $uomId, $this->product_id, false);
     }
@@ -122,11 +123,11 @@ class TransactionLine extends Model
         }
         $uomId = $this->uom_id ?? $this->product->uom_id;
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
-        $scaledCost = \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->unit_cost, $multiplierStr) : (string) $this->unit_cost;
+        $scaledCost = FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul((string) $this->unit_cost, $multiplierStr) : (string) $this->unit_cost;
 
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($scaledCost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($scaledCost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedUnitCost8dpAttribute(): ?string
@@ -136,11 +137,11 @@ class TransactionLine extends Model
         }
         $uomId = $this->uom_id ?? $this->product->uom_id;
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
-        $scaledCost = \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->unit_cost, $multiplierStr) : (string) $this->unit_cost;
+        $scaledCost = FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul((string) $this->unit_cost, $multiplierStr) : (string) $this->unit_cost;
 
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($scaledCost, 8).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($scaledCost, 8).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedUnitPriceAttribute(): ?string
@@ -150,11 +151,11 @@ class TransactionLine extends Model
         }
         $uomId = $this->uom_id ?? $this->product->uom_id;
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
-        $scaledPrice = \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->unit_price, $multiplierStr) : (string) $this->unit_price;
+        $scaledPrice = FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul((string) $this->unit_price, $multiplierStr) : (string) $this->unit_price;
 
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($scaledPrice, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($scaledPrice, 2).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedUnitPrice8dpAttribute(): ?string
@@ -164,10 +165,10 @@ class TransactionLine extends Model
         }
         $uomId = $this->uom_id ?? $this->product->uom_id;
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($uomId, $this->product_id, false);
-        $scaledPrice = \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->unit_price, $multiplierStr) : (string) $this->unit_price;
+        $scaledPrice = FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul((string) $this->unit_price, $multiplierStr) : (string) $this->unit_price;
 
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($scaledPrice, 8).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($scaledPrice, 8).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 }

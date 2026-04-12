@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -72,7 +73,7 @@ class Inventory extends Model
     {
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div((string) $this->getRawOriginal('quantity_on_hand'), $multiplierStr) : (string) $this->getRawOriginal('quantity_on_hand');
+        return FinancialMath::isPositive($multiplierStr) ? FinancialMath::div((string) $this->getRawOriginal('quantity_on_hand'), $multiplierStr) : (string) $this->getRawOriginal('quantity_on_hand');
     }
 
     /**
@@ -82,7 +83,7 @@ class Inventory extends Model
     {
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::mul((string) $this->getRawOriginal('average_cost'), $multiplierStr) : (string) $this->getRawOriginal('average_cost');
+        return FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul((string) $this->getRawOriginal('average_cost'), $multiplierStr) : (string) $this->getRawOriginal('average_cost');
     }
 
     /**
@@ -92,7 +93,7 @@ class Inventory extends Model
     {
         $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->product->uom_id, $this->product_id, false);
 
-        return \App\Helpers\FinancialMath::isPositive($multiplierStr) ? \App\Helpers\FinancialMath::div((string) $this->getRawOriginal('reserved_qty'), $multiplierStr) : (string) $this->getRawOriginal('reserved_qty');
+        return FinancialMath::isPositive($multiplierStr) ? FinancialMath::div((string) $this->getRawOriginal('reserved_qty'), $multiplierStr) : (string) $this->getRawOriginal('reserved_qty');
     }
 
     /**
@@ -116,7 +117,7 @@ class Inventory extends Model
      */
     public function getFormattedAvailableQtyAttribute(): string
     {
-        $availableRecord = \App\Helpers\FinancialMath::sub((string) $this->scaled_quantity_on_hand, (string) $this->scaled_reserved_qty);
+        $availableRecord = FinancialMath::sub((string) $this->scaled_quantity_on_hand, (string) $this->scaled_reserved_qty);
 
         return UomHelper::format($availableRecord, $this->product->uom_id, $this->product_id, false);
     }
@@ -128,7 +129,7 @@ class Inventory extends Model
     {
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($this->scaled_average_cost, 2).' / '.($this->product->uom->abbreviation ?? 'pcs');
     }
 
     /**
@@ -138,6 +139,6 @@ class Inventory extends Model
     {
         $symbol = '₱';
 
-        return $symbol.\App\Helpers\FinancialMath::format($this->scaled_average_cost, 8).' / '.($this->product->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($this->scaled_average_cost, 8).' / '.($this->product->uom->abbreviation ?? 'pcs');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -52,7 +53,7 @@ class InventoryCostLayer extends Model
      */
     public function getRemainingQtyAttribute(): string
     {
-        return \App\Helpers\FinancialMath::sub((string) $this->received_qty, (string) $this->issued_qty);
+        return FinancialMath::sub((string) $this->received_qty, (string) $this->issued_qty);
     }
 
     /**

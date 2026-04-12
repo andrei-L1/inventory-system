@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Procurement;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,7 @@ class PurchaseOrderLineResource extends JsonResource
             'formatted_received_qty' => $this->formatted_received_qty,
             'returned_qty' => (string) $this->returned_qty,
             'formatted_returned_qty' => $this->formatted_returned_qty,
-            'pending_qty' => \App\Helpers\FinancialMath::max('0', \App\Helpers\FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty)), // H-6: guard against negative after credit return
+            'pending_qty' => FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty)), // H-6: guard against negative after credit return
             'formatted_pending_qty' => $this->formatted_pending_qty,
             'unit_cost' => (string) $this->unit_cost,
             'formatted_unit_cost' => $this->formatted_unit_cost,

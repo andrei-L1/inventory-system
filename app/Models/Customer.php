@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -50,14 +51,14 @@ class Customer extends Model
     {
         $unpaidInvoices = '0';
         foreach ($this->invoices()->whereIn('status', [Invoice::STATUS_OPEN])->get() as $inv) {
-            $unpaidInvoices = \App\Helpers\FinancialMath::add($unpaidInvoices, \App\Helpers\FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount));
+            $unpaidInvoices = FinancialMath::add($unpaidInvoices, FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount));
         }
 
         $unallocatedPayments = '0';
         foreach ($this->payments()->get() as $pay) {
-            $unallocatedPayments = \App\Helpers\FinancialMath::add($unallocatedPayments, (string) $pay->unallocated_amount);
+            $unallocatedPayments = FinancialMath::add($unallocatedPayments, (string) $pay->unallocated_amount);
         }
 
-        return \App\Helpers\FinancialMath::max('0', \App\Helpers\FinancialMath::sub($unpaidInvoices, $unallocatedPayments));
+        return FinancialMath::max('0', FinancialMath::sub($unpaidInvoices, $unallocatedPayments));
     }
 }

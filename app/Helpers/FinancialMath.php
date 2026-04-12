@@ -138,13 +138,13 @@ class FinancialMath
     {
         $rounded = self::round($value, $decimals);
         $parts = explode('.', $rounded);
-        
+
         $intPart = $parts[0];
         $decPart = $parts[1] ?? str_repeat('0', $decimals);
-        
+
         // Add thousands separator without casting to float
         $intPartFormatted = preg_replace('/(?<=\d)(?=(\d{3})+(?!\d))/', ',', $intPart);
-        
+
         if ($decimals === 0) {
             return $intPartFormatted;
         }
@@ -152,7 +152,7 @@ class FinancialMath
         // Ensure decimal part is padded to required scale if missing zeros
         $decPart = str_pad(substr($decPart, 0, $decimals), $decimals, '0', STR_PAD_RIGHT);
 
-        return $intPartFormatted . '.' . $decPart;
+        return $intPartFormatted.'.'.$decPart;
     }
 
     /**

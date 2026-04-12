@@ -1,11 +1,13 @@
 <?php
+
 require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
-use App\Models\PurchaseOrderStatus;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderStatus;
+use Illuminate\Contracts\Console\Kernel;
 
 $po = PurchaseOrder::find(1);
 if ($po) {

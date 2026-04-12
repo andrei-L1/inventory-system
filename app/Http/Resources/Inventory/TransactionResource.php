@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Inventory;
 
+use App\Helpers\FinancialMath;
 use App\Models\Transaction;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,7 +18,7 @@ class TransactionResource extends JsonResource
 
         // Enhanced type name for better ledger distinction
         $typeName = strtolower($this->type->name ?? 'unknown');
-        $isReturn = ($line && \App\Helpers\FinancialMath::isNegative((string) $line->quantity) && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
+        $isReturn = ($line && FinancialMath::isNegative((string) $line->quantity) && ($this->purchase_order_id || str_starts_with(strtoupper($this->reference_number), 'RTV')));
 
         if ($this->purchase_order_id && $typeName === 'receipt' && ! $isReturn) {
             $typeName = 'good_receipt';
@@ -75,7 +76,7 @@ class TransactionResource extends JsonResource
             'formatted_unit_price' => $line->formatted_unit_price ?? null,
             'formatted_unit_price_8dp' => $line->formatted_unit_price_8dp ?? null,
             'total_cost' => $line && $line->total_cost ? (string) $line->total_cost : '0',
-            'total_cost_8dp' => $line && $line->total_cost ? \App\Helpers\FinancialMath::format($line->total_cost, 8) : '0',
+            'total_cost_8dp' => $line && $line->total_cost ? FinancialMath::format($line->total_cost, 8) : '0',
 
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];

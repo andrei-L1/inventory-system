@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -66,7 +67,7 @@ class Invoice extends Model
 
     public function getBalanceAttribute(): string
     {
-        return \App\Helpers\FinancialMath::sub((string) $this->total_amount, (string) $this->paid_amount);
+        return FinancialMath::sub((string) $this->total_amount, (string) $this->paid_amount);
     }
 
     public function isDraft(): bool

@@ -32,7 +32,7 @@ class UomHelper
         // Mass / Volume auto-scaling (e.g. 1500g -> 1.5 kg)
         if ($uom->category !== 'count') {
             $absQty = str_starts_with($quantity, '-') ? substr($quantity, 1) : $quantity;
-            if ($uom->is_base && !FinancialMath::isZero($absQty)) {
+            if ($uom->is_base && ! FinancialMath::isZero($absQty)) {
                 $scaledUom = null;
                 $bestFactor = '1';
                 foreach (self::$uoms as $candidate) {
@@ -103,7 +103,7 @@ class UomHelper
 
         $multiplier = (string) $conversion->conversion_factor;
         // Float equivalent decomposition
-        $wholeUnits = FinancialMath::round(FinancialMath::sub($absQty, '0.50000000'), 0); 
+        $wholeUnits = FinancialMath::round(FinancialMath::sub($absQty, '0.50000000'), 0);
         $remainder = FinancialMath::sub($absQty, $wholeUnits);
         $smallerQty = FinancialMath::mul($remainder, $multiplier);
 

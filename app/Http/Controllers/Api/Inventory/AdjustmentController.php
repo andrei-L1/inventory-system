@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Inventory;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\TransactionStoreRequest;
 use App\Http\Resources\Inventory\TransactionResource;
@@ -46,7 +47,7 @@ class AdjustmentController extends Controller
             $data['lines'] = collect($data['lines'])->map(function ($line) {
                 return array_merge($line, [
                     'quantity' => (string) ($line['quantity'] ?? '0'),
-                    'unit_cost' => \App\Helpers\FinancialMath::round((string) ($line['unit_cost'] ?? '0'), \App\Helpers\FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round((string) ($line['unit_cost'] ?? '0'), FinancialMath::LINE_SCALE),
                 ]);
             })->toArray();
 

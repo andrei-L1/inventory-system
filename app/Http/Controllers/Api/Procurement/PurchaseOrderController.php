@@ -387,7 +387,7 @@ class PurchaseOrderController extends Controller
                         $remaining = FinancialMath::sub((string) $poLine->ordered_qty, (string) $poLine->received_qty);
                         $formattedReceived = UomHelper::format($receivedQty, (int) $receivedUomId, $poLine->product_id);
                         $formattedMax = UomHelper::format($remaining, (int) $lineUomId, $poLine->product_id);
-                        
+
                         abort(422, "Cannot process receipt: The entered quantity ({$formattedReceived}) is greater than the pending quantity ({$formattedMax}) remaining on this line for SKU {$poLine->product->sku}.");
                     }
 
@@ -514,7 +514,7 @@ class PurchaseOrderController extends Controller
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
                             $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string) $poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
                         }
-                        
+
                         $formattedReturn = UomHelper::format($returnQtyRaw, (int) $returnUomId, $poLine->product_id);
                         $formattedMax = UomHelper::format($receivedInReturnUnit, (int) $returnUomId, $poLine->product_id);
 

@@ -33,13 +33,13 @@ class ProductResource extends JsonResource
             $targetUomId = (int) $targetUomId;
             $targetMultiplier = UomHelper::getMultiplierToSmallest($targetUomId, $this->id, false);
             $productMultiplier = UomHelper::getMultiplierToSmallest((int) $this->uom_id, $this->id, false);
-            
+
             // Normalize to Atomic (Price per Piece) then scale to Target
             if (FinancialMath::gt($productMultiplier, '0')) {
                 // Selling Price scaling
                 $perPiecePrice = FinancialMath::div($sellingPrice, $productMultiplier);
                 $sellingPrice = FinancialMath::mul($perPiecePrice, $targetMultiplier);
-                
+
                 // Average Cost scaling
                 $perPieceCost = FinancialMath::div($averageCost, $productMultiplier);
                 $averageCost = FinancialMath::mul($perPieceCost, $targetMultiplier);
@@ -49,12 +49,12 @@ class ProductResource extends JsonResource
                 $reorderQuantity = FinancialMath::div(FinancialMath::mul($reorderQuantity, $productMultiplier), $targetMultiplier);
             }
 
-            $scaledQoh = FinancialMath::gt($targetMultiplier, '0') 
-                ? FinancialMath::div($qoh, $targetMultiplier) 
+            $scaledQoh = FinancialMath::gt($targetMultiplier, '0')
+                ? FinancialMath::div($qoh, $targetMultiplier)
                 : $qoh;
-                
+
             $formattedTotalQoh = UomHelper::format((float) $scaledQoh, $targetUomId, $this->id, false);
-            
+
             $targetUom = UnitOfMeasure::find($targetUomId);
             $targetUomAbbr = $targetUom->abbreviation ?? 'pcs';
             $formattedSellingPrice = '₱'.FinancialMath::format($sellingPrice, 2).' / '.$targetUomAbbr;
@@ -82,7 +82,7 @@ class ProductResource extends JsonResource
             'reorder_point' => $reorderPoint,
             'reorder_quantity' => $reorderQuantity,
             'total_stock_value' => FinancialMath::mul($averageCost, $qoh),
-            'formatted_total_stock_value_8dp' => '₱' . FinancialMath::format(FinancialMath::mul($averageCost, $qoh), 8),
+            'formatted_total_stock_value_8dp' => '₱'.FinancialMath::format(FinancialMath::mul($averageCost, $qoh), 8),
 
             'is_active' => (bool) $this->is_active,
             'category_id' => $this->category_id,
@@ -100,7 +100,7 @@ class ProductResource extends JsonResource
                 'lifo' => 'LIFO (Last-In, First-Out)',
                 default => $this->costingMethod->label ?? 'unknown',
             },
-            'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/' . $this->attachmentsIn('main_image')->first()->file_path) : null,
+            'main_image_url' => $this->attachmentsIn('main_image')->first()?->file_path ? asset('storage/'.$this->attachmentsIn('main_image')->first()->file_path) : null,
             'has_history' => (bool) ($this->transaction_lines_count ?? $this->transactionLines()->exists()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

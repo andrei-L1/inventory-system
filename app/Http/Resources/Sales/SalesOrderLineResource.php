@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -66,12 +67,12 @@ class SalesOrderLineResource extends JsonResource
                 'formatted_quantity_on_hand' => $inv->formatted_quantity_on_hand,
                 'reserved_qty' => (string) $inv->scaled_reserved_qty,
                 'formatted_reserved_qty' => $inv->formatted_reserved_qty,
-                'available_qty' => \App\Helpers\FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty),
+                'available_qty' => FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty),
                 'formatted_available_qty' => $inv->formatted_available_qty,
             ]),
-            'total_available_qty' => (string) $this->product->inventories->reduce(fn ($carry, $inv) => \App\Helpers\FinancialMath::add($carry, \App\Helpers\FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty)), '0'),
+            'total_available_qty' => (string) $this->product->inventories->reduce(fn ($carry, $inv) => FinancialMath::add($carry, FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty)), '0'),
             'formatted_total_available_qty' => UomHelper::format(
-                (string) $this->product->inventories->reduce(fn ($carry, $inv) => \App\Helpers\FinancialMath::add($carry, \App\Helpers\FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty)), '0'),
+                (string) $this->product->inventories->reduce(fn ($carry, $inv) => FinancialMath::add($carry, FinancialMath::sub((string) $inv->scaled_quantity_on_hand, (string) $inv->scaled_reserved_qty)), '0'),
                 $this->uom_id ?? $this->product->uom_id,
                 $this->product_id,
                 false

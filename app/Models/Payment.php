@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,9 +42,9 @@ class Payment extends Model
     {
         $allocated = '0';
         foreach ($this->allocations as $allocation) {
-            $allocated = \App\Helpers\FinancialMath::add($allocated, (string) $allocation->amount);
+            $allocated = FinancialMath::add($allocated, (string) $allocation->amount);
         }
 
-        return \App\Helpers\FinancialMath::sub((string) $this->amount, $allocated);
+        return FinancialMath::sub((string) $this->amount, $allocated);
     }
 }

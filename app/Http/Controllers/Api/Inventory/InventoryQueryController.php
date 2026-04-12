@@ -52,6 +52,7 @@ class InventoryQueryController extends Controller
             ->values()
             ->map(function ($product) {
                 $shortage = FinancialMath::sub((string) $product->reorder_point, (string) $product->total_qoh);
+
                 return [
                     'id' => $product->id,
                     'sku' => $product->sku,
@@ -85,8 +86,8 @@ class InventoryQueryController extends Controller
             ->get()
             ->map(function ($inv) use ($targetUomId, $multiplier, $product) {
                 $qoh = (string) $inv->quantity_on_hand;
-                $scaledQoh = FinancialMath::gt($multiplier, '0') 
-                    ? FinancialMath::div($qoh, $multiplier) 
+                $scaledQoh = FinancialMath::gt($multiplier, '0')
+                    ? FinancialMath::div($qoh, $multiplier)
                     : $qoh;
 
                 return [
@@ -123,14 +124,14 @@ class InventoryQueryController extends Controller
             ->map(function ($layer) use ($targetUomId, $multiplier, $product) {
                 $po = $layer->transactionLine?->transaction?->purchaseOrder;
 
-                $receivedScaled = FinancialMath::gt($multiplier, '0') 
-                    ? FinancialMath::div((string) $layer->received_qty, $multiplier) 
+                $receivedScaled = FinancialMath::gt($multiplier, '0')
+                    ? FinancialMath::div((string) $layer->received_qty, $multiplier)
                     : (string) $layer->received_qty;
-                $remainingScaled = FinancialMath::gt($multiplier, '0') 
-                    ? FinancialMath::div((string) $layer->remaining_qty, $multiplier) 
+                $remainingScaled = FinancialMath::gt($multiplier, '0')
+                    ? FinancialMath::div((string) $layer->remaining_qty, $multiplier)
                     : (string) $layer->remaining_qty;
-                $unitCostScaled = FinancialMath::gt($multiplier, '0') 
-                    ? FinancialMath::mul((string) $layer->unit_cost, $multiplier) 
+                $unitCostScaled = FinancialMath::gt($multiplier, '0')
+                    ? FinancialMath::mul((string) $layer->unit_cost, $multiplier)
                     : (string) $layer->unit_cost;
 
                 $roundedUnitCost = FinancialMath::round($unitCostScaled, 2);
@@ -144,8 +145,8 @@ class InventoryQueryController extends Controller
                     'location_name' => $layer->location?->name ?? 'Unknown Location',
                     'receipt_date' => $layer->receipt_date,
                     'unit_cost' => (string) $layer->unit_cost,
-                    'formatted_unit_cost' => '₱'.\App\Helpers\FinancialMath::format($unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
-                    'formatted_unit_cost_8dp' => '₱'.\App\Helpers\FinancialMath::format($unitCostScaled, 8).' / '.($targetUom->abbreviation ?? 'pcs'),
+                    'formatted_unit_cost' => '₱'.FinancialMath::format($unitCostScaled, 2).' / '.($targetUom->abbreviation ?? 'pcs'),
+                    'formatted_unit_cost_8dp' => '₱'.FinancialMath::format($unitCostScaled, 8).' / '.($targetUom->abbreviation ?? 'pcs'),
                     'original_qty' => (string) $layer->received_qty,
                     'formatted_original_qty' => UomHelper::format((string) $receivedScaled, $targetUomId, $product->id, false),
                     'remaining_qty' => (string) $layer->remaining_qty,

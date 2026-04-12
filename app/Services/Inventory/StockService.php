@@ -370,10 +370,10 @@ class StockService
 
         if (! $isReceipt && FinancialMath::lt($availableForIssue, FinancialMath::round(ltrim($qtyMove, '-'), FinancialMath::LINE_SCALE))) {
             $uomId = $line->uom_id ?? $inventory->product->uom_id;
-            
+
             // Format quantities for human-readable feedback
             $multiplier = UomHelper::getMultiplierToSmallest($uomId, $line->product_id, false);
-            
+
             $reqScaled = FinancialMath::div(ltrim($qtyMove, '-'), $multiplier);
             $availScaled = FinancialMath::div($availableForIssue, $multiplier);
 
