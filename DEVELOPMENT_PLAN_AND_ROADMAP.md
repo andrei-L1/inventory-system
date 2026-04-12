@@ -438,6 +438,25 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Credit Limit enforcement** — Integrated into SO Approval gating (`SalesOrderController@approve`).
 - [x] **Finance Center UI** — Build the frontend for Invoices, Payments, Credit Notes, and Document Viewers.
 
+---
+
+## 💰 Phase 5.7 — Procurement Financials: Accounts Payable (A/P)
+> Status: ⬜ NOT STARTED
+> Bridge the gap between receiving goods and paying vendors.
+
+### 5.7.1 Vendor Billing (Bills)
+- [ ] `BillController` — CRUD (`/api/finance/bills`) linked to Receipts (GRN).
+- [ ] Logic: Convert specific PO lines into a Bill.
+- [ ] Support for **Partial Billing** (Bill only what was received).
+- [ ] `billable_qty` tracking on PO lines (already supported by lines model).
+
+### 5.7.2 Vendor Payments & Debit Notes
+- [ ] `VendorPaymentController` — Issue payments against vendor bills using `vendor_payments` table.
+- [ ] `DebitNoteController` — Handle financial reversals for Purchase Returns (PRET) using `debit_notes` table.
+- [ ] **Vendor Statement generation**: High-precision statement of account for every supplier.
+
+---
+
 ### 5.6 Backorder & Short-Fulfill Management
 > Status: ✅ COMPLETE (Native support implemented)
 - [x] **Backorder Tracking**: Visualized via progress indicators where `shipped_qty < ordered_qty`.
@@ -503,17 +522,17 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 ## 💰 Phase 7 — Pricing & Discounts
 > Status: 🚧 IN PROGRESS (Schema & Model layer complete)
 
-### 7.1 Price Lists API
+### 7.1 Landed Costs & Valuation Alignment
+- [ ] `LandedCostController` — allocation of freight, tax, and insurance using `landed_costs` table.
+- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
+- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+
+### 7.2 Price Lists & Discounts API
 - [ ] `PriceListController` — CRUD (`/api/price-lists`).
 - [ ] `PriceListItemController` — manage per-product prices within a list.
 - [ ] `DiscountController` — CRUD for discount rules.
 - [ ] Price list assignment: to customer, to customer group, or default.
 - [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price.
-
-### 7.2 Pricing Frontend
-- [ ] **Price Lists page** — create lists, set prices per product.
-- [ ] **Discounts page** — define discount rules (%, flat, volume-based).
-- [ ] Price lookup visible on SO Create form (show which price list applied).
 
 ---
 
@@ -649,7 +668,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 5.5 | Finance (A/R) | ✅ 100% — Full A/R, Payment Allocation, and Statements live. |
 | 5.7 | Finance (A/P) | ⬜ 0% — Strategic Bridge Created (billable_qty live). |
 | 6 | Logistics (Traceability) | 🚧 10% — Schema in place; `product_serials` ready for wire-up. |
-| 7 | Pricing & Discounts | 🚧 5% — Schema in place; `price_lists` ready for wire-up. |
+| 7 | Pricing & Landed Costs | 🚧 5% — Strategic Bridge Created (Landed Cost pending). |
 | 8 | Reporting & Snapshots | ⬜ 0% — Schema exists; `stock_snapshots` engine pending. |
 | 9 | Administration & Security | 🚧 ~25% — Middleware + models done; Metadata Management pending. |
 | 10 | Production Hardening | ⬜ 0% |
@@ -663,4 +682,31 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 2. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
 3. **Logistics & Shipments (Phase 6.1)** — Shipments panel on SO Detail page, Carrier management.
 4. **User Management UI (Phase 9.1)** — Create the admin dashboard for managing staff roles and access permissions.
+
+---
+
+## 📂 Master Schema Inventory (61 Tables)
+> **Snapshot Date**: 2026-04-12
+> **Saturation Level**: 100% (All tables formally assigned to Roadmap)
+
+### 📈 Active Financial Ledger (15 Tables)
+`transactions` [P2.1], `transaction_lines` [P2.1], `transaction_types` [P2.1], `transaction_statuses` [P2.1], `transfers` [P2.1], `invoices` [P5.5], `invoice_lines` [P5.5], `payments` [P5.5], `payment_allocations` [P5.5], `payment_refunds` [P5.5], `bills` [P5.7], `vendor_payments` [P5.7], `debit_notes` [P5.7], `landed_costs` [P7.1], `costing_methods` [P1].
+
+### 📦 Master Data & Stock (10 Tables)
+`products` [P1.3], `categories` [P1.3], `inventories` [P2.1], `inventory_cost_layers` [P2.2], `locations` [P1.2], `location_types` [P1.2], `units_of_measure` [P1.5], `uom_conversions` [P1.5], `vendors` [P1.4], `customers` [P5.1].
+
+### 🚀 Sales & Procurement Workflow (9 Tables)
+`sales_orders` [P5.2], `sales_order_lines` [P5.2], `sales_order_statuses` [P5.2], `purchase_orders` [P4.1], `purchase_order_lines` [P4.1], `purchase_order_statuses` [P4.1], `reorder_rules` [P4.3], `replenishment_suggestions` [P4.3], `attachments` [P9.4].
+
+### 🚚 Logistics & Traceability (5 Tables)
+`shipments` [P6.1], `carriers` [P6.1], `product_serials` [P6.3], `transaction_line_serials` [P6.3], `packages` [P6.3].
+
+### 🔮 Pricing & Intelligence (6 Tables)
+`price_lists` [P7.2], `price_list_items` [P7.2], `discounts` [P7.2], `reports` [P8.1], `report_runs` [P8.1], `stock_snapshots` [P8.2].
+
+### 🛡️ Governance & Security (6 Tables)
+`users` [P1.1], `roles` [P1.1], `permissions` [P1.1], `audit_logs` [P11], `activity_logs` [P11], `adjustment_reasons` [P9.4].
+
+### ⚙️ System Infrastructure (10 Tables)
+`permission_role` [P1.1], `personal_access_tokens` [P1.1], `password_reset_tokens` [P1.1], `sessions` [P10], `cache` [P10], `cache_locks` [P10], `failed_jobs` [P8], `jobs` [P8], `job_batches` [P8], `migrations` [P0].
 
