@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use App\Traits\HasAttachments;
 use Illuminate\Database\Eloquent\Collection;
@@ -50,7 +51,9 @@ class Product extends Model
     protected $appends = [
         'formatted_total_qoh',
         'formatted_average_cost',
+        'formatted_average_cost_8dp',
         'formatted_selling_price',
+        'formatted_total_stock_value_8dp',
     ];
 
     protected static function boot()
@@ -81,7 +84,7 @@ class Product extends Model
                 $category = Category::find($product->category_id);
                 $catPrefix = $category?->code ?: strtoupper(substr($category?->name ?: 'GEN', 0, 3));
 
-                $nextId = (self::max('id') ?? 0) + 1;
+                $nextId = (self::withTrashed()->max('id') ?? 0) + 1;
                 $serial = str_pad($nextId, 4, '0', STR_PAD_LEFT);
 
                 $product->sku = "{$catPrefix}-{$abbreviation}-{$serial}";
@@ -94,6 +97,13 @@ class Product extends Model
             // }
         });
     }
+
+    protected $casts = [
+        'average_cost' => 'decimal:8',
+        'selling_price' => 'decimal:8',
+        'reorder_point' => 'decimal:8',
+        'reorder_quantity' => 'decimal:8',
+    ];
 
     protected $fillable = [
         'product_code',
@@ -175,24 +185,32 @@ class Product extends Model
      * Get the average cost scaled to the primary unit of measure.
      * Stored value is now "Cost per Piece" (Atomic).
      */
-    public function getAverageCostAttribute($value): float
+    public function getAverageCostAttribute($value): string
     {
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
+        $v = $value ? (string) $value : '0';
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
 
-        return $multiplier > 0 ? (float) $value * $multiplier : (float) $value;
+        return FinancialMath::isPositive($multiplierStr) ? FinancialMath::mul($v, $multiplierStr) : $v;
     }
 
     /**
      * Get the total quantity on hand across all locations.
      */
-    public function getTotalQohAttribute(): float
+    public function getTotalQohAttribute(): string
     {
         // Internal QOH is now stored in Atomic Pieces.
         // We convert it back to the Product's Base UOM for catalog display.
-        $pieces = (float) $this->inventories()->sum('quantity_on_hand');
-        $multiplier = UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
+        $pieces = '0';
+        $qtys = $this->relationLoaded('inventories')
+            ? $this->inventories->pluck('quantity_on_hand')
+            : $this->inventories()->pluck('quantity_on_hand');
 
-        return $multiplier > 0 ? $pieces / $multiplier : $pieces;
+        foreach ($qtys as $qty) {
+            $pieces = FinancialMath::add($pieces, (string) $qty);
+        }
+        $multiplierStr = (string) UomHelper::getMultiplierToSmallest($this->uom_id, $this->id, false);
+
+        return FinancialMath::isPositive($multiplierStr) ? FinancialMath::div($pieces, $multiplierStr) : $pieces;
     }
 
     /**
@@ -208,13 +226,29 @@ class Product extends Model
     {
         $symbol = '₱'; // Default currency symbol
 
-        return $symbol.number_format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($this->average_cost, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+    }
+
+    public function getFormattedAverageCost8dpAttribute(): string
+    {
+        $symbol = '₱'; // Default currency symbol
+
+        return $symbol.FinancialMath::format($this->average_cost, 8).' / '.($this->uom->abbreviation ?? 'pcs');
     }
 
     public function getFormattedSellingPriceAttribute(): string
     {
         $symbol = '₱'; // Default currency symbol
+        $price = $this->selling_price ? (string) $this->selling_price : '0';
 
-        return $symbol.number_format($this->selling_price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+        return $symbol.FinancialMath::format($price, 2).' / '.($this->uom->abbreviation ?? 'pcs');
+    }
+
+    public function getFormattedTotalStockValue8dpAttribute(): string
+    {
+        $symbol = '₱';
+        $totalValue = FinancialMath::mul((string) $this->total_qoh, (string) $this->average_cost);
+
+        return $symbol.FinancialMath::format($totalValue, 8);
     }
 }

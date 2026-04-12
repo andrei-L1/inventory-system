@@ -12,6 +12,7 @@ import InputNumber from 'primevue/inputnumber';
 import Toast from 'primevue/toast';
 import { useToast } from "primevue/usetoast";
 import axios from 'axios';
+import Popover from 'primevue/popover';
 
 const toast = useToast();
 const { can } = usePermissions();
@@ -48,7 +49,7 @@ const getFactorToBase = (uomId, productId = null) => {
         }
         
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
@@ -61,9 +62,22 @@ const form = ref({
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null, inventories: [] }
+        { product_id: null, location_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_price: 0.00, tax_rate: 0, discount_rate: 0, stock: null, inventories: [], costLayers: [] }
     ]
 });
+
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
+
+const toggleStockInfo = (event, line) => {
+    selectedLineForStock.value = line;
+    stockOp.value.toggle(event);
+};
+
+const selectLocation = (loc, line) => {
+    line.location_id = loc.location_id;
+    checkStock(line);
+};
 
 const fetchProductInventory = async (line) => {
     if (!line.product_id) {
@@ -72,17 +86,141 @@ const fetchProductInventory = async (line) => {
         return;
     }
     try {
-        const [invRes, stockRes] = await Promise.all([
+        const [invRes, stockRes, layersRes] = await Promise.all([
             axios.get(`/api/inventory/${line.product_id}/locations`),
             line.location_id ? axios.get('/api/inventory/stock-check', {
                 params: { product_id: line.product_id, location_id: line.location_id, uom_id: line.uom_id }
-            }) : Promise.resolve(null)
+            }) : Promise.resolve(null),
+            axios.get(`/api/inventory/${line.product_id}/cost-layers`)
         ]);
         line.inventories = invRes.data.data;
         line.stock = stockRes ? stockRes.data : null;
+        line.costLayers = layersRes.data.data;
     } catch (e) {
         console.error('Failed to fetch inventory data', e);
     }
+};
+
+const getConversionDetails = (uomId, productId) => {
+    if (!productId || !uomId) return null;
+    const baseAuth = getFactorToBase(uomId, productId);
+    if (baseAuth.factor === 1) return null;
+
+    const directRule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(uomId) && c.product_id === productId);
+    const baseUom = uoms.value.find(u => u.id === baseAuth.baseId);
+    const baseAbbr = baseUom ? baseUom.abbreviation : '';
+
+    return {
+        text: `= ${baseAuth.factor} ${baseAbbr}`,
+        isCustom: !!directRule
+    };
+};
+
+const getScaledQty = (rawPieces, line) => {
+    if (!line.product_id || rawPieces === undefined || rawPieces === null) return '0';
+    const { factor } = getFactorToBase(line.uom_id, line.product_id);
+    const scaled = (parseFloat(rawPieces) / factor);
+    
+    return isUomIdDiscrete(line.uom_id) 
+        ? Math.floor(scaled + 0.0001).toLocaleString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+};
+
+const simulateCosting = (line) => {
+    if (!line.product_id) return { unit: 0, total: 0 };
+
+    if (!line.costLayers?.length) {
+        const product = products.value.find(p => p.id === line.product_id);
+        const rawCost = product?.average_cost || 0;
+        const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+        const productScale = getFactorToBase(product?.uom_id, product?.id).factor;
+        const unit = (Number(rawCost) / productScale) * targetScale;
+        return { unit, total: unit * line.ordered_qty };
+    }
+
+    const product = products.value.find(p => p.id === line.product_id);
+    const costingMethod = product?.costing_method_name?.toLowerCase() || 'average';
+    
+    let layers = [...line.costLayers];
+    if (costingMethod === 'fifo') {
+        layers.sort((a, b) => new Date(a.receipt_date) - new Date(b.receipt_date));
+    } else if (costingMethod === 'lifo') {
+        layers.sort((a, b) => new Date(b.receipt_date) - new Date(a.receipt_date));
+    } else {
+        const avg = getScaledCost(line);
+        return { unit: avg, total: avg * line.ordered_qty };
+    }
+
+    let totalSimulatedCost = 0;
+    const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+    let neededBase = line.ordered_qty * targetScale;
+    const initialNeededBase = neededBase;
+
+    for (const layer of layers) {
+        const taken = Math.min(neededBase, layer.remaining_qty);
+        totalSimulatedCost += taken * layer.unit_cost;
+        neededBase -= taken;
+        if (neededBase <= 0) break;
+    }
+
+    if (neededBase > 0 && layers.length > 0) {
+        const fallbackCost = layers[layers.length - 1].unit_cost;
+        totalSimulatedCost += neededBase * fallbackCost;
+    }
+
+    const avgPieceCost = initialNeededBase > 0 ? (totalSimulatedCost / initialNeededBase) : 0;
+    return { 
+        unit: avgPieceCost * targetScale, 
+        total: totalSimulatedCost,
+        wasEstimated: neededBase > 0
+    };
+};
+
+const calculateEffectiveCost = (line) => {
+    return simulateCosting(line).unit;
+};
+
+const snapToCost = (line) => {
+    const product = products.value.find(p => p.id === line.product_id);
+    if (!product) return;
+
+    const result = simulateCosting(line);
+    // Check if we are currently snapped (with high precision epsilon)
+    const isCurrentlySnapped = Math.abs(line.unit_price - result.unit) < 0.000001;
+
+    if (isCurrentlySnapped) {
+        // REVERT TO CATALOG PRICE
+        const targetInfo = getFactorToBase(line.uom_id, product.id);
+        const defaultUnitFactor = getFactorToBase(product.uom_id, product.id).factor;
+        const piecePrice = (product.selling_price || 0) / defaultUnitFactor;
+        line.unit_price = piecePrice * targetInfo.factor;
+        
+        toast.add({ 
+            severity: 'secondary', 
+            summary: 'Reverted to Catalog', 
+            detail: 'Price reset to standard selling price.', 
+            life: 2000 
+        });
+    } else {
+        // SNAP TO COST
+        line.unit_price = result.unit;
+        toast.add({ 
+            severity: 'info', 
+            summary: 'Snapped to Cost', 
+            detail: `Price anchored to ${result.total.toLocaleString(undefined, {minimumFractionDigits: 2})} total value.`, 
+            life: 2000 
+        });
+    }
+};
+
+const getScaledCost = (line) => {
+    const product = products.value.find(p => p.id === line.product_id);
+    if (!product) return 0;
+    const targetScale = getFactorToBase(line.uom_id, line.product_id).factor;
+    const productScale = getFactorToBase(product.uom_id, product.id).factor;
+    // product.average_cost is anchored to product.uom_id
+    const pieceCost = (Number(product.average_cost) || 0) / productScale;
+    return pieceCost * targetScale;
 };
 
 const checkStock = async (line) => {
@@ -156,22 +294,49 @@ const getAvailableUoms = (productId) => {
     });
 };
 
+const getMarginInfo = (line) => {
+    const cost = calculateEffectiveCost(line);
+    const price = line.unit_price || 0;
+    
+    if (!price || !cost) return { percentage: 0, status: 'none', label: '0%' };
+    
+    // Profit Margin = (Price - Cost) / Price
+    const margin = (price - cost) / price;
+    const percentage = (margin * 100).toFixed(2);
+    
+    // Status Logic: 
+    // Only turn Red (loss) if the price is more than 1 cent below the actual cost.
+    // Otherwise, if margin is low or just below zero, show Yellow (slim/break-even).
+    if (price < (cost - 0.01)) {
+        return { percentage, status: 'loss', label: `${percentage}%`, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' };
+    }
+    
+    if (margin < 0.15) {
+        return { percentage, status: 'slim', label: `${percentage}%`, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30' };
+    }
+    
+    return { percentage, status: 'profit', label: `${percentage}%`, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' };
+};
+
 const onUomChange = (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (!product || !line.uom_id) return;
 
     const targetInfo = getFactorToBase(line.uom_id, product.id);
-    const productBaseInfo = getFactorToBase(product.uom_id, product.id);
     
+    // CASE A: Autofilling initial price from Catalog
+    // We treat product.selling_price as the price for product.uom_id (Default unit)
     if (!line.unit_price || line.unit_price == 0) {
-        const basePrice = product.selling_price || 0;
-        if (targetInfo.baseId === productBaseInfo.baseId) {
-            const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            line.unit_price = basePrice * effectiveFactor;
-            line.prev_uom_id = line.uom_id;
-            return;
-        }
+        const basePricePerDefaultUnit = product.selling_price || 0;
+        const defaultUnitFactor = getFactorToBase(product.uom_id, product.id).factor;
+        
+        // Normalize to Piece then scale to Box
+        const piecePrice = basePricePerDefaultUnit / defaultUnitFactor;
+        line.unit_price = piecePrice * targetInfo.factor;
+        line.prev_uom_id = line.uom_id;
+        return;
     } 
+    // CASE B: Scaling an existing price (manual override)
     else if (line.prev_uom_id) {
         const prevInfo = getFactorToBase(line.prev_uom_id, product.id);
         if (targetInfo.baseId === prevInfo.baseId) {
@@ -220,32 +385,32 @@ const removeLine = (index) => {
 };
 
 const lineSubtotal = (line) => {
-    const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-    const discount = base * ((line.discount_rate || 0) / 100);
-    const tax = (base - discount) * ((line.tax_rate || 0) / 100);
+    const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+    const discount = base * ((Number(line.discount_rate) || 0) / 100);
+    const tax = (base - discount) * ((Number(line.tax_rate) || 0) / 100);
     return base - discount + tax;
 };
 
 const untaxedSubtotal = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        const discount = base * ((Number(line.discount_rate) || 0) / 100);
         return sum + (base - discount);
     }, 0);
 });
 
 const totalTax = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        const discount = base * ((line.discount_rate || 0) / 100);
-        return sum + ((base - discount) * ((line.tax_rate || 0) / 100));
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        const discount = base * ((Number(line.discount_rate) || 0) / 100);
+        return sum + ((base - discount) * ((Number(line.tax_rate) || 0) / 100));
     }, 0);
 });
 
 const totalDiscount = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        const base = (line.ordered_qty || 0) * (line.unit_price || 0);
-        return sum + (base * ((line.discount_rate || 0) / 100));
+        const base = (Number(line.ordered_qty) || 0) * (Number(line.unit_price) || 0);
+        return sum + (base * ((Number(line.discount_rate) || 0) / 100));
     }, 0);
 });
 
@@ -379,6 +544,7 @@ const cancel = () => {
                                             :options="products" 
                                             optionLabel="name" 
                                             optionValue="id" 
+                                            dataKey="id"
                                             placeholder="Select product" 
                                             filter
                                             @change="() => { onProductSelect(line); checkStock(line); }"
@@ -403,6 +569,7 @@ const cancel = () => {
                                             :options="locations" 
                                             optionLabel="name" 
                                             optionValue="id" 
+                                            dataKey="id"
                                             placeholder="Location" 
                                             @change="checkStock(line)"
                                             class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
@@ -416,10 +583,43 @@ const cancel = () => {
                                             :options="getAvailableUoms(line.product_id)" 
                                             optionLabel="abbreviation" 
                                             optionValue="id" 
+                                            dataKey="id"
                                             placeholder="UOM" 
                                             @change="onUomChange(line)"
                                             class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
-                                        />
+                                        >
+                                            <template #value="slotProps">
+                                                <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                    <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
+                                                    <span 
+                                                        v-if="getConversionDetails(slotProps.value, line.product_id)" 
+                                                        class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                    >
+                                                        {{ getConversionDetails(slotProps.value, line.product_id).text }}
+                                                    </span>
+                                                </div>
+                                                <span v-else>{{ slotProps.placeholder }}</span>
+                                            </template>
+                                            <template #option="slotProps">
+                                                <div class="flex flex-col">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-bold text-[11px] uppercase">{{ slotProps.option.abbreviation }}</span>
+                                                        <span 
+                                                            v-if="getConversionDetails(slotProps.option.id, line.product_id)?.isCustom" 
+                                                            class="px-1.5 py-[1px] bg-rose-500/20 text-rose-400 text-[8px] font-mono rounded tracking-widest border border-rose-500/30 uppercase"
+                                                        >
+                                                            Custom
+                                                        </span>
+                                                    </div>
+                                                    <span 
+                                                        v-if="getConversionDetails(slotProps.option.id, line.product_id)" 
+                                                        class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                    >
+                                                        {{ getConversionDetails(slotProps.option.id, line.product_id).text }}
+                                                    </span>
+                                                </div>
+                                            </template>
+                                        </Select>
                                     </div>
 
                                     <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
@@ -443,10 +643,57 @@ const cancel = () => {
                                     </div>
                                 </div>
 
+                                <!-- Context Indicator Bar -->
+                                <div v-if="line.product_id" class="flex flex-wrap items-center gap-2 mt-[-8px]">
+                                    <div 
+                                        @click="(e) => toggleStockInfo(e, line)"
+                                        class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-teal-500/50 transition-all group"
+                                    >
+                                        <div class="flex flex-col text-left">
+                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover:text-teal-500">At Source</span>
+                                            <span class="text-[10px] font-black font-mono" :class="line.location_id && parseFloat(getScaledQty(getLocalStock(line), line)) < line.ordered_qty ? 'text-red-400' : 'text-zinc-200'">{{ getScaledQty(getLocalStock(line), line) }}</span>
+                                        </div>
+                                        <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                        <div class="flex flex-col text-left">
+                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover:text-teal-500">Global Pool</span>
+                                            <span class="text-[10px] font-black text-zinc-400 font-mono">{{ getScaledQty((line.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), line) }}</span>
+                                        </div>
+                                        <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover:text-teal-500"></i>
+                                    </div>
+
+                                    <div v-if="line.product_id" 
+                                        @click="snapToCost(line)"
+                                        class="flex items-center gap-3 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg transition-all cursor-pointer hover:border-teal-500/50 group/cost shadow-inner"
+                                        :class="getMarginInfo(line).border"
+                                        title="Click to snap Unit Price to exactly match historical cost total"
+                                    >
+                                        <div class="flex flex-col">
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">EST_COST ({{ (products.find(p => p.id === line.product_id)?.costing_method_name || 'AVG').toUpperCase() }})</span>
+                                                <i class="pi pi-link text-[6px] text-zinc-600 group-hover/cost:text-teal-500 transition-opacity opacity-0 group-hover/cost:opacity-100"></i>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-[10px] font-black font-mono text-zinc-300">₱{{ calculateEffectiveCost(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                                                <i v-if="getMarginInfo(line).status === 'loss'" class="pi pi-exclamation-triangle text-[10px] text-red-500 animate-pulse" title="Selling below estimated cost!"></i>
+                                            </div>
+                                        </div>
+                                        <div class="w-px h-6 bg-zinc-800 group-hover/cost:bg-teal-500/20"></div>
+                                        <div class="flex flex-col">
+                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">Margin</span>
+                                            <span class="text-[10px] font-black font-mono" :class="getMarginInfo(line).color">{{ getMarginInfo(line).label }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="grid grid-cols-12 gap-4 items-end bg-zinc-900/40 p-3 rounded-lg border border-zinc-800/30">
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
                                         <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Price</label>
-                                        <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-teal-500/50" />
+                                        <div class="relative">
+                                            <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" :inputClass="'w-full bg-zinc-950 border text-right text-white p-2 rounded-lg transition-all focus:border-teal-500/50 ' + getMarginInfo(line).border" />
+                                            <div v-if="getMarginInfo(line).status !== 'none'" class="absolute -top-1 -right-1">
+                                                <div class="w-2.5 h-2.5 rounded-full border border-zinc-950 shadow-lg" :class="getMarginInfo(line).status === 'loss' ? 'bg-red-500' : getMarginInfo(line).status === 'slim' ? 'bg-amber-500' : 'bg-emerald-500'"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
                                         <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Tax (%)</label>
@@ -462,46 +709,6 @@ const cancel = () => {
                                     </div>
                                 </div>
 
-                                <!-- Enhanced location breakdown for better readability -->
-                                <div v-if="line.product_id" class="rounded-xl border border-zinc-800 bg-zinc-900/20 overflow-hidden mt-2">
-                                    <div class="flex items-center justify-between px-4 py-2.5 bg-zinc-900/40 border-b border-zinc-800">
-                                        <span class="text-[10px] font-bold text-teal-500 uppercase tracking-[0.2em] font-mono">Location Breakdown</span>
-                                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono whitespace-nowrap ml-4">Qty on Hand</span>
-                                    </div>
-                                    <div v-if="line.inventories && line.inventories.length" class="divide-y divide-zinc-800/50">
-                                        <div 
-                                            v-for="inv in line.inventories" 
-                                            :key="inv.id" 
-                                            class="flex items-center justify-between px-4 py-2.5 transition-colors"
-                                            :class="inv.location_id === line.location_id ? 'bg-teal-500/10' : 'hover:bg-white/[0.02]'"
-                                        >
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-1.5 h-1.5 rounded-full" :class="inv.location_id === line.location_id ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.4)]' : 'bg-zinc-700'"></div>
-                                                <span 
-                                                    class="text-xs font-bold uppercase tracking-wide font-mono"
-                                                    :class="inv.location_id === line.location_id ? 'text-teal-100' : 'text-zinc-400'"
-                                                >{{ inv.location_name }}</span>
-                                            </div>
-                                            <span 
-                                                class="text-xs font-black font-mono"
-                                                :class="inv.location_id === line.location_id ? 'text-teal-400' : 'text-zinc-200'"
-                                            >{{ Number(inv.quantity_on_hand).toFixed(2) }}</span>
-                                        </div>
-                                    </div>
-                                    <div v-else class="px-4 py-6 text-center text-xs text-zinc-600 italic font-mono bg-zinc-950/20">
-                                        <i class="pi pi-exclamation-triangle block mb-2 text-zinc-800 text-lg"></i>
-                                        No stock records found for this product
-                                    </div>
-                                    <div class="flex items-center justify-between px-4 py-3 bg-zinc-900/60 border-t border-zinc-800">
-                                        <div class="flex items-center gap-2">
-                                            <i class="pi pi-globe text-zinc-600 text-[10px]"></i>
-                                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.15em] font-mono">Total Global Stock</span>
-                                        </div>
-                                        <span class="text-xs font-black text-white font-mono px-3 py-1 bg-zinc-800 rounded-lg border border-zinc-700/50 shadow-inner">
-                                            {{ (line.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0).toFixed(2) }}
-                                        </span>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -536,6 +743,50 @@ const cancel = () => {
             </div>
 
         </div>
+
+        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !p-0 !shadow-2xl !rounded-2xl overflow-hidden min-w-[280px]">
+            <div v-if="selectedLineForStock" class="flex flex-col">
+                <div class="px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono">STOCK BREAKDOWN</span>
+                    <span class="text-[10px] font-bold text-zinc-600 font-mono">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation || 'pcs' }}</span>
+                </div>
+                
+                <div class="max-h-[300px] overflow-y-auto">
+                    <div v-if="selectedLineForStock.inventories?.length" class="divide-y divide-zinc-900">
+                        <div 
+                            v-for="inv in selectedLineForStock.inventories" 
+                            :key="inv.id"
+                            @click="selectLocation(inv, selectedLineForStock)"
+                            class="px-4 py-3 flex items-center justify-between hover:bg-teal-500/5 cursor-pointer transition-colors group"
+                            :class="inv.location_id === selectedLineForStock.location_id ? 'bg-teal-500/10' : ''"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 rounded-full" :class="inv.location_id === selectedLineForStock.location_id ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.5)]' : 'bg-zinc-800'"></div>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold font-mono tracking-tight" :class="inv.location_id === selectedLineForStock.location_id ? 'text-teal-100' : 'text-zinc-400'">{{ inv.location_name }}</span>
+                                    <span v-if="inv.location_id === selectedLineForStock.location_id" class="text-[8px] text-teal-500 font-bold uppercase tracking-widest">Selected Source</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-xs font-black font-mono text-zinc-200">{{ getScaledQty(inv.quantity_on_hand, selectedLineForStock) }}</span>
+                                <span class="text-[8px] text-zinc-600 font-mono font-bold uppercase">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation || 'pcs' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="p-8 text-center text-zinc-600 italic text-xs font-mono">
+                         No stock records found
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-zinc-950 border-t border-zinc-800 flex items-center justify-between">
+                    <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono italic">Click a location to route</span>
+                    <div class="flex items-center gap-2">
+                         <span class="text-[11px] font-black text-white font-mono">{{ getScaledQty((selectedLineForStock.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), selectedLineForStock) }}</span>
+                         <span class="text-[8px] font-bold text-zinc-600 uppercase font-mono">GLOBAL</span>
+                    </div>
+                </div>
+            </div>
+        </Popover>
     </AppLayout>
 </template>
 

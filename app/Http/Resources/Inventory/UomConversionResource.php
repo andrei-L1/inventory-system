@@ -19,7 +19,7 @@ class UomConversionResource extends JsonResource
             'product_id' => $this->product_id,
             'from_uom_id' => $this->from_uom_id,
             'to_uom_id' => $this->to_uom_id,
-            'conversion_factor' => (float) $this->conversion_factor,
+            'conversion_factor' => (string) $this->conversion_factor,
             'is_custom' => ! is_null($this->product_id),
 
             // Relationships

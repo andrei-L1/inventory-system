@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,10 +38,13 @@ class Payment extends Model
         return $this->hasMany(PaymentAllocation::class);
     }
 
-    public function getUnallocatedAmountAttribute(): float
+    public function getUnallocatedAmountAttribute(): string
     {
-        $allocated = (float) $this->allocations()->sum('amount');
+        $allocated = '0';
+        foreach ($this->allocations as $allocation) {
+            $allocated = FinancialMath::add($allocated, (string) $allocation->amount);
+        }
 
-        return (float) $this->amount - $allocated;
+        return FinancialMath::sub((string) $this->amount, $allocated);
     }
 }

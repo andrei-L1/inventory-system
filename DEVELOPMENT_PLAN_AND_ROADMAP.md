@@ -1,5 +1,9 @@
 # Nexus Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-04-11 (Enterprise Precision Remediation Audit). All status markers reflect actual codebase state.
+> Last audited: 2026-04-12 (Enterprise Precision & Frontend-Backend Handshake Alignment). All status markers reflect actual codebase state.
+
+---
+
+## Technical Mission
 
 ---
 
@@ -65,7 +69,7 @@ Each phase below corresponds to one stage of that chain.
 - [x] **Full Concurrency & Locking Audit** — Comprehensive race-condition audit across all controllers and StockService. PO status transitions (approve/send/ship/close), GRN receive, and processReturn now use `DB::transaction` + `lockForUpdate`. `postTransaction()` and `reverseTransaction()` lock the Transaction header row before idempotency checks. `ReorderRuleController` catches `QueryException` for DB-level unique guard. 33 tests, 113 assertions — 100% passing. ✅ NEW
 - [x] **Inventory Costing Engine Refactor (Strategy Pattern)** — Successfully refactored the engine to use pluggable FIFO, LIFO, and Weighted Average strategies. Decoupled valuation logic from physical movement and ensured the global `average_cost` invariant is maintained across all receipt types. ✅ NEW
 - [x] **Product-Aware Contextual Scaling** — Upgraded `UomHelper` and core controllers to support product-specific UOM conversion rules. The system now allows the same unit (e.g., "Box") to have different conversion factors per SKU without global rule pollution. ✅ NEW
-- [x] **Enterprise Financial Precision Remediation** — Systemically eradicated PHP native floating-point math arithmetic from the engine. Deployed `FinancialMath` (BCMath wrapper) across all transaction, controller, and accumulation pipelines to enforce strict `decimal(18, 8)` string math and semantic comparators. ✅ NEW
+- [x] **Enterprise Financial Precision Remediation** — Systemically eradicated PHP native floating-point math arithmetic from the engine. Deployed `FinancialMath` (BCMath wrapper) across all transaction, controller, and accumulation pipelines to enforce strict `decimal(18, 8)` string math. **Hardened against scale-truncation bugs and enforced the 'Honest Truth' standard (Ledger Precision + Visual Tilde Cues).** ✅ NEW
 
 
 ### 0.2 Database Schema
@@ -172,7 +176,7 @@ Each phase below corresponds to one stage of that chain.
 ---
 
 ## ✅ Phase 2 — Warehouse Operations: Stock Movements
-> Status: COMPLETE — API layer, Intelligence Grid, and all 4 Movement Forms fully wired.
+> Status: COMPLETE — 100% System-wide Precision aligned across 12+ movement forms and order mission controls.
 
 ### 2.1 Stock Movement API ✅ COMPLETED
 - [x] `POST /api/transactions` — Create any stock movement (receipt, issue, adjustment)
@@ -424,61 +428,63 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] Credit Note generation (links to Invoicing)
 
 ### 5.5 Invoicing & Customer Payments
-> Status: NOT STARTED
-- [ ] `InvoiceController` — CRUD (`/api/invoices`)
-- [ ] Invoice linked to Sales Order (supports partial invoicing)
-- [ ] `PaymentController` — CRUD (`/api/payments`)
-- [ ] Payment allocation logic (Apply payment to one or more invoices)
-- [ ] Customer Statement generation
-- [ ] Credit Limit enforcement: block SO confirmation if customer total exposure exceeds limit
+> Status: 🚧 PARTIALLY COMPLETE (Backend API Live)
+- [x] `InvoiceController` — CRUD (`/api/finance/invoices`) with Draft → Posted lifecycle.
+- [x] Invoice linked to Sales Order (supports partial invoicing and line-level selection).
+- [x] `PaymentController` — CRUD (`/api/finance/payments`).
+- [x] Payment allocation logic (Apply payment to one or more invoices with balance tracking).
+- [x] **Credit Notes** — Automatically generated via Sales Return resolution logic.
+- [ ] Customer Statement generation.
+- [x] **Credit Limit enforcement** — Integrated into SO Approval gating (`SalesOrderController@approve`).
+- [ ] **Finance Center UI** — Build the frontend for Invoices, Payments, and Credit Notes.
 
 ### 5.6 Backorder & Short-Fulfill Management
 > Status: ✅ COMPLETE (Native support implemented)
 - [x] **Backorder Tracking**: Visualized via progress indicators where `shipped_qty < ordered_qty`.
-- [x] **Split Fulfillment**: UI/API support for shipping partial quantities; natively supported by the Pick/Pack/Ship Mission Control. ✅
+- [x] **Split Fulfillment**: UI/API support for shipping partial quantities; natively supported by the Pick/Pack/Ship Mission Control.
 - [ ] **Procurement Trigger**: Automatically link short-fulfilled SOs to the `ReplenishmentSuggestion` engine in Phase 4.3.
 
 ---
 
 ## 🚚 Phase 6 — Logistics: Shipments & Carriers
-> Status: NOT STARTED — schema in place (shipments, packages, carriers)
+> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
 
 ### 6.1 Shipments API
-- [ ] `ShipmentController` — CRUD (`/api/shipments`)
-- [ ] `CarrierController` — Read/Write (`/api/carriers`)
-- [ ] Shipment linked to SO — one SO can have multiple shipments (partial)
-- [ ] Fields: tracking number, carrier, ship date, estimated delivery, status
+- [ ] `ShipmentController` — CRUD (`/api/shipments`).
+- [ ] `CarrierController` — Read/Write (`/api/carriers`).
+- [ ] Shipment linked to SO — one SO can have multiple shipments (partial).
+- [ ] Fields: tracking number, carrier, ship date, estimated delivery, status.
 
 ### 6.2 Shipments Frontend
-- [ ] **Shipments panel** on SO Detail page
-  - Log a shipment with carrier + tracking number
-  - View all shipments for an SO
-- [ ] **Carriers lookup management page** (in Settings)
+- [ ] **Shipments panel** on SO Detail page.
+  - Log a shipment with carrier + tracking number.
+  - View all shipments for an SO.
+- [ ] **Carriers lookup management page** (in Settings).
 
 ### 6.3 Serial / Batch Tracking
-- [ ] `ProductSerialController` — assign + query serial numbers
-- [ ] On Receipt: auto-generate or manually enter serials per unit
-- [ ] On Issue/Ship: select specific serial numbers to fulfill
-- [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`
-- [ ] **Serial Registry page** — search serials, view status, view transaction history per unit
-- [ ] Serial scan input (keyboard wedge / barcode scanner compatible)
+- [ ] `ProductSerialController` — assign + query serial numbers.
+- [ ] On Receipt: auto-generate or manually enter serials per unit.
+- [ ] On Issue/Ship: select specific serial numbers to fulfill.
+- [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
+- [ ] **Serial Registry page** — search serials, view status, view transaction history per unit.
+- [ ] Serial scan input (keyboard wedge / barcode scanner compatible).
 
 ---
 
 ## 💰 Phase 7 — Pricing & Discounts
-> Status: NOT STARTED — schema in place (price_lists, price_list_items, discounts)
+> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
 
 ### 7.1 Price Lists API
-- [ ] `PriceListController` — CRUD (`/api/price-lists`)
-- [ ] `PriceListItemController` — manage per-product prices within a list
-- [ ] `DiscountController` — CRUD for discount rules
-- [ ] Price list assignment: to customer, to customer group, or default
-- [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price
+- [ ] `PriceListController` — CRUD (`/api/price-lists`).
+- [ ] `PriceListItemController` — manage per-product prices within a list.
+- [ ] `DiscountController` — CRUD for discount rules.
+- [ ] Price list assignment: to customer, to customer group, or default.
+- [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price.
 
 ### 7.2 Pricing Frontend
-- [ ] **Price Lists page** — create lists, set prices per product
-- [ ] **Discounts page** — define discount rules (%, flat, volume-based)
-- [ ] Price lookup visible on SO Create form (show which price list applied)
+- [ ] **Price Lists page** — create lists, set prices per product.
+- [ ] **Discounts page** — define discount rules (%, flat, volume-based).
+- [ ] Price lookup visible on SO Create form (show which price list applied).
 
 ---
 
@@ -506,7 +512,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ### 8.3 Reports Frontend
 - [ ] **Reports page** — Enable the disabled nav item in sidebar
-- [ ] Report catalog view — browse available report types
+- [ ] Report catalog view — browse available report types 
 - [ ] Parameter form per report (date range, product filter, category, location)
 - [ ] Results DataTable + inline charts
 - [ ] Export to PDF and CSV
@@ -594,8 +600,9 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
 | 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
 | 5 | Sales (Sales Orders) | ✅ 100% — Mission Control Fulfillment + Customer Center live. |
-| 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema in place; Serial/Batch tracking pending. |
-| 7 | Pricing & Discounts | ⬜ 0% — Schema + models only |
+| 5.5 | Finance (Invoicing & Payments) | 🚧 70% — Backend API & Credit logic live; UI pending. |
+| 6 | Logistics (Shipments & Serials) | 🚧 10% — Schema & Models in place; Controllers pending. |
+| 7 | Pricing & Discounts | 🚧 5% — Schema & Models in place. |
 | 8 | Reporting & Financial Analysis | ⬜ 0% — Schema + models only |
 | 9 | Administration & Security | 🚧 ~25% — Middleware + models + location UI done. |
 | 10 | Production Hardening | ⬜ 0% |
@@ -604,8 +611,8 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ## Immediate Next Steps (Priority Order)
 
-1. **Reporting Engine (Phase 8)** — Develop the asynchronous valuation engine to calculate Total Inventory Value and Gross Margin historicals.
-2. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
-3. **Invoicing & Payments (Phase 5.5)** — Build the Invoice Controller to finalize standard Accounts Receivable and payment allocations against the newly minted Credit Notes.
+1. **Reporting Engine (Phase 8)** — Develop the asynchronous valuation engine to calculate Total Inventory Value and Gross Margin historicals using our new 8-decimal precision standard.
+2. **Finance Center UI (Phase 5.5)** — Build the "Mission Control" for Invoices, Payments, and Credit Notes to utilize the existing backend A/R logic.
+3. **Serial & Batch Tracking (Phase 6.3)** — Implement the `product_serials` registry and integrate barcode scanning into the Receipt/Issue forms.
 4. **User Management UI (Phase 9.1)** — Create the admin dashboard for managing staff roles and access permissions.
 

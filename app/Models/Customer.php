@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -46,21 +47,18 @@ class Customer extends Model
     /**
      * Total exposure = Unpaid balance on all Open Invoices - Unallocated Payment balances.
      */
-    public function getExposureAttribute(): float
+    public function getExposureAttribute(): string
     {
-        $unpaidInvoices = (float) $this->invoices()
-            ->whereIn('status', [Invoice::STATUS_OPEN])
-            ->get()
-            ->sum(function ($inv) {
-                return (float) ($inv->total_amount - $inv->paid_amount);
-            });
+        $unpaidInvoices = '0';
+        foreach ($this->invoices()->whereIn('status', [Invoice::STATUS_OPEN])->get() as $inv) {
+            $unpaidInvoices = FinancialMath::add($unpaidInvoices, FinancialMath::sub((string) $inv->total_amount, (string) $inv->paid_amount));
+        }
 
-        $unallocatedPayments = (float) $this->payments()
-            ->get()
-            ->sum(function ($pay) {
-                return (float) $pay->unallocated_amount;
-            });
+        $unallocatedPayments = '0';
+        foreach ($this->payments()->get() as $pay) {
+            $unallocatedPayments = FinancialMath::add($unallocatedPayments, (string) $pay->unallocated_amount);
+        }
 
-        return max(0, $unpaidInvoices - $unallocatedPayments);
+        return FinancialMath::max('0', FinancialMath::sub($unpaidInvoices, $unallocatedPayments));
     }
 }

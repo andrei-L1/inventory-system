@@ -23,7 +23,7 @@ class CustomerResource extends JsonResource
             'billing_address' => $this->billing_address,
             'shipping_address' => $this->shipping_address,
             'tax_number' => $this->tax_number,
-            'credit_limit' => (float) $this->credit_limit,
+            'credit_limit' => (string) $this->credit_limit,
             'price_list_id' => $this->price_list_id,
             'is_active' => (bool) $this->is_active,
             'created_at' => $this->created_at,

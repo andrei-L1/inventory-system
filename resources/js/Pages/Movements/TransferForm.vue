@@ -93,6 +93,7 @@
                                       v-model="form.from_location" 
                                       :options="locations" 
                                       optionLabel="name" 
+                                      dataKey="id"
                                       placeholder="From..." 
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                  />
@@ -104,6 +105,7 @@
                                       v-model="form.to_location" 
                                       :options="locations" 
                                       optionLabel="name" 
+                                      dataKey="id"
                                       placeholder="To..." 
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                  />
@@ -142,11 +144,12 @@
                         </div>
 
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                            <div class="flex flex-col gap-4">
-                                <div v-for="(line, index) in form.lines" :key="index" class="p-6 bg-zinc-950/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-5 relative group transition-all hover:border-zinc-700/50 hover:shadow-2xl hover:bg-zinc-950/60">
-                                    <div class="grid grid-cols-12 gap-5 items-end">
-                                        <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product to Move</label>
+                            <div class="flex flex-col gap-3">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-900/20 border border-zinc-800/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-violet-500/20 hover:bg-zinc-900/40">
+                                    <div class="grid grid-cols-12 gap-4 items-center">
+                                        <!-- Product Selection (Col 5) -->
+                                        <div class="col-span-12 lg:col-span-5 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Product to Move</span>
                                             <Select 
                                                 v-model="line.product" 
                                                 :options="products" 
@@ -154,110 +157,119 @@
                                                 placeholder="Search products..." 
                                                 filter 
                                                 @change="onProductSelect(line)"
-                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-violet-500/50"
+                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-violet-500/30"
                                             />
                                         </div>
 
-                                        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit</label>
-                                            <Select 
-                                                v-model="line.uom_id" 
-                                                :options="getAvailableUoms(line.product?.id)" 
-                                                optionLabel="abbreviation" 
-                                                optionValue="id"
-                                                placeholder="UOM" 
-                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-violet-500/50"
-                                            />
+                                        <!-- Unit Selection (Col 2) -->
+                                        <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
+                                            <div class="flex flex-col gap-2">
+                                                <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                                <Select 
+                                                    v-model="line.uom_id" 
+                                                    :options="getAvailableUoms(line.product?.id)" 
+                                                    optionLabel="abbreviation" 
+                                                    optionValue="id" 
+                                                    placeholder="UOM" 
+                                                    dataKey="id"
+                                                    @change="onUomChange(line)"
+                                                    class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-violet-500/50"
+                                                >
+                                                    <template #value="slotProps">
+                                                        <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                            <span class="font-bold text-[11px] uppercase">{{ getUomAbbr(slotProps.value) }}</span>
+                                                            <span 
+                                                                v-if="getConversionDetails(slotProps.value, line.product?.id)" 
+                                                                class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                            >
+                                                                {{ getConversionDetails(slotProps.value, line.product?.id).text }}
+                                                            </span>
+                                                        </div>
+                                                        <span v-else>{{ slotProps.placeholder }}</span>
+                                                    </template>
+                                                    <template #option="slotProps">
+                                                        <div class="flex flex-col">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="font-bold text-[11px] uppercase">{{ slotProps.option.abbreviation }}</span>
+                                                                <span 
+                                                                    v-if="getConversionDetails(slotProps.option.id, line.product?.id)?.isCustom" 
+                                                                    class="px-1.5 py-[1px] bg-rose-500/20 text-rose-400 text-[8px] font-mono rounded tracking-widest border border-rose-500/30 uppercase"
+                                                                >
+                                                                    Custom
+                                                                </span>
+                                                            </div>
+                                                            <span 
+                                                                v-if="getConversionDetails(slotProps.option.id, line.product?.id)" 
+                                                                class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                            >
+                                                                {{ getConversionDetails(slotProps.option.id, line.product?.id).text }}
+                                                            </span>
+                                                        </div>
+                                                    </template>
+                                                </Select>
+                                            </div>
                                         </div>
 
-                                        <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
-                                            <InputNumber 
-                                                v-model="line.quantity" 
-                                                :min="0" 
-                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
-                                                :inputClass="'w-full bg-zinc-950 border text-center text-white p-2 rounded-lg outline-none ' + (isInsufficient(line) ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-800 focus:border-violet-500/50')"
-                                            />
+                                        <!-- Quantity Input (Col 4 - Unified Bar) -->
+                                        <div class="col-span-6 lg:col-span-4 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Quantity</span>
+                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-violet-500/50 transition-all overflow-hidden h-10 group/input"
+                                                 :class="{'border-red-500/30 bg-red-500/5': isInsufficient(line)}">
+                                                <InputNumber 
+                                                    v-model="line.quantity" 
+                                                    class="w-full h-full"
+                                                    :min="0" 
+                                                    :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
+                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#fff', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div class="col-span-12 md:col-span-1 flex items-center justify-end">
+                                        <!-- Actions (Col 1) -->
+                                        <div class="col-span-12 lg:col-span-1 flex items-end justify-center h-10 mt-5 lg:mt-0">
                                             <button 
                                                 @click="removeLine(index)" 
-                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500/40 hover:text-red-400 hover:bg-red-500/20 transition-all border border-red-500/0 hover:border-red-500/20"
-                                                title="Remove Line"
+                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/20 hover:text-red-400 hover:bg-red-500/10 transition-all border border-red-500/0 hover:border-red-500/10"
                                             >
-                                                <i class="pi pi-trash text-xs" />
+                                                <i class="pi pi-trash text-[10px]" />
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- Always-visible location breakdown -->
-                                    <div v-if="line.product" class="rounded-xl border border-zinc-800 bg-zinc-900/20 overflow-hidden">
-                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/40 border-b border-zinc-800">
-                                            <span class="text-[9px] font-bold text-violet-400 uppercase tracking-[0.2em] font-mono">Location Breakdown</span>
-                                            <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono whitespace-nowrap ml-4">Qty on Hand</span>
-                                        </div>
-                                        <div v-if="line.inventories && line.inventories.length" class="divide-y divide-zinc-800/40 max-h-48 overflow-y-auto custom-scrollbar">
+                                    <!-- Context Indicator Bar -->
+                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-zinc-800/40 pt-3 mt-1">
+                                        <div class="flex items-center gap-6">
+                                            <!-- Availability Stat (CLICKABLE) -->
                                             <div 
-                                                v-for="inv in line.inventories" 
-                                                :key="inv.id" 
-                                                class="flex items-center justify-between px-4 py-2 transition-colors"
-                                                :class="inv.location_id === form.from_location?.id ? 'bg-violet-500/10' : 'hover:bg-white/[0.01]'"
+                                                @click="(e) => toggleStockInfo(e, line)"
+                                                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-violet-500/50 transition-all group/stat"
                                             >
-                                                <div class="flex items-center gap-3">
-                                                    <div class="w-1 h-1 rounded-full" :class="inv.location_id === form.from_location?.id ? 'bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]' : 'bg-zinc-700'"></div>
-                                                    <span 
-                                                        class="text-[11px] font-bold uppercase tracking-wide font-mono"
-                                                        :class="inv.location_id === form.from_location?.id ? 'text-violet-300' : 'text-zinc-500'"
-                                                    >{{ inv.location_name }}</span>
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">At Source</span>
+                                                    <span class="text-[10px] font-black font-mono text-zinc-200">
+                                                        {{ getScaledQty(line, getLocalStock(line)) }}
+                                                    </span>
                                                 </div>
-                                                <span 
-                                                    class="text-[11px] font-black font-mono"
-                                                    :class="inv.location_id === form.from_location?.id ? 'text-violet-400' : 'text-zinc-500'"
-                                                >{{ getScaledQty(line, inv.quantity_on_hand) }}</span>
+                                                <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">Global Pool</span>
+                                                    <span class="text-[10px] font-black text-zinc-400 font-mono">
+                                                        {{ getScaledQty(line, line.product.total_qoh) }}
+                                                    </span>
+                                                </div>
+                                                <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover/stat:text-violet-500"></i>
                                             </div>
-                                        </div>
-                                        <div v-else class="px-4 py-4 text-center text-[10px] text-zinc-600 italic font-mono bg-zinc-950/10">
-                                            No stock records found for this product
-                                        </div>
-                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/60 border-t border-zinc-800">
-                                            <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono italic">Total Global Stock</span>
-                                            <span class="text-[10px] font-black text-white font-mono px-2 py-0.5 bg-zinc-800 rounded border border-zinc-700/50 shadow-inner">
-                                                {{ getScaledQty(line, line.product?.total_qoh) }}
-                                            </span>
-                                        </div>
-                                    </div>
 
-                                    <!-- Post-Transfer Summary (Transfer-specific) -->
-                                    <div v-if="line.product && form.from_location && form.to_location" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div class="flex items-center justify-between bg-zinc-900/60 p-3 rounded-xl border border-zinc-800 text-[10px]">
-                                            <div class="flex flex-col gap-0.5">
-                                                <span class="text-zinc-600 font-bold uppercase tracking-widest leading-none mb-1">Source Impact</span>
-                                                <span class="text-zinc-400 uppercase font-mono truncate max-w-[150px]">{{ form.from_location.name }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-zinc-500 font-mono">{{ getScaledQty(line, getLocalStock(line)) }}</span>
-                                                <i class="pi pi-arrow-right text-[8px] text-zinc-800"></i>
-                                                <span class="font-black font-mono" :class="isInsufficient(line) ? 'text-rose-500' : 'text-violet-400'">
-                                                    {{ (parseFloat(getScaledQty(line, getLocalStock(line))) - (parseFloat(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
-                                                </span>
+                                            <!-- Routing Visual -->
+                                            <div class="flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">{{ form.from_location?.name || 'SRC' }}</span>
+                                                    <i class="pi pi-arrow-right text-[8px] text-zinc-700"></i>
+                                                    <span class="text-[9px] font-black text-white uppercase tracking-tighter">{{ form.to_location?.name || 'DEST' }}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="flex items-center justify-between bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10 text-[10px]">
-                                            <div class="flex flex-col gap-0.5">
-                                                <span class="text-emerald-500/60 font-bold uppercase tracking-widest leading-none mb-1">Target Gain</span>
-                                                <span class="text-emerald-400/80 uppercase font-mono truncate max-w-[150px]">{{ form.to_location.name }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-sm font-black text-emerald-400 font-mono">
-                                                    +{{ line.quantity || 0 }}
-                                                </span>
-                                                <span class="text-[9px] text-emerald-500/40 font-bold uppercase">{{ getUomAbbr(line.uom_id) }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div v-if="isInsufficient(line)" class="text-[8px] text-rose-500 font-bold uppercase animate-pulse absolute top-4 right-16">
-                                        Insufficient stock at source!
                                     </div>
                                 </div>
                             </div>
@@ -271,6 +283,45 @@
                 </div>
             </div>
         </div>
+
+        <!-- Location Breakdown Popover -->
+        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+                <div class="text-[9px] font-black text-violet-500 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
+                    <span>Stock Availability</span>
+                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
+                </div>
+                
+                <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
+                    <div v-for="loc in selectedLineForStock.inventories" 
+                         :key="loc.location_id" 
+                         @click="selectLocation(loc)"
+                         class="group flex justify-between items-center px-2 py-2 rounded-lg border border-transparent hover:border-violet-500/20 hover:bg-violet-500/5 transition-all cursor-pointer">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-tight"
+                                  :class="[
+                                      loc.location_id === form.from_location?.id ? 'text-violet-400' : 
+                                      loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-zinc-400 group-hover:text-zinc-200'
+                                  ]">
+                                {{ loc.location_name }}
+                            </span>
+                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-if="loc.location_id === form.from_location?.id">Current Source</span>
+                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-else-if="loc.location_id === form.to_location?.id">Current Target</span>
+                        </div>
+                        <span class="font-mono text-[10px] font-bold text-zinc-500 group-hover:text-white">
+                            {{ getScaledQty(selectedLineForStock, loc.quantity_on_hand) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-zinc-900">
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase italic leading-tight">
+                        <i class="pi pi-info-circle text-[7px] mr-1"></i>
+                        Click a location to set as Source or Target warehouse.
+                    </p>
+                </div>
+            </div>
+        </Popover>
     </AppLayout>
 </template>
 
@@ -284,6 +335,7 @@ import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import Popover from 'primevue/popover';
 
 const toast = useToast();
 const { props } = usePage();
@@ -293,6 +345,8 @@ const products = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingData = ref(false);
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
 
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
@@ -300,21 +354,20 @@ const isUomIdDiscrete = (id) => {
 };
 
 const getFactorToBase = (uomId, productId = null) => {
-    if (!uomId) return { factor: 1, baseId: null };
     let factor = 1.0;
-    let current = Number(uomId);
+    let current = uomId;
     let processed = [current];
     while (true) {
         let rule = null;
         if (productId) {
-            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === productId);
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === productId);
         }
         if (!rule) {
-            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === null);
+            rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
         }
-        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
+        if (!rule || processed.includes(rule.to_uom_id)) break;
         factor *= Number(rule.conversion_factor);
-        current = Number(rule.to_uom_id);
+        current = rule.to_uom_id;
         processed.push(current);
     }
     return { factor, baseId: current };
@@ -333,10 +386,43 @@ const getAvailableUoms = (productId) => {
         if (u.is_base) return true;
         if (u.category !== 'count') return true;
         return uomConversions.value.some(c => 
-            Number(c.from_uom_id) === u.id && 
+            c.from_uom_id === u.id && 
             (c.product_id === null || c.product_id === product.id)
         );
     });
+};
+
+const toggleStockInfo = async (event, line) => {
+    if (!line.product) return;
+    
+    if (!line.inventories || line.inventories.length === 0) {
+        await fetchProductInventory(line);
+    }
+    
+    selectedLineForStock.value = line;
+    stockOp.value.toggle(event);
+};
+
+const selectLocation = (loc) => {
+    // If from_location is same as clicked, do nothing
+    if (form.from_location?.id === loc.location_id) return;
+
+    // Smart Routing:
+    // 1. If to_location is same as clicked, clear it and set as from
+    if (form.to_location?.id === loc.location_id) {
+        form.to_location = null;
+    }
+    
+    // 2. Set as from_location if it's empty or we want to change it
+    if (!form.from_location || form.from_location.id !== loc.location_id) {
+        form.from_location = { id: loc.location_id, name: loc.location_name };
+        toast.add({ severity: 'info', summary: 'Source Selected', detail: `Moving items FROM ${loc.location_name}`, life: 2000 });
+        return;
+    }
+
+    // 3. Otherwise set as to_location
+    form.to_location = { id: loc.location_id, name: loc.location_name };
+    toast.add({ severity: 'info', summary: 'Target Selected', detail: `Moving items TO ${loc.location_name}`, life: 2000 });
 };
 
 const loadData = async () => {
@@ -373,10 +459,6 @@ const loadData = async () => {
     }
 };
 
-onMounted(() => {
-    loadData();
-});
-
 const form = useForm({
     from_location: null,
     to_location: null,
@@ -397,17 +479,35 @@ const fetchProductInventory = async (line) => {
     }
 };
 
+const getConversionDetails = (uomId, productId) => {
+    if (!productId || !uomId) return null;
+    const baseAuth = getFactorToBase(uomId, productId);
+    if (baseAuth.factor === 1) return null;
+
+    const directRule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(uomId) && c.product_id === productId);
+    const baseUom = uoms.value.find(u => u.id === baseAuth.baseId);
+    const baseAbbr = baseUom ? baseUom.abbreviation : '';
+
+    return {
+        text: `= ${baseAuth.factor} ${baseAbbr}`,
+        isCustom: !!directRule
+    };
+};
+
 const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
-    const factor = getFactorToBase(line.uom_id, line.product?.id).factor;
-    const scaled = (parseFloat(rawPieces) / factor);
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const { factor } = getFactorToBase(line.uom_id, line.product?.id);
+    const scaled = (Number(rawPieces) / factor);
+    
+    return isUomIdDiscrete(line.uom_id) 
+        ? Math.floor(scaled + 0.0001).toLocaleString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {
     if (!line.inventories || !form.from_location) return 0;
     const inv = line.inventories.find(i => i.location_id === form.from_location.id);
-    return inv ? inv.quantity_on_hand : 0;
+    return Number(inv?.quantity_on_hand) || 0;
 };
 
 const getUomAbbr = (id) => {
@@ -417,16 +517,20 @@ const getUomAbbr = (id) => {
 
 const isInsufficient = (line) => {
     if (!line.product || !form.from_location) return false;
-    let qtyInBase = parseFloat(line.quantity) || 0;
+    let qtyInBase = Number(line.quantity) || 0;
     const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
     const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
     if (targetInfo.baseId === productBaseInfo.baseId) {
         const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-        qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+        qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
     }
     
     return qtyInBase > getLocalStock(line);
+};
+
+const onUomChange = (line) => {
+    // Optional scaling logic if needed
 };
 
 const submitForm = async () => {
@@ -441,14 +545,14 @@ const submitForm = async () => {
     for (const line of form.lines) {
         if (!line.product) continue;
 
-        let qtyInBase = parseFloat(line.quantity) || 0;
+        let qtyInBase = Number(line.quantity) || 0;
         
         const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
         const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+            qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
         } else {
             toast.add({ severity: 'error', summary: 'UOM Error', detail: `No conversion path from ${line.uom_id} to product base.`, life: 5000 });
             isSubmitting.value = false;
@@ -478,8 +582,8 @@ const submitForm = async () => {
             lines: form.lines.map(line => ({
                 product_id: line.product?.id,
                 uom_id: line.uom_id,
-                quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.product?.average_cost || 0)
+                quantity: Number(line.quantity),
+                unit_cost: Number(line.product?.average_cost || 0)
             }))
         };
         
@@ -509,5 +613,9 @@ const removeLine = (index) => {
     form.lines.splice(index, 1);
 };
 
-const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (Number(l.quantity) || 0), 0));
+
+onMounted(() => {
+    loadData();
+});
 </script>

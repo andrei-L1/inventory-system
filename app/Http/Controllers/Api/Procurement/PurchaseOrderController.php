@@ -91,15 +91,18 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $qty = (string) $lineData['ordered_qty'];
+                $cost = (string) $lineData['unit_cost'];
+
+                $lineCost = FinancialMath::poLineCost($qty, $cost);
                 $lineTotals[] = $lineCost;
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
                 ]);
             }
 
@@ -108,7 +111,7 @@ class PurchaseOrderController extends Controller
             return $po;
         });
 
-        return (new PurchaseOrderResource($po->load('lines.product.uom')))->response()->setStatusCode(201);
+        return (new PurchaseOrderResource($po->refresh()->load('lines.product.uom')))->response()->setStatusCode(201);
     }
 
     public function update(PurchaseOrderUpdateRequest $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
@@ -145,15 +148,18 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $lineCost = FinancialMath::poLineCost($lineData['ordered_qty'], $lineData['unit_cost']);
+                $qty = (string) $lineData['ordered_qty'];
+                $cost = (string) $lineData['unit_cost'];
+
+                $lineCost = FinancialMath::poLineCost($qty, $cost);
                 $lineTotals[] = $lineCost;
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
                     'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($lineData['ordered_qty'], FinancialMath::LINE_SCALE),
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($lineData['unit_cost'], FinancialMath::LINE_SCALE),
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
                 ]);
             }
 
@@ -162,7 +168,7 @@ class PurchaseOrderController extends Controller
             return $purchaseOrder;
         });
 
-        return new PurchaseOrderResource($po->load('lines.product.uom'));
+        return new PurchaseOrderResource($po->refresh()->load('lines.product.uom'));
     }
 
     public function destroy(PurchaseOrder $purchaseOrder): JsonResponse
@@ -312,7 +318,7 @@ class PurchaseOrderController extends Controller
                         'transaction_type_id' => $receiptType->id,
                         'transaction_status_id' => $postedStatus->id,
                         'transaction_date' => now()->toDateString(),
-                        'reference_number' => 'GRN-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
+                        'reference_number' => 'GRN-'.now()->format('YmdHis').'-'.mt_rand(1000, 9999),
                         'vendor_id' => $purchaseOrder->vendor_id,
                         'purchase_order_id' => $purchaseOrder->id,
                         'reference_doc' => $purchaseOrder->po_number,
@@ -352,7 +358,8 @@ class PurchaseOrderController extends Controller
                         $truncated = bcadd($receivedQtyRaw, '0', 0);
                         $fractional = FinancialMath::sub($receivedQtyRaw, $truncated);
                         if (! FinancialMath::isZero($fractional)) {
-                            abort(422, "Discrete units ({$receivedUom->abbreviation}) must be received in whole numbers. Fractional inputs are not allowed for this unit type.");
+                            $formattedQty = UomHelper::format($receivedQtyRaw, (int) $receivedUomId, $poLine->product_id);
+                            abort(422, "Inventory Integrity Error: Units of type '{$receivedUom->abbreviation}' are discrete and cannot be split into fractions (Attempted: {$formattedQty}). Please enter a whole number.");
                         }
                         $receivedQtyRaw = $truncated;
                     }
@@ -378,14 +385,25 @@ class PurchaseOrderController extends Controller
                     $newReceived = FinancialMath::add((string) $poLine->received_qty, $qtyToUpdatePO);
                     if (FinancialMath::gt($newReceived, (string) $poLine->ordered_qty)) {
                         $remaining = FinancialMath::sub((string) $poLine->ordered_qty, (string) $poLine->received_qty);
-                        abort(422, "Cannot receive {$receivedQty} units (equiv. to {$qtyToUpdatePO} in PO unit) for SKU {$poLine->product->sku}. Only {$remaining} remains on this order line.");
+                        $formattedReceived = UomHelper::format($receivedQty, (int) $receivedUomId, $poLine->product_id);
+                        $formattedMax = UomHelper::format($remaining, (int) $lineUomId, $poLine->product_id);
+
+                        abort(422, "Cannot process receipt: The entered quantity ({$formattedReceived}) is greater than the pending quantity ({$formattedMax}) remaining on this line for SKU {$poLine->product->sku}.");
+                    }
+
+                    $unitCost = $poLine->unit_cost;
+                    if ((int) $receivedUomId !== (int) $lineUomId) {
+                        // Factor ($receivedUom to $lineUom) was calculated at line 373.
+                        // Cost per $receivedUom = Cost per $lineUom * Factor.
+                        // e.g. Box cost P100 * (1 Piece = 0.25 Box) = P25 Piece cost.
+                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
                         'quantity' => $receivedQty,
-                        'unit_cost' => (string) $poLine->unit_cost,
+                        'unit_cost' => (string) $unitCost,
                         'uom_id' => $receivedUomId,
                     ];
 
@@ -454,7 +472,7 @@ class PurchaseOrderController extends Controller
                         'transaction_type_id' => $pretType->id,
                         'transaction_status_id' => $postedStatus->id,
                         'transaction_date' => now()->toDateString(),
-                        'reference_number' => 'RTV-'.$purchaseOrder->po_number.'-'.substr(uniqid(), -4),
+                        'reference_number' => 'RTV-'.now()->format('YmdHis').'-'.mt_rand(1000, 9999),
                         'vendor_id' => $purchaseOrder->vendor_id,
                         'purchase_order_id' => $purchaseOrder->id,
                         'reference_doc' => $purchaseOrder->po_number,
@@ -496,7 +514,17 @@ class PurchaseOrderController extends Controller
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
                             $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string) $poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
                         }
-                        abort(422, "Return quantity ({$returnQtyRaw} units) exceeds available received stock for SKU {$poLine->product->sku}. Max returnable: {$receivedInReturnUnit} units.");
+
+                        $formattedReturn = UomHelper::format($returnQtyRaw, (int) $returnUomId, $poLine->product_id);
+                        $formattedMax = UomHelper::format($receivedInReturnUnit, (int) $returnUomId, $poLine->product_id);
+
+                        abort(422, "Cannot process return: The entered quantity ({$formattedReturn}) is greater than the quantity currently received ({$formattedMax}) for SKU {$poLine->product->sku}.");
+                    }
+
+                    $unitCost = $poLine->unit_cost;
+                    if ((int) $returnUomId !== (int) $lineUomId) {
+                        // Factor ($returnUomId to $lineUomId) was calculated at line 488.
+                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     // Negative quantity → issue path (consumes layers and reduces QOH).
@@ -504,7 +532,7 @@ class PurchaseOrderController extends Controller
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
                         'quantity' => -abs($returnQtyRaw),
-                        'unit_cost' => $poLine->unit_cost,
+                        'unit_cost' => (string) $unitCost,
                         'uom_id' => $returnUomId,
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];

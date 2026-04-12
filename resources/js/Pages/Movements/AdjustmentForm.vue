@@ -31,7 +31,7 @@
                     </div>
                     <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">SUM_ADJUSTMENT</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toFixed(2) }}</div>
+                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
                     </div>
                     <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-amber-500 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-amber-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">ACTIVE WAREHOUSE</span>
@@ -55,6 +55,7 @@
                                       v-model="form.location" 
                                       :options="locations" 
                                       optionLabel="name" 
+                                      dataKey="id"
                                       placeholder="Warehouse..." 
                                       class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
                                  />
@@ -91,11 +92,12 @@
                         </div>
 
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                            <div class="flex flex-col gap-4">
-                                <div v-for="(line, index) in form.lines" :key="index" class="p-6 bg-zinc-950/40 border border-zinc-800/80 rounded-2xl flex flex-col gap-5 relative group transition-all hover:border-zinc-700/50 hover:shadow-2xl hover:bg-zinc-950/60">
-                                    <div class="grid grid-cols-12 gap-5 items-end">
-                                        <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product</label>
+                            <div class="flex flex-col gap-3">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-900/20 border border-zinc-800/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-amber-500/20 hover:bg-zinc-900/40">
+                                    <div class="grid grid-cols-12 gap-4 items-center">
+                                        <!-- Product Selection (Col 5) -->
+                                        <div class="col-span-12 lg:col-span-5 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Product</span>
                                             <Select 
                                                 v-model="line.product" 
                                                 :options="products" 
@@ -103,87 +105,129 @@
                                                 placeholder="Search products..." 
                                                 filter 
                                                 @change="onProductSelect(line)"
-                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-amber-500/50"
+                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-amber-500/30"
                                             />
                                         </div>
 
-                                        <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit</label>
+                                        <!-- Unit Selection (Col 2) -->
+                                        <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Unit</span>
                                             <Select 
                                                 v-model="line.uom_id" 
                                                 :options="getAvailableUoms(line.product?.id)" 
                                                 optionLabel="abbreviation" 
-                                                optionValue="id"
-                                                placeholder="UOM" 
-                                                class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-amber-500/50"
-                                            />
+                                                optionValue="id" 
+                                                placeholder="Unit" 
+                                                dataKey="id"
+                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-[11px] !font-black !flex !items-center focus-within:!border-sky-500/30"
+                                            >
+                                                <template #value="slotProps">
+                                                    <div v-if="slotProps.value" class="flex items-center gap-2">
+                                                        <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
+                                                        <span 
+                                                            v-if="getConversionDetails(slotProps.value, line.product?.id)" 
+                                                            class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                        >
+                                                            {{ getConversionDetails(slotProps.value, line.product?.id).text }}
+                                                        </span>
+                                                    </div>
+                                                    <span v-else>{{ slotProps.placeholder }}</span>
+                                                </template>
+                                                <template #option="slotProps">
+                                                    <div class="flex flex-col">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="font-bold text-[11px] uppercase">{{ slotProps.option.abbreviation }}</span>
+                                                            <span 
+                                                                v-if="getConversionDetails(slotProps.option.id, line.product?.id)?.isCustom" 
+                                                                class="px-1.5 py-[1px] bg-rose-500/20 text-rose-400 text-[8px] font-mono rounded tracking-widest border border-rose-500/30 uppercase"
+                                                            >
+                                                                Custom
+                                                            </span>
+                                                        </div>
+                                                        <span 
+                                                            v-if="getConversionDetails(slotProps.option.id, line.product?.id)" 
+                                                            class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                        >
+                                                            {{ getConversionDetails(slotProps.option.id, line.product?.id).text }}
+                                                        </span>
+                                                    </div>
+                                                </template>
+                                            </Select>
                                         </div>
 
-                                        <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                            <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Adj Qty (+/-)</label>
-                                            <InputNumber 
-                                                v-model="line.quantity" 
-                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
-                                                :inputClass="'w-full bg-zinc-950 border text-center font-bold p-2 rounded-lg outline-none ' + (isInsufficient(line) ? 'border-red-500/60 focus:border-red-500 text-rose-500' : 'border-zinc-800 focus:border-amber-500/50 ' + (line.quantity < 0 ? 'text-red-400' : 'text-emerald-400'))"
-                                            />
+                                        <!-- Quantity Input (Col 4 - Unified Bar) -->
+                                        <div class="col-span-6 lg:col-span-4 flex flex-col gap-1">
+                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Adjustment Quantity (+/-)</span>
+                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-amber-500/50 transition-all overflow-hidden h-10 group/input"
+                                                 :class="{'border-red-500/30 bg-red-500/5': isInsufficient(line)}">
+                                                <InputNumber 
+                                                    v-model="line.quantity" 
+                                                    class="w-full h-full"
+                                                    :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8" 
+                                                    :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: Number(line.quantity) < 0 ? '#f87171' : '#34d399', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                                    placeholder="0"
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div class="col-span-12 md:col-span-1 flex items-center justify-end">
+                                        <!-- Actions (Col 1) -->
+                                        <div class="col-span-12 lg:col-span-1 flex items-end justify-center h-10 mt-5 lg:mt-0">
                                             <button 
                                                 @click="removeLine(index)" 
-                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-500/40 hover:text-red-400 hover:bg-red-500/20 transition-all border border-red-500/0 hover:border-red-500/20"
-                                                title="Remove Line"
+                                                class="w-10 h-10 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/20 hover:text-red-400 hover:bg-red-500/10 transition-all border border-red-500/0 hover:border-red-500/10"
                                             >
-                                                <i class="pi pi-trash text-xs" />
+                                                <i class="pi pi-trash text-[10px]" />
                                             </button>
                                         </div>
                                     </div>
 
-                                    <!-- Always-visible location breakdown -->
-                                    <div v-if="line.product" class="rounded-xl border border-zinc-800 bg-zinc-900/20 overflow-hidden">
-                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/40 border-b border-zinc-800">
-                                            <span class="text-[9px] font-bold text-amber-400 uppercase tracking-[0.2em] font-mono">Location Availability</span>
-                                            <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono whitespace-nowrap ml-4">Qty on Hand</span>
-                                        </div>
-                                        <div v-if="line.inventories && line.inventories.length" class="divide-y divide-zinc-800/40 max-h-48 overflow-y-auto custom-scrollbar">
+                                    <!-- Context Indicator Bar -->
+                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-zinc-800/40 pt-3 mt-1">
+                                        <div class="flex items-center gap-6">
+                                            <!-- Availability Stat (CLICKABLE) -->
                                             <div 
-                                                v-for="inv in line.inventories" 
-                                                :key="inv.id" 
-                                                class="flex items-center justify-between px-4 py-2 transition-colors"
-                                                :class="inv.location_id === form.location?.id ? 'bg-amber-500/10' : 'hover:bg-white/[0.01]'"
+                                                @click="(e) => toggleStockInfo(e, line)"
+                                                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-amber-500/50 transition-all group/stat"
                                             >
-                                                <div class="flex items-center gap-3">
-                                                    <div class="w-1 h-1 rounded-full" :class="inv.location_id === form.location?.id ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-zinc-700'"></div>
-                                                    <span 
-                                                        class="text-[11px] font-bold uppercase tracking-wide font-mono"
-                                                        :class="inv.location_id === form.location?.id ? 'text-amber-300' : 'text-zinc-500'"
-                                                    >{{ inv.location_name }}</span>
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-amber-500 line-clamp-1">Local Stock</span>
+                                                    <span class="text-[10px] font-black font-mono text-zinc-200">
+                                                        {{ getScaledQty(line, getLocalStock(line)) }}
+                                                    </span>
                                                 </div>
-                                                <div class="flex flex-col items-end">
-                                                    <span 
-                                                        class="text-[11px] font-black font-mono"
-                                                        :class="inv.location_id === form.location?.id ? 'text-amber-400' : 'text-zinc-500'"
-                                                    >{{ getScaledQty(line, inv.quantity_on_hand) }}</span>
-                                                    <!-- Show effect on specific location -->
-                                                    <div v-if="inv.location_id === form.location?.id && line.quantity !== 0" class="text-[9px] font-bold font-mono" :class="line.quantity < 0 ? 'text-red-500' : 'text-emerald-500'">
-                                                        {{ line.quantity > 0 ? '→ ' : '→ ' }}{{ (parseFloat(getScaledQty(line, inv.quantity_on_hand)) + (parseFloat(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
-                                                    </div>
+                                                <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                                <div class="flex flex-col text-left">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-amber-500 line-clamp-1">Global Pool</span>
+                                                    <span class="text-[10px] font-black text-zinc-400 font-mono">
+                                                        {{ getScaledQty(line, line.product?.total_qoh) }}
+                                                    </span>
+                                                </div>
+                                                <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover/stat:text-amber-500"></i>
+                                            </div>
+
+                                            <!-- Financial Context -->
+                                            <div class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+                                                <div class="flex flex-col">
+                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono">EST_COST (AVG)</span>
+                                                    <span class="text-[10px] font-black font-mono text-zinc-300">₱{{ getScaledCost(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Impact Result -->
+                                            <div v-if="Number(line.quantity) !== 0 && form.location" class="flex-1 flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
+                                                <i class="pi pi-sync text-[10px] text-zinc-700"></i>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">New Local Balance:</span>
+                                                    <span class="text-[11px] font-mono font-black" :class="isInsufficient(line) ? 'text-red-500 animate-pulse' : 'text-zinc-300'">
+                                                        {{ (Number(getScaledQty(line, getLocalStock(line)).replace(/,/g, '')) + (Number(line.quantity) || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}
+                                                    </span>
+                                                </div>
+                                                <div v-if="isInsufficient(line)" class="ml-auto text-[8px] font-black text-red-500/60 uppercase tracking-widest">
+                                                    <i class="pi pi-exclamation-triangle mr-1"></i>
+                                                    Insufficient stock
                                                 </div>
                                             </div>
                                         </div>
-                                        <div v-else class="px-4 py-4 text-center text-[10px] text-zinc-600 italic font-mono bg-zinc-950/10">
-                                            No stock records found for this product
-                                        </div>
-                                        <div class="flex items-center justify-between px-4 py-2 bg-zinc-900/60 border-t border-zinc-800">
-                                            <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.15em] font-mono italic">Total Global Stock</span>
-                                            <span class="text-[10px] font-black text-white font-mono px-2 py-0.5 bg-zinc-800 rounded border border-zinc-700/50 shadow-inner">
-                                                {{ getScaledQty(line, line.product?.total_qoh) }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div v-if="isInsufficient(line)" class="text-[8px] text-rose-500 font-bold uppercase animate-pulse absolute top-4 right-16">
-                                        Adjustment exceeds local stock!
                                     </div>
                                 </div>
                             </div>
@@ -197,6 +241,41 @@
                 </div>
             </div>
         </div>
+
+        <!-- Location Breakdown Popover -->
+        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+                <div class="text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
+                    <span>Stock Availability</span>
+                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation }}</span>
+                </div>
+                
+                <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
+                    <div v-for="loc in selectedLineForStock.inventories" 
+                         :key="loc.location_id" 
+                         @click="selectLocation(loc)"
+                         class="group flex justify-between items-center px-2 py-2 rounded-lg border border-transparent hover:border-amber-500/20 hover:bg-amber-500/5 transition-all cursor-pointer">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-tight"
+                                  :class="[loc.location_id === form.location?.id ? 'text-amber-400' : 'text-zinc-400 group-hover:text-zinc-200']">
+                                {{ loc.location_name }}
+                            </span>
+                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-if="loc.location_id === form.location?.id">Active Warehouse</span>
+                        </div>
+                        <span class="font-mono text-[10px] font-bold text-zinc-500 group-hover:text-white">
+                            {{ getScaledQty(selectedLineForStock, loc.quantity_on_hand) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-zinc-900">
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase italic leading-tight text-center">
+                        <i class="pi pi-info-circle text-[7px] mr-1"></i>
+                        Click a location to switch active warehouse
+                    </p>
+                </div>
+            </div>
+        </Popover>
     </AppLayout>
 </template>
 
@@ -206,10 +285,10 @@ import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
 import InputNumber from 'primevue/inputnumber';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import Popover from 'primevue/popover';
 
 const toast = useToast();
 const { props } = usePage();
@@ -219,6 +298,8 @@ const products = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const loadingData = ref(false);
+const stockOp = ref(null);
+const selectedLineForStock = ref(null);
 
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
@@ -238,11 +319,32 @@ const getFactorToBase = (uomId, productId = null) => {
             rule = uomConversions.value.find(c => c.from_uom_id === current && c.product_id === null);
         }
         if (!rule || processed.includes(rule.to_uom_id)) break;
-        factor *= rule.conversion_factor;
+        factor *= Number(rule.conversion_factor);
         current = rule.to_uom_id;
         processed.push(current);
     }
     return { factor, baseId: current };
+};
+
+const getConversionDetails = (uomId, productId) => {
+    if (!productId || !uomId) return null;
+    const baseAuth = getFactorToBase(uomId, productId);
+    if (baseAuth.factor === 1) return null;
+
+    const directRule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(uomId) && c.product_id === productId);
+    const baseUom = uoms.value.find(u => u.id === baseAuth.baseId);
+    const baseAbbr = baseUom ? baseUom.abbreviation : '';
+
+    return {
+        text: `= ${baseAuth.factor} ${baseAbbr}`,
+        isCustom: !!directRule
+    };
+};
+
+const getScaledCost = (line) => {
+    if (!line.product) return 0;
+    const { factor } = getFactorToBase(line.uom_id, line.product.id);
+    return (Number(line.product.average_cost) || 0) * factor;
 };
 
 const getAvailableUoms = (productId) => {
@@ -262,6 +364,22 @@ const getAvailableUoms = (productId) => {
             (c.product_id === null || c.product_id === product.id)
         );
     });
+};
+
+const toggleStockInfo = async (event, line) => {
+    if (!line.product) return;
+    
+    if (!line.inventories || line.inventories.length === 0) {
+        await fetchProductInventory(line);
+    }
+    
+    selectedLineForStock.value = line;
+    stockOp.value.toggle(event);
+};
+
+const selectLocation = (loc) => {
+    form.location = { id: loc.location_id, name: loc.location_name };
+    toast.add({ severity: 'info', summary: 'Warehouse Switched', detail: `Active warehouse set to ${loc.location_name}`, life: 2000 });
 };
 
 const loadData = async () => {
@@ -298,10 +416,6 @@ const loadData = async () => {
     }
 };
 
-onMounted(() => {
-    loadData();
-});
-
 const reasons = ref([
     { label: 'Physical Count Difference', id: 1 },
     { label: 'Damaged Items', id: 2 },
@@ -325,14 +439,14 @@ const postAdjustment = async () => {
     for (const line of form.lines) {
         if (!line.product) continue;
         
-        let adjustmentQtyInBase = parseFloat(line.quantity) || 0;
+        let adjustmentQtyInBase = Number(line.quantity) || 0;
         
         const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
         const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
         if (targetInfo.baseId === productBaseInfo.baseId) {
             const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-            adjustmentQtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+            adjustmentQtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
         } else {
             toast.add({ severity: 'error', summary: 'UOM Error', detail: `No conversion path from ${line.uom_id} to product base.`, life: 5000 });
             isSubmitting.value = false;
@@ -363,8 +477,8 @@ const postAdjustment = async () => {
                 product_id: line.product?.id,
                 location_id: form.location?.id,
                 uom_id: line.uom_id,
-                quantity: parseFloat(line.quantity),
-                unit_cost: parseFloat(line.product?.average_cost || 0)
+                quantity: Number(line.quantity),
+                unit_cost: Number(line.product?.average_cost || 0)
             }))
         };
         
@@ -396,36 +510,40 @@ const fetchProductInventory = async (line) => {
     }
 };
 
+const totalQty = computed(() => form.lines.reduce((s, l) => s + (Number(l.quantity) || 0), 0));
+
 const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
-    const factor = getFactorToBase(line.uom_id, line.product?.id).factor;
-    const scaled = (parseFloat(rawPieces) / factor);
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const { factor } = getFactorToBase(line.uom_id, line.product?.id);
+    const scaled = (Number(rawPieces) / factor);
+    
+    return isUomIdDiscrete(line.uom_id) 
+        ? Math.floor(scaled + 0.0001).toLocaleString() 
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
 };
 
 const getLocalStock = (line) => {
     if (!line.inventories || !form.location) return 0;
     const inv = line.inventories.find(i => i.location_id === form.location.id);
-    return inv ? inv.quantity_on_hand : 0;
-};
-
-const getUomAbbr = (id) => {
-    const uom = uoms.value.find(u => u.id === id);
-    return uom ? uom.abbreviation : '';
+    return Number(inv?.quantity_on_hand) || 0;
 };
 
 const isInsufficient = (line) => {
     if (!line.product || !form.location) return false;
-    let qtyInBase = parseFloat(line.quantity) || 0;
+    let qtyInBase = Number(line.quantity) || 0;
     const targetInfo = getFactorToBase(line.uom_id, line.product?.id);
     const productBaseInfo = getFactorToBase(line.product.uom_id, line.product?.id);
 
     if (targetInfo.baseId === productBaseInfo.baseId) {
         const effectiveFactor = targetInfo.factor / productBaseInfo.factor;
-        qtyInBase = (parseFloat(line.quantity) || 0) * effectiveFactor;
+        qtyInBase = (Number(line.quantity) || 0) * effectiveFactor;
     }
     
-    return qtyInBase < 0 && Math.abs(qtyInBase) > getLocalStock(line);
+    // Only check insufficiency for deductions (negative adjustment)
+    if (qtyInBase < 0) {
+        return Math.abs(qtyInBase) > getLocalStock(line);
+    }
+    return false;
 };
 
 const addLine = () => {
@@ -436,5 +554,7 @@ const removeLine = (index) => {
     form.lines.splice(index, 1);
 };
 
-const totalQty = computed(() => form.lines.reduce((s, l) => s + (parseFloat(l.quantity) || 0), 0));
+onMounted(() => {
+    loadData();
+});
 </script>

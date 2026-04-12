@@ -21,7 +21,7 @@ class UomHelper
         if ($quantity === null) {
             return '0';
         }
-        $quantity = (float) $quantity;
+        $quantity = (string) $quantity;
 
         self::ensureCacheLoaded();
         $uom = self::getUom($uomId);
@@ -31,25 +31,27 @@ class UomHelper
 
         // Mass / Volume auto-scaling (e.g. 1500g -> 1.5 kg)
         if ($uom->category !== 'count') {
-            if ($uom->is_base && abs($quantity) > 0) {
+            $absQty = str_starts_with($quantity, '-') ? substr($quantity, 1) : $quantity;
+            if ($uom->is_base && ! FinancialMath::isZero($absQty)) {
                 $scaledUom = null;
-                $bestFactor = 1.0;
+                $bestFactor = '1';
                 foreach (self::$uoms as $candidate) {
                     if ($candidate->category === $uom->category && ! $candidate->is_base && $candidate->conversion_factor_to_base) {
-                        if (abs($quantity) >= $candidate->conversion_factor_to_base && $candidate->conversion_factor_to_base > $bestFactor) {
+                        $factorStr = (string) $candidate->conversion_factor_to_base;
+                        if (FinancialMath::gte($absQty, $factorStr) && FinancialMath::gt($factorStr, $bestFactor)) {
                             $scaledUom = $candidate;
-                            $bestFactor = $candidate->conversion_factor_to_base;
+                            $bestFactor = $factorStr;
                         }
                     }
                 }
                 if ($scaledUom) {
-                    $scaledQty = $quantity / $bestFactor;
+                    $scaledQty = FinancialMath::div($quantity, $bestFactor);
 
-                    return round($scaledQty, $scaledUom->decimals).' '.$scaledUom->abbreviation;
+                    return FinancialMath::round($scaledQty, $scaledUom->decimals).' '.$scaledUom->abbreviation;
                 }
             }
 
-            return round($quantity, $uom->decimals).' '.$uom->abbreviation;
+            return FinancialMath::round($quantity, $uom->decimals).' '.$uom->abbreviation;
         }
 
         // Discrete units (BOX, PCS) use recursive breakdown if fractional
@@ -59,21 +61,21 @@ class UomHelper
     /**
      * Handle recursive dual-UOM breakdown for discrete units.
      */
-    private static function formatDiscrete(float $quantity, int $uomId, ?int $productId = null, bool $throw = false): string
+    private static function formatDiscrete(string $quantity, int $uomId, ?int $productId = null, bool $throw = false): string
     {
         $uom = self::getUom($uomId);
-        $absQty = abs($quantity);
-        $isNegative = $quantity < -0.00000001; // display only — float ok here
+        $absQty = str_starts_with($quantity, '-') ? substr($quantity, 1) : $quantity;
+        $isNegative = str_starts_with($quantity, '-');
 
-        // Base case: whole number check (display only — float epsilon ok here)
-        if (abs($absQty - round($absQty)) < 0.00000001) {
-            $res = round($absQty).' '.$uom->abbreviation;
+        // Base case: whole number check
+        if (FinancialMath::isZero(FinancialMath::sub($absQty, FinancialMath::round($absQty, 0)))) {
+            $res = FinancialMath::round($absQty, 0).' '.$uom->abbreviation;
 
             // Expand to base unit if this is a packaging unit
             if (! $uom->is_base) {
                 $multiplier = self::getMultiplierToSmallest($uomId, $productId, $throw);
-                if ($multiplier > 1) {
-                    $totalSmallest = round($absQty * $multiplier);
+                if (FinancialMath::gt($multiplier, '1')) {
+                    $totalSmallest = FinancialMath::round(FinancialMath::mul($absQty, $multiplier), 0);
                     $smallestUom = self::getUom(self::getSmallestUnitId($uomId));
                     $res .= ' ['.$totalSmallest.' '.($smallestUom->abbreviation ?? 'pcs').']';
                 }
@@ -94,18 +96,19 @@ class UomHelper
 
         if (! $conversion) {
             // No conversion rule found, show original decimal bounded by defined precision
-            $res = round($absQty, $uom->decimals).' '.$uom->abbreviation;
+            $res = FinancialMath::round($absQty, $uom->decimals).' '.$uom->abbreviation;
 
             return $isNegative ? '-'.$res : $res;
         }
 
-        $multiplier = $conversion->conversion_factor;
-        $wholeUnits = floor($absQty + 0.00000001); // display only — float epsilon ok here
-        $remainder = $absQty - $wholeUnits;
-        $smallerQty = $remainder * $multiplier;
+        $multiplier = (string) $conversion->conversion_factor;
+        // Float equivalent decomposition
+        $wholeUnits = FinancialMath::round(FinancialMath::sub($absQty, '0.50000000'), 0);
+        $remainder = FinancialMath::sub($absQty, $wholeUnits);
+        $smallerQty = FinancialMath::mul($remainder, $multiplier);
 
         $parts = [];
-        if ($wholeUnits > 0) {
+        if (FinancialMath::gt($wholeUnits, '0')) {
             $parts[] = $wholeUnits.' '.$uom->abbreviation;
         }
 

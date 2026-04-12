@@ -131,6 +131,31 @@ class FinancialMath
     }
 
     /**
+     * String-safe equivalent for number_format to avoid precision-loss from float casting.
+     * Rounds to the given scale, adds comma separators to the integer portion.
+     */
+    public static function format(mixed $value, int $decimals = self::HEADER_SCALE): string
+    {
+        $rounded = self::round($value, $decimals);
+        $parts = explode('.', $rounded);
+
+        $intPart = $parts[0];
+        $decPart = $parts[1] ?? str_repeat('0', $decimals);
+
+        // Add thousands separator without casting to float
+        $intPartFormatted = preg_replace('/(?<=\d)(?=(\d{3})+(?!\d))/', ',', $intPart);
+
+        if ($decimals === 0) {
+            return $intPartFormatted;
+        }
+
+        // Ensure decimal part is padded to required scale if missing zeros
+        $decPart = str_pad(substr($decPart, 0, $decimals), $decimals, '0', STR_PAD_RIGHT);
+
+        return $intPartFormatted.'.'.$decPart;
+    }
+
+    /**
      * Deterministic comparison: normalizes both sides to LINE_SCALE strings,
      * then compares at scale=0 (integer boundary).
      *
@@ -147,7 +172,7 @@ class FinancialMath
         $aNorm = bcadd(self::toDecimal($a), '0', self::LINE_SCALE);
         $bNorm = bcadd(self::toDecimal($b), '0', self::LINE_SCALE);
 
-        return bccomp($aNorm, $bNorm, 0);
+        return bccomp($aNorm, $bNorm, self::LINE_SCALE);
     }
 
     // ─── Semantic Comparators (replace ALL + 0.00000001 epsilon patterns) ─────
@@ -192,6 +217,16 @@ class FinancialMath
     public static function isNegative(mixed $a): bool
     {
         return self::cmp($a, '0') < 0;
+    }
+
+    public static function max(mixed $a, mixed $b): string
+    {
+        return self::gte($a, $b) ? self::toDecimal($a) : self::toDecimal($b);
+    }
+
+    public static function min(mixed $a, mixed $b): string
+    {
+        return self::lte($a, $b) ? self::toDecimal($a) : self::toDecimal($b);
     }
 
     // ─── Private Domain Intermediates ─────────────────────────────────────────

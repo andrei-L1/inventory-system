@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Inventory;
 
 use App\Exceptions\InsufficientStockException;
 use App\Exceptions\UomConversionException;
+use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\TransactionStoreRequest;
 use App\Http\Requests\Inventory\TransferStoreRequest;
@@ -47,6 +48,14 @@ class TransactionController extends Controller
 
             $validated['header'] = $header;
 
+            // Normalize numeric inputs to strings for FinancialMath compliance
+            $validated['lines'] = collect($validated['lines'])->map(function ($line) {
+                return array_merge($line, [
+                    'quantity' => (string) ($line['quantity'] ?? '0'),
+                    'unit_cost' => FinancialMath::round((string) ($line['unit_cost'] ?? '0'), FinancialMath::LINE_SCALE),
+                ]);
+            })->toArray();
+
             $transaction = $this->stockService->recordMovement($validated);
 
             return response()->json(
@@ -80,6 +89,14 @@ class TransactionController extends Controller
             $header['reference_number'] = 'TRF-'.now()->format('YmdHis').'-'.mt_rand(100, 999);
 
             $validated['header'] = $header;
+
+            // Normalize numeric inputs to strings for FinancialMath compliance
+            $validated['lines'] = collect($validated['lines'])->map(function ($line) {
+                return array_merge($line, [
+                    'quantity' => (string) ($line['quantity'] ?? '0'),
+                    'unit_cost' => FinancialMath::round((string) ($line['unit_cost'] ?? '0'), FinancialMath::LINE_SCALE),
+                ]);
+            })->toArray();
 
             $result = $this->stockService->recordTransfer($validated);
 

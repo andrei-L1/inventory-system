@@ -106,9 +106,9 @@ class ReorderRuleController extends Controller
             'product_name' => $rule->product?->name,
             'location_id' => $rule->location_id,
             'location_name' => $rule->location?->name ?? 'All Locations (Global)',
-            'min_stock' => (float) $rule->min_stock,
-            'max_stock' => $rule->max_stock ? (float) $rule->max_stock : null,
-            'reorder_qty' => (float) $rule->reorder_qty,
+            'min_stock' => (string) $rule->min_stock,
+            'max_stock' => $rule->max_stock ? (string) $rule->max_stock : null,
+            'reorder_qty' => (string) $rule->reorder_qty,
             'is_active' => (bool) $rule->is_active,
             'created_at' => $rule->created_at?->format('Y-m-d'),
         ];

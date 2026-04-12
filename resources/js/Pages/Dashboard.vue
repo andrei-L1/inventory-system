@@ -39,12 +39,12 @@ const loadDashboard = async () => {
 };
 
 const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val);
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(val));
 };
 
 const generatePath = (data) => {
     if (!data || data.length < 2) return '';
-    const points = data.map(d => d.value);
+    const points = data.map(d => Number(d.value));
     const min = Math.min(...points);
     const max = Math.max(...points);
     const range = max - min || 1;
@@ -278,7 +278,7 @@ onMounted(loadDashboard);
                                      </div>
                                 </div>
                                 <div class="w-full bg-zinc-800 rounded-full h-1 mt-1 overflow-hidden">
-                                     <div class="bg-red-500 h-full rounded-full" :style="{ width: Math.max(5, (item.quantity_on_hand / item.reorder_point) * 100) + '%' }"></div>
+                                     <div class="bg-red-500 h-full rounded-full" :style="{ width: Math.max(5, (Number(item.quantity_on_hand) / Number(item.reorder_point)) * 100) + '%' }"></div>
                                 </div>
                            </div>
                       </div>

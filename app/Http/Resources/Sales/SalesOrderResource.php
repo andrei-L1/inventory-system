@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Http\Resources\Inventory\TransactionResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,10 +30,14 @@ class SalesOrderResource extends JsonResource
             'order_date' => $this->order_date,
             'expected_shipping_date' => $this->expected_shipping_date,
             'shipped_at' => $this->shipped_at,
-            'total_amount' => (float) $this->total_amount,
-            'subtotal' => (float) ($this->lines->sum('subtotal') - $this->lines->sum('tax_amount')),
-            'total_tax' => (float) $this->lines->sum('tax_amount'),
-            'total_discount' => (float) $this->lines->sum('discount_amount'),
+            'total_amount' => (string) $this->total_amount,
+            'formatted_total_amount' => FinancialMath::format($this->total_amount, 2),
+            'subtotal' => (string) $this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, FinancialMath::sub((string) $line->subtotal, (string) $line->tax_amount)), '0'),
+            'formatted_subtotal' => FinancialMath::format($this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, FinancialMath::sub((string) $line->subtotal, (string) $line->tax_amount)), '0'), 2),
+            'total_tax' => (string) $this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, (string) $line->tax_amount), '0'),
+            'formatted_total_tax' => FinancialMath::format($this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, (string) $line->tax_amount), '0'), 2),
+            'total_discount' => (string) $this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, (string) $line->discount_amount), '0'),
+            'formatted_total_discount' => FinancialMath::format($this->lines->reduce(fn ($carry, $line) => FinancialMath::add($carry, (string) $line->discount_amount), '0'), 2),
             'currency' => $this->currency,
             'notes' => $this->notes,
             'carrier' => $this->carrier,
