@@ -285,4 +285,13 @@ class SalesOrder extends Model
         }
         return false;
     }
+
+    /**
+     * Bridge for Phase 6 (Logistics). 
+     * Determines if the order is fully fulfilled and ready for the shipping lane metrics.
+     */
+    public function getShippableStatusAttribute(): bool
+    {
+        return $this->status?->name === SalesOrderStatus::SHIPPED;
+    }
 }

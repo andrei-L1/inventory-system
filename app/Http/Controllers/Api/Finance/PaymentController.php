@@ -134,10 +134,11 @@ class PaymentController extends Controller
 
         $payment->load(['allocations', 'refunds']);
         $amountToRefund = (string) $request->input('amount');
+        $unallocated = $payment->unallocated_amount;
 
-        if (FinancialMath::gt($amountToRefund, (string) $payment->unallocated_amount)) {
+        if (FinancialMath::gt($amountToRefund, $unallocated)) {
             return response()->json([
-                'message' => "Cannot refund {$amountToRefund}. Only " . $payment->unallocated_amount . " unallocated credit remains on this payment."
+                'message' => "Cannot refund {$amountToRefund}. Only {$unallocated} unallocated credit remains on this payment."
             ], 422);
         }
 
