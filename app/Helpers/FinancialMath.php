@@ -68,6 +68,11 @@ class FinancialMath
      */
     public static function toDecimal(mixed $value): string
     {
+        // Treat null or empty string as "0" to prevent validation failures on non-set database columns.
+        if ($value === null || $value === '') {
+            return '0';
+        }
+
         self::assertNumeric($value);
 
         // int: cast directly to string — no float involved.

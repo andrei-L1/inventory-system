@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Finance\CustomerStatementController;
 use App\Http\Controllers\Api\Finance\InvoiceController;
 use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentController;
@@ -114,6 +115,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::apiResource('purchase-orders', PurchaseOrderController::class)->only(['index', 'show'])->middleware('permission:view-purchase-orders');
     Route::apiResource('purchase-orders', PurchaseOrderController::class)->except(['index', 'show'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:manage-purchase-orders');
+    Route::patch('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/send', [PurchaseOrderController::class, 'send'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/ship', [PurchaseOrderController::class, 'markAsShipped'])->middleware('permission:manage-purchase-orders');
     Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])->middleware('permission:manage-purchase-orders');
@@ -140,9 +142,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::apiResource('invoices', InvoiceController::class)->only(['index', 'show', 'destroy'])->middleware('permission:view-sales-orders');
     Route::post('sales-orders/{salesOrder}/invoice', [InvoiceController::class, 'storeFromSalesOrder'])->middleware('permission:manage-sales-orders');
     Route::patch('invoices/{invoice}/post', [InvoiceController::class, 'post'])->middleware('permission:manage-sales-orders');
+    Route::patch('invoices/{invoice}/void', [InvoiceController::class, 'void'])->middleware('permission:manage-sales-orders');
+    Route::get('customers/{customer}/statement', [CustomerStatementController::class, 'show'])->middleware('permission:view-sales-orders');
 
     Route::apiResource('payments', PaymentController::class)->only(['index', 'show', 'store', 'destroy'])->middleware('permission:view-sales-orders');
     Route::post('payments/{payment}/allocate', [PaymentController::class, 'allocate'])->middleware('permission:manage-sales-orders');
+    Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->middleware('permission:manage-sales-orders');
+    Route::delete('payments/{payment}/unallocate/{allocation}', [PaymentController::class, 'unallocate'])->middleware('permission:manage-sales-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

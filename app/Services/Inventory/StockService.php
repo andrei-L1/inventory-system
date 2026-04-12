@@ -438,18 +438,30 @@ class StockService
      */
     private function updateProductGlobalAverageCost(Product $product): void
     {
-        $stats = Inventory::where('product_id', $product->id)
+        $inventories = Inventory::where('product_id', $product->id)
             ->where('quantity_on_hand', '>', 0)
-            ->selectRaw('SUM(quantity_on_hand * average_cost) as total_value, SUM(quantity_on_hand) as total_qty')
-            ->first();
+            ->get();
 
-        // selectRaw SUM() returns a numeric string from MySQL — safe for FinancialMath.
-        if ($stats && FinancialMath::isPositive((string) ($stats->total_qty ?? '0'))) {
-            $newAvg = FinancialMath::round(
-                FinancialMath::div((string) $stats->total_value, (string) $stats->total_qty),
-                FinancialMath::LINE_SCALE
-            );
-            $product->update(['average_cost' => $newAvg]);
+        if ($inventories->isEmpty()) {
+            return;
+        }
+
+        $totalValue = '0';
+        $totalQty = '0';
+
+        foreach ($inventories as $inv) {
+            $valueAtLocation = FinancialMath::mul((string) $inv->quantity_on_hand, (string) $inv->average_cost);
+            $totalValue = FinancialMath::add($totalValue, $valueAtLocation);
+            $totalQty = FinancialMath::add($totalQty, (string) $inv->quantity_on_hand);
+        }
+
+        if (FinancialMath::isPositive($totalQty)) {
+            $product->update([
+                'average_cost' => FinancialMath::round(
+                    FinancialMath::div($totalValue, $totalQty),
+                    FinancialMath::LINE_SCALE
+                ),
+            ]);
         }
     }
 

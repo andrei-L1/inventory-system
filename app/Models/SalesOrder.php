@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\FinancialMath;
+use App\Services\Procurement\ReplenishmentService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -111,6 +112,11 @@ class SalesOrder extends Model
         return $this->hasMany(Shipment::class);
     }
 
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     public function isDraft(): bool
     {
         return $this->status?->name === SalesOrderStatus::QUOTATION;
@@ -208,5 +214,86 @@ class SalesOrder extends Model
         $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
         $this->update(['status_id' => $status->id]);
         $this->setRelation('status', $status);
+
+        // --- BACKORDER AUTOMATION (PHASE 5.6) ---
+        // Any time an SO recalculates its fulfillment status (whether backward or forward),
+        // ping the Replenishment Engine to ensure we aren't short.
+        if (app()->bound(ReplenishmentService::class)) {
+            app(ReplenishmentService::class)->generateSuggestions();
+        } else {
+            // Fallback for when bound via fresh app instance in tinker/tests
+            (new ReplenishmentService)->generateSuggestions();
+        }
+    }
+
+    /**
+     * Calculate the total value of items that have been approved but not yet invoiced.
+     * Uses 8-decimal precision for intermediates, then rounds the header.
+     */
+    public function getUninvoicedAmountAttribute(): string
+    {
+        $this->loadMissing('lines');
+        $lineTotals = [];
+
+        foreach ($this->lines as $line) {
+            $lineTotals[] = FinancialMath::soLineSubtotal(
+                $line->uninvoiced_qty,
+                (string) $line->unit_price,
+                (string) $line->discount_rate ?? 0,
+                (string) $line->tax_rate ?? 0
+            );
+        }
+
+        return FinancialMath::headerTotal($lineTotals);
+    }
+
+    /**
+     * Determine the overall billing status of the SO based on Shipped vs Invoiced quantities.
+     * Returns: NONE, PARTIAL, or FULL.
+     */
+    public function getInvoiceStatusAttribute(): string
+    {
+        $this->loadMissing('lines');
+
+        $totalShipped = '0';
+        $totalInvoiced = '0';
+
+        foreach ($this->lines as $line) {
+            $totalShipped = FinancialMath::add($totalShipped, (string) $line->shipped_qty);
+            $totalInvoiced = FinancialMath::add($totalInvoiced, $line->invoiced_qty);
+        }
+
+        if (FinancialMath::isZero($totalInvoiced)) {
+            return 'NONE';
+        }
+
+        if (FinancialMath::gte($totalInvoiced, $totalShipped)) {
+            return 'FULL';
+        }
+
+        return 'PARTIAL';
+    }
+
+    /**
+     * Checks if the order has any shipped items that are yet to be billed.
+     */
+    public function getHasUninvoicedItemsAttribute(): bool
+    {
+        foreach ($this->lines as $line) {
+            if (FinancialMath::gt($line->uninvoiced_qty, '0')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Bridge for Phase 6 (Logistics).
+     * Determines if the order is fully fulfilled and ready for the shipping lane metrics.
+     */
+    public function getShippableStatusAttribute(): bool
+    {
+        return $this->status?->name === SalesOrderStatus::SHIPPED;
     }
 }

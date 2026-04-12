@@ -61,6 +61,17 @@ class PurchaseOrderLine extends Model
         return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty));
     }
 
+    /**
+     * Quantity that has been received but not yet formally billed.
+     * Bridge for Phase 5.6 / 6 (Procurement Billing).
+     */
+    public function getBillableQtyAttribute(): string
+    {
+        // Since "Vendor Bills" are not yet implemented, all received items
+        // are currently considered billable.
+        return (string) $this->received_qty;
+    }
+
     public function getFormattedOrderedQtyAttribute(): string
     {
         return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);

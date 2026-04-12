@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Finance\InvoiceController;
+use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
@@ -130,4 +132,29 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
         return Inertia::render('SalesOrders/Show', ['id' => $id]);
     })->name('sales-orders.show');
+
+    // --- Finance (Phase 5.5) ---
+    Route::get('/finance-center', function () {
+        return Inertia::render('Finance/FinanceCenter');
+    })->name('finance.center');
+
+    Route::get('/finance/invoices/create', function () {
+        return Inertia::render('Finance/InvoiceForm');
+    })->name('finance.invoices.create');
+
+    Route::get('/finance/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('finance.invoices.print');
+
+    Route::get('/finance/invoices/{id}', function (Request $request, $id) {
+        return Inertia::render('Finance/InvoiceDocument', ['id' => $id]);
+    })->name('finance.invoices.show');
+
+    Route::get('/finance/payments/create', function () {
+        return Inertia::render('Finance/PaymentForm');
+    })->name('finance.payments.create');
+
+    Route::get('/finance/payments/{payment}/print', [PaymentController::class, 'print'])->name('finance.payments.print');
+
+    Route::get('/finance/payments/{id}', function (Request $request, $id) {
+        return Inertia::render('Finance/PaymentDocument', ['id' => $id]);
+    })->name('finance.payments.show');
 });

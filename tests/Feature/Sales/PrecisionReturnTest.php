@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sales;
 
+use App\Helpers\FinancialMath;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
@@ -90,9 +91,10 @@ class PrecisionReturnTest extends TestCase
         // 3. Perform High Precision Partial Return
         $returnQty = 0.54321098;
 
-        // Expected credit note amount = 0.54321098 * 123.45678901 = 67.06299313437298
-        // Rounded to 8 decimals = 67.06299313
-        $expectedCreditTotal = round($returnQty * $precisionPrice, 8);
+        // Expected credit note amount
+        // Note: For document headers, we use headerTotal (2dp). For lines, we use 8dp.
+        $expectedCreditTotalLine = FinancialMath::soLineSubtotal((string) $returnQty, (string) $precisionPrice);
+        $expectedCreditTotalHeader = FinancialMath::headerTotal([$expectedCreditTotalLine]);
 
         $response = $this->postJson("/api/sales-orders/{$so->id}/return", [
             'location_id' => $location->id,
@@ -126,7 +128,7 @@ class PrecisionReturnTest extends TestCase
         $this->assertDatabaseHas('invoices', [
             'sales_order_id' => $so->id,
             'type' => 'CREDIT_NOTE',
-            'total_amount' => $expectedCreditTotal,
+            'total_amount' => $expectedCreditTotalHeader,
         ]);
 
         // Detailed check on credit note line
@@ -134,7 +136,7 @@ class PrecisionReturnTest extends TestCase
             'product_id' => $product->id,
             'quantity' => $returnQty,
             'unit_price' => $precisionPrice,
-            'subtotal' => $expectedCreditTotal,
+            'subtotal' => $expectedCreditTotalLine,
         ]);
     }
 }

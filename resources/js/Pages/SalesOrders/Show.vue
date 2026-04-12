@@ -264,7 +264,7 @@ const submitPack = async () => {
 };
 
 const printVoucher = () => {
-    window.open(`/sales-orders/${so.value.id}/print`, '_blank');
+    window.open(window.location.href + '/print', '_blank');
 };
 
 const openShipDialog = () => {

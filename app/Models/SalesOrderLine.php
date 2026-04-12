@@ -18,6 +18,8 @@ class SalesOrderLine extends Model
         'formatted_packed_qty',
         'formatted_returned_qty',
         'formatted_remaining_qty',
+        'invoiced_qty',
+        'uninvoiced_qty',
     ];
 
     protected $fillable = [
@@ -73,6 +75,11 @@ class SalesOrderLine extends Model
         return $this->belongsTo(UnitOfMeasure::class, 'uom_id');
     }
 
+    public function invoiceLines()
+    {
+        return $this->hasMany(InvoiceLine::class);
+    }
+
     /**
      * Quantity to be picked (Ordered - Picked)
      */
@@ -95,6 +102,29 @@ class SalesOrderLine extends Model
     public function getRemainingShipQtyAttribute(): string
     {
         return FinancialMath::max('0', FinancialMath::sub((string) $this->packed_qty, (string) $this->shipped_qty));
+    }
+
+    /**
+     * Quantity that has already been billed on Invoices
+     */
+    public function getInvoicedQtyAttribute(): string
+    {
+        return (string) $this->invoiceLines()->with('invoice')->get()->reduce(function ($carry, $line) {
+            // Only count if invoice exists (is not soft-deleted) and is not VOID
+            if (! $line->invoice || $line->invoice->isVoid()) {
+                return $carry;
+            }
+
+            return FinancialMath::add($carry, (string) $line->quantity);
+        }, '0');
+    }
+
+    /**
+     * Quantity that has been shipped but not yet invoiced
+     */
+    public function getUninvoicedQtyAttribute(): string
+    {
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->shipped_qty, $this->invoiced_qty));
     }
 
     /**

@@ -37,6 +37,27 @@ class SalesOrderController extends Controller
             });
         }
 
+        if ($request->boolean('invoiceable')) {
+            // S-M3: Deep SQL filter for orders that have truly remaining items to bill (Shipped > Invoiced).
+            // This handles VOID invoices and soft-deletes at the DB layer for absolute accuracy.
+            $query->whereHas('lines', function ($l) {
+                $l->whereRaw('
+                    shipped_qty > COALESCE(
+                        (SELECT SUM(quantity) 
+                         FROM invoice_lines 
+                         WHERE invoice_lines.sales_order_line_id = sales_order_lines.id
+                         AND invoice_lines.deleted_at IS NULL
+                         AND NOT EXISTS (
+                             SELECT 1 FROM invoices 
+                             WHERE invoices.id = invoice_lines.invoice_id 
+                             AND invoices.status = "VOID"
+                         )
+                        ), 0
+                    )
+                ');
+            });
+        }
+
         return SalesOrderResource::collection($query->paginate($request->get('limit', 15)));
     }
 

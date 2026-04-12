@@ -177,14 +177,36 @@ class PurchaseOrderController extends Controller
             $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
             $po->loadMissing('status');
 
+            // L-4: Physical deletion is only permitted for purely local/editable drafts.
+            // Once a PO is in 'open' or beyond, it should be formally CANCELLED.
             if (! $po->status->is_editable) {
-                abort(403, 'Purchase order cannot be deleted in its current status.');
+                abort(403, 'Purchase order cannot be deleted. Try cancelling it instead.');
             }
 
             $po->delete();
         });
 
         return response()->json(null, 204);
+    }
+
+    public function cancel(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
+    {
+        return DB::transaction(function () use ($purchaseOrder) {
+            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
+            $po->loadMissing(['status', 'lines']);
+
+            if (! $po->can_be_cancelled) {
+                if (in_array($po->status->name, ['closed', 'cancelled'])) {
+                    abort(400, "Purchase order is already in a terminal '{$po->status->name}' state.");
+                }
+                abort(400, 'Purchase order cannot be cancelled because it has already started receiving goods. Close it instead to truncate remaining items.');
+            }
+
+            $cancelledStatus = PurchaseOrderStatus::where('name', 'cancelled')->firstOrFail();
+            $po->update(['status_id' => $cancelledStatus->id]);
+
+            return new PurchaseOrderResource($po->load('lines', 'status'));
+        });
     }
 
     public function approve(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
@@ -695,7 +717,7 @@ class PurchaseOrderController extends Controller
                     ]);
                 }
 
-                $po->update(['total_amount' => $totalAmount]);
+                $po->update(['total_amount' => FinancialMath::headerTotal([$totalAmount])]);
                 $posCreated[] = $po->po_number;
             }
         });
@@ -724,40 +746,6 @@ class PurchaseOrderController extends Controller
         } catch (\Exception $e) {
             throw new UomConversionException($e->getMessage());
         }
-    }
-
-    /**
-     * M-1: Cancel a purchase order.
-     * Only allowed when no stock has been received. Terminal states (closed/cancelled) are blocked.
-     */
-    public function cancel(Request $request, PurchaseOrder $purchaseOrder): PurchaseOrderResource
-    {
-        $purchaseOrder = DB::transaction(function () use ($purchaseOrder, $request) {
-            $po = PurchaseOrder::lockForUpdate()->findOrFail($purchaseOrder->id);
-            $po->loadMissing(['status', 'lines']);
-
-            if (in_array($po->status->name, ['closed', 'cancelled'])) {
-                abort(400, "Purchase order is already {$po->status->name} and cannot be cancelled.");
-            }
-
-            // Guard: if any stock has been received, require returns first
-            // R-H3: Use DB query to avoid evaluating stale in-memory collection
-            $hasReceipts = $po->lines()->where('received_qty', '>', 0)->exists();
-            if ($hasReceipts) {
-                abort(422, 'This purchase order has received stock. Process an RTV return for all received items before cancelling.');
-            }
-
-            $cancelledStatus = PurchaseOrderStatus::where('name', 'cancelled')->firstOrFail();
-
-            $po->update([
-                'status_id' => $cancelledStatus->id,
-                'notes' => trim(($po->notes ?? '').' | Cancelled by '.$request->user()->name.' on '.now()->toDateString()),
-            ]);
-
-            return $po;
-        });
-
-        return new PurchaseOrderResource($purchaseOrder->load('lines', 'status'));
     }
 
     /**

@@ -114,14 +114,27 @@ class SalesOrderReturnController extends Controller
                             $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
                         );
 
-                        // Credit Note line values
+                        // Credit Note line values (Capture tax/discount from original line)
+                        $cnLineSubtotal = FinancialMath::soLineSubtotal(
+                            $returnedQty,
+                            (string) $soLine->unit_price,
+                            (string) $soLine->discount_rate,
+                            (string) $soLine->tax_rate
+                        );
+
                         $creditNoteLines[] = [
                             'product_id' => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity' => FinancialMath::round($returnedQty, FinancialMath::LINE_SCALE),
+                            'quantity' => $returnedQty,
                             'unit_price' => (string) $soLine->unit_price,
-                            'subtotal' => FinancialMath::round(FinancialMath::mul($returnedQty, (string) $soLine->unit_price), FinancialMath::LINE_SCALE),
+                            'tax_rate' => $soLine->tax_rate,
+                            'tax_amount' => FinancialMath::soLineTax($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate, (string) $soLine->tax_rate),
+                            'discount_rate' => $soLine->discount_rate,
+                            'discount_amount' => FinancialMath::soLineDiscount($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate),
+                            'subtotal' => $cnLineSubtotal,
                         ];
+
+                        $lineTotals[] = $cnLineSubtotal;
                     }
 
                     $soLine->notes = trim(($soLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
@@ -147,17 +160,12 @@ class SalesOrderReturnController extends Controller
                 // Automatically generate a Draft Credit Note if there are refunds
                 $creditNote = null;
                 if (! empty($creditNoteLines)) {
-                    $totalAmount = '0';
-                    foreach ($creditNoteLines as $line) {
-                        $totalAmount = FinancialMath::add($totalAmount, $line['subtotal']);
-                    }
-
                     $creditNote = Invoice::create([
                         'invoice_number' => 'CN-'.now()->format('Ymd-Hi').'-'.rand(10, 99),
                         'customer_id' => $salesOrder->customer_id,
                         'sales_order_id' => $salesOrder->id,
                         'invoice_date' => now()->toDateString(),
-                        'total_amount' => FinancialMath::round($totalAmount, FinancialMath::LINE_SCALE),
+                        'total_amount' => FinancialMath::headerTotal($lineTotals),
                         'status' => Invoice::STATUS_DRAFT,
                         'type' => Invoice::TYPE_CREDIT_NOTE,
                         'notes' => 'Generated from Return: '.$transaction->reference_number,
