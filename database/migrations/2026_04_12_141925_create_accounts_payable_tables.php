@@ -51,6 +51,7 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->string('debit_note_number')->unique();
             $table->enum('status', ['DRAFT', 'POSTED', 'APPLIED', 'VOID'])->default('DRAFT');
+            $table->text('notes')->nullable();
             $table->timestamps();
 
             $table->index(['vendor_id', 'status']);
