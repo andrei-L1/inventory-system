@@ -116,3 +116,23 @@ To support diverse packaging across the catalog, the UOM engine is **Context-Awa
 ### D. Financial Precision & The "No Float" Rule
 - **Zero-Float Boundary**: The system enforces a strict "No Float" rule. All arithmetic is performed using PHP's `BCMath` extension via the `FinancialMath` helper.
 - **String Handshake**: Frontend and Backend communicate using high-precision numeric strings. Frontend components explicitly cast these strings to `Number()` only for visual arithmetic or comparison, ensuring that data never "silently" rounds before it reaches the ledger.
+
+---
+
+## 6. The Three-Way Match Engine (Financial Linkage)
+
+The system enforces a biological link between Logistics and Finance to prevent transactional fraud and clerical errors.
+
+### A. The Linkage Chain
+Every Vendor Bill must pass through a mandatory validation chain:
+1.  **Purchase Order (L1)**: Defines the legal "Budget" and "Intent."
+2.  **TransactionLine/Receipt (L2)**: Records the "Physical Assets" delivered by the vendor.
+3.  **Bill (L3)**: Matches the "Liability" to the physical assets.
+
+### B. "Biological" Validation
+You cannot bill for a product that hasn't been received. The `BillController` locks the `purchase_order_lines` and `transaction_lines` simultaneously during posting to ensure:
+-   **Receipt Integrity**: The bill only pulls line data from a verified GRN.
+-   **PO Integrity**: The total billed quantity across all bills for a specific PO line cannot exceed the original PO quantity.
+
+### C. The Atomic Pivot (A/P Standard)
+While a PO line might define "10 Boxes," the **Finance Bridge** automatically pivots to **Pieces** upon bill creation. This ensures that the General Ledger captures the absolute lowest denominator of value, allowing for perfectly accurate Average Cost (WAC) calculations on every piece of stock received.

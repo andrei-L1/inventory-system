@@ -524,5 +524,11 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Critical Bug Fix: Scale Truncation**: Identified and patched a massive architectural regression in the FinancialMath comparison engine. Fixed ccomp scale truncation which was causing fractional quantities (e.g. 0.5 Boxes) to be treated as 0 during status transitions. PO closure logic is now precision-aware at 8 decimal places.
 - **Dual-Layer UOM Accounting**: Formalized the separation between 'Commercial Units' (Orders) and 'Atomic Units' (Inventory) in documentation and verification scripts. The system now perfectly bridges fractional procurement units (0.5 bx) to atomic stock counts (2 pcs) with zero drift.
 - **Module Hardening**: Verified GRN and RTV generation logic against database string limits (30 chars), ensuring unique IDs never breach schema constraints.
-- **Audit Compliance**: Created a finalized system-wide audit report confirming 100% adherence to the BCMath string-boundary standard across all core service layers.
+### 2026-04-13: Finance Module Hardening & Atomic Payables (Phase 5.7)
+
+- **Atomic Billing Standard**: Successfully pivoted the Accounts Payable (A/P) module to the "Contextual Atomic" standard. All vendor bills are now standardized to primary base units (Pieces) upon creation. This prevents rounding drift between bulk vendor invoices and internal inventory valuation, ensuring the General Ledger remains 100% mathematically aligned with physical stock counts.
+- **Three-Way Match Verification**: Hardened the `BillController` to enforce a biological link between the Purchase Order, the Warehouse Receipt (GRN), and the Vendor Bill. Submissions are now filtered to strip logistical zero-quantity noise, resolving legacy `422 Unprocessable Content` errors.
+- **Contextual UI Preservation**: Implemented "Reference UOM" labels in the billing forms. Accountants can now enter data in Pieces while seeing the equivalent bulk units (e.g., Boxes) in real-time labels, bridging the gap between vendor documents and internal atomic truth.
+- **Navigation Persistence**: Resolved a UX regression by appending `?mode=PAYABLE` to all Finance Center navigation links, ensuring the workspace context is preserved when moving between document detail views and the main settlement dashboard.
+- **Documentation Overhaul**: Synchronized all root-level architectural and mathematical specifications to reflect the "Atomic Payables" shift as the new system-wide standard.
 

@@ -47,6 +47,28 @@ const getStatusColor = (status) => {
 const printDocument = () => {
     window.open(window.location.href + '/print', '_blank');
 };
+
+const handlePost = async () => {
+    if (!confirm('Officially post this invoice to the ledger?')) return;
+    try {
+        await axios.patch(`/api/invoices/${props.id}/post`);
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Invoice posted.', life: 3000 });
+        router.reload();
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not post invoice.', life: 3000 });
+    }
+};
+
+const handleVoid = async () => {
+    if (!confirm('Are you sure you want to VOID this invoice? This will reverse the ledger impact.')) return;
+    try {
+        await axios.patch(`/api/invoices/${props.id}/void`);
+        toast.add({ severity: 'warn', summary: 'Voided', detail: 'Invoice has been voided.', life: 3000 });
+        router.reload();
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not void invoice.', life: 3000 });
+    }
+};
 </script>
 
 <template>
@@ -73,6 +95,13 @@ const printDocument = () => {
                     <button @click="printDocument" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-print"></i> Print
                     </button>
+                    <!-- Action Buttons -->
+                    <button v-if="invoice?.status === 'DRAFT'" @click="handlePost" class="bg-sky-500 hover:bg-sky-400 text-zinc-950 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                        <i class="pi pi-check"></i> Post Invoice
+                    </button>
+                    <button v-if="['DRAFT', 'OPEN'].includes(invoice?.status)" @click="handleVoid" class="bg-zinc-800 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                        <i class="pi pi-ban"></i> Void
+                    </button>
                 </div>
             </div>
 
@@ -83,7 +112,8 @@ const printDocument = () => {
             </div>
 
             <!-- Voucher Printable Area -->
-            <div v-else-if="invoice" class="bg-white text-zinc-900 rounded-xl p-10 shadow-2xl print:shadow-none print:p-0">
+            <div v-else-if="invoice" class="bg-white text-zinc-900 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-t-8 border-sky-500 overflow-hidden print:shadow-none print:border-none print:rounded-none">
+                <div class="p-12">
                 
                 <div class="flex justify-between items-start border-b-2 border-zinc-200 pb-8 mb-8">
                     <div>
@@ -145,7 +175,7 @@ const printDocument = () => {
                         <tbody class="divide-y divide-zinc-100">
                             <tr v-for="line in invoice.lines" :key="line.id" class="text-sm">
                                 <td class="py-3 px-2 font-bold text-zinc-800">{{ line.product?.name }}</td>
-                                <td class="py-3 px-2 font-mono text-zinc-600 text-right">{{ line.quantity }}</td>
+                                <td class="py-3 px-2 font-mono text-zinc-600 text-right">{{ Number(line.quantity).toFixed(8) }}</td>
                                 <td class="py-3 px-2 font-mono text-zinc-600 text-right" style="width: 15%">{{ formatCurrency(line.unit_price) }}</td>
                                 <td class="py-3 px-2 font-mono font-bold text-zinc-900 text-right" style="width: 20%">{{ formatCurrency(line.subtotal) }}</td>
                             </tr>
@@ -186,6 +216,7 @@ const printDocument = () => {
                     </div>
                 </div>
 
+                </div>
             </div>
         </div>
     </AppLayout>

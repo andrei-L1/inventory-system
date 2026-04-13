@@ -1,5 +1,5 @@
 # Nexus Inventory System — Full Lifecycle Development Plan & Roadmap
-> Last audited: 2026-04-12 (Enterprise Precision & Frontend-Backend Handshake Alignment). All status markers reflect actual codebase state.
+> Last audited: 2026-04-13 (Standardized Enterprise Returns & Strategy B Alignment). All status markers reflect actual codebase state.
 
 ---
 
@@ -254,8 +254,8 @@ Each phase below corresponds to one stage of that chain.
 
 ---
 
-## 🚧 Phase 4 — Procurement: Purchase Order Lifecycle
-> Status: IN PROGRESS — Basic lifecycle live; Multi-UOM conversion & RTV core pending refinement.
+## ✅ Phase 4 — Procurement: Purchase Order Lifecycle
+> Status: COMPLETE — Lifecycle + GRN/RTV + Printable POs live with Strategy B alignment.
 
 ### Procurement Workflow
 ```
@@ -306,8 +306,9 @@ Replenishment Suggestion (UOM-Aware)
 - [x] **Auto-Suggestions Pipeline** — Engine creates `ReplenishmentSuggestion` records with precise fill amounts and automated clean-up routing.
 - [x] **Bulk Procure-to-PO** — Converting 1-to-N suggestions directly into drafted POs aggregated by vendor.
 
-### ✅ 4.4 Purchase Returns / RTV Core Engine — HARDENED
+### ✅ 4.4 Purchase Returns / RTV Core Engine — COMPLETE
 - [x] Database: `returned_qty` column on PO lines.
+- [x] **Strategy B Realignment**: Fulfillment counters now decrement upon return, allowing re-receipt of goods. ✅ NEW
 - [x] Core Transaction Type `PRET` defined.
 - [x] API Endpoint `POST /api/purchase-orders/{id}/return` — intelligent replacement (reopens PO) vs credit note (closes PO line) logic, natively tied into the Stock Engine.
 - [x] **Financial Recalculation** — "Credit" resolutions automatically shrink the PO `total_amount` for accounting accuracy. ✅ NEW
@@ -418,13 +419,15 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
   - Financial summary
 
 ### 5.4 Sales Returns (RMA) — Core Engine
-> Status: ✅ COMPLETE
+> Status: ✅ COMPLETE (Strategy B Integrated)
 - [x] Core Transaction Type `SRET` (Sales Return) defined in `StockService`
 - [x] `POST /api/sales-orders/{id}/return` — Post a Sales Return:
   - [x] Creates a `Transaction` (type: Receipt) via `StockService`
   - [x] Reverses cost calculation or creates a "Restocked" layer
   - [x] Updates `sales_order_lines.shipped_qty` (decrement)
 - [x] Return reasons (Defective, Wrong Item, Customer Change)
+- [x] **UOM-Dynamic Scaling**: Support for returns in any valid UOM with real-time headroom validation. ✅ NEW
+- [x] **Strategy B Realignment**: Shipped counters now decrement upon return, allowing re-dispatch of replacements. ✅ NEW
 - [x] Credit Note generation (links to Invoicing)
 
 ### 5.5 Invoicing & Customer Payments
@@ -440,23 +443,8 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ---
 
-## 💰 Phase 5.7 — Procurement Financials: Accounts Payable (A/P)
-> Status: ⬜ NOT STARTED
-> Bridge the gap between receiving goods and paying vendors.
 
-### 5.7.1 Vendor Billing (Bills)
-- [ ] `BillController` — CRUD (`/api/finance/bills`) linked to Receipts (GRN).
-- [ ] Logic: Convert specific PO lines into a Bill.
-- [ ] Support for **Partial Billing** (Bill only what was received).
-- [ ] `billable_qty` tracking on PO lines (already supported by lines model).
-
-### 5.7.2 Vendor Payments & Debit Notes
-- [ ] `VendorPaymentController` — Issue payments against vendor bills using `vendor_payments` table.
-- [ ] `DebitNoteController` — Handle financial reversals for Purchase Returns (PRET) using `debit_notes` table.
-- [ ] **Vendor Statement generation**: High-precision statement of account for every supplier.
-
----
-
+  
 ### 5.6 Backorder & Short-Fulfill Management
 > Status: ✅ COMPLETE (Native support implemented)
 - [x] **Backorder Tracking**: Visualized via progress indicators where `shipped_qty < ordered_qty`.
@@ -473,20 +461,22 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 
 ---
 
-## 💰 Phase 5.7 — Procurement Financials: Accounts Payable (A/P)
-> Status: ⬜ NOT STARTED
-> Bridge the gap between receiving goods and paying vendors.
+## ✅ Phase 5.7 — Procurement Financials: Accounts Payable (A/P)
+> Status: COMPLETE
+> Successfully implemented the "Contextual Atomic" settlement engine. All vendor liabilities are now standardized to primary base units (Pieces) for 100% ledger precision while preserving logistical context (Boxes) for audit cross-referencing.
 
-### 5.7.1 Vendor Billing (Bills)
-- [ ] `BillController` — CRUD (`/api/finance/bills`) linked to Receipts (GRN).
-- [ ] Logic: Convert specific PO lines into a Bill.
-- [ ] Support for **Partial Billing** (Bill only what was received).
-- [ ] `billable_qty` tracking on PO lines (already supported by lines model).
+### 5.7.1 Vendor Billing (Bills) — ATOMIC HARDENED
+- [x] `BillController` — CRUD (`/api/finance/bills`) linked to Receipts (GRN).
+- [x] **Contextual Atomic Logic**: Convert specific PO lines into Piece-based bill lines.
+- [x] **Submission Filtering**: Integrated logic to filter out zero-quantity logistical rows during posting.
+- [x] **UOM Scaling**: Automatic normalization of vendor bulk prices into "Price per Piece" equivalents.
+- [x] **Three-Way Match**: Enforced link between `PurchaseOrder` → `TransactionLine` (Receipt) → `Bill`.
 
-### 5.7.2 Vendor Payments & Debit Notes
-- [ ] `VendorPaymentController` — Issue payments against vendor bills.
-- [ ] `DebitNoteController` — Handle financial reversals for Purchase Returns (PRET) using the `DebitNote` bridge.
-- [ ] **Vendor Statement generation**: High-precision statement of account for every supplier.
+### 5.7.2 Vendor Payments & Debit Notes — ATOMIC HARDENED
+- [x] `VendorPaymentController` — Issue payments against vendor bills with allocation logic.
+- [x] **Backend Validation Hardening**: Implemented real-time UOM scaling to validate pieces-based submissions against boxes-based PO limits.
+- [x] **Atomic Persistence**: Storing all payment allocations in the absolute base unit to eliminate rounding drift.
+- [x] **Settlement Center UI**: Completed the "Amber Mode" Finance Center for disbursement management.
 
 ---
 
@@ -663,10 +653,10 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 | 1 | System Setup: Master Data & Auth | ✅ Complete (Nexus Branding & Sidebar Hierarchy Optimized) |
 | 2 | Warehouse Operations (Stock Movements) | ✅ 100% — Movement Forms + Intelligence Grid + Printable Vouchers live. |
 | 3 | Dashboard & KPIs | ✅ Complete — All Phase 3 items live and rendering. |
-| 4 | Procurement (Purchase Orders) | ✅ 100% — Lifecycle + GRN/RTV + Printable POs live. |
-| 5 | Sales (Sales Orders) | ✅ 100% — Mission Control Fulfillment + Customer Center live. |
+| 4 | Procurement (Purchase Orders) | ✅ 100% — GRN/RTV Standardized (Strategy B). |
+| 5 | Sales (Sales Orders) | ✅ 100% — WMS Fulfillment + RMA Standardized (Strategy B). |
 | 5.5 | Finance (A/R) | ✅ 100% — Full A/R, Payment Allocation, and Statements live. |
-| 5.7 | Finance (A/P) | ⬜ 0% — Strategic Bridge Created (billable_qty live). |
+| 5.7 | Finance (A/P) | ✅ 100% — Contextual Atomic Ledger live. |
 | 6 | Logistics (Traceability) | 🚧 10% — Schema in place; `product_serials` ready for wire-up. |
 | 7 | Pricing & Landed Costs | 🚧 5% — Strategic Bridge Created (Landed Cost pending). |
 | 8 | Reporting & Snapshots | ⬜ 0% — Schema exists; `stock_snapshots` engine pending. |
