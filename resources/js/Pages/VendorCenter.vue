@@ -439,7 +439,7 @@ const formatCurrency = (val) => {
                                 <Column header="Unit" style="width: 90px">
                                     <template #body="{ data }">
                                         <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
-                                            {{ data.uom_abbreviation || 'PCS' }}
+                                            {{ data.base_uom?.abbreviation ?? data.uom_abbreviation ?? '???' }}
                                         </span>
                                     </template>
                                 </Column>
@@ -516,7 +516,7 @@ const formatCurrency = (val) => {
 
                                 <Column field="total_qoh" header="Total On Hand" style="width: 150px">
                                     <template #body="{ data }">
-                                        <span class="font-mono font-bold text-sm" :class="data.total_qoh > 0 ? 'text-zinc-200' : 'text-zinc-600'">{{ data.total_qoh }} {{ data.uom?.name || 'pcs' }}</span>
+                                        <span class="font-mono font-bold text-sm" :class="data.total_qoh > 0 ? 'text-zinc-200' : 'text-zinc-600'">{{ data.total_qoh }} {{ data.base_uom?.abbreviation ?? data.uom?.abbreviation ?? '???' }}</span>
                                     </template>
                                 </Column>
 

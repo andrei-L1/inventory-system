@@ -216,9 +216,10 @@ const getScaledQty = (productObj, rawPieces) => {
     if (!productObj || rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(productObj.uom_id, productObj.id).factor;
     const scaled = (Number(rawPieces) / factor);
-    return isUomIdDiscrete(productObj.uom_id) 
-        ? Math.floor(scaled + 0.0001).toString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === productObj.uom_id);
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 // Final stock quantities used for reorder logic in the grid
@@ -883,7 +884,7 @@ const getBaseUomForSelected = computed(() => {
                                                 <div class="relative flex-1">
                                                     <InputNumber v-model="product.initial_conversion_factor" placeholder="Enter quantity..." 
                                                                 inputClass="!bg-zinc-950 !border-sky-500/30 !text-white !h-11 !w-full !px-3 !font-black !font-mono !text-lg focus:!border-sky-500 shadow-inner" />
-                                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-tighter">{{ getBaseUomForSelected?.abbreviation || 'pcs' }}</div>
+                                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-tighter">{{ getBaseUomForSelected?.abbreviation ?? '???' }}</div>
                                                 </div>
                                                 <div class="flex flex-col gap-0.5 max-w-[120px]">
                                                     <span class="text-[7px] text-zinc-500 font-bold uppercase tracking-[0.1em] font-mono leading-none">Atomic Rule</span>
@@ -1015,7 +1016,7 @@ const getBaseUomForSelected = computed(() => {
                                                      <InputNumber v-model="product.initial_conversion_factor" placeholder="E.g. 12" 
                                                                  class="!w-full"
                                                                  inputClass="!bg-zinc-900/80 !border-sky-500/30 !text-white !h-12 !px-4 !font-black !text-lg !font-mono focus:!border-sky-500 shadow-[0_0_15px_rgba(56,189,248,0.1)]" />
-                                                     <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 tracking-tighter uppercase font-mono">{{ getBaseUomForSelected?.abbreviation || 'pcs' }}</div>
+                                                     <div class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 tracking-tighter uppercase font-mono">{{ getBaseUomForSelected?.abbreviation ?? '???' }}</div>
                                                 </div>
                                             </div>
 

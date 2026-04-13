@@ -401,10 +401,11 @@ const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product?.id);
     const scaled = (Number(rawPieces) / factor);
-    
-    return isUomIdDiscrete(line.uom_id) 
-        ? Math.floor(scaled + 0.0001).toLocaleString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toLocaleString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const getScaledAvailableStock = (line) => {

@@ -25,7 +25,20 @@ class PurchaseOrderLineResource extends JsonResource
             'formatted_returned_qty' => $this->formatted_returned_qty,
             'pending_qty' => FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty)), // H-6: guard against negative after credit return
             'uom_id' => $this->uom_id,
-            'uom_abbreviation' => $this->uom->abbreviation ?? 'pcs',
+            'uom_abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? null,
+            'base_uom' => (function() {
+                $category = $this->product?->uom?->category;
+                if (!$category) return null;
+                $baseUom = \App\Models\UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                if (!$baseUom) return null;
+                return [
+                    'id'           => $baseUom->id,
+                    'abbreviation' => $baseUom->abbreviation,
+                    'name'         => $baseUom->name,
+                    'category'     => $baseUom->category,
+                    'decimals'     => $baseUom->decimals,
+                ];
+            })(),
             'ordered_qty' => (string) $this->ordered_qty,
             'formatted_ordered_qty' => $this->formatted_ordered_qty,
             'formatted_pending_qty' => $this->formatted_pending_qty,

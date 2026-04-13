@@ -120,10 +120,11 @@ const getScaledQty = (rawPieces, line) => {
     if (!line.product_id || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product_id);
     const scaled = (parseFloat(rawPieces) / factor);
-    
-    return isUomIdDiscrete(line.uom_id) 
-        ? Math.floor(scaled + 0.0001).toLocaleString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toLocaleString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const simulateCosting = (line) => {
@@ -748,7 +749,7 @@ const cancel = () => {
             <div v-if="selectedLineForStock" class="flex flex-col">
                 <div class="px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 flex justify-between items-center">
                     <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono">STOCK BREAKDOWN</span>
-                    <span class="text-[10px] font-bold text-zinc-600 font-mono">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation || 'pcs' }}</span>
+                    <span class="text-[10px] font-bold text-zinc-600 font-mono">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
                 </div>
                 
                 <div class="max-h-[300px] overflow-y-auto">
@@ -769,7 +770,7 @@ const cancel = () => {
                             </div>
                             <div class="flex flex-col items-end">
                                 <span class="text-xs font-black font-mono text-zinc-200">{{ getScaledQty(inv.quantity_on_hand, selectedLineForStock) }}</span>
-                                <span class="text-[8px] text-zinc-600 font-mono font-bold uppercase">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation || 'pcs' }}</span>
+                                <span class="text-[8px] text-zinc-600 font-mono font-bold uppercase">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
                             </div>
                         </div>
                     </div>

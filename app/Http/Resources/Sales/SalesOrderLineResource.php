@@ -33,6 +33,19 @@ class SalesOrderLineResource extends JsonResource
                 'name' => $this->uom->name,
                 'abbreviation' => $this->uom->abbreviation,
             ],
+            'base_uom' => (function() {
+                $category = $this->product?->uom?->category;
+                if (!$category) return null;
+                $baseUom = \App\Models\UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                if (!$baseUom) return null;
+                return [
+                    'id'           => $baseUom->id,
+                    'abbreviation' => $baseUom->abbreviation,
+                    'name'         => $baseUom->name,
+                    'category'     => $baseUom->category,
+                    'decimals'     => $baseUom->decimals,
+                ];
+            })(),
             'ordered_qty' => (string) $this->ordered_qty,
             'formatted_ordered_qty' => $this->formatted_ordered_qty,
             'shipped_qty' => (string) $this->shipped_qty,

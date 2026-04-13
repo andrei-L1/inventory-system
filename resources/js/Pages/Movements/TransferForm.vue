@@ -498,10 +498,11 @@ const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product?.id);
     const scaled = (Number(rawPieces) / factor);
-    
-    return isUomIdDiscrete(line.uom_id) 
-        ? Math.floor(scaled + 0.0001).toLocaleString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toLocaleString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const getLocalStock = (line) => {
@@ -561,7 +562,10 @@ const submitForm = async () => {
 
         const availableQty = getLocalStock(line);
         if (qtyInBase > availableQty) {
-            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot transfer equivalent of ${qtyInBase} ${line.product.uom?.abbreviation || 'pcs'} at ${form.from_location.name}. Available: ${availableQty}.`, life: 5000 });
+            const baseUomAbbr = line.product?.base_uom?.abbreviation ?? line.product?.uom?.abbreviation ?? '???'
+            if (!line.product?.base_uom?.abbreviation) console.error('[UOM CONTRACT] base_uom missing on product', line.product)
+            toast.add({ severity: 'warn', summary: 'Insufficient Stock', detail: `Cannot transfer equivalent of ${qtyInBase} ${baseUomAbbr} at ${form.from_location.name}. Available: ${availableQty}.`, life: 5000 });
+
             isSubmitting.value = false;
             return;
         }

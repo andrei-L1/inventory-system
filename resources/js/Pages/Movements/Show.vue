@@ -190,7 +190,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 <Column header="Unit" style="width: 100px">
                                     <template #body="{ data }">
                                         <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
-                                            {{ data.uom_abbreviation || 'PCS' }}
+                                            {{ data.base_uom?.abbreviation ?? data.uom_abbreviation ?? '???' }}
                                         </span>
                                     </template>
                                 </Column>

@@ -122,9 +122,10 @@ const getScaledQty = (uomId, rawPieces, productId = null) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     const factor = getFactorToBase(uomId, productId).factor;
     const scaled = (Number(rawPieces) / factor);
-    return isUomIdDiscrete(uomId) 
-        ? Math.floor(scaled + 0.0001).toString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === uomId);
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const toggleStockInfo = async (event, product) => {
@@ -494,7 +495,7 @@ const tablePt = {
                                         </span>
                                     </div>
                                     <div v-if="!slotProps.option.is_base" class="text-[9px] text-zinc-500 font-mono italic">
-                                        = {{ getFactorToBase(slotProps.option.id, selectedProduct?.id).factor }} {{ uoms.find(u => u.is_base && u.category === slotProps.option.category)?.abbreviation || 'pcs' }}
+                                        = {{ getFactorToBase(slotProps.option.id, selectedProduct?.id).factor }} {{ uoms.find(u => u.is_base && u.category === slotProps.option.category)?.abbreviation ?? '???' }}
                                     </div>
                                 </div>
                             </template>

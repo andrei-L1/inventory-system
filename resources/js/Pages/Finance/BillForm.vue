@@ -146,13 +146,13 @@ const fetchPOData = async (poId) => {
                                 transaction_line_id: l.id,
                                 quantity_in_po_unit: qtyInPoUnit,
                                 pieces: Number(l.quantity),
-                                base_uom: l.base_uom_abbreviation || 'pcs',
+                                base_uom: l.base_uom?.abbreviation ?? l.base_uom_abbreviation ?? '???',
                                 billed_in_po_unit: billedInPoUnit,
                                 available_to_bill: available,
                                 bill_qty: suggested,
                                 factor: poUnitFactor,
                                 unit_price: Number(poLine.unit_cost),
-                                uom: poLine.uom_abbreviation || 'pcs',
+                                uom: poLine.base_uom?.abbreviation ?? poLine.uom_abbreviation ?? '???',
                                 subtotal: Number(poLine.unit_cost) * suggested
                             });
                         }
@@ -184,7 +184,7 @@ const fetchPOData = async (poId) => {
                 received_qty: Number(poLine.received_qty),
                 returned_qty: Number(poLine.returned_qty || 0),
                 billable_qty: Number(poLine.billable_qty),
-                uom: poLine.uom_abbreviation || 'pcs',
+                uom: poLine.base_uom?.abbreviation ?? poLine.uom_abbreviation ?? '???',
                 receipts,
                 returns
             };

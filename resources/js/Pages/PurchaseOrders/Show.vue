@@ -78,7 +78,10 @@ const getScaledQty = (line, rawPieces) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     const factor = Number(getFactorToBase(line.uom_id, line.product_id).factor);
     const scaled = Number(rawPieces) / factor;
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const getLocalStock = (line) => {
@@ -347,9 +350,9 @@ const openGrnMode = async () => {
                 pending_qty: Number(l.pending_qty),
                 formatted_pending_qty: l.formatted_pending_qty,
                 received_qty: Number(l.pending_qty),
-                unit: l.uom || 'PCS',
+                unit: l.uom ?? l.base_uom ?? '???',
                 uom_id: l.uom_id,
-                product_uom: l.uom || 'PCS',
+                product_uom: l.uom ?? l.base_uom ?? '???',
                 inventories: invMap[l.product_id] || []
             }));
         
@@ -432,7 +435,7 @@ const openReturnMode = async () => {
                 received_qty_in_po_unit: Number(l.received_qty), // Keep track of base received qty
                 uom: l.uom,
                 uom_id: l.uom_id,
-                product_uom: l.uom || 'PCS',
+                product_uom: l.uom ?? l.base_uom ?? '???',
                 return_qty: 0,
                 resolution: 'replacement',
                 reason: ''

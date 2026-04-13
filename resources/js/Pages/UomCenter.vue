@@ -128,6 +128,13 @@ const saveUom = async () => {
         return;
     }
 
+    // Contract 6: multiplier must be > 0 if provided
+    const factor = uomForm.value.conversion_factor_to_base;
+    if (factor !== null && factor !== '' && (isNaN(Number(factor)) || Number(factor) <= 0)) {
+        toast.add({ severity: 'error', summary: 'Invalid Multiplier', detail: 'Multiplier to Base Unit must be a positive number greater than zero.', life: 5000 });
+        return;
+    }
+
     try {
         if (uomForm.value.id) {
             await axios.put(`/api/uom/${uomForm.value.id}`, uomForm.value);
@@ -407,9 +414,9 @@ const getUomAbbr = (id) => {
                                            placeholder="e.g. 0 for Pcs, 3 for Kg" />
                             </div>
 
-                            <!-- Contextual Physics Fields -->
-                            <div class="col-span-12 flex flex-col gap-4 mt-2 p-4 bg-zinc-900/30 border border-zinc-800 rounded-xl" v-if="uomForm.category !== 'count'">
-                                <div class="flex items-center justify-between">
+                            <!-- Contextual Physics / Packaging Multiplier Fields -->
+                            <div class="col-span-12 flex flex-col gap-4 mt-2 p-4 bg-zinc-900/30 border border-zinc-800 rounded-xl">
+                                <div class="flex items-center justify-between" v-if="uomForm.category !== 'count'">
                                     <div class="flex flex-col">
                                         <span class="text-white font-bold text-[11px] uppercase tracking-tight text-sky-400">Universal Base Unit</span>
                                         <span class="text-zinc-500 text-[9px] font-mono uppercase mt-0.5">Is this the absolute smallest unit for {{ uomForm.category }}?</span>
@@ -418,21 +425,20 @@ const getUomAbbr = (id) => {
                                                  :pt="{ slider: ({ props }) => ({ class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700' }) }" />
                                 </div>
 
-                                <div v-if="!uomForm.is_base" class="flex flex-col gap-2 mt-2 pt-4 border-t border-zinc-800/60 transition-all">
+                                <div v-if="!uomForm.is_base" class="flex flex-col gap-2" :class="uomForm.category !== 'count' ? 'mt-2 pt-4 border-t border-zinc-800/60' : ''">
                                     <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Multiplier to Base Unit</label>
                                     <div class="flex gap-2 items-center">
                                         <span class="text-xs text-zinc-500 font-mono font-bold whitespace-nowrap">1 {{ uomForm.abbreviation || 'X' }} = </span>
-                                        <InputText v-model="uomForm.conversion_factor_to_base" type="number" step="0.00001" 
+                                        <InputText v-model="uomForm.conversion_factor_to_base" type="number" step="0.00001" min="0.00001"
                                                    class="!bg-zinc-950 !border-sky-500/30 !text-sky-400 !font-mono !font-bold !h-12 w-full focus:!border-sky-500/70"
                                                    placeholder="e.g. 1000" />
                                     </div>
+                                    <p class="text-[9px] text-zinc-600 font-mono uppercase tracking-tight m-0 leading-relaxed">
+                                        <i class="pi pi-info-circle mr-1 text-zinc-500"></i>
+                                        <span v-if="uomForm.category === 'count'">Global default (e.g. 1 Box = 12 pcs). Product-specific rules defined in the Catalog will always override this.</span>
+                                        <span v-else>How many base units equal 1 of this unit (e.g. 1 kg = 1000 g).</span>
+                                    </p>
                                 </div>
-                            </div>
-                            <!-- Count Category Notice -->
-                            <div class="col-span-12 p-3 bg-fuchsia-500/5 border border-fuchsia-500/20 rounded-lg" v-if="uomForm.category === 'count'">
-                                <p class="text-[10px] text-fuchsia-400/80 font-mono tracking-tight m-0 leading-relaxed uppercase">
-                                    <i class="pi pi-info-circle mr-1 text-fuchsia-500"></i> Packaging conversions (like Box = 12 pcs) are product-specific. Do not set them here. Navigate to a product's catalog page to map its packaging size. Global fallbacks can still be defined in rules.
-                                </p>
                             </div>
 
                             <div class="col-span-12 pt-2 flex items-center justify-between p-4 bg-zinc-900/30 rounded-xl border border-zinc-800/80">

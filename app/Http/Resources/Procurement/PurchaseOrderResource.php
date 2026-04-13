@@ -50,9 +50,19 @@ class PurchaseOrderResource extends JsonResource
                         'uom_id' => $l->uom_id ?? $l->product->uom_id,
                         'product_id' => $l->product_id,
                         'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
-                        'base_uom_abbreviation' => \App\Models\UnitOfMeasure::where('category', $l->product->uom->category)
-                            ->where('is_base', 1)
-                            ->first()?->abbreviation ?? 'PCS',
+                        'base_uom' => (function() use ($l) {
+                            $category = $l->product?->uom?->category;
+                            if (!$category) return null;
+                            $baseUom = \App\Models\UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                            if (!$baseUom) return null;
+                            return [
+                                'id'           => $baseUom->id,
+                                'abbreviation' => $baseUom->abbreviation,
+                                'name'         => $baseUom->name,
+                                'category'     => $baseUom->category,
+                                'decimals'     => $baseUom->decimals,
+                            ];
+                        })(),
                     ]),
                 ]);
             }),
@@ -79,6 +89,19 @@ class PurchaseOrderResource extends JsonResource
                             'quantity' => str_replace('-', '', (string) $l->quantity),
                             'formatted_quantity' => $l->formatted_quantity,
                             'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
+                            'base_uom' => (function() use ($l) {
+                                $category = $l->product?->uom?->category;
+                                if (!$category) return null;
+                                $baseUom = \App\Models\UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                                if (!$baseUom) return null;
+                                return [
+                                    'id'           => $baseUom->id,
+                                    'abbreviation' => $baseUom->abbreviation,
+                                    'name'         => $baseUom->name,
+                                    'category'     => $baseUom->category,
+                                    'decimals'     => $baseUom->decimals,
+                                ];
+                            })(),
                             'notes' => $notes,
                         ];
                     }),
