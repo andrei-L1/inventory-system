@@ -26,6 +26,8 @@ const loading = ref(true);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const locations = ref([]);
+const availableInventory = ref([]);
+const loadingConversions = ref(false);
 
 const pickLoading = ref(false);
 const packLoading = ref(false);
@@ -53,7 +55,102 @@ const returnForm = ref({
     notes: ''
 });
 
-// Removed Popover toggle logic in favor of always-visible breakdown
+// UOM Config Helpers
+const getFactorToBase = (uomId, productId = null) => {
+    if (!uomId) return { factor: 1, baseId: null };
+    let factor = 1.0;
+    let current = Number(uomId);
+    let processed = [current];
+    while (true) {
+        let rule = null;
+        if (productId) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === productId);
+        }
+        if (!rule) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === current && c.product_id === null);
+        }
+        
+        if (!rule || processed.includes(Number(rule.to_uom_id))) break;
+        factor = Number(factor) * Number(rule.conversion_factor);
+        current = Number(rule.to_uom_id);
+        processed.push(current);
+    }
+    return { factor, baseId: current };
+};
+
+const getUomAbbr = (id) => {
+    const uom = uoms.value.find(u => u.id === id);
+    return uom ? uom.abbreviation : '';
+};
+
+const getFilteredUoms = (line) => {
+    let list = uoms.value;
+    const currentUom = uoms.value.find(u => u.id === line.uom_id);
+    if (currentUom && currentUom.category) {
+        list = uoms.value.filter(u => u.category === currentUom.category);
+    } else {
+        const isCount = isUomIdDiscrete(line.uom_id);
+        list = uoms.value.filter(u => u.category === (isCount ? 'count' : u.category));
+    }
+
+    return list.map(u => {
+        let rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id !== null && Number(c.product_id) === Number(line.product_id));
+        let isCustom = !!rule;
+        if (!rule) {
+            rule = uomConversions.value.find(c => Number(c.from_uom_id) === Number(u.id) && c.product_id === null);
+        }
+        let conversion_text = '';
+        if (rule) {
+            const toUom = uoms.value.find(tu => tu.id === rule.to_uom_id);
+            if (toUom) {
+                conversion_text = `× ${Number(rule.conversion_factor)} ${toUom.abbreviation}`;
+            }
+        }
+        return { ...u, conversion_text, is_custom: isCustom };
+    });
+};
+
+const onReturnUomChange = (line) => {
+    const soLine = so.value.lines.find(l => l.id === line.so_line_id);
+    if (!soLine) return;
+    const targetInfo = getFactorToBase(line.uom_id, line.product_id);
+    const soBaseInfo = getFactorToBase(soLine.uom_id, soLine.product_id);
+    if (Number(targetInfo.baseId) === Number(soBaseInfo.baseId)) {
+        const effectiveFactor = Number(soBaseInfo.factor) / Number(targetInfo.factor);
+        line.return_qty = Number(line.net_shipped_qty) * effectiveFactor;
+        return;
+    }
+    toast.add({ severity: 'warn', summary: 'No Conversion', detail: 'No common base unit found for this UOM pairing.', life: 4000 });
+};
+
+const filteredReturnLocations = computed(() => {
+    if (availableInventory.value.length === 0) return locations.value;
+    const locIdsWithStock = new Set(availableInventory.value.map(inv => inv.location?.id).filter(Boolean));
+    return locations.value.filter(loc => locIdsWithStock.has(loc.id));
+});
+
+const getStockInSelectedLocation = (productId) => {
+    if (!returnForm.value.location_id) return 0;
+    const inv = availableInventory.value.find(
+        i => Number(i.product?.id) === Number(productId) && Number(i.location?.id) === Number(returnForm.value.location_id)
+    );
+    return inv ? Number(inv.quantity_on_hand) : 0;
+};
+
+// C-7: Calculate dynamic headroom for returns based on the selected UOM
+const getMaxReturnable = (line) => {
+    const soLine = so.value.lines.find(l => l.id === line.so_line_id);
+    if (!soLine) return 0;
+    
+    const currentInfo = getFactorToBase(line.uom_id, line.product_id);
+    const soInfo = getFactorToBase(soLine.uom_id, soLine.product_id);
+    
+    if (Number(currentInfo.baseId) !== Number(soInfo.baseId)) return 0;
+    
+    // (Shipped in SO Unit * SO Factor) / Current Factor = Max in Current Unit
+    const multiplier = Number(soInfo.factor) / Number(currentInfo.factor);
+    return Number(soLine.net_shipped_qty) * multiplier;
+};
 
 const isQuotation = computed(() => so.value?.status?.name === 'quotation' || so.value?.status?.name === 'quotation_sent');
 const canCancel = computed(() => so.value && !['shipped', 'cancelled', 'closed'].includes(so.value.status.name));
@@ -309,23 +406,38 @@ const fulfill = async () => {
     }
 };
 
-const openReturnDialog = () => {
-    returnForm.value.lines = so.value.lines
-        .filter(l => Number(l.shipped_qty) > 0)
-        .map(l => ({
-            so_line_id: l.id,
-            product_name: l.product_name,
-            sku: l.sku,
-            shipped_qty: Number(l.shipped_qty),
-            returned_qty: Number(l.returned_qty), // already returned
-            to_return: 0,
-            uom: l.uom?.abbreviation,
-            resolution: 'replacement',
-            reason: ''
-        }));
-    returnForm.value.notes = '';
-    returnForm.value.location_id = null;
-    returnDialog.value = true;
+const openReturnDialog = async () => {
+    returnLoading.value = true;
+    try {
+        // Port logical parity: Fetch inventory distribution for all products on the SO
+        const productIds = so.value.lines.map(l => l.product_id);
+        const inventoryRes = await Promise.all(
+            productIds.map(id => axios.get(`/api/inventory?product_id=${id}&limit=100`))
+        );
+        availableInventory.value = inventoryRes.flatMap(res => res.data.data);
+
+        returnForm.value.location_id = null;
+        returnForm.value.lines = so.value.lines
+            .filter(l => Number(l.net_shipped_qty) > 0)
+            .map(l => ({
+                so_line_id: l.id,
+                product_id: l.product_id,
+                product_name: l.product_name,
+                sku: l.sku,
+                net_shipped_qty: Number(l.net_shipped_qty), // Original shipped in SO Unit
+                uom: l.uom?.abbreviation,
+                uom_id: l.uom_id,
+                return_qty: 0,
+                resolution: 'replacement',
+                reason: ''
+            }));
+        returnForm.value.notes = '';
+        returnDialog.value = true;
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Could not fetch inventory position data.', life: 3000 });
+    } finally {
+        returnLoading.value = false;
+    }
 };
 
 const submitReturn = async () => {
@@ -338,9 +450,10 @@ const submitReturn = async () => {
         const payload = {
             location_id: returnForm.value.location_id,
             notes: returnForm.value.notes,
-            lines: returnForm.value.lines.filter(l => Number(l.to_return) > 0).map(l => ({
+            lines: returnForm.value.lines.filter(l => Number(l.return_qty) > 0).map(l => ({
                 so_line_id: l.so_line_id,
-                returned_qty: l.to_return,
+                returned_qty: l.return_qty,
+                uom_id: l.uom_id,
                 resolution: l.resolution,
                 reason: l.reason
             }))
@@ -430,6 +543,7 @@ const totalDiscount = computed(() => {
                 </div>
 
                 <div class="flex items-center gap-3 z-10 no-print">
+                    <!-- Return Dialog (RMA High-Density Upgrade) -->
                     <Button 
                         v-if="canApprove && can('manage-sales-orders')" 
                         label="Confirm Order" 
@@ -646,13 +760,13 @@ const totalDiscount = computed(() => {
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="MANIFEST">
+                            <Column header="GOAL / REQ">
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
                                         <div class="flex items-center gap-2">
                                             <span class="text-[11px] font-mono font-black text-white">{{ data.formatted_ordered_qty }}</span>
                                         </div>
-                                        <span class="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Ordered</span>
+                                        <span class="text-[9px] font-black text-zinc-600 uppercase tracking-widest">Target</span>
                                     </div>
                                 </template>
                             </Column>
@@ -661,6 +775,13 @@ const totalDiscount = computed(() => {
                                     <div class="flex flex-col">
                                         <span class="text-[10px] font-mono font-bold text-zinc-300">{{ data.formatted_picked_qty }} Picked</span>
                                         <span class="text-[10px] font-mono font-bold text-zinc-300">{{ data.formatted_packed_qty }} Packed</span>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="RETURNED">
+                                <template #body="{ data }">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[11px] font-mono font-black text-amber-500/80">{{ Number(data.returned_qty) > 0 ? data.formatted_returned_qty : '-' }}</span>
                                     </div>
                                 </template>
                             </Column>
@@ -992,11 +1113,11 @@ const totalDiscount = computed(() => {
             </div>
         </Dialog>
 
-        <!-- Return Dialog -->
+        <!-- Return Dialog (RMA High-Density Matrix) -->
         <Dialog v-model:visible="returnDialog" modal :header="null" :closable="false" :style="{ width: '65rem' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:content:class="!p-0 !bg-transparent">
             <div class="flex flex-col bg-zinc-950 border border-amber-900/30 rounded-3xl overflow-hidden relative ring-1 ring-white/5 shadow-[0_0_50px_rgba(245,158,11,0.1)]">
-                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-amber-500/10 blur-[100px] pointer-events-none"></div>
-
+                <div class="absolute top-0 right-0 w-[50%] h-32 bg-amber-500/5 blur-[100px] pointer-events-none"></div>
+                
                 <div class="px-6 py-5 border-b border-amber-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -1008,93 +1129,170 @@ const totalDiscount = computed(() => {
                         </div>
                     </div>
                     <button @click="returnDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
-                        <i class="pi pi-times text-[10px]"></i>
+                        <i class="pi pi-times text-xs"></i>
                     </button>
                 </div>
 
-                <div class="p-6 flex flex-col gap-6 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                    <div class="bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl flex items-start gap-3">
-                        <i class="pi pi-exclamation-triangle text-amber-500 mt-0.5"></i>
-                        <div class="flex flex-col">
-                            <span class="text-[10px] font-black text-amber-400 uppercase tracking-widest font-mono mb-1">RMA Protocol Enforcement</span>
-                            <p class="text-[11px] text-zinc-400 font-medium leading-relaxed font-mono uppercase tracking-tight">
-                                Processing a return creates an <span class="text-white font-bold bg-zinc-900 px-2 py-0.5 rounded">SRMA</span> reversal movement. System will automatically restore inventory to picking bins and calculate credit note liabilities.
-                            </p>
-                        </div>
+                <div class="p-6 flex flex-col gap-6 max-h-[65vh] overflow-y-auto custom-scrollbar relative z-10">
+                    
+                    <!-- Protocol Alert -->
+                    <div class="bg-amber-500/5 border-l-2 border-l-amber-500/50 p-4 rounded-r-xl flex items-center gap-4">
+                        <i class="pi pi-shield text-amber-500/60 shadow-[0_0_10px_rgba(245,158,11,0.2)]"></i>
+                        <p class="text-[11px] text-zinc-400 font-medium leading-relaxed">
+                            <span class="text-white font-mono font-black mr-2 tracking-tighter uppercase opacity-80">RMA Protocol Enforcement</span>
+                            Processing an RMA generates an <span class="text-white font-mono font-bold">SRET</span> movement. 
+                            <span class="text-emerald-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Replacement</span> resets fulfillment. 
+                            <span class="text-sky-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Refund</span> calculates <span class="text-amber-400 underline decoration-amber-500/30">Credit Note</span> liabilities.
+                        </p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-6 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50">
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Receiving Location (Destination Bin)</label>
+                    <!-- Destination Configuration -->
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-6 flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-widest uppercase font-mono pl-1">Target Bin (Destination)</label>
                             <Select 
                                 v-model="returnForm.location_id" 
-                                :options="locations" 
+                                :options="filteredReturnLocations" 
                                 optionLabel="name" 
                                 optionValue="id" 
-                                placeholder="Select active bin" 
-                                filter 
-                                class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !text-xs !font-bold text-white shadow-inner"
-                            />
+                                placeholder="SELECT RECEIPT BIN..." 
+                                filter
+                                class="!w-full !bg-zinc-900/30 !border-zinc-800/80 !rounded-xl !h-12 !flex !items-center font-mono focus-within:!border-amber-500/30 shadow-none transition-all"
+                            >
+                                <template #option="slotProps">
+                                    <div class="flex items-center justify-between w-full">
+                                        <span class="text-[11px] font-bold text-zinc-300 uppercase tracking-tight">{{ slotProps.option.name }}</span>
+                                        <span class="text-[10px] font-mono font-black text-amber-500/60">{{ slotProps.option.code }}</span>
+                                    </div>
+                                </template>
+                            </Select>
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="text-[9px] font-black text-zinc-600 tracking-[0.2em] uppercase font-mono">Return Notes / Memo</label>
-                            <InputText v-model="returnForm.notes" placeholder="Detailed reason for global return..." class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-11 !px-4 !text-xs !font-bold text-white focus:!border-amber-500/50 transition-all shadow-inner" />
+                        <div class="col-span-6 flex flex-col gap-2">
+                            <label class="text-[9px] font-black text-zinc-600 tracking-widest uppercase font-mono pl-1">Global Return Memo</label>
+                            <InputText v-model="returnForm.notes" placeholder="Detailed reason for global return..." class="!w-full !bg-zinc-900/30 !border-zinc-800/80 !rounded-xl !h-12 !px-4 !text-xs !font-bold text-white focus:!border-amber-500/30 transition-all shadow-none" />
                         </div>
                     </div>
-                
-                    <DataTable :value="returnForm.lines" class="p-datatable-sm" scrollable scrollHeight="300px">
-                        <Column field="product_name" header="PRODUCT/ID">
-                             <template #body="{ data }">
-                                <div class="flex flex-col">
-                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
-                                    <span class="text-[9px] font-mono text-amber-500/70 font-bold uppercase tracking-widest">{{ data.sku }}</span>
+
+                    <!-- Line Matrix -->
+                    <div class="flex flex-col gap-2 text-center">
+                        <div class="grid grid-cols-12 gap-4 px-4 text-[8px] font-black text-zinc-600 uppercase tracking-[0.2em] font-mono mb-1">
+                            <div class="col-span-3 text-left">Product/ID</div>
+                            <div class="col-span-2">System Status</div>
+                            <div class="col-span-7">RMA Entry Selection</div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-3">
+                            <div v-for="(line, index) in returnForm.lines" :key="line.so_line_id" 
+                                 class="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 items-center bg-zinc-900/20 border border-zinc-800/40 rounded-2xl hover:bg-zinc-900/40 transition-all hover:border-amber-500/20 group/row"
+                            >
+                                <!-- Product Identity -->
+                                <div class="xl:col-span-3 flex flex-col gap-1 text-left">
+                                    <span class="text-xs font-black text-white group-hover/row:text-amber-400 transition-colors">{{ line.product_name }}</span>
+                                    <span class="text-[9px] font-mono font-black text-sky-500/60 uppercase tracking-tighter">{{ line.sku }}</span>
                                 </div>
-                            </template>
-                        </Column>
-                        <Column header="FULFILLED">
-                            <template #body="{ data }">
-                                <div class="flex flex-col items-center">
-                                    <span class="text-[11px] font-mono font-black text-zinc-200">{{ data.shipped_qty }}</span>
-                                    <span class="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">{{ data.uom }}</span>
+
+                                <!-- Status Indicators -->
+                                <div class="xl:col-span-2 flex items-center justify-center gap-3">
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">SO UNIT</span>
+                                        <span class="text-[11px] font-mono font-bold text-zinc-300">{{ line.net_shipped_qty }}</span>
+                                    </div>
+                                    <div class="w-px h-6 bg-zinc-800/50"></div>
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] font-black uppercase tracking-widest text-emerald-500/60">In Bin</span>
+                                        <span class="text-[11px] font-mono font-bold text-emerald-400">
+                                            {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
+                                        </span>
+                                    </div>
                                 </div>
-                            </template>
-                        </Column>
-                        <Column header="QTY TO RETURN" style="width: 140px">
-                            <template #body="{ data }">
-                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-amber-500/50 transition-all shadow-inner h-10 group overflow-hidden">
-                                     <InputNumber 
-                                        v-model="data.to_return" 
-                                        :min="0" 
-                                        :max="data.shipped_qty" 
-                                        :maxFractionDigits="isUomIdDiscrete(data.so_line_id ? so.lines.find(l => l.id === data.so_line_id)?.uom_id : null) ? 0 : 8"
-                                        class="p-inputtext-sm text-center font-mono font-black text-amber-400 border-0 bg-transparent flex-1 focus:ring-0 w-full"
-                                        :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f59e0b', width: '100%', boxShadow: 'none', height: '2.5rem', fontSize: '0.85rem' }"
-                                        placeholder="0"
-                                    />
+
+                                <!-- Entries (Unified Action Bar) -->
+                                <div class="xl:col-span-7 grid grid-cols-12 gap-2 h-10">
+                                    <!-- Qty + UOM -->
+                                    <div class="col-span-5 flex items-center bg-zinc-950 border border-zinc-800 rounded-xl focus-within:border-amber-500/50 transition-all overflow-hidden h-full">
+                                        <div class="flex-1 relative group/input">
+                                            <InputNumber 
+                                                v-model="line.return_qty" 
+                                                class="w-full h-full"
+                                                :max="getMaxReturnable(line)"
+                                                :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 8"
+                                                :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f59e0b', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
+                                                placeholder="0"
+                                            />
+                                            <span class="absolute -top-1 left-1/2 -translate-x-1/2 text-[7px] font-black text-zinc-700 uppercase tracking-tighter opacity-0 group-focus-within/input:opacity-100 transition-opacity">
+                                                MAX: {{ getMaxReturnable(line).toFixed(2) }}
+                                            </span>
+                                        </div>
+                                        <div class="w-px h-4 bg-zinc-800/50"></div>
+                                        <Select 
+                                            v-model="line.uom_id" 
+                                            :options="getFilteredUoms(line)" 
+                                            optionLabel="abbreviation" 
+                                            optionValue="id" 
+                                            @change="onReturnUomChange(line)"
+                                            class="!bg-zinc-900/10 !border-0 !shadow-none !h-full w-24"
+                                            pt:label:class="!text-amber-500 !font-black !p-0 !flex !items-center !justify-center !uppercase !h-full !text-[11px]"
+                                            pt:dropdown:class="!text-zinc-700 !w-4"
+                                        >
+                                            <template #value="slotProps">
+                                                <span v-if="slotProps.value" class="text-amber-500 font-black">
+                                                    {{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}
+                                                </span>
+                                            </template>
+                                        </Select>
+                                    </div>
+
+                                    <!-- Resolution -->
+                                    <div class="col-span-3">
+                                        <Select 
+                                            v-model="line.resolution" 
+                                            :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'REFUND', value: 'refund'}]" 
+                                            optionLabel="label" 
+                                            optionValue="value" 
+                                            class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !h-full !flex !items-center !text-[9px] !font-black tracking-widest" 
+                                        >
+                                            <template #value="slotProps">
+                                                <span v-if="slotProps.value" class="text-[9px] font-black uppercase" :class="slotProps.value === 'replacement' ? 'text-emerald-500/60' : 'text-sky-500/60'">
+                                                    {{ slotProps.value === 'replacement' ? 'REPLACE' : 'REFUND' }}
+                                                </span>
+                                            </template>
+                                        </Select>
+                                    </div>
+
+                                    <!-- Reason -->
+                                    <div class="col-span-4">
+                                        <InputText 
+                                            v-model="line.reason" 
+                                            placeholder="Condition..." 
+                                            class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !text-[11px] !font-bold !h-full !px-4 focus:!border-amber-500/30 text-zinc-300" 
+                                        />
+                                    </div>
                                 </div>
-                            </template>
-                        </Column>
-                        <Column header="RESOLUTION" style="width: 170px">
-                            <template #body="{ data }">
-                                <Select v-model="data.resolution" :options="[{label:'Replacement',value:'replacement'},{label:'Refund / Credit',value:'refund'}]" optionLabel="label" optionValue="value" class="!w-full !bg-zinc-950 !border-zinc-800 !rounded-xl !text-[10px] !h-10 shadow-inner focus:!border-amber-500/50 transition-all font-bold text-white uppercase tracking-widest" />
-                            </template>
-                        </Column>
-                        <Column header="REASON / CONDITION" style="width: 200px">
-                            <template #body="{ data }">
-                                <InputText v-model="data.reason" placeholder="e.g. Defective, Wrong Item" class="!bg-zinc-950 !border-zinc-800 !rounded-xl !text-[10px] !h-10 w-full !px-3 shadow-inner focus:!border-amber-500/50 transition-all" />
-                            </template>
-                        </Column>
-                    </DataTable>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="px-6 py-5 border-t border-amber-900/10 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-20 relative">
-                    <Button label="Cancel" @click="returnDialog = false" class="p-button-text !text-zinc-500 hover:!text-white uppercase font-mono font-black tracking-widest text-[11px]" />
+                <!-- Action Footer -->
+                <div class="px-6 py-5 border-t border-amber-900/30 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-10 relative">
                     <Button 
-                        label="Execute Return" 
-                        :loading="returnLoading" 
-                        @click="submitReturn"
-                        class="!px-10 !h-12 !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black uppercase font-mono tracking-widest text-[11px] !rounded-xl !border-none shadow-[0_0_20px_rgba(245,158,11,0.3)]"
+                        label="Abort Operation" 
+                        @click="returnDialog = false" 
+                        class="p-button-text !text-zinc-500 hover:!text-white !font-bold !text-[11px] !tracking-widest uppercase font-mono" 
                     />
+                    
+                    <div class="flex items-center gap-6">
+                        <span v-if="returnForm.lines.some(l => Number(l.return_qty) > 0)" class="text-[10px] font-mono text-amber-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                            <div class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
+                            {{ returnForm.lines.filter(l => Number(l.return_qty) > 0).length }} Marked
+                        </span>
+                        <Button 
+                            label="EXECUTE RETURN" 
+                            @click="submitReturn" 
+                            :loading="returnLoading" 
+                            class="!min-h-[2.5rem] !px-10 !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
+                        />
+                    </div>
                 </div>
             </div>
         </Dialog>

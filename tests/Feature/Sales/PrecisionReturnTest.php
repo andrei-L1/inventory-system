@@ -113,9 +113,11 @@ class PrecisionReturnTest extends TestCase
 
         // 4. Verify Quantities in SO Line
         $soLine->refresh();
-        $expectedNewShipped = round($orderQty - $returnQty, 8);
+        $expectedNewNet = round($orderQty - $returnQty, 8);
 
-        $this->assertEquals($expectedNewShipped, (float) $soLine->shipped_qty, 'Shipped quantity should be decremented precisely');
+        $this->assertEquals($expectedNewNet, (float) $soLine->shipped_qty, 'Shipped quantity should be decremented precisely');
+        $this->assertEquals($expectedNewNet, (float) $soLine->net_shipped_qty, 'Net Shipped quantity should be decremented precisely');
+        $this->assertEquals($expectedNewNet, (float) $soLine->requirement_qty, 'Active Requirement should be decremented precisely');
         $this->assertEquals($returnQty, (float) $soLine->returned_qty, 'Returned quantity should match exactly');
 
         // 5. Verify Inventory QOH

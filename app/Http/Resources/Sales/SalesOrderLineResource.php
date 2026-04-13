@@ -36,6 +36,7 @@ class SalesOrderLineResource extends JsonResource
             'ordered_qty' => (string) $this->ordered_qty,
             'formatted_ordered_qty' => $this->formatted_ordered_qty,
             'shipped_qty' => (string) $this->shipped_qty,
+            'net_shipped_qty' => (string) $this->net_shipped_qty,
             'formatted_shipped_qty' => $this->formatted_shipped_qty,
             'uninvoiced_qty' => (string) $this->uninvoiced_qty,
             'picked_qty' => (string) $this->picked_qty,

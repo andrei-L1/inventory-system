@@ -7,6 +7,7 @@ use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -94,6 +95,45 @@ class TransactionLine extends Model
     public function serials(): BelongsToMany
     {
         return $this->belongsToMany(ProductSerial::class, 'transaction_line_serials');
+    }
+
+    /**
+     * Get the bill lines associated with this transaction line.
+     */
+    public function billLines(): HasMany
+    {
+        return $this->hasMany(BillLine::class);
+    }
+
+    /**
+     * Get the total quantity already billed for this receipt line.
+     * EXCLUDES lines from VOIDed bills to allow for correct re-billing.
+     */
+    public function getBilledQtyAttribute(): string
+    {
+        // Use sum() on the relationship to handle filtering efficiently
+        // if billLines is not loaded. If loaded, this might cause a query.
+        // We'll use a collection sum if it's already loaded for performance.
+        $lines = $this->relationLoaded('billLines') 
+            ? $this->billLines 
+            : $this->billLines()->with('bill')->get();
+
+        $total = '0';
+        foreach ($lines as $line) {
+            if ($line->bill && $line->bill->status !== Bill::STATUS_VOID) {
+                $total = FinancialMath::add($total, (string) $line->quantity);
+            }
+        }
+
+        return $total;
+    }
+
+    /**
+     * Get the remaining quantity available to be billed for this receipt line.
+     */
+    public function getBillableQtyAttribute(): string
+    {
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->quantity, $this->billed_qty));
     }
 
     /**

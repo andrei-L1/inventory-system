@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Invoice extends Model
 {
@@ -41,8 +42,8 @@ class Invoice extends Model
     protected $casts = [
         'invoice_date' => 'date:Y-m-d',
         'due_date' => 'date:Y-m-d',
-        'total_amount' => 'decimal:8',
-        'paid_amount' => 'decimal:8',
+        'total_amount' => 'decimal:2',
+        'paid_amount' => 'decimal:2',
     ];
 
     protected $appends = [
@@ -95,5 +96,43 @@ class Invoice extends Model
     public function isVoid(): bool
     {
         return $this->status === self::STATUS_VOID;
+    }
+
+    /**
+     * Formally void the invoice and reverse its financial impact.
+     * 
+     * Actions:
+     * 1. Clears payment allocations (returning funds to the customer payment pool).
+     * 2. Sets status to VOID.
+     * 
+     * Note: SalesOrderLine invoicing progress is calculated dynamically,
+     * so it will automatically reflect the release of these items.
+     */
+    public function void(): bool
+    {
+        if ($this->status === self::STATUS_VOID) {
+            return true;
+        }
+
+        return DB::transaction(function () {
+            // 1. Reverse financial allocations (un-pay the invoice)
+            foreach ($this->payments as $allocation) {
+                $allocation->delete();
+            }
+
+            // 2. Update Invoice status
+            $success = $this->update([
+                'status' => self::STATUS_VOID,
+                'paid_amount' => 0,
+            ]);
+
+            // 3. Sync Sales Order Billing Status and overall Fulfillment Status
+            if ($this->salesOrder) {
+                $this->salesOrder->syncBillingStatus();
+                $this->salesOrder->recalculateStatus();
+            }
+
+            return $success;
+        });
     }
 }

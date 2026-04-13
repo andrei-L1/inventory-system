@@ -13,6 +13,9 @@ class Payment extends Model
 {
     use HasFactory, SoftDeletes;
 
+    const STATUS_PAID = 'PAID';
+    const STATUS_VOID = 'VOID';
+
     protected $fillable = [
         'payment_number',
         'customer_id',
@@ -21,7 +24,34 @@ class Payment extends Model
         'payment_method',
         'reference_number',
         'notes',
+        'status',
     ];
+
+    /**
+     * Formally void the receipt and reverse its financial impact.
+     */
+    public function void(): bool
+    {
+        if ($this->status === self::STATUS_VOID) {
+            return true;
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            foreach ($this->allocations as $allocation) {
+                $invoice = $allocation->invoice;
+                if ($invoice) {
+                    $newPaidAmount = FinancialMath::sub((string) $invoice->paid_amount, (string) $allocation->amount);
+                    $invoice->update([
+                        'paid_amount' => $newPaidAmount,
+                        'status' => Invoice::STATUS_OPEN // Revert to open
+                    ]);
+                }
+                $allocation->delete();
+            }
+
+            return $this->update(['status' => self::STATUS_VOID]);
+        });
+    }
 
     protected $casts = [
         'payment_date' => 'date:Y-m-d',
@@ -30,6 +60,7 @@ class Payment extends Model
 
     protected $appends = [
         'unallocated_amount',
+        'refunded_amount',
     ];
 
     public function customer(): BelongsTo
@@ -47,6 +78,15 @@ class Payment extends Model
         return $this->hasMany(PaymentRefund::class);
     }
 
+    public function getRefundedAmountAttribute(): string
+    {
+        $refunded = '0';
+        foreach ($this->refunds as $refund) {
+            $refunded = FinancialMath::add($refunded, (string) $refund->amount);
+        }
+        return $refunded;
+    }
+
     public function getUnallocatedAmountAttribute(): string
     {
         $allocated = '0';
@@ -54,12 +94,7 @@ class Payment extends Model
             $allocated = FinancialMath::add($allocated, (string) $allocation->amount);
         }
 
-        $refunded = '0';
-        foreach ($this->refunds as $refund) {
-            $refunded = FinancialMath::add($refunded, (string) $refund->amount);
-        }
-
-        $spent = FinancialMath::add($allocated, $refunded);
+        $spent = FinancialMath::add($allocated, $this->refunded_amount);
 
         return FinancialMath::sub((string) $this->amount, $spent);
     }

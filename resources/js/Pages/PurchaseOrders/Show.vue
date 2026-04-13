@@ -24,6 +24,13 @@ const toast = useToast();
 const po = ref(null);
 const loading = ref(true);
 
+const canBill = computed(() => {
+    if (!po.value) return false;
+    // Industry standard: Bill is possible if there is at least one received item that hasn't been billed yet
+    return (['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.value.status)) &&
+           po.value.lines.some(l => Number(l.received_qty) > Number(l.billed_qty || 0));
+});
+
 const approveLoading = ref(false);
 const sendLoading = ref(false);
 const shipLoading = ref(false);
@@ -631,6 +638,14 @@ const openPrint = () => {
                     />
 
                     <Button 
+                        v-if="canBill && can('manage-purchase-orders')" 
+                        label="Convert to Bill" 
+                        icon="pi pi-file-export" 
+                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
+                        @click="router.visit(`/finance/bills/create?from_po=${po.id}`)"
+                    />
+                    
+                    <Button 
                         v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Print PO" 
                         icon="pi pi-print" 
@@ -787,29 +802,35 @@ const openPrint = () => {
                                 </template>
                             </Column>
 
-                            <Column field="ordered_qty" header="REQ QTY">
+                            <Column field="ordered_qty" header="ORDER GOAL">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ data.formatted_ordered_qty || data.ordered_qty }}</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-mono text-xs font-bold">{{ data.formatted_ordered_qty || data.ordered_qty }}</span>
+                                        <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Requirement</span>
+                                    </div>
                                 </template>
                             </Column>
 
-                            <Column field="received_qty" header="RCV QTY">
+                            <Column field="received_qty" header="NET RCV">
                                 <template #body="{ data }">
-                                    <span :class="[Number(data.received_qty) >= Number(data.ordered_qty) ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
-                                        {{ data.formatted_received_qty || data.received_qty }}
-                                    </span>
+                                    <div class="flex flex-col">
+                                        <span :class="[Number(data.net_received_qty) >= Number(data.requirement_qty) ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
+                                            {{ data.formatted_received_qty || data.received_qty }}
+                                        </span>
+                                        <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Balanced</span>
+                                    </div>
                                 </template>
                             </Column>
 
-                            <Column field="returned_qty" header="RET QTY">
+                            <Column field="returned_qty" header="RETURNED">
                                 <template #body="{ data }">
                                     <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-zinc-700', 'font-mono text-xs']">
-                                        {{ data.formatted_returned_qty || data.returned_qty }}
+                                        {{ Number(data.returned_qty) > 0 ? (data.formatted_returned_qty || data.returned_qty) : '-' }}
                                     </span>
                                 </template>
                             </Column>
                             
-                            <Column field="pending_qty" header="REM QTY">
+                            <Column field="pending_qty" header="REMAINING">
                                 <template #body="{ data }">
                                     <span :class="[Number(data.pending_qty) === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
                                         {{ data.formatted_pending_qty || data.pending_qty }}

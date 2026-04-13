@@ -11,6 +11,7 @@ use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
 use App\Models\InventoryCostLayer;
+use App\Models\DebitNote;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
@@ -66,6 +67,7 @@ class PurchaseOrderController extends Controller
             'transactions.toLocation',
             'transactions.fromLocation',
             'transactions.lines.product.uom',
+            'transactions.lines.billLines', // New: load billing history for each receipt line
         ]);
 
         return new PurchaseOrderResource($purchaseOrder);
@@ -437,15 +439,7 @@ class PurchaseOrderController extends Controller
                 $transaction = $stockService->recordMovement($transactionData);
 
                 // Update PO Status
-                // C-3: Must load('lines') after refresh() so isCompleted() uses fresh data,
-                // not the stale in-memory collection from before the receive loop.
-                $purchaseOrder->refresh();
-                $purchaseOrder->load('lines');
-                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
-                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
-
-                $purchaseOrder->status_id = $poStatus->id;
-                $purchaseOrder->save();
+                $purchaseOrder->recalculateStatus();
 
                 return $transaction;
             });
@@ -511,85 +505,123 @@ class PurchaseOrderController extends Controller
                 // and both decrement — causing received_qty to go negative.
                 $poLines = $purchaseOrder->lines()->lockForUpdate()->get()->keyBy('id');
 
+                $totalCreditAmount = '0';
                 foreach ($request->lines as $item) {
                     $poLine = $poLines->get($item['po_line_id']);
 
-                    if (! $poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
+                    if (!$poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
                         abort(400, 'Invalid PO line ID.');
                     }
 
-                    $returnQtyRaw = (string) $item['return_qty'];
+                    $returnQtyRaw = (string)$item['return_qty'];
                     $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
                     $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
 
                     // Convert return qty to PO line UOM for validation and tracking
                     $qtyToUpdatePO = $returnQtyRaw;
-                    if ((int) $returnUomId !== (int) $lineUomId) {
+                    if ((int)$returnUomId !== (int)$lineUomId) {
                         $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $poLine->product_id);
                         $qtyToUpdatePO = FinancialMath::round(FinancialMath::mul($returnQtyRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     // Guard: cannot return more than received
-                    if (FinancialMath::gt($qtyToUpdatePO, (string) $poLine->received_qty)) {
-                        $receivedInReturnUnit = (string) $poLine->received_qty;
-                        if ((int) $returnUomId !== (int) $lineUomId) {
+                    if (FinancialMath::gt($qtyToUpdatePO, (string)$poLine->received_qty)) {
+                        $receivedInReturnUnit = (string)$poLine->received_qty;
+                        if ((int)$returnUomId !== (int)$lineUomId) {
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
-                            $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string) $poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
+                            $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string)$poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
                         }
 
-                        $formattedReturn = UomHelper::format($returnQtyRaw, (int) $returnUomId, $poLine->product_id);
-                        $formattedMax = UomHelper::format($receivedInReturnUnit, (int) $returnUomId, $poLine->product_id);
+                        $formattedReturn = UomHelper::format($returnQtyRaw, (int)$returnUomId, $poLine->product_id);
+                        $formattedMax = UomHelper::format($receivedInReturnUnit, (int)$returnUomId, $poLine->product_id);
 
                         abort(422, "Cannot process return: The entered quantity ({$formattedReturn}) is greater than the quantity currently received ({$formattedMax}) for SKU {$poLine->product->sku}.");
                     }
 
                     $unitCost = $poLine->unit_cost;
-                    if ((int) $returnUomId !== (int) $lineUomId) {
-                        // Factor ($returnUomId to $lineUomId) was calculated at line 488.
-                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
+                    if ((int)$returnUomId !== (int)$lineUomId) {
+                        $unitCost = FinancialMath::round(FinancialMath::mul((string)$poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
                     }
-
+ 
                     // Negative quantity → issue path (consumes layers and reduces QOH).
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
                         'quantity' => -abs($returnQtyRaw),
-                        'unit_cost' => (string) $unitCost,
+                        'unit_cost' => (string)$unitCost,
                         'uom_id' => $returnUomId,
-                        'notes' => 'Resolution: '.ucfirst($item['resolution']),
+                        'notes' => 'Resolution: ' . ucfirst($item['resolution']),
                     ];
-
-                    $newReceived = FinancialMath::sub((string) $poLine->received_qty, (string) $qtyToUpdatePO);
-                    $poLine->received_qty = FinancialMath::isNegative($newReceived) ? '0' : $newReceived;
-                    $poLine->returned_qty = FinancialMath::add((string) $poLine->returned_qty, (string) $qtyToUpdatePO);
-
+ 
+                    // [INDUSTRY STANDARD]: We maintain historical 'returned' count
+                    // but we MUST decrement 'received_qty' to allow "re-receipt" of replacements.
+                    $poLine->returned_qty = FinancialMath::add((string)$poLine->returned_qty, (string)$qtyToUpdatePO);
+                    $poLine->received_qty = FinancialMath::max('0', FinancialMath::sub((string)$poLine->received_qty, (string)$qtyToUpdatePO));
+ 
                     if ($item['resolution'] === 'credit') {
-                        $newOrdered = FinancialMath::sub((string) $poLine->ordered_qty, (string) $qtyToUpdatePO);
-                        $poLine->ordered_qty = FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered;
+                        // Financial Credit Accumulation
+                        $lineCredit = FinancialMath::round(FinancialMath::mul((string)$qtyToUpdatePO, (string)$poLine->unit_cost), FinancialMath::LINE_SCALE);
+                        $totalCreditAmount = FinancialMath::add($totalCreditAmount, $lineCredit);
                     }
-
-                    $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
+ 
+                    $poLine->notes = trim(($poLine->notes ?? '') . ' | Return Reason: ' . ($item['reason'] ?? 'N/A') . ' (' . $item['resolution'] . ')');
                     $poLine->save();
                 }
-
+ 
                 // H-7: Record movement FIRST, then recalculate total.
-                // This guarantees all line saves have committed before summing.
                 $transaction = $stockService->recordMovement($transactionData);
+ 
+                // ─── Phase 5.7: Generate Debit Note (Consolidated in Bills) ───
+                if (FinancialMath::gt($totalCreditAmount, '0')) {
+                    $debitNote = \App\Models\Bill::create([
+                        'bill_number' => 'DN-' . now()->format('YmdHi') . '-' . mt_rand(1001, 9999),
+                        'type' => \App\Models\Bill::TYPE_DEBIT_NOTE,
+                        'vendor_id' => $purchaseOrder->vendor_id,
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'ref_transaction_id' => $transaction->id ?? null,
+                        'bill_date' => now()->toDateString(),
+                        'total_amount' => $totalCreditAmount,
+                        'paid_amount' => 0,
+                        'status' => \App\Models\Bill::STATUS_POSTED,
+                        'notes' => 'Generated from Purchase Return: ' . ($transaction->reference_number ?? 'N/A'),
+                        'reason' => $request->lines[0]['reason'] ?? 'Purchase Return',
+                    ]);
 
-                $this->recalculatePurchaseOrderTotal($purchaseOrder);
+                    // Generate Line Items for the Debit Note to support Dynamic Quantity Release
+                    foreach ($request->lines as $item) {
+                        // IMPORTANT: Only generate lines for items that opted for CREDIT resolution
+                        if (($item['resolution'] ?? '') !== 'credit') {
+                            continue;
+                        }
 
-                $purchaseOrder->refresh();
-                $purchaseOrder->load('lines');
+                        $poLine = $purchaseOrder->lines()->where('id', $item['po_line_id'])->first();
+                        if ($poLine) {
+                            $returnQtyRaw = (string) $item['return_qty'];
+                            $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
+                            
+                            // Convert return qty to ATOMIC PIECES for BillLine storage
+                            $piecesMultiplier = (string) \App\Helpers\UomHelper::getMultiplierToSmallest($returnUomId, $poLine->product_id);
+                            $qtyPieces = FinancialMath::mul($returnQtyRaw, $piecesMultiplier);
 
-                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+                            // Calculate line credit amount
+                            $multiplier = (string) \App\Helpers\UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
+                            $unitPricePieces = FinancialMath::div((string)$poLine->unit_cost, $multiplier);
+                            $lineCreditRaw = FinancialMath::mul($qtyPieces, $unitPricePieces);
 
-                if ($wasManuallyClosed) {
-                    $newStatusName = 'closed';
+                            // Note: We store the returned quantity as NEGATIVE in the BillLine 
+                            // to correctly re-balance the net billed quantity in the dynamic accessor.
+                            $debitNote->lines()->create([
+                                'purchase_order_line_id' => $poLine->id,
+                                'quantity' => '-' . $qtyPieces,
+                                'unit_price' => $unitPricePieces,
+                                'subtotal' => '-' . FinancialMath::round($lineCreditRaw, FinancialMath::LINE_SCALE),
+                                'notes' => 'Credit for Return: ' . ($item['reason'] ?? 'N/A'),
+                            ]);
+                        }
+                    }
                 }
 
-                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
-                $purchaseOrder->status_id = $poStatus->id;
-                $purchaseOrder->save();
+                $purchaseOrder->recalculateStatus();
 
                 return $transaction;
             });

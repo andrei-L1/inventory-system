@@ -81,8 +81,10 @@ class ProcurementTest extends TestCase
         $this->assertEqualsWithDelta(7.0, (float) $invAfter->quantity_on_hand, 0.0001);
 
         $line = PurchaseOrderLine::findOrFail($poLineId);
-        $this->assertEqualsWithDelta(7.0, (float) $line->received_qty, 0.0001);
-        $this->assertEqualsWithDelta(10.0, (float) $line->ordered_qty, 0.0001);
+        $this->assertEqualsWithDelta(7.0, (float) $line->received_qty, 0.0001, 'Net Received should decrease upon return');
+        $this->assertEqualsWithDelta(7.0, (float) $line->net_received_qty, 0.0001, 'Net Received should match the counter');
+        $this->assertEqualsWithDelta(10.0, (float) $line->ordered_qty, 0.0001, 'Ordered Qty should remain immutable');
+        $this->assertEqualsWithDelta(10.0, (float) $line->requirement_qty, 0.0001, 'Requirement stays at 10 for replacements');
     }
 
     public function test_purchase_return_credit_reduces_ordered_qty_and_totals(): void
@@ -133,10 +135,13 @@ class ProcurementTest extends TestCase
         ])->assertOk();
 
         $line = PurchaseOrderLine::findOrFail($poLineId);
-        $this->assertEqualsWithDelta(7.0, (float) $line->ordered_qty, 0.0001);
-        $this->assertEqualsWithDelta(7.0, (float) $line->received_qty, 0.0001);
+        $this->assertEqualsWithDelta(10.0, (float) $line->ordered_qty, 0.0001, 'Gross Ordered should stay at 10');
+        $this->assertEqualsWithDelta(7.0, (float) $line->requirement_qty, 0.0001, 'Net Requirement should be 7 after credit');
+        $this->assertEqualsWithDelta(7.0, (float) $line->received_qty, 0.0001, 'Received Qty should decrease');
+        $this->assertEqualsWithDelta(7.0, (float) $line->net_received_qty, 0.0001, 'Net Received should match');
 
         $poJson = $this->getJson("/api/purchase-orders/{$poId}")->assertOk()->json('data');
-        $this->assertEqualsWithDelta(35.0, (float) $poJson['total_amount'], 0.01);
+        // Total amount (contract) stays at 50, but Debit Note handles the $15 adjustment.
+        $this->assertEqualsWithDelta(50.0, (float) $poJson['total_amount'], 0.01);
     }
 }

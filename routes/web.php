@@ -133,28 +133,45 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         return Inertia::render('SalesOrders/Show', ['id' => $id]);
     })->name('sales-orders.show');
 
-    // --- Finance (Phase 5.5) ---
+    // --- Finance (Phase 5.5 / 5.7) ---
+    Route::get('/finance', fn() => redirect()->route('finance.center'));
     Route::get('/finance-center', function () {
         return Inertia::render('Finance/FinanceCenter');
     })->name('finance.center');
 
-    Route::get('/finance/invoices/create', function () {
-        return Inertia::render('Finance/InvoiceForm');
-    })->name('finance.invoices.create');
+    Route::prefix('finance')->name('finance.')->group(function () {
+        // A/R - Invoices
+        Route::get('/invoices/create', function () {
+            return Inertia::render('Finance/InvoiceForm');
+        })->name('invoices.create');
+        Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+        Route::get('/invoices/{id}', function (Request $request, $id) {
+            return Inertia::render('Finance/InvoiceDocument', ['id' => $id]);
+        })->name('invoices.show');
 
-    Route::get('/finance/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('finance.invoices.print');
+        // A/R - Payments
+        Route::get('/payments/create', function () {
+            return Inertia::render('Finance/PaymentForm');
+        })->name('payments.create');
+        Route::get('/payments/{payment}/print', [PaymentController::class, 'print'])->name('payments.print');
+        Route::get('/payments/{id}', function (Request $request, $id) {
+            return Inertia::render('Finance/PaymentDocument', ['id' => $id]);
+        })->name('payments.show');
 
-    Route::get('/finance/invoices/{id}', function (Request $request, $id) {
-        return Inertia::render('Finance/InvoiceDocument', ['id' => $id]);
-    })->name('finance.invoices.show');
+        // A/P - Bills
+        Route::get('/bills/create', function () {
+            return Inertia::render('Finance/BillForm');
+        })->name('bills.create');
+        Route::get('/bills/{id}', function (Request $request, $id) {
+            return Inertia::render('Finance/BillDocument', ['id' => $id]);
+        })->name('bills.show');
 
-    Route::get('/finance/payments/create', function () {
-        return Inertia::render('Finance/PaymentForm');
-    })->name('finance.payments.create');
-
-    Route::get('/finance/payments/{payment}/print', [PaymentController::class, 'print'])->name('finance.payments.print');
-
-    Route::get('/finance/payments/{id}', function (Request $request, $id) {
-        return Inertia::render('Finance/PaymentDocument', ['id' => $id]);
-    })->name('finance.payments.show');
+        // A/P - Vendor Payments
+        Route::get('/vendor-payments/create', function () {
+            return Inertia::render('Finance/VendorPaymentForm');
+        })->name('vendor-payments.create');
+        Route::get('/vendor-payments/{id}', function (Request $request, $id) {
+            return Inertia::render('Finance/VendorPaymentDocument', ['id' => $id]);
+        })->name('vendor-payments.show');
+    });
 });

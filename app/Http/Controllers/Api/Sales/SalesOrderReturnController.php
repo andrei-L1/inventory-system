@@ -33,6 +33,7 @@ class SalesOrderReturnController extends Controller
             'lines' => 'required|array',
             'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
             'lines.*.returned_qty' => 'required|numeric|min:0.0001',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
             'lines.*.resolution' => 'required|in:replacement,refund',
             'lines.*.reason' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
@@ -64,59 +65,51 @@ class SalesOrderReturnController extends Controller
 
                 $soLines = $so->lines()->lockForUpdate()->get()->keyBy('id');
                 $creditNoteLines = [];
+                $lineTotals = [];
 
                 foreach ($request->lines as $item) {
                     /** @var SalesOrderLine $soLine */
                     $soLine = $soLines->get($item['so_line_id']);
-                    $returnedQty = (string) $item['returned_qty'];
+                    $returnedQtyRaw = (string) $item['returned_qty'];
+                    $returnUomId = $item['uom_id'] ?? $soLine->uom_id;
+                    $lineUomId = $soLine->uom_id;
 
-                    $maxReturnable = FinancialMath::sub((string) $soLine->shipped_qty, (string) $soLine->returned_qty);
-                    if (FinancialMath::gt($returnedQty, $maxReturnable)) {
-                        abort(422, "Cannot return more than what was shipped for product: {$soLine->product->name}");
+                    // Convert return qty to SO line UOM for validation and tracking
+                    $qtyToUpdateSO = $returnedQtyRaw;
+                    if ((int)$returnUomId !== (int)$lineUomId) {
+                        $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $soLine->product_id);
+                        $qtyToUpdateSO = FinancialMath::round(FinancialMath::mul($returnedQtyRaw, $factor), FinancialMath::LINE_SCALE);
+                    }
+
+                    // [Net-Aware Check]: Since shipped_qty is now a net counter (decremented on return),
+                    // it represents the absolute maximum that can be returned from the warehouse.
+                    $maxReturnable = (string) $soLine->shipped_qty;
+                    if (FinancialMath::gt($qtyToUpdateSO, $maxReturnable)) {
+                        $uomName = $soLine->uom->abbreviation ?? 'units';
+                        abort(422, "Cannot return more than what is currently fulfilled for {$soLine->product->name}. Max available to return: {$maxReturnable} {$uomName}.");
                     }
 
                     $transactionData['lines'][] = [
                         'product_id' => $soLine->product_id,
                         'location_id' => $request->location_id,
-                        'quantity' => $returnedQty, // Receipt is positive string
-                        'uom_id' => $soLine->uom_id,
+                        'quantity' => $returnedQtyRaw, // Receipt is positive string in its provided UOM
+                        'uom_id' => $returnUomId,
                     ];
-
-                    $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $returnedQty);
-                    $soLine->shipped_qty = FinancialMath::sub((string) $soLine->shipped_qty, $returnedQty);
-                    $newPacked = FinancialMath::sub((string) $soLine->packed_qty, $returnedQty);
-                    $soLine->packed_qty = FinancialMath::round(
-                        FinancialMath::isNegative($newPacked) ? '0' : $newPacked,
-                        FinancialMath::LINE_SCALE
-                    );
-
-                    $newPicked = FinancialMath::sub((string) $soLine->picked_qty, $returnedQty);
-                    $soLine->picked_qty = FinancialMath::round(
-                        FinancialMath::isNegative($newPicked) ? '0' : $newPicked,
-                        FinancialMath::LINE_SCALE
-                    );
-
+ 
+                    // [INDUSTRY STANDARD]: We maintain cumulative historical values for returns
+                    // but we MUST decrement fulfillment counters to allow "re-dispatch" of replacements.
+                    $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $qtyToUpdateSO);
+                    
+                    // Rebalance fulfillment counters
+                    $soLine->shipped_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->shipped_qty, $qtyToUpdateSO));
+                    $soLine->packed_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->packed_qty, $qtyToUpdateSO));
+                    $soLine->picked_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->picked_qty, $qtyToUpdateSO));
+ 
                     if ($item['resolution'] === 'refund') {
-                        $newOrdered = FinancialMath::sub((string) $soLine->ordered_qty, $returnedQty);
-                        $soLine->ordered_qty = FinancialMath::round(
-                            FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered,
-                            FinancialMath::LINE_SCALE
-                        );
-
-                        // Recalculate line totals using BCMath — no floats.
-                        $soLine->discount_amount = FinancialMath::soLineDiscount(
-                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0
-                        );
-                        $soLine->tax_amount = FinancialMath::soLineTax(
-                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
-                        );
-                        $soLine->subtotal = FinancialMath::soLineSubtotal(
-                            $soLine->ordered_qty, $soLine->unit_price, $soLine->discount_rate ?? 0, $soLine->tax_rate ?? 0
-                        );
-
                         // Credit Note line values (Capture tax/discount from original line)
+                        // Use base-unit cost (soLine->unit_price) and the scaled quantity (qtyToUpdateSO)
                         $cnLineSubtotal = FinancialMath::soLineSubtotal(
-                            $returnedQty,
+                            $qtyToUpdateSO,
                             (string) $soLine->unit_price,
                             (string) $soLine->discount_rate,
                             (string) $soLine->tax_rate
@@ -125,12 +118,12 @@ class SalesOrderReturnController extends Controller
                         $creditNoteLines[] = [
                             'product_id' => $soLine->product_id,
                             'sales_order_line_id' => $soLine->id,
-                            'quantity' => $returnedQty,
+                            'quantity' => $qtyToUpdateSO, // We store credit in base-unit terms
                             'unit_price' => (string) $soLine->unit_price,
                             'tax_rate' => $soLine->tax_rate,
-                            'tax_amount' => FinancialMath::soLineTax($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate, (string) $soLine->tax_rate),
+                            'tax_amount' => FinancialMath::soLineTax($qtyToUpdateSO, (string) $soLine->unit_price, (string) $soLine->discount_rate, (string) $soLine->tax_rate),
                             'discount_rate' => $soLine->discount_rate,
-                            'discount_amount' => FinancialMath::soLineDiscount($returnedQty, (string) $soLine->unit_price, (string) $soLine->discount_rate),
+                            'discount_amount' => FinancialMath::soLineDiscount($qtyToUpdateSO, (string) $soLine->unit_price, (string) $soLine->discount_rate),
                             'subtotal' => $cnLineSubtotal,
                         ];
 
@@ -141,23 +134,14 @@ class SalesOrderReturnController extends Controller
                     $soLine->save();
                 }
 
-                // S-M1: The SO total_amount is intentionally NOT recalculated here.
-                // Once an SO is approved, its total_amount is immutable (like an original contract).
-                // The generated Credit Note (below) solely represents the financial adjustment.
-                // Mutating the SO total AND issuing a credit note would double-count the loss.
-
                 // Record stock movement
                 $transaction = $stockService->recordMovement($transactionData);
 
                 // --- STATUS RECALCULATION ---
-                // After modifying shipped_qty, the SO-level status must be
-                // re-evaluated from the actual line quantities. This allows the
-                // status to move backwards (e.g. SHIPPED → PARTIALLY_SHIPPED)
-                // so that warehouse staff can continue fulfilling the remainder.
                 $so->unsetRelation('lines'); // force a fresh load
                 $so->recalculateStatus();
 
-                // Automatically generate a Draft Credit Note if there are refunds
+                // Automatically generate a Posted Credit Note if there are refunds
                 $creditNote = null;
                 if (! empty($creditNoteLines)) {
                     $creditNote = Invoice::create([
@@ -166,7 +150,7 @@ class SalesOrderReturnController extends Controller
                         'sales_order_id' => $salesOrder->id,
                         'invoice_date' => now()->toDateString(),
                         'total_amount' => FinancialMath::headerTotal($lineTotals),
-                        'status' => Invoice::STATUS_DRAFT,
+                        'status' => Invoice::STATUS_OPEN,
                         'type' => Invoice::TYPE_CREDIT_NOTE,
                         'notes' => 'Generated from Return: '.$transaction->reference_number,
                     ]);
@@ -198,6 +182,18 @@ class SalesOrderReturnController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Helper to find a conversion factor between two UOMs.
+     */
+    private function getUomConversionFactor(int $fromId, int $toId, ?int $productId = null): string
+    {
+        try {
+            return (string) \App\Helpers\UomHelper::getConversionFactor($fromId, $toId, $productId);
+        } catch (\Exception $e) {
+            abort(422, $e->getMessage());
         }
     }
 }

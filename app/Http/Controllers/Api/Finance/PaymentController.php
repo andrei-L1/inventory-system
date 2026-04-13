@@ -85,7 +85,12 @@ class PaymentController extends Controller
                         abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Only {$remainingBudget} unallocated remains.");
                     }
 
-                    // Guard 2: don't over-pay the invoice.
+                    // Guard: don't allocate to PAID or VOID invoices.
+                    if ($invoice->status === Invoice::STATUS_PAID || $invoice->status === Invoice::STATUS_VOID) {
+                        abort(422, "Payment Error: Cannot allocate payment to Invoice #{$invoice->invoice_number} because it is already {$invoice->status}.");
+                    }
+
+                    // Guard: don't over-pay the invoice.
                     if (FinancialMath::gt($amountToAllocate, (string) $invoice->balance_due)) {
                         abort(422, "Cannot allocate {$amountToAllocate} for invoice #{$invoice->invoice_number}. Current balance is {$invoice->balance_due}.");
                     }
@@ -101,7 +106,8 @@ class PaymentController extends Controller
 
                     $invoice->paid_amount = FinancialMath::add((string) $invoice->paid_amount, $amountToAllocate);
 
-                    if (FinancialMath::gte((string) $invoice->paid_amount, (string) $invoice->total_amount)) {
+                    // Final status check must use HEADER_SCALE (2) to align with actual header totals
+                    if (FinancialMath::equals((string) $invoice->paid_amount, (string) $invoice->total_amount, FinancialMath::HEADER_SCALE)) {
                         $invoice->status = Invoice::STATUS_PAID;
                     }
 
@@ -179,7 +185,7 @@ class PaymentController extends Controller
                 $invoice->paid_amount = FinancialMath::max('0', FinancialMath::round($newPaidAmount, 2));
 
                 // 3. Re-evaluate status (Standard industry logic: If unpaid, it's OPEN)
-                if (FinancialMath::lt($invoice->paid_amount, (string) $invoice->total_amount)) {
+                if (FinancialMath::lt((string) $invoice->paid_amount, (string) $invoice->total_amount, FinancialMath::HEADER_SCALE)) {
                     $invoice->status = Invoice::STATUS_OPEN;
                 }
 
@@ -211,6 +217,20 @@ class PaymentController extends Controller
         $payment->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function void(Payment $payment): JsonResponse
+    {
+        if ($payment->status === Payment::STATUS_VOID) {
+            return response()->json(['message' => 'Payment already voided.'], 200);
+        }
+
+        $payment->void();
+
+        return response()->json([
+            'message' => 'Payment voided successfully. Funds released back to invoice balances.',
+            'payment' => $payment
+        ]);
     }
 
     public function print(Payment $payment)
