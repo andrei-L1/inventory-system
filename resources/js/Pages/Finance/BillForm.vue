@@ -143,7 +143,7 @@ const fetchPOData = async (poId) => {
                                 type: 'RECEIPT',
                                 reference: rcpt.reference_number,
                                 date: rcpt.received_at,
-                                transaction_line_id: l.id,
+                                transaction_line_id: l.transaction_line_id,
                                 quantity_in_po_unit: qtyInPoUnit,
                                 pieces: Number(l.quantity),
                                 base_uom: l.base_uom?.abbreviation ?? l.base_uom_abbreviation ?? '???',
