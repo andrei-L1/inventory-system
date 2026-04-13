@@ -23,4 +23,18 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
+
 test_output*.txt
+
+# Antigravity Session Artifacts
+/brain/
+/scratch/
+/artifacts/
+/implementation_plan.md
+/task.md
+/walkthrough.md
+/billing_logic_architecture.md
+/finance_center_guide.md
+/schema_roadmap_compliance.md
+/audit_findings.md
+/audit_report.md
