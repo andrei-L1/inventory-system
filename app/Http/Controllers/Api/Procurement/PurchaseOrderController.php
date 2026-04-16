@@ -456,12 +456,16 @@ class PurchaseOrderController extends Controller
                         abort(422, "Cannot process receipt: The entered quantity ({$formattedReceived}) is greater than the pending quantity ({$formattedMax}) remaining on this line for SKU {$poLine->product->sku}.");
                     }
 
-                    $unitCost = $poLine->unit_cost;
+                    $discountPct = FinancialMath::div((string) ($poLine->discount_rate ?? '0'), '100');
+                    $discountAmountPerUnit = FinancialMath::mul((string) $poLine->unit_cost, $discountPct);
+                    $netUnitCostRaw = FinancialMath::sub((string) $poLine->unit_cost, $discountAmountPerUnit);
+
+                    $unitCost = $netUnitCostRaw;
                     if ((int) $receivedUomId !== (int) $lineUomId) {
                         // Factor ($receivedUom to $lineUom) was calculated at line 373.
                         // Cost per $receivedUom = Cost per $lineUom * Factor.
                         // e.g. Box cost P100 * (1 Piece = 0.25 Box) = P25 Piece cost.
-                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
+                        $unitCost = FinancialMath::round(FinancialMath::mul($netUnitCostRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     $transactionData['lines'][] = [
@@ -579,9 +583,13 @@ class PurchaseOrderController extends Controller
                         abort(422, "Cannot process return: The entered quantity ({$formattedReturn}) is greater than the quantity currently received ({$formattedMax}) for SKU {$poLine->product->sku}.");
                     }
 
-                    $unitCost = $poLine->unit_cost;
+                    $discountPct = FinancialMath::div((string) ($poLine->discount_rate ?? '0'), '100');
+                    $discountAmountPerUnit = FinancialMath::mul((string) $poLine->unit_cost, $discountPct);
+                    $netUnitCostRaw = FinancialMath::sub((string) $poLine->unit_cost, $discountAmountPerUnit);
+
+                    $unitCost = $netUnitCostRaw;
                     if ((int)$returnUomId !== (int)$lineUomId) {
-                        $unitCost = FinancialMath::round(FinancialMath::mul((string)$poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
+                        $unitCost = FinancialMath::round(FinancialMath::mul($netUnitCostRaw, $factor), FinancialMath::LINE_SCALE);
                     }
  
                     // Negative quantity → issue path (consumes layers and reduces QOH).
