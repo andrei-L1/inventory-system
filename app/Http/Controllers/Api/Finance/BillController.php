@@ -51,6 +51,8 @@ class BillController extends Controller
             'lines.*.transaction_line_id' => 'required|exists:transaction_lines,id',
             'lines.*.quantity' => 'required|numeric|min:0.00000001',
             'lines.*.unit_price' => 'nullable|numeric|min:0', // Explicit pricing override support
+            'lines.*.discount_rate' => 'nullable|numeric|min:0|max:100',
+            'lines.*.tax_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
         try {
@@ -104,13 +106,33 @@ class BillController extends Controller
                     }
 
                     // Calculate subtotal using ATOMIC values (Pieces * Price-per-Piece)
-                    $lineSubtotal = FinancialMath::round(FinancialMath::mul($qtyPieces, (string) $unitPrice), FinancialMath::LINE_SCALE);
+                    $grossCost = FinancialMath::round(FinancialMath::mul($qtyPieces, (string) $unitPrice), FinancialMath::LINE_SCALE);
+
+                    $discountRate = (string) ($item['discount_rate'] ?? $poLine->discount_rate ?? 0);
+                    $taxRate = (string) ($item['tax_rate'] ?? $poLine->tax_rate ?? 0);
+
+                    $discountAmount = FinancialMath::round(
+                        FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                        FinancialMath::LINE_SCALE
+                    );
+
+                    $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                    $taxAmount = FinancialMath::round(
+                        FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                        FinancialMath::LINE_SCALE
+                    );
+
+                    $lineSubtotal = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
 
                     $bill->lines()->create([
                         'purchase_order_line_id' => $poLine->id,
                         'transaction_line_id' => $grnLine->id,
                         'quantity' => $qtyPieces, // Stored as pieces
                         'unit_price' => $unitPrice,
+                        'discount_rate' => FinancialMath::round($discountRate, 2),
+                        'discount_amount' => $discountAmount,
+                        'tax_rate' => FinancialMath::round($taxRate, 2),
+                        'tax_amount' => $taxAmount,
                         'subtotal' => $lineSubtotal,
                     ]);
 
@@ -150,6 +172,8 @@ class BillController extends Controller
             'lines.*.description' => 'required|string|max:255',
             'lines.*.quantity' => 'required|numeric|min:0.00000001',
             'lines.*.unit_price' => 'required|numeric|min:0',
+            'lines.*.discount_rate' => 'nullable|numeric|min:0|max:100',
+            'lines.*.tax_rate' => 'nullable|numeric|min:0|max:100',
         ]);
 
         try {
@@ -168,11 +192,31 @@ class BillController extends Controller
                 foreach ($request->lines as $item) {
                     $qty = (string) $item['quantity'];
                     $price = (string) $item['unit_price'];
-                    $subtotal = FinancialMath::round(FinancialMath::mul($qty, $price), FinancialMath::LINE_SCALE);
+                    $discountRate = (string) ($item['discount_rate'] ?? 0);
+                    $taxRate = (string) ($item['tax_rate'] ?? 0);
+
+                    $grossCost = FinancialMath::round(FinancialMath::mul($qty, $price), FinancialMath::LINE_SCALE);
+
+                    $discountAmount = FinancialMath::round(
+                        FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                        FinancialMath::LINE_SCALE
+                    );
+
+                    $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                    $taxAmount = FinancialMath::round(
+                        FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                        FinancialMath::LINE_SCALE
+                    );
+
+                    $subtotal = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
 
                     $bill->lines()->create([
                         'quantity' => $qty,
                         'unit_price' => $price,
+                        'discount_rate' => FinancialMath::round($discountRate, 2),
+                        'discount_amount' => $discountAmount,
+                        'tax_rate' => FinancialMath::round($taxRate, 2),
+                        'tax_amount' => $taxAmount,
                         'subtotal' => $subtotal,
                         'notes' => $item['description'],
                     ]);

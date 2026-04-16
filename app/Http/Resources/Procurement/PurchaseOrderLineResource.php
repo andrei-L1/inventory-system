@@ -45,6 +45,10 @@ class PurchaseOrderLineResource extends JsonResource
             'billed_qty' => (string) $this->billed_qty,
             'billable_qty' => (string) $this->billable_qty, // Net available (Received - Billed - Returns)
             'unit_cost' => (string) $this->unit_cost,
+            'discount_rate' => (string) $this->discount_rate,
+            'discount_amount' => (string) $this->discount_amount,
+            'tax_rate' => (string) $this->tax_rate,
+            'tax_amount' => (string) $this->tax_amount,
             'formatted_unit_cost' => $this->formatted_unit_cost,
             'total_line_cost' => (string) $this->total_cost,
         ];

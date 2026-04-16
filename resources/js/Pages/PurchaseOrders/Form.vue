@@ -60,7 +60,7 @@ const form = ref({
     currency: 'PHP',
     notes: '',
     lines: [
-        { product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00 }
+        { product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00, discount_rate: 0, tax_rate: 0 }
     ]
 });
 
@@ -189,14 +189,16 @@ onMounted(async () => {
                 uom_id: l.uom_id,
                 prev_uom_id: l.uom_id,
                 ordered_qty: l.ordered_qty,
-                unit_cost: l.unit_cost
+                unit_cost: l.unit_cost,
+                discount_rate: l.discount_rate || 0,
+                tax_rate: l.tax_rate || 0
             }))
         };
     }
 });
 
 const addLine = () => {
-    form.value.lines.push({ product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00 });
+    form.value.lines.push({ product_id: null, uom_id: null, prev_uom_id: null, ordered_qty: 1, unit_cost: 0.00, discount_rate: 0, tax_rate: 0 });
 };
 
 const removeLine = (index) => {
@@ -207,7 +209,17 @@ const removeLine = (index) => {
 
 const grandTotal = computed(() => {
     return form.value.lines.reduce((sum, line) => {
-        return sum + (Number(line.ordered_qty) * Number(line.unit_cost));
+        const qty = Number(line.ordered_qty) || 0;
+        const cost = Number(line.unit_cost) || 0;
+        const discountRate = Number(line.discount_rate) || 0;
+        const taxRate = Number(line.tax_rate) || 0;
+        
+        const gross = qty * cost;
+        const discount = gross * (discountRate / 100);
+        const taxable = gross - discount;
+        const tax = taxable * (taxRate / 100);
+        
+        return sum + (taxable + tax);
     }, 0);
 });
 
@@ -399,9 +411,17 @@ const cancel = () => {
                                         inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" 
                                     />
                                 </div>
-                                <div class="flex flex-col gap-2 w-full md:w-32 z-0">
+                                <div class="flex flex-col gap-2 w-full md:w-28 z-0">
                                     <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>
                                     <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                </div>
+                                <div class="flex flex-col gap-2 w-full md:w-24 z-0">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Disc %</label>
+                                    <InputNumber v-model="line.discount_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-rose-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                </div>
+                                <div class="flex flex-col gap-2 w-full md:w-24 z-0">
+                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Tax %</label>
+                                    <InputNumber v-model="line.tax_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-blue-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <Button 
                                     icon="pi pi-trash" 

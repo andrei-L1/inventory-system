@@ -18,14 +18,22 @@ class BillLine extends Model
         'transaction_line_id',
         'quantity',
         'unit_price',
+        'discount_rate',
+        'discount_amount',
+        'tax_rate',
+        'tax_amount',
         'subtotal',
         'notes',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:8',
-        'unit_price' => 'decimal:8',
-        'subtotal' => 'decimal:8',
+        'quantity'        => 'decimal:8',
+        'unit_price'      => 'decimal:8',
+        'discount_rate'   => 'decimal:2',
+        'discount_amount' => 'decimal:8',
+        'tax_rate'        => 'decimal:2',
+        'tax_amount'      => 'decimal:8',
+        'subtotal'        => 'decimal:8',
     ];
 
     public function bill(): BelongsTo

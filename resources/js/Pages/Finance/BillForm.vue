@@ -35,7 +35,7 @@ const form = ref({
     due_date: new Date(new Date().setDate(new Date().getDate() + 30)),
     notes: '',
     lines: [
-        { description: '', quantity: 1, unit_price: 0, po_line_id: null, transaction_line_id: null }
+        { description: '', quantity: 1, unit_price: 0, po_line_id: null, transaction_line_id: null, discount_rate: 0, tax_rate: 0 }
     ]
 });
 
@@ -148,10 +148,12 @@ const fetchPOData = async (poId) => {
                                 pieces: Number(l.quantity),
                                 base_uom: l.base_uom?.abbreviation ?? l.base_uom_abbreviation ?? '???',
                                 billed_in_po_unit: billedInPoUnit,
-                                available_to_bill: available,
+                                fetchPOData: true,
                                 bill_qty: suggested,
                                 factor: poUnitFactor,
                                 unit_price: Number(poLine.unit_cost),
+                                discount_rate: Number(poLine.discount_rate || 0),
+                                tax_rate: Number(poLine.tax_rate || 0),
                                 uom: poLine.base_uom?.abbreviation ?? poLine.uom_abbreviation ?? '???',
                                 subtotal: Number(poLine.unit_cost) * suggested
                             });
@@ -206,15 +208,27 @@ const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(val || 0));
 };
 
-const subtotal = (line) => Number(line.bill_qty || 0) * Number(line.unit_price || 0);
+const subtotal = (line) => {
+    const qty = Number(line.bill_qty ?? line.quantity ?? 0);
+    const price = Number(line.unit_price || 0);
+    const dr = Number(line.discount_rate || 0);
+    const tr = Number(line.tax_rate || 0);
+    
+    const gross = qty * price;
+    const discount = gross * (dr / 100);
+    const taxable = gross - discount;
+    const tax = taxable * (tr / 100);
+    
+    return taxable + tax;
+};
 
 const grandTotal = computed(() => {
     if (isPOLinked.value) {
         return groupedLines.value.reduce((acc, group) => {
-            return acc + group.receipts.reduce((gAcc, r) => gAcc + (r.bill_qty * r.unit_price), 0);
+            return acc + group.receipts.reduce((gAcc, r) => gAcc + subtotal(r), 0);
         }, 0);
     }
-    return form.value.lines.reduce((acc, line) => acc + (Number(line.quantity || 0) * Number(line.unit_price || 0)), 0);
+    return form.value.lines.reduce((acc, line) => acc + subtotal(line), 0);
 });
 
 const submit = async () => {
@@ -236,6 +250,8 @@ const submit = async () => {
                             transaction_line_id: r.transaction_line_id,
                             quantity: r.bill_qty * r.factor,
                             unit_price: r.unit_price / r.factor,
+                            discount_rate: r.discount_rate,
+                            tax_rate: r.tax_rate,
                             description: `[${r.reference}] ${group.product_name}`
                         });
                     }
@@ -500,8 +516,10 @@ onMounted(async () => {
                                             <tr class="text-[9px] font-black text-zinc-600 uppercase tracking-widest border-b border-zinc-800">
                                                 <th class="py-3 px-4 text-left" style="width: 140px">Artifact #</th>
                                                 <th class="py-3 px-4 text-left">Activity</th>
-                                                <th class="py-3 px-4 text-right" style="width: 140px">Impact Qty</th>
-                                                <th class="py-3 px-4 text-right" style="width: 150px">Price</th>
+                                                <th class="py-3 px-4 text-right" style="width: 120px">Impact Qty</th>
+                                                <th class="py-3 px-4 text-right" style="width: 120px">Price</th>
+                                                <th class="py-3 px-2 text-center" style="width: 70px">Disc %</th>
+                                                <th class="py-3 px-2 text-center" style="width: 70px">Tax %</th>
                                                 <th class="py-3 px-6 text-right" style="width: 150px">Amount to Bill</th>
                                             </tr>
                                         </thead>
@@ -532,12 +550,18 @@ onMounted(async () => {
                                                 <td class="py-4 px-4 text-right">
                                                      <span class="text-[11px] font-mono text-white">{{ formatCurrency(r.unit_price) }}</span>
                                                 </td>
+                                                <td class="py-4 px-2 text-center">
+                                                    <InputNumber v-model="r.discount_rate" :min="0" :max="100" fluid inputClass="!bg-zinc-950/50 !border-zinc-800 !text-rose-400 !font-black !text-xs !text-center !py-2 !rounded-lg" />
+                                                </td>
+                                                <td class="py-4 px-2 text-center">
+                                                    <InputNumber v-model="r.tax_rate" :min="0" :max="100" fluid inputClass="!bg-zinc-950/50 !border-zinc-800 !text-blue-400 !font-black !text-xs !text-center !py-2 !rounded-lg" />
+                                                </td>
                                                 <td class="py-4 px-6 text-right">
                                                     <div class="relative group/input">
-                                                        <InputNumber v-model="r.bill_qty" :min="0" :max="r.available_to_bill" :step="0.01" @update:modelValue="r.subtotal = r.bill_qty * r.unit_price" fluid
+                                                        <InputNumber v-model="r.bill_qty" :min="0" :max="r.available_to_bill" :step="0.01" fluid
                                                                     inputClass="!bg-zinc-950 !border-amber-500/20 focus:!border-amber-500 !text-white !font-black !text-xs !text-right !py-2 !rounded-lg !shadow-inner transition-all" />
                                                         <div class="flex flex-col items-end mt-1 px-1">
-                                                            <span class="text-white font-mono text-xs font-black">{{ formatCurrency(r.subtotal) }}</span>
+                                                            <span class="text-white font-mono text-xs font-black">{{ formatCurrency(subtotal(r)) }}</span>
                                                             <span class="text-[8px] text-zinc-600 font-bold font-mono uppercase tracking-tighter">Matches [{{ (r.bill_qty * r.factor).toLocaleString() }} {{ r.base_uom }}]</span>
                                                         </div>
                                                     </div>
@@ -561,6 +585,8 @@ onMounted(async () => {
                                                     -{{ rtn.quantity_in_base.toLocaleString() }} {{ rtn.uom }}
                                                 </td>
                                                 <td class="py-4 px-4 opacity-30 text-right text-[10px] font-bold text-zinc-700 uppercase italic">Non-Billable</td>
+                                                <td class="py-4 px-2"></td>
+                                                <td class="py-4 px-2"></td>
                                                 <td class="py-4 px-6 text-right opacity-30 pointer-events-none grayscale">
                                                     <div class="h-8 w-full bg-zinc-950/50 rounded-lg flex items-center justify-center">
                                                         <i class="pi pi-ban text-[8px] text-zinc-700"></i>
@@ -575,20 +601,28 @@ onMounted(async () => {
                             <!-- Manual Line Items (Visible if not PO linked) -->
                             <div v-if="!isPOLinked" class="space-y-6">
                                 <div v-for="(line, idx) in form.lines" :key="idx" class="bg-zinc-900/40 p-6 rounded-3xl border border-zinc-800 grid grid-cols-12 gap-6 items-center group">
-                                    <div class="col-span-12 lg:col-span-6 space-y-2">
-                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Description of Expense</label>
+                                    <div class="col-span-12 lg:col-span-4 space-y-2">
+                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Description</label>
                                         <input v-model="line.description" type="text" 
                                                class="w-full bg-zinc-950 border border-zinc-800 rounded-xl h-11 px-4 text-white text-xs focus:border-amber-500 outline-none transition-all">
                                     </div>
                                     <div class="col-span-4 lg:col-span-2 space-y-2">
-                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Quantity</label>
+                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Qty</label>
                                         <InputNumber v-model="line.quantity" :min="0" fluid 
                                                      inputClass="!bg-zinc-950 !border-zinc-800 !text-white !font-mono !text-xs !text-right !h-11 !rounded-xl" />
                                     </div>
                                     <div class="col-span-4 lg:col-span-2 space-y-2">
-                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Unit Price</label>
+                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Price</label>
                                         <InputNumber v-model="line.unit_price" mode="currency" currency="PHP" locale="en-PH" fluid 
                                                      inputClass="!bg-zinc-950 !border-zinc-800 !text-white !font-mono !text-xs !text-right !h-11 !rounded-xl" />
+                                    </div>
+                                    <div class="col-span-2 lg:col-span-1 space-y-2">
+                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Disc %</label>
+                                        <InputNumber v-model="line.discount_rate" :min="0" :max="100" fluid inputClass="!bg-zinc-950 text-rose-400 !border-zinc-800 !text-center !text-xs !h-11 !rounded-xl" />
+                                    </div>
+                                    <div class="col-span-2 lg:col-span-1 space-y-2">
+                                        <label class="text-[9px] font-black text-zinc-600 uppercase tracking-widest px-1">Tax %</label>
+                                        <InputNumber v-model="line.tax_rate" :min="0" :max="100" fluid inputClass="!bg-zinc-950 text-blue-400 !border-zinc-800 !text-center !text-xs !h-11 !rounded-xl" />
                                     </div>
                                     <div class="col-span-3 lg:col-span-1 text-right pt-5">
                                         <div class="text-[10px] font-black text-white font-mono opacity-50">{{ formatCurrency(subtotal(line)) }}</div>
@@ -600,7 +634,7 @@ onMounted(async () => {
                                         </button>
                                     </div>
                                 </div>
-                                <button @click="form.lines.push({ description: '', quantity: 1, unit_price: 0 })" 
+                                <button @click="form.lines.push({ description: '', quantity: 1, unit_price: 0, discount_rate: 0, tax_rate: 0 })" 
                                         class="w-full h-12 border-2 border-dashed border-zinc-800 rounded-2xl text-zinc-600 hover:text-amber-500 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3">
                                     <i class="pi pi-plus"></i>
                                     Add Manual Entry

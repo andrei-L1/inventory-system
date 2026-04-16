@@ -287,12 +287,14 @@ Replenishment Suggestion (UOM-Aware)
 - [x] **Multi-UOM Integration**:
   - [x] Add `uom_id` to `purchase_order_lines`.
   - [x] Implement conversion logic in `PurchaseOrderController@receive` (convert PO UOM to Base UOM before posting to `StockService`).
+- [x] **Financial Precision Capabilities**: Added `discount_rate`, `discount_amount`, `tax_rate`, and `tax_amount` configurations to `purchase_order_lines` with 8-decimal `FinancialMath` consistency. ✅ NEW
 
 ### 4.2 Purchase Orders Frontend ✅ NOW LIVE (v1.0)
 - [x] **Purchase Orders list page** (`/purchase-orders`)
 - [x] **PO Create/Edit form**
   - [x] Header: Vendor, expected delivery date, notes
   - [x] **Multi-UOM Line Selector** — support for choosing "Box", "Case", etc.
+  - [x] **Financial Modifiers** — Inputs for Discount % and Tax % with real-time Gross-to-Net Subtotal/Grand Total computations inline. ✅ NEW
   - [x] "Save Draft" and "Discard" buttons
 - [x] **PO Detail / Receive page**
   - [x] Shows PO metadata and lines with ordered qty vs. received qty
@@ -470,6 +472,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Contextual Atomic Logic**: Convert specific PO lines into Piece-based bill lines.
 - [x] **Submission Filtering**: Integrated logic to filter out zero-quantity logistical rows during posting.
 - [x] **UOM Scaling**: Automatic normalization of vendor bulk prices into "Price per Piece" equivalents.
+- [x] **Procurement Taxation & Discounting**: Fully integrated `discount_rate` and `tax_rate` pipelines across `PurchaseOrder` and `Bill` workflows with 8-decimal `FinancialMath` integrity (Mirroring the Sales/A/R standard). ✅ NEW
 - [x] **Three-Way Match**: Enforced link between `PurchaseOrder` → `TransactionLine` (Receipt) → `Bill`.
 
 ### 5.7.2 Vendor Payments & Debit Notes — ATOMIC HARDENED

@@ -17,15 +17,23 @@ class PurchaseOrderLine extends Model
         'received_qty',
         'returned_qty',
         'unit_cost',
+        'discount_rate',
+        'discount_amount',
+        'tax_rate',
+        'tax_amount',
         'notes',
     ];
 
     protected $casts = [
-        'ordered_qty' => 'decimal:8',
-        'received_qty' => 'decimal:8',
-        'returned_qty' => 'decimal:8',
-        'unit_cost' => 'decimal:8',
-        'total_cost' => 'decimal:8', // Virtual column from DB
+        'ordered_qty'      => 'decimal:8',
+        'received_qty'     => 'decimal:8',
+        'returned_qty'     => 'decimal:8',
+        'unit_cost'        => 'decimal:8',
+        'discount_rate'    => 'decimal:2',
+        'discount_amount'  => 'decimal:8',
+        'tax_rate'         => 'decimal:2',
+        'tax_amount'       => 'decimal:8',
+        'total_cost'       => 'decimal:8', // Virtual column from DB
     ];
 
     protected $appends = [

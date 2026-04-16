@@ -532,3 +532,10 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **Navigation Persistence**: Resolved a UX regression by appending `?mode=PAYABLE` to all Finance Center navigation links, ensuring the workspace context is preserved when moving between document detail views and the main settlement dashboard.
 - **Documentation Overhaul**: Synchronized all root-level architectural and mathematical specifications to reflect the "Atomic Payables" shift as the new system-wide standard.
 
+### 2026-04-16: Procurement Financial Completeness (Taxation & Discounting)
+
+- **PO & Bill Financial Schema**: Fully integrated `tax_rate`, `tax_amount`, `discount_rate`, and `discount_amount` into the `purchase_order_lines` and `bill_lines` tables to capture vendor commercial terms.
+- **Backend Precision Math**: Refactored `PurchaseOrderController` and `BillController` to natively calculate exact line liability (`(Gross - Discount) + Tax`) securely utilizing the strict `FinancialMath` 8-decimal string math engine.
+- **A/P Mirroring**: Procurement generation and Accounts Payable (Bills) workflows are perfectly architected to mathematically match the existing Sales Order (Invoicing) capabilities, enabling 100% systemic parity between A/R and A/P.
+- **UI Integrations**: Re-engineered Vue `PurchaseOrders/Form.vue` and `Finance/BillForm.vue` forms with inline discount/tax input parameters. Forms dynamically display live financial gross-to-net aggregations, pulling vendor configuration presets downward automatically.
+

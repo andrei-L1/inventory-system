@@ -93,18 +93,41 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $qty = (string) $lineData['ordered_qty'];
+                $qty  = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
+                $discountRate = (string) ($lineData['discount_rate'] ?? 0);
+                $taxRate = (string) ($lineData['tax_rate'] ?? 0);
 
-                $lineCost = FinancialMath::poLineCost($qty, $cost);
-                $lineTotals[] = $lineCost;
+                // Gross line cost before discount
+                $grossCost = FinancialMath::poLineCost($qty, $cost);
+
+                // Discount amount = gross * rate / 100
+                $discountAmount = FinancialMath::round(
+                    FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                // Tax amount = (gross - discount) * taxRate / 100
+                $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                $taxAmount = FinancialMath::round(
+                    FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                // Net line cost = gross - discount + tax
+                $netCost = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
+                $lineTotals[] = $netCost;
 
                 $po->lines()->create([
-                    'product_id' => $lineData['product_id'],
-                    'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
-                    'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'product_id'      => $lineData['product_id'],
+                    'uom_id'          => $lineData['uom_id'],
+                    'ordered_qty'     => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'received_qty'    => 0,
+                    'unit_cost'       => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate'   => FinancialMath::round($discountRate, 2),
+                    'discount_amount' => $discountAmount,
+                    'tax_rate'        => FinancialMath::round($taxRate, 2),
+                    'tax_amount'      => $taxAmount,
                 ]);
             }
 
@@ -150,18 +173,36 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $qty = (string) $lineData['ordered_qty'];
+                $qty  = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
+                $discountRate = (string) ($lineData['discount_rate'] ?? 0);
+                $taxRate = (string) ($lineData['tax_rate'] ?? 0);
 
-                $lineCost = FinancialMath::poLineCost($qty, $cost);
-                $lineTotals[] = $lineCost;
+                $grossCost    = FinancialMath::poLineCost($qty, $cost);
+                $discountAmount = FinancialMath::round(
+                    FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                $taxAmount = FinancialMath::round(
+                    FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                $netCost = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
+                $lineTotals[] = $netCost;
 
                 $purchaseOrder->lines()->create([
-                    'product_id' => $lineData['product_id'],
-                    'uom_id' => $lineData['uom_id'],
-                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
-                    'received_qty' => 0,
-                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'product_id'      => $lineData['product_id'],
+                    'uom_id'          => $lineData['uom_id'],
+                    'ordered_qty'     => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'received_qty'    => 0,
+                    'unit_cost'       => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate'   => FinancialMath::round($discountRate, 2),
+                    'discount_amount' => $discountAmount,
+                    'tax_rate'        => FinancialMath::round($taxRate, 2),
+                    'tax_amount'      => $taxAmount,
                 ]);
             }
 
