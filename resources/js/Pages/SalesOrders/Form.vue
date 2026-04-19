@@ -463,20 +463,20 @@ const cancel = () => {
         <div class="h-full max-w-6xl mx-auto flex flex-col gap-6">
             
             <!-- Header -->
-            <div class="flex items-center justify-between p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+            <div class="flex items-center justify-between p-6 bg-panel/40 border border-panel-border/80 rounded-2xl shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 blur-[100px] pointer-events-none"></div>
                 <div class="flex items-center gap-4 z-10">
-                    <button @click="cancel" class="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors hover:border-zinc-600">
+                    <button @click="cancel" class="w-10 h-10 rounded-xl bg-deep border border-panel-border flex items-center justify-center text-secondary hover:text-primary transition-colors hover:border-zinc-600">
                         <i class="pi pi-arrow-left"></i>
                     </button>
                     <div>
-                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Sales Order' : 'New Sales Order' }}</h1>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Draft Quotation for Customer</p>
+                        <h1 class="text-primary text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Sales Order' : 'New Sales Order' }}</h1>
+                        <p class="text-secondary text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Draft Quotation for Customer</p>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3 z-10">
-                    <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-zinc-400 hover:!text-white" @click="cancel" />
+                    <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-secondary hover:!text-primary" @click="cancel" />
                     <Button 
                         label="Create Quotation" 
                         icon="pi pi-save" 
@@ -491,11 +491,11 @@ const cancel = () => {
             <div class="grid grid-cols-12 gap-6">
                 <!-- Header Info -->
                 <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Customer Context</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                        <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border/50 pb-3">Customer Context</span>
                         
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Customer</label>
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Customer</label>
                             <Select 
                                 v-model="form.customer_id" 
                                 :options="customers" 
@@ -503,32 +503,32 @@ const cancel = () => {
                                 optionValue="id" 
                                 placeholder="Select customer" 
                                 filter
-                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50"
+                                class="w-full bg-deep border-panel-border text-sm focus:border-teal-500/50"
                             />
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Order Date</label>
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Order Date</label>
                             <DatePicker 
                                 v-model="form.order_date" 
                                 dateFormat="yy-mm-dd" 
                                 placeholder="YYYY-MM-DD"
-                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50"
+                                class="w-full bg-deep border-panel-border text-sm focus:border-teal-500/50"
                             />
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Notes</label>
-                            <Textarea v-model="form.notes" rows="4" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-teal-500/50 resize-none" placeholder="Special requirements..." />
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Notes</label>
+                            <Textarea v-model="form.notes" rows="4" class="w-full bg-deep border-panel-border text-sm focus:border-teal-500/50 resize-none" placeholder="Special requirements..." />
                         </div>
                     </div>
                 </div>
 
                 <!-- Lines Editor -->
                 <div class="col-span-12 lg:col-span-9 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
-                        <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-2">
-                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Invoice Lines</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
+                        <div class="flex items-center justify-between border-b border-panel-border/50 pb-3 mb-2">
+                            <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Invoice Lines</span>
                             <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                                 Grand Total: ₱{{ grandTotal.toFixed(2) }}
                             </span>
@@ -536,10 +536,10 @@ const cancel = () => {
                         
 
                         <div class="flex flex-col gap-4">
-                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/30 border border-zinc-800/50 rounded-xl flex flex-col gap-4 relative group transition-all hover:border-zinc-700 hover:shadow-lg hover:bg-zinc-950/50">
+                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-deep/30 border border-panel-border/50 rounded-xl flex flex-col gap-4 relative group transition-all hover:border-zinc-700 hover:shadow-lg hover:bg-deep/50">
                                 <div class="grid grid-cols-12 gap-4 items-end">
                                     <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Product Selection</label>
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Product Selection</label>
                                         <Select 
                                             v-model="line.product_id" 
                                             :options="products" 
@@ -549,14 +549,14 @@ const cancel = () => {
                                             placeholder="Select product" 
                                             filter
                                             @change="() => { onProductSelect(line); checkStock(line); }"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                            class="w-full bg-deep border-panel-border text-primary focus:border-teal-500/50"
                                         >
                                             <template #option="slotProps">
                                                 <div class="flex flex-col">
                                                     <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
                                                     <div class="flex items-center gap-2">
                                                         <span class="text-[9px] font-mono text-teal-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
-                                                        <span class="text-zinc-700 font-mono text-[9px]">| ₱{{ Number(slotProps.option.selling_price).toFixed(2) }}</span>
+                                                        <span class="text-muted font-mono text-[9px]">| ₱{{ Number(slotProps.option.selling_price).toFixed(2) }}</span>
                                                     </div>
                                                 </div>
                                             </template>
@@ -564,7 +564,7 @@ const cancel = () => {
                                     </div>
 
                                     <div class="col-span-6 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Storage Source</label>
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Storage Source</label>
                                         <Select 
                                             v-model="line.location_id" 
                                             :options="locations" 
@@ -573,12 +573,12 @@ const cancel = () => {
                                             dataKey="id"
                                             placeholder="Location" 
                                             @change="checkStock(line)"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                            class="w-full bg-deep border-panel-border text-primary focus:border-teal-500/50"
                                         />
                                     </div>
 
                                     <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">UOM</label>
                                         <Select 
                                             v-model="line.uom_id" 
                                             :options="getAvailableUoms(line.product_id)" 
@@ -587,14 +587,14 @@ const cancel = () => {
                                             dataKey="id"
                                             placeholder="UOM" 
                                             @change="onUomChange(line)"
-                                            class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-teal-500/50"
+                                            class="w-full bg-deep border-panel-border text-primary focus:border-teal-500/50"
                                         >
                                             <template #value="slotProps">
                                                 <div v-if="slotProps.value" class="flex items-center gap-2">
                                                     <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
                                                     <span 
                                                         v-if="getConversionDetails(slotProps.value, line.product_id)" 
-                                                        class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                        class="text-[9px] text-muted font-mono font-bold tracking-widest hidden 2xl:block uppercase"
                                                     >
                                                         {{ getConversionDetails(slotProps.value, line.product_id).text }}
                                                     </span>
@@ -614,7 +614,7 @@ const cancel = () => {
                                                     </div>
                                                     <span 
                                                         v-if="getConversionDetails(slotProps.option.id, line.product_id)" 
-                                                        class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                        class="text-[9px] text-secondary font-mono font-bold mt-0.5 tracking-widest"
                                                     >
                                                         {{ getConversionDetails(slotProps.option.id, line.product_id).text }}
                                                     </span>
@@ -624,12 +624,12 @@ const cancel = () => {
                                     </div>
 
                                     <div class="col-span-6 md:col-span-2 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Qty</label>
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Qty</label>
                                         <InputNumber 
                                             v-model="line.ordered_qty" 
                                             :min="0.01" 
                                             :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
-                                            :inputClass="'w-full bg-zinc-950 border text-center text-white p-2 rounded-lg outline-none ' + (line.product_id && line.location_id && getLocalStock(line) < line.ordered_qty ? 'border-red-500/60 focus:border-red-500' : 'border-zinc-800 focus:border-teal-500/50')"
+                                            :inputClass="'w-full bg-deep border text-center text-primary p-2 rounded-lg outline-none ' + (line.product_id && line.location_id && getLocalStock(line) < line.ordered_qty ? 'border-red-500/60 focus:border-red-500' : 'border-panel-border focus:border-teal-500/50')"
                                         />
                                         <div v-if="line.product_id && line.location_id && getLocalStock(line) < line.ordered_qty" class="text-[7px] text-red-500 font-bold uppercase tracking-tighter text-right animate-pulse">Shortage!</div>
                                     </div>
@@ -637,7 +637,7 @@ const cancel = () => {
                                     <div class="col-span-6 md:col-span-1 flex items-center justify-end">
                                         <Button 
                                             icon="pi pi-trash" 
-                                            class="p-button-rounded p-button-danger p-button-text !text-zinc-600 hover:!text-red-400" 
+                                            class="p-button-rounded p-button-danger p-button-text !text-muted hover:!text-red-400" 
                                             @click="removeLine(index)"
                                             v-if="form.lines.length > 1"
                                         />
@@ -648,65 +648,65 @@ const cancel = () => {
                                 <div v-if="line.product_id" class="flex flex-wrap items-center gap-2 mt-[-8px]">
                                     <div 
                                         @click="(e) => toggleStockInfo(e, line)"
-                                        class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-teal-500/50 transition-all group"
+                                        class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel-border rounded-lg cursor-pointer hover:border-teal-500/50 transition-all group"
                                     >
                                         <div class="flex flex-col text-left">
-                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover:text-teal-500">At Source</span>
-                                            <span class="text-[10px] font-black font-mono" :class="line.location_id && parseFloat(getScaledQty(getLocalStock(line), line)) < line.ordered_qty ? 'text-red-400' : 'text-zinc-200'">{{ getScaledQty(getLocalStock(line), line) }}</span>
+                                            <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover:text-teal-500">At Source</span>
+                                            <span class="text-[10px] font-black font-mono" :class="line.location_id && parseFloat(getScaledQty(getLocalStock(line), line)) < line.ordered_qty ? 'text-red-400' : 'text-primary'">{{ getScaledQty(getLocalStock(line), line) }}</span>
                                         </div>
-                                        <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                        <div class="w-px h-4 bg-panel-hover mx-1"></div>
                                         <div class="flex flex-col text-left">
-                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover:text-teal-500">Global Pool</span>
-                                            <span class="text-[10px] font-black text-zinc-400 font-mono">{{ getScaledQty((line.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), line) }}</span>
+                                            <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover:text-teal-500">Global Pool</span>
+                                            <span class="text-[10px] font-black text-secondary font-mono">{{ getScaledQty((line.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), line) }}</span>
                                         </div>
-                                        <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover:text-teal-500"></i>
+                                        <i class="pi pi-chevron-down text-[8px] text-muted group-hover:text-teal-500"></i>
                                     </div>
 
                                     <div v-if="line.product_id" 
                                         @click="snapToCost(line)"
-                                        class="flex items-center gap-3 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg transition-all cursor-pointer hover:border-teal-500/50 group/cost shadow-inner"
+                                        class="flex items-center gap-3 px-3 py-1.5 bg-panel border border-panel-border rounded-lg transition-all cursor-pointer hover:border-teal-500/50 group/cost shadow-inner"
                                         :class="getMarginInfo(line).border"
                                         title="Click to snap Unit Price to exactly match historical cost total"
                                     >
                                         <div class="flex flex-col">
                                             <div class="flex items-center gap-1">
-                                                <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">EST_COST ({{ (products.find(p => p.id === line.product_id)?.costing_method_name || 'AVG').toUpperCase() }})</span>
-                                                <i class="pi pi-link text-[6px] text-zinc-600 group-hover/cost:text-teal-500 transition-opacity opacity-0 group-hover/cost:opacity-100"></i>
+                                                <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/cost:text-teal-400">EST_COST ({{ (products.find(p => p.id === line.product_id)?.costing_method_name || 'AVG').toUpperCase() }})</span>
+                                                <i class="pi pi-link text-[6px] text-muted group-hover/cost:text-teal-500 transition-opacity opacity-0 group-hover/cost:opacity-100"></i>
                                             </div>
                                             <div class="flex items-center gap-1.5">
                                                 <span class="text-[10px] font-black font-mono text-zinc-300">₱{{ calculateEffectiveCost(line).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</span>
                                                 <i v-if="getMarginInfo(line).status === 'loss'" class="pi pi-exclamation-triangle text-[10px] text-red-500 animate-pulse" title="Selling below estimated cost!"></i>
                                             </div>
                                         </div>
-                                        <div class="w-px h-6 bg-zinc-800 group-hover/cost:bg-teal-500/20"></div>
+                                        <div class="w-px h-6 bg-panel-hover group-hover/cost:bg-teal-500/20"></div>
                                         <div class="flex flex-col">
-                                            <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/cost:text-teal-400">Margin</span>
+                                            <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/cost:text-teal-400">Margin</span>
                                             <span class="text-[10px] font-black font-mono" :class="getMarginInfo(line).color">{{ getMarginInfo(line).label }}</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-12 gap-4 items-end bg-zinc-900/40 p-3 rounded-lg border border-zinc-800/30">
+                                <div class="grid grid-cols-12 gap-4 items-end bg-panel/40 p-3 rounded-lg border border-panel-border/30">
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Price</label>
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Unit Price</label>
                                         <div class="relative">
-                                            <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" :inputClass="'w-full bg-zinc-950 border text-right text-white p-2 rounded-lg transition-all focus:border-teal-500/50 ' + getMarginInfo(line).border" />
+                                            <InputNumber v-model="line.unit_price" mode="decimal" :minFractionDigits="2" :inputClass="'w-full bg-deep border text-right text-primary p-2 rounded-lg transition-all focus:border-teal-500/50 ' + getMarginInfo(line).border" />
                                             <div v-if="getMarginInfo(line).status !== 'none'" class="absolute -top-1 -right-1">
                                                 <div class="w-2.5 h-2.5 rounded-full border border-zinc-950 shadow-lg" :class="getMarginInfo(line).status === 'loss' ? 'bg-red-500' : getMarginInfo(line).status === 'slim' ? 'bg-amber-500' : 'bg-emerald-500'"></div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Tax (%)</label>
-                                        <InputNumber v-model="line.tax_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50" />
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Tax (%)</label>
+                                        <InputNumber v-model="line.tax_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-deep border border-panel-border text-center text-primary p-2 rounded-lg focus:border-teal-500/50" />
                                     </div>
                                     <div class="col-span-4 md:col-span-3 flex flex-col gap-2">
-                                        <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Disc (%)</label>
-                                        <InputNumber v-model="line.discount_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-teal-500/50" />
+                                        <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Disc (%)</label>
+                                        <InputNumber v-model="line.discount_rate" :min="0" :max="100" suffix="%" inputClass="w-full bg-deep border border-panel-border text-center text-primary p-2 rounded-lg focus:border-teal-500/50" />
                                     </div>
                                     <div class="col-span-12 md:col-span-3 flex flex-col gap-2 items-end">
                                         <label class="text-[9px] font-bold text-teal-500/70 tracking-[0.2em] font-mono uppercase">Subtotal</label>
-                                        <span class="text-sm font-mono font-bold text-white pr-2">₱{{ lineSubtotal(line).toFixed(2) }}</span>
+                                        <span class="text-sm font-mono font-bold text-primary pr-2">₱{{ lineSubtotal(line).toFixed(2) }}</span>
                                     </div>
                                 </div>
 
@@ -721,21 +721,21 @@ const cancel = () => {
                         />
 
                         <!-- Financial Summary Footer -->
-                        <div class="mt-6 p-6 bg-zinc-950/50 border border-zinc-800/80 rounded-2xl flex flex-col gap-3 shadow-inner">
-                            <div class="flex justify-between items-center text-zinc-500">
+                        <div class="mt-6 p-6 bg-deep/50 border border-panel-border/80 rounded-2xl flex flex-col gap-3 shadow-inner">
+                            <div class="flex justify-between items-center text-secondary">
                                 <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Untaxed Subtotal</span>
                                 <span class="text-xs font-mono font-bold">₱{{ untaxedSubtotal.toFixed(2) }}</span>
                             </div>
-                            <div class="flex justify-between items-center text-zinc-500">
+                            <div class="flex justify-between items-center text-secondary">
                                 <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Total Discount</span>
                                 <span class="text-xs font-mono font-bold text-red-500/70">- ₱{{ totalDiscount.toFixed(2) }}</span>
                             </div>
-                            <div class="flex justify-between items-center text-zinc-500 border-b border-zinc-800/50 pb-3">
+                            <div class="flex justify-between items-center text-secondary border-b border-panel-border/50 pb-3">
                                 <span class="text-[10px] font-bold uppercase tracking-widest font-mono">Estimated Tax</span>
                                 <span class="text-xs font-mono font-bold">₱{{ totalTax.toFixed(2) }}</span>
                             </div>
                             <div class="flex justify-between items-center pt-1">
-                                <span class="text-xs font-bold text-white uppercase tracking-widest font-mono">Grand Total</span>
+                                <span class="text-xs font-bold text-primary uppercase tracking-widest font-mono">Grand Total</span>
                                 <span class="text-lg font-black text-emerald-400 font-mono shadow-emerald-500/20 drop-shadow-md">₱{{ grandTotal.toFixed(2) }}</span>
                             </div>
                         </div>
@@ -745,11 +745,11 @@ const cancel = () => {
 
         </div>
 
-        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !p-0 !shadow-2xl !rounded-2xl overflow-hidden min-w-[280px]">
+        <Popover ref="stockOp" class="!bg-deep !border-panel-border !p-0 !shadow-2xl !rounded-2xl overflow-hidden min-w-[280px]">
             <div v-if="selectedLineForStock" class="flex flex-col">
-                <div class="px-4 py-3 bg-zinc-900/80 border-b border-zinc-800 flex justify-between items-center">
+                <div class="px-4 py-3 bg-panel/80 border-b border-panel-border flex justify-between items-center">
                     <span class="text-[10px] font-bold text-teal-500 uppercase tracking-widest font-mono">STOCK BREAKDOWN</span>
-                    <span class="text-[10px] font-bold text-zinc-600 font-mono">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
+                    <span class="text-[10px] font-bold text-muted font-mono">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
                 </div>
                 
                 <div class="max-h-[300px] overflow-y-auto">
@@ -762,28 +762,28 @@ const cancel = () => {
                             :class="inv.location_id === selectedLineForStock.location_id ? 'bg-teal-500/10' : ''"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="w-2 h-2 rounded-full" :class="inv.location_id === selectedLineForStock.location_id ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.5)]' : 'bg-zinc-800'"></div>
+                                <div class="w-2 h-2 rounded-full" :class="inv.location_id === selectedLineForStock.location_id ? 'bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.5)]' : 'bg-panel-hover'"></div>
                                 <div class="flex flex-col">
-                                    <span class="text-xs font-bold font-mono tracking-tight" :class="inv.location_id === selectedLineForStock.location_id ? 'text-teal-100' : 'text-zinc-400'">{{ inv.location_name }}</span>
+                                    <span class="text-xs font-bold font-mono tracking-tight" :class="inv.location_id === selectedLineForStock.location_id ? 'text-teal-100' : 'text-secondary'">{{ inv.location_name }}</span>
                                     <span v-if="inv.location_id === selectedLineForStock.location_id" class="text-[8px] text-teal-500 font-bold uppercase tracking-widest">Selected Source</span>
                                 </div>
                             </div>
                             <div class="flex flex-col items-end">
-                                <span class="text-xs font-black font-mono text-zinc-200">{{ getScaledQty(inv.quantity_on_hand, selectedLineForStock) }}</span>
-                                <span class="text-[8px] text-zinc-600 font-mono font-bold uppercase">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
+                                <span class="text-xs font-black font-mono text-primary">{{ getScaledQty(inv.quantity_on_hand, selectedLineForStock) }}</span>
+                                <span class="text-[8px] text-muted font-mono font-bold uppercase">{{ uoms.find(u => u.id === selectedLineForStock.uom_id)?.abbreviation ?? '???' }}</span>
                             </div>
                         </div>
                     </div>
-                    <div v-else class="p-8 text-center text-zinc-600 italic text-xs font-mono">
+                    <div v-else class="p-8 text-center text-muted italic text-xs font-mono">
                          No stock records found
                     </div>
                 </div>
                 
-                <div class="p-3 bg-zinc-950 border-t border-zinc-800 flex items-center justify-between">
-                    <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono italic">Click a location to route</span>
+                <div class="p-3 bg-deep border-t border-panel-border flex items-center justify-between">
+                    <span class="text-[9px] font-bold text-secondary uppercase tracking-widest font-mono italic">Click a location to route</span>
                     <div class="flex items-center gap-2">
-                         <span class="text-[11px] font-black text-white font-mono">{{ getScaledQty((selectedLineForStock.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), selectedLineForStock) }}</span>
-                         <span class="text-[8px] font-bold text-zinc-600 uppercase font-mono">GLOBAL</span>
+                         <span class="text-[11px] font-black text-primary font-mono">{{ getScaledQty((selectedLineForStock.inventories || []).reduce((s, i) => s + (parseFloat(i.quantity_on_hand) || 0), 0), selectedLineForStock) }}</span>
+                         <span class="text-[8px] font-bold text-muted uppercase font-mono">GLOBAL</span>
                     </div>
                 </div>
             </div>
@@ -813,3 +813,5 @@ const cancel = () => {
     color: white;
 }
 </style>
+
+

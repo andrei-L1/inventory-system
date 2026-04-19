@@ -214,19 +214,19 @@ const formatCurrency = (val) => {
 
 const getStatusColor = (status) => {
     switch (status) {
-        case 'DRAFT': return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+        case 'DRAFT': return 'bg-panel-hover text-secondary border-zinc-700';
         case 'OPEN': 
         case 'POSTED': return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
         case 'PAID': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
         case 'VOID': return 'bg-red-500/10 text-red-400 border-red-500/20';
-        default: return 'bg-zinc-800 text-zinc-400 border-zinc-700';
+        default: return 'bg-panel-hover text-secondary border-zinc-700';
     }
 };
 
 const tablePt = {
     root: { class: '!bg-transparent' },
     bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200 cursor-pointer' },
-    header: { class: '!bg-zinc-900/60 !border-zinc-800 !text-zinc-500 !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
+    header: { class: '!bg-panel/60 !border-panel-border !text-secondary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
 };
 
 const handleAction = async (type, id, action) => {
@@ -254,7 +254,7 @@ const handleAction = async (type, id, action) => {
         <Head title="Finance Center" />
         <Toast />
 
-        <div class="p-4 bg-zinc-950 min-h-[calc(100vh-64px)] flex flex-col">
+        <div class="p-4 bg-deep min-h-[calc(100vh-64px)] flex flex-col">
             <!-- Header Section -->
             <div class="w-full mb-6 flex justify-between items-end">
                 <div class="flex flex-col">
@@ -262,12 +262,12 @@ const handleAction = async (type, id, action) => {
                         <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] font-mono">
                             {{ financeMode === 'RECEIVABLE' ? 'Accounts Receivable' : 'Accounts Payable' }}
                         </span>
-                        <div class="h-px w-8 bg-zinc-800"></div>
-                        <div class="flex p-1 rounded-xl border border-zinc-900 bg-zinc-950/40 backdrop-blur-xl shadow-inner">
+                        <div class="h-px w-8 bg-panel-hover"></div>
+                        <div class="flex p-1 rounded-xl border border-zinc-900 bg-deep/40 backdrop-blur-xl shadow-inner">
                             <button @click="financeMode = 'RECEIVABLE'" 
                                     :class="financeMode === 'RECEIVABLE' 
                                         ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.1)]' 
-                                        : 'text-zinc-600 hover:text-zinc-400 border-transparent bg-transparent'"
+                                        : 'text-muted hover:text-secondary border-transparent bg-transparent'"
                                     class="px-6 py-2 text-[10px] uppercase tracking-[0.2em] rounded-lg transition-all duration-500 font-black border active:scale-95 flex items-center gap-2">
                                 <div v-if="financeMode === 'RECEIVABLE'" class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></div>
                                 Receivables
@@ -275,17 +275,17 @@ const handleAction = async (type, id, action) => {
                             <button @click="financeMode = 'PAYABLE'" 
                                     :class="financeMode === 'PAYABLE' 
                                         ? 'bg-amber-500/10 border-amber-500/40 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
-                                        : 'text-zinc-600 hover:text-zinc-400 border-transparent bg-transparent'"
+                                        : 'text-muted hover:text-secondary border-transparent bg-transparent'"
                                     class="px-6 py-2 text-[10px] uppercase tracking-[0.2em] rounded-lg transition-all duration-500 font-black border active:scale-95 flex items-center gap-2">
                                 <div v-if="financeMode === 'PAYABLE'" class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
                                 Payables
                             </button>
                         </div>
                     </div>
-                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">
+                    <h1 class="text-3xl font-bold text-primary tracking-tight m-0 mb-2">
                         {{ financeMode === 'RECEIVABLE' ? 'Receivable Management' : 'Vendor Settle Center' }}
                     </h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                    <p class="text-secondary text-sm max-w-2xl leading-relaxed">
                         {{ financeMode === 'RECEIVABLE' 
                             ? 'Manage customer invoices, record incoming payments, and generate unified running-balance statements.' 
                             : 'Track vendor bills, record payments/disbursements, and monitor your accounts payable balance.' }}
@@ -294,10 +294,10 @@ const handleAction = async (type, id, action) => {
             </div>
 
             <!-- Actions Bar (Sharp Design) -->
-            <div class="mb-8 p-6 bg-zinc-900/40 border border-zinc-900 rounded-2xl backdrop-blur-md flex items-center gap-8 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
-                <div class="flex flex-col border-r border-zinc-800 pr-8">
-                    <span class="text-[9px] font-bold text-zinc-700 uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
-                    <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">
+            <div class="mb-8 p-6 bg-panel/40 border border-zinc-900 rounded-2xl backdrop-blur-md flex items-center gap-8 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
+                <div class="flex flex-col border-r border-panel-border pr-8">
+                    <span class="text-[9px] font-bold text-muted uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
+                    <span class="text-[11px] font-bold text-secondary uppercase tracking-tight">
                         {{ financeMode === 'RECEIVABLE' ? 'Receivable Management' : 'Payable Settlements' }}
                     </span>
                 </div>
@@ -313,7 +313,7 @@ const handleAction = async (type, id, action) => {
                         <i class="pi pi-credit-card" /> Record Payment
                     </button>
                     <button @click="activeTab = 'statements'" 
-                            class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-book" /> Audit Statement
                     </button>
                 </div>
@@ -325,11 +325,11 @@ const handleAction = async (type, id, action) => {
                         <i class="pi pi-file-plus" /> Generate Bill
                     </button>
                     <button @click="router.visit('/finance/vendor-payments/create')" 
-                            class="px-6 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-money-bill" /> Record Disbursement
                     </button>
                     <button @click="router.visit('/purchase-orders')" 
-                            class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-search" /> View Receipts (GRN)
                     </button>
                 </div>
@@ -339,23 +339,23 @@ const handleAction = async (type, id, action) => {
             <div class="w-full mb-6 flex items-center gap-6 border-b border-zinc-900 pb-0">
                 <div @click="activeTab = 'invoices'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'invoices' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-zinc-500 border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'invoices' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
                     {{ financeMode === 'RECEIVABLE' ? 'Invoices & Credit Notes' : 'Bills & Debit Notes' }}
                 </div>
                 <div @click="activeTab = 'payments'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'payments' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-zinc-500 border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'payments' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
                     Payments
                 </div>
                 <div @click="activeTab = 'statements'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'statements' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-zinc-500 border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'statements' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
                     {{ financeMode === 'RECEIVABLE' ? 'Customer Statements' : 'Vendor Statements' }}
                 </div>
             </div>
 
             <!-- Workspace -->
-            <div class="w-full flex-1 min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col relative group">
+            <div class="w-full flex-1 min-h-0 bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm flex flex-col relative group">
                 <!-- Background Accent -->
                 <div class="absolute top-0 right-0 w-96 h-96 blur-[120px] -mr-48 -mt-48 rounded-full pointer-events-none opacity-50"
                      :class="financeMode === 'RECEIVABLE' ? 'bg-sky-500/5' : 'bg-amber-500/5'"></div>
@@ -378,18 +378,18 @@ const handleAction = async (type, id, action) => {
                             </template>
                             <Column field="invoice_number" header="Invoice #" style="width: 200px">
                                 <template #body="{ data }">
-                                    <span class="font-mono text-[11px] bg-zinc-950 text-white px-2 py-0.5 border border-zinc-800 rounded tracking-widest">{{ data.invoice_number }}</span>
+                                    <span class="font-mono text-[11px] bg-deep text-primary px-2 py-0.5 border border-panel-border rounded tracking-widest">{{ data.invoice_number }}</span>
                                     <span v-if="data.type === 'CREDIT_NOTE'" class="ml-2 text-[8px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/20 font-bold uppercase tracking-widest">CREDIT NOTE</span>
                                 </template>
                             </Column>
                             <Column field="invoice_date" header="Date" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] text-zinc-400">{{ data.invoice_date }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] text-secondary">{{ data.invoice_date }}</span></template>
                             </Column>
                             <Column header="Customer">
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-xs text-zinc-200 tracking-tight">{{ data.customer?.name }}</span>
-                                        <span class="font-mono text-[9px] text-zinc-600 tracking-widest">{{ data.customer?.customer_code }}</span>
+                                        <span class="font-bold text-xs text-primary tracking-tight">{{ data.customer?.name }}</span>
+                                        <span class="font-mono text-[9px] text-muted tracking-widest">{{ data.customer?.customer_code }}</span>
                                     </div>
                                 </template>
                             </Column>
@@ -406,7 +406,7 @@ const handleAction = async (type, id, action) => {
                                 </template>
                             </Column>
                             <Column header="Total Amount" style="width: 150px">
-                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-zinc-200">{{ formatCurrency(data.total_amount) }}</span></template>
+                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-primary">{{ formatCurrency(data.total_amount) }}</span></template>
                             </Column>
                              <Column header="Balance Due" style="width: 150px">
                                  <template #body="{ data }">
@@ -418,11 +418,11 @@ const handleAction = async (type, id, action) => {
                                      <div class="flex items-center gap-2">
                                          <button @click.stop="data.status === 'DRAFT' ? handleAction('invoices', data.id, 'post') : handleAction('invoices', data.id, 'void')" 
                                                  :class="data.status === 'DRAFT' ? 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500'"
-                                                 class="px-2 h-7 border rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono hover:text-white"
+                                                 class="px-2 h-7 border rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono hover:text-primary"
                                                  v-if="['DRAFT', 'OPEN'].includes(data.status)">
                                              {{ data.status === 'DRAFT' ? 'Post' : 'Void' }}
                                          </button>
-                                         <button @click.stop="router.visit('/finance/invoices/' + data.id)" class="px-2 h-7 bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono">
+                                         <button @click.stop="router.visit('/finance/invoices/' + data.id)" class="px-2 h-7 bg-panel-hover border border-zinc-700 text-secondary hover:text-primary rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono">
                                              View
                                          </button>
                                      </div>
@@ -446,17 +446,17 @@ const handleAction = async (type, id, action) => {
                             </template>
                             <Column field="bill_number" header="Doc #" style="width: 200px">
                                 <template #body="{ data }">
-                                    <span class="font-mono text-[11px] bg-zinc-950 text-white px-2 py-0.5 border border-zinc-800 rounded tracking-widest">{{ data.bill_number }}</span>
+                                    <span class="font-mono text-[11px] bg-deep text-primary px-2 py-0.5 border border-panel-border rounded tracking-widest">{{ data.bill_number }}</span>
                                     <span v-if="data.type === 'DEBIT_NOTE'" class="ml-2 text-[8px] bg-rose-500/10 text-rose-400 px-1 py-0.5 rounded border border-rose-500/20 font-bold uppercase tracking-widest">DEBIT NOTE</span>
                                 </template>
                             </Column>
                             <Column field="bill_date" header="Date" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] text-zinc-400">{{ data.bill_date }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] text-secondary">{{ data.bill_date }}</span></template>
                             </Column>
                             <Column header="Vendor">
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-xs text-zinc-200 tracking-tight">{{ data.vendor?.name }}</span>
+                                        <span class="font-bold text-xs text-primary tracking-tight">{{ data.vendor?.name }}</span>
                                     </div>
                                 </template>
                             </Column>
@@ -473,7 +473,7 @@ const handleAction = async (type, id, action) => {
                                 </template>
                             </Column>
                             <Column header="Total Amount" style="width: 150px">
-                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-zinc-200">{{ formatCurrency(data.total_amount) }}</span></template>
+                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-primary">{{ formatCurrency(data.total_amount) }}</span></template>
                             </Column>
                             <Column header="Balance Due" style="width: 150px">
                                 <template #body="{ data }">
@@ -485,11 +485,11 @@ const handleAction = async (type, id, action) => {
                                     <div class="flex items-center gap-2">
                                         <button @click.stop="data.status === 'DRAFT' ? handleAction('bills', data.id, 'post') : handleAction('bills', data.id, 'void')" 
                                                 :class="data.status === 'DRAFT' ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:bg-rose-500'"
-                                                class="px-2 h-7 border rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono hover:text-white"
+                                                class="px-2 h-7 border rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono hover:text-primary"
                                                 v-if="['DRAFT', 'POSTED'].includes(data.status)">
                                             {{ data.status === 'DRAFT' ? 'Post' : 'Void' }}
                                         </button>
-                                        <button @click.stop="router.visit('/finance/bills/' + data.id)" class="px-2 h-7 bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono">
+                                        <button @click.stop="router.visit('/finance/bills/' + data.id)" class="px-2 h-7 bg-panel-hover border border-zinc-700 text-secondary hover:text-primary rounded text-[9px] font-bold uppercase tracking-widest transition-colors font-mono">
                                             View
                                         </button>
                                     </div>
@@ -515,21 +515,21 @@ const handleAction = async (type, id, action) => {
                                 </div>
                             </template>
                             <Column field="payment_number" header="Receipt #" style="width: 200px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] bg-zinc-950 text-white px-2 py-0.5 border border-zinc-800 rounded tracking-widest">{{ data.payment_number }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] bg-deep text-primary px-2 py-0.5 border border-panel-border rounded tracking-widest">{{ data.payment_number }}</span></template>
                             </Column>
                             <Column field="payment_date" header="Date" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] text-zinc-400">{{ data.payment_date }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] text-secondary">{{ data.payment_date }}</span></template>
                             </Column>
                             <Column header="Customer">
                                 <template #body="{ data }">
-                                    <div class="flex flex-col"><span class="font-bold text-xs text-zinc-200 tracking-tight">{{ data.customer?.name }}</span></div>
+                                    <div class="flex flex-col"><span class="font-bold text-xs text-primary tracking-tight">{{ data.customer?.name }}</span></div>
                                 </template>
                             </Column>
                             <Column header="Total Received" style="width: 140px">
                                 <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-emerald-400">{{ formatCurrency(data.amount) }}</span></template>
                             </Column>
                             <Column header="Refunded" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-rose-400" v-if="Number(data.refunded_amount) > 0">{{ formatCurrency(data.refunded_amount) }}</span><span v-else class="text-zinc-600 font-mono text-[11px]">-</span></template>
+                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-rose-400" v-if="Number(data.refunded_amount) > 0">{{ formatCurrency(data.refunded_amount) }}</span><span v-else class="text-muted font-mono text-[11px]">-</span></template>
                             </Column>
                             <Column header="Remaining Balance" style="width: 160px">
                                 <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-sky-400">{{ formatCurrency(data.unallocated_amount) }}</span></template>
@@ -550,21 +550,21 @@ const handleAction = async (type, id, action) => {
                                 </div>
                             </template>
                             <Column field="payment_number" header="Disbursement #" style="width: 200px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] bg-zinc-950 text-white px-2 py-0.5 border border-zinc-800 rounded tracking-widest">{{ data.payment_number }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] bg-deep text-primary px-2 py-0.5 border border-panel-border rounded tracking-widest">{{ data.payment_number }}</span></template>
                             </Column>
                             <Column field="payment_date" header="Date" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono text-[11px] text-zinc-400">{{ data.payment_date }}</span></template>
+                                <template #body="{ data }"><span class="font-mono text-[11px] text-secondary">{{ data.payment_date }}</span></template>
                             </Column>
                             <Column header="Vendor">
                                 <template #body="{ data }">
-                                    <div class="flex flex-col"><span class="font-bold text-xs text-zinc-200 tracking-tight">{{ data.vendor?.name }}</span></div>
+                                    <div class="flex flex-col"><span class="font-bold text-xs text-primary tracking-tight">{{ data.vendor?.name }}</span></div>
                                 </template>
                             </Column>
                             <Column header="Total Paid" style="width: 150px">
                                 <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-amber-400">{{ formatCurrency(data.amount) }}</span></template>
                             </Column>
                             <Column header="Refunded" style="width: 130px">
-                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-rose-400" v-if="Number(data.refunded_amount) > 0">{{ formatCurrency(data.refunded_amount) }}</span><span v-else class="text-zinc-600 font-mono text-[11px]">-</span></template>
+                                <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-rose-400" v-if="Number(data.refunded_amount) > 0">{{ formatCurrency(data.refunded_amount) }}</span><span v-else class="text-muted font-mono text-[11px]">-</span></template>
                             </Column>
                             <Column header="Remaining Balance" style="width: 160px">
                                 <template #body="{ data }"><span class="font-mono font-bold tracking-tight text-[11px] text-sky-400">{{ formatCurrency(data.unallocated_amount) }}</span></template>
@@ -581,39 +581,39 @@ const handleAction = async (type, id, action) => {
                         <div class="flex items-center gap-4 mb-6 relative z-30">
                             <div class="w-80">
                                 <Select v-if="financeMode === 'RECEIVABLE'" v-model="selectedStatementCustomer" :options="customers" optionLabel="name" placeholder="Select Customer to View Statement" 
-                                        class="w-full bg-zinc-950/80 border-zinc-700 text-white shadow-xl backdrop-blur-md" filter />
+                                        class="w-full bg-deep/80 border-zinc-700 text-primary shadow-xl backdrop-blur-md" filter />
                                 <Select v-else v-model="selectedStatementVendor" :options="vendors" optionLabel="name" placeholder="Select Vendor to View Statement" 
-                                        class="w-full bg-zinc-950/80 border-zinc-700 text-white shadow-xl backdrop-blur-md" filter />
+                                        class="w-full bg-deep/80 border-zinc-700 text-primary shadow-xl backdrop-blur-md" filter />
                             </div>
                         </div>
 
                         <div v-if="statementData" class="flex-1 min-h-0 flex flex-col">
                             <div class="grid grid-cols-4 gap-4 mb-6">
-                                <div class="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
-                                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">{{ financeMode === 'RECEIVABLE' ? 'Customer Exposure' : 'Vendor Liability' }}</span>
-                                    <span class="text-xl font-bold font-mono text-white">{{ formatCurrency(financeMode === 'RECEIVABLE' ? statementData.customer?.exposure || 0 : statementData.summary.closing_balance) }}</span>
+                                <div class="bg-deep/80 border border-panel-border rounded-xl p-4 flex flex-col justify-center">
+                                    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">{{ financeMode === 'RECEIVABLE' ? 'Customer Exposure' : 'Vendor Liability' }}</span>
+                                    <span class="text-xl font-bold font-mono text-primary">{{ formatCurrency(financeMode === 'RECEIVABLE' ? statementData.customer?.exposure || 0 : statementData.summary.closing_balance) }}</span>
                                 </div>
-                                <div class="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
-                                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Debits</span>
+                                <div class="bg-deep/80 border border-panel-border rounded-xl p-4 flex flex-col justify-center">
+                                    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Total Debits</span>
                                     <span class="text-xl font-bold font-mono text-zinc-300">{{ formatCurrency(statementData.summary.total_debits) }}</span>
                                 </div>
-                                <div class="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 flex flex-col justify-center">
-                                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Credits</span>
+                                <div class="bg-deep/80 border border-panel-border rounded-xl p-4 flex flex-col justify-center">
+                                    <span class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Total Credits</span>
                                     <span class="text-xl font-bold font-mono" :class="financeMode === 'RECEIVABLE' ? 'text-emerald-400' : 'text-amber-400'">{{ formatCurrency(statementData.summary.total_credits) }}</span>
                                 </div>
                                 <div class="border rounded-xl p-4 flex flex-col justify-center shadow-[0_0_20px_rgba(0,0,0,0.1)]"
                                      :class="financeMode === 'RECEIVABLE' ? 'bg-sky-500/10 border-sky-500/30' : 'bg-amber-500/10 border-amber-500/30'">
                                     <span class="text-[10px] font-bold uppercase tracking-widest mb-1" :class="financeMode === 'RECEIVABLE' ? 'text-sky-400' : 'text-amber-400'">Running Balance</span>
-                                    <span class="text-2xl font-bold font-mono text-white">{{ formatCurrency(statementData.summary.closing_balance) }}</span>
+                                    <span class="text-2xl font-bold font-mono text-primary">{{ formatCurrency(statementData.summary.closing_balance) }}</span>
                                 </div>
                             </div>
 
                             <DataTable :value="statementData.lines" :loading="loadingStatement" scrollable scrollHeight="flex" 
-                                       class="gh-table border border-zinc-800/80 rounded-xl overflow-hidden bg-zinc-950/50" :pt="tablePt"
+                                       class="gh-table border border-panel-border/80 rounded-xl overflow-hidden bg-deep/50" :pt="tablePt"
                                        @row-click="(e) => e.data.link ? router.visit(e.data.link) : null"
                             >
                                 <Column field="date" header="Date" style="width: 120px">
-                                    <template #body="{ data }"><span class="font-mono text-[11px] text-zinc-400">{{ data.date }}</span></template>
+                                    <template #body="{ data }"><span class="font-mono text-[11px] text-secondary">{{ data.date }}</span></template>
                                 </Column>
                                 <Column header="Type" style="width: 140px">
                                     <template #body="{ data }">
@@ -623,7 +623,7 @@ const handleAction = async (type, id, action) => {
                                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': data.type === 'PAYMENT' && financeMode==='RECEIVABLE',
                                                   'bg-amber-500/10 text-amber-400 border-amber-500/20': data.type === 'PAYMENT' && financeMode==='PAYABLE',
                                                   'bg-rose-500/10 text-rose-400 border-rose-500/20': data.type === 'CREDIT_NOTE' || data.type === 'DEBIT_NOTE' || data.type === 'REFUND',
-                                                  'bg-zinc-800 text-zinc-400 border-zinc-700': data.type === 'OPENING_BALANCE'
+                                                  'bg-panel-hover text-secondary border-zinc-700': data.type === 'OPENING_BALANCE'
                                               }">
                                             {{ data.type }}
                                         </span>
@@ -632,36 +632,36 @@ const handleAction = async (type, id, action) => {
                                 <Column field="reference" header="Reference" style="width: 160px">
                                     <template #body="{ data }">
                                         <span class="font-mono text-[11px] font-bold tracking-widest transition-colors"
-                                              :class="data.link ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 hover:text-sky-300' : 'text-amber-500 hover:text-amber-400') : 'text-zinc-500'">
+                                              :class="data.link ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 hover:text-sky-300' : 'text-amber-500 hover:text-amber-400') : 'text-secondary'">
                                             {{ data.reference || '-' }}
                                         </span>
                                     </template>
                                 </Column>
                                 <Column field="description" header="Description">
-                                    <template #body="{ data }"><span class="text-xs text-zinc-400">{{ data.description }}</span></template>
+                                    <template #body="{ data }"><span class="text-xs text-secondary">{{ data.description }}</span></template>
                                 </Column>
                                 <Column header="Debit (+)" style="width: 130px" class="text-right">
                                     <template #body="{ data }">
                                         <span v-if="Number(data.debit) > 0" class="font-mono text-xs text-zinc-300 font-bold">{{ formatCurrency(data.debit) }}</span>
-                                        <span v-else class="text-zinc-700 font-mono">-</span>
+                                        <span v-else class="text-muted font-mono">-</span>
                                     </template>
                                 </Column>
                                 <Column header="Credit (-)" style="width: 130px" class="text-right">
                                     <template #body="{ data }">
                                         <span v-if="Number(data.credit) > 0" class="font-mono text-xs font-bold" :class="financeMode === 'RECEIVABLE' ? 'text-emerald-400' : 'text-amber-400'">{{ formatCurrency(data.credit) }}</span>
-                                        <span v-else class="text-zinc-700 font-mono">-</span>
+                                        <span v-else class="text-muted font-mono">-</span>
                                     </template>
                                 </Column>
-                                <Column header="Balance" style="width: 150px" class="text-right border-l border-zinc-800/50">
-                                    <template #body="{ data }"><span class="font-mono text-[13px] font-bold text-white tracking-tight">{{ formatCurrency(data.balance) }}</span></template>
+                                <Column header="Balance" style="width: 150px" class="text-right border-l border-panel-border/50">
+                                    <template #body="{ data }"><span class="font-mono text-[13px] font-bold text-primary tracking-tight">{{ formatCurrency(data.balance) }}</span></template>
                                 </Column>
                             </DataTable>
                         </div>
                         
                         <div v-else class="flex-1 flex items-center justify-center relative flex-col opacity-50 grayscale">
                             <i class="pi pi-book text-6xl" :class="financeMode === 'RECEIVABLE' ? 'text-sky-400' : 'text-amber-400'"></i>
-                            <h2 class="text-xl font-bold tracking-tight text-white mb-2">{{ financeMode === 'RECEIVABLE' ? 'Customer Statements' : 'Vendor Ledger Viewer' }}</h2>
-                            <p class="text-zinc-500 text-sm max-w-md text-center">Select an entity from the dropdown to load the chronological accounting statement.</p>
+                            <h2 class="text-xl font-bold tracking-tight text-primary mb-2">{{ financeMode === 'RECEIVABLE' ? 'Customer Statements' : 'Vendor Ledger Viewer' }}</h2>
+                            <p class="text-secondary text-sm max-w-md text-center">Select an entity from the dropdown to load the chronological accounting statement.</p>
                         </div>
                     </div>
                 </template>
@@ -672,3 +672,5 @@ const handleAction = async (type, id, action) => {
 
 <style scoped>
 </style>
+
+

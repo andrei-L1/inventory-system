@@ -133,44 +133,44 @@ const submitInvoice = async () => {
                     <button @click="router.visit('/finance-center')" class="bg-transparent border-none text-sky-400 hover:text-sky-300 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest mb-6 transition-colors p-0 outline-none">
                         <i class="pi pi-arrow-left text-xs"></i> Back to Finance Center
                     </button>
-                    <h1 class="text-2xl font-bold text-white tracking-tight mb-1">Generate Invoice</h1>
-                    <p class="text-zinc-400 text-sm">Bill a customer from an active Sales Order based on shipped quantities.</p>
+                    <h1 class="text-2xl font-bold text-primary tracking-tight mb-1">Generate Invoice</h1>
+                    <p class="text-secondary text-sm">Bill a customer from an active Sales Order based on shipped quantities.</p>
                 </div>
             </div>
 
             <!-- Form Details -->
-            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6 shadow-xl">
+            <div class="bg-panel border border-panel-border rounded-xl p-6 mb-6 shadow-xl">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Select Sales Order</label>
+                        <label class="block text-xs font-bold text-secondary uppercase tracking-widest mb-2">Select Sales Order</label>
                         <Select v-model="selectedSo" :options="salesOrders" optionLabel="so_number" placeholder="Choose SO" 
-                                class="w-full bg-zinc-950 border-zinc-800 text-white" 
+                                class="w-full bg-deep border-panel-border text-primary" 
                                 :loading="loadingSOs" filter 
                                 @change="onSoSelect" />
                     </div>
 
                     <div v-if="selectedSo">
-                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Invoice Date</label>
-                        <input type="date" v-model="invoiceDate" class="w-full bg-zinc-950 border border-zinc-800 text-white p-2.5 rounded-lg text-sm focus:border-sky-500 outline-none" />
+                        <label class="block text-xs font-bold text-secondary uppercase tracking-widest mb-2">Invoice Date</label>
+                        <input type="date" v-model="invoiceDate" class="w-full bg-deep border border-panel-border text-primary p-2.5 rounded-lg text-sm focus:border-sky-500 outline-none" />
                     </div>
 
                     <div v-if="selectedSo">
-                        <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Due Date (Optional)</label>
-                        <input type="date" v-model="dueDate" class="w-full bg-zinc-950 border border-zinc-800 text-white p-2.5 rounded-lg text-sm focus:border-sky-500 outline-none" />
+                        <label class="block text-xs font-bold text-secondary uppercase tracking-widest mb-2">Due Date (Optional)</label>
+                        <input type="date" v-model="dueDate" class="w-full bg-deep border border-panel-border text-primary p-2.5 rounded-lg text-sm focus:border-sky-500 outline-none" />
                     </div>
                 </div>
 
-                <div v-if="selectedSo" class="mt-6 border-t border-zinc-800 pt-6">
+                <div v-if="selectedSo" class="mt-6 border-t border-panel-border pt-6">
                     <div class="flex items-center gap-3">
-                        <span class="text-zinc-400 text-sm">Customer:</span>
-                        <span class="text-white font-bold">{{ selectedSo.customer?.name }}</span>
+                        <span class="text-secondary text-sm">Customer:</span>
+                        <span class="text-primary font-bold">{{ selectedSo.customer?.name }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Lines -->
-            <div v-if="selectedSo && lines.length > 0" class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6 shadow-xl">
-                <h3 class="text-white font-bold tracking-tight mb-4 flex items-center gap-2">
+            <div v-if="selectedSo && lines.length > 0" class="bg-panel border border-panel-border rounded-xl p-6 mb-6 shadow-xl">
+                <h3 class="text-primary font-bold tracking-tight mb-4 flex items-center gap-2">
                     <i class="pi pi-box text-sky-400"></i>
                     Shipped Lines for Invoicing
                 </h3>
@@ -178,7 +178,7 @@ const submitInvoice = async () => {
                 <DataTable :value="lines" class="p-datatable-sm bg-transparent">
                     <Column header="Product">
                         <template #body="{ data }">
-                            <span class="text-sm text-zinc-200 font-bold">{{ data.product_name }}</span>
+                            <span class="text-sm text-primary font-bold">{{ data.product_name }}</span>
                         </template>
                     </Column>
                     <Column header="Shipped Qty" style="width: 15%">
@@ -194,7 +194,7 @@ const submitInvoice = async () => {
                     <Column header="Invoice Qty" style="width: 20%">
                         <template #body="{ data }">
                             <InputNumber v-model="data.invoice_qty" :min="0" :max="data.uninvoiced_qty" :minFractionDigits="0" :maxFractionDigits="4" 
-                                         class="w-full max-w-[120px]" inputClass="bg-zinc-950 border-zinc-700 text-white text-right text-xs" />
+                                         class="w-full max-w-[120px]" inputClass="bg-deep border-zinc-700 text-primary text-right text-xs" />
                         </template>
                     </Column>
                     <Column header="Subtotal" style="width: 15%" class="text-right">
@@ -205,10 +205,10 @@ const submitInvoice = async () => {
                 </DataTable>
 
                 <div class="mt-6 flex justify-end">
-                    <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4 w-64">
+                    <div class="bg-deep border border-panel-border rounded-lg p-4 w-64">
                         <div class="flex justify-between items-center">
-                            <span class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Total Invoice</span>
-                            <span class="text-xl font-bold font-mono text-white">{{ formatCurrency(totalAmount) }}</span>
+                            <span class="text-secondary text-xs font-bold uppercase tracking-widest">Total Invoice</span>
+                            <span class="text-xl font-bold font-mono text-primary">{{ formatCurrency(totalAmount) }}</span>
                         </div>
                     </div>
                 </div>
@@ -216,7 +216,7 @@ const submitInvoice = async () => {
 
             <!-- Empty State / Generate Button -->
             <div class="flex justify-end gap-4" v-if="selectedSo">
-                <button @click="router.visit('/finance-center')" class="px-6 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                <button @click="router.visit('/finance-center')" class="px-6 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-secondary hover:text-primary transition-colors">
                     Cancel
                 </button>
                 <button @click="submitInvoice" :disabled="submitting || lines.length === 0" 
@@ -228,3 +228,5 @@ const submitInvoice = async () => {
         </div>
     </AppLayout>
 </template>
+
+

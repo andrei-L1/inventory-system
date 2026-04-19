@@ -3,21 +3,21 @@
         <Head title="Inventory Transfer" />
         <Toast />
         
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+        <div class="p-8 bg-deep min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-violet-400 uppercase tracking-[0.2em] block mb-2 font-mono">Internal Movement</span>
-                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Move Items</h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                    <h1 class="text-3xl font-bold text-primary tracking-tight m-0 mb-2">Move Items</h1>
+                    <p class="text-secondary text-sm max-w-2xl leading-relaxed">
                         Move stock between warehouses or locations. Both locations will be updated simultaneously upon posting.
                     </p>
                 </div>
                 
                 <div class="flex items-center gap-4">
-                    <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
+                    <button @click="router.visit('/inventory-center')" class="!bg-panel !border-panel-border !text-secondary hover:!text-primary !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-violet-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-violet-500/10 hover:!bg-violet-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-violet-500 !border-none !text-primary !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-violet-500/10 hover:!bg-violet-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ isSubmitting ? 'PROCESSING...' : 'TRANSFER ITEMS' }}
                     </button>
                 </div>
@@ -25,39 +25,39 @@
 
             <div class="max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-2">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_LINES</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ form.lines.length.toString().padStart(2, '0') }}</div>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_LINES</span>
+                        <div class="text-2xl font-bold text-primary tracking-tight text-center lg:text-left">{{ form.lines.length.toString().padStart(2, '0') }}</div>
                     </div>
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">SUM_TRANSFER</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">SUM_TRANSFER</span>
+                        <div class="text-2xl font-bold text-primary tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
                     </div>
-                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-violet-500 shadow-xl backdrop-blur-sm">
+                    <div class="bg-panel/30 border border-panel-border/50 rounded-2xl p-6 border-l-4 border-l-violet-500 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-violet-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">SOURCE ROUTE</span>
                         <div class="text-[11px] font-bold text-zinc-300 uppercase truncate text-center lg:text-left tracking-tight">{{ form.from_location?.name || 'NOT_SELECTED' }}</div>
                     </div>
                 </div>
 
                 <!-- Transfer Route Map -->
-                <div class="mb-10 p-10 rounded-3xl bg-zinc-900/20 border border-zinc-900 flex items-center justify-between gap-12 relative overflow-hidden group shadow-2xl backdrop-blur-sm">
+                <div class="mb-10 p-10 rounded-3xl bg-panel/20 border border-zinc-900 flex items-center justify-between gap-12 relative overflow-hidden group shadow-2xl backdrop-blur-sm">
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.05),transparent)] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     
                     <!-- Source Location -->
                     <div class="z-10 flex flex-col items-start gap-4 flex-1">
-                        <div class="w-16 h-16 rounded-2xl bg-zinc-950 border-2 border-zinc-900 flex items-center justify-center shadow-2xl relative transition-all group-hover:border-zinc-700">
-                            <i class="pi pi-home text-zinc-700 text-xl" />
+                        <div class="w-16 h-16 rounded-2xl bg-deep border-2 border-zinc-900 flex items-center justify-center shadow-2xl relative transition-all group-hover:border-zinc-700">
+                            <i class="pi pi-home text-muted text-xl" />
                         </div>
                         <div class="flex flex-col items-start">
-                            <span class="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] font-mono mb-1 leading-none">Source Location</span>
-                            <span class="text-lg font-bold text-zinc-400 uppercase tracking-tight">{{ form.from_location?.name || 'SELECT SOURCE' }}</span>
+                            <span class="text-[9px] font-black text-muted uppercase tracking-[0.2em] font-mono mb-1 leading-none">Source Location</span>
+                            <span class="text-lg font-bold text-secondary uppercase tracking-tight">{{ form.from_location?.name || 'SELECT SOURCE' }}</span>
                         </div>
                     </div>
 
                     <!-- Transfer Path -->
-                    <div class="flex-[2] h-px bg-zinc-800 relative z-10 max-w-[600px] mx-10">
+                    <div class="flex-[2] h-px bg-panel-hover relative z-10 max-w-[600px] mx-10">
                         <div class="absolute -top-5 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                             <div class="px-6 py-2 rounded-full bg-zinc-950 border border-zinc-800 flex items-center gap-3 shadow-lg group-hover:border-violet-500/30 transition-all">
+                             <div class="px-6 py-2 rounded-full bg-deep border border-panel-border flex items-center gap-3 shadow-lg group-hover:border-violet-500/30 transition-all">
                                  <div class="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></div>
                                  <span class="text-[9px] font-black text-violet-400 uppercase tracking-[0.4em] font-mono leading-none">READY TO MOVE</span>
                              </div>
@@ -67,19 +67,19 @@
 
                     <!-- Destination Location -->
                     <div class="z-10 flex flex-col items-end gap-4 flex-1 text-right">
-                        <div class="w-16 h-16 rounded-2xl bg-zinc-950 border-2 border-violet-500/20 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.1)] relative transition-all group-hover:border-violet-500/40">
+                        <div class="w-16 h-16 rounded-2xl bg-deep border-2 border-violet-500/20 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.1)] relative transition-all group-hover:border-violet-500/40">
                             <i class="pi pi-map-marker text-violet-400 text-xl" />
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] font-mono mb-1 leading-none">Destination</span>
+                            <span class="text-[9px] font-black text-muted uppercase tracking-[0.2em] font-mono mb-1 leading-none">Destination</span>
                             <span class="text-lg font-bold text-violet-300 uppercase tracking-tight">{{ form.to_location?.name || 'SELECT TARGET' }}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-12 gap-8 flex-1 min-h-0">
-                    <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
+                    <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                        <div class="p-6 border-b border-panel-border bg-panel/60 flex justify-between items-center">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-violet-500"></div>
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Transfer Details</span>
@@ -88,56 +88,56 @@
                         
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">From Location</label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">From Location</label>
                                  <Select 
                                       v-model="form.from_location" 
                                       :options="locations" 
                                       optionLabel="name" 
                                       dataKey="id"
                                       placeholder="From..." 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !text-xs font-mono"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">To Location</label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">To Location</label>
                                  <Select 
                                       v-model="form.to_location" 
                                       :options="locations" 
                                       optionLabel="name" 
                                       dataKey="id"
                                       placeholder="To..." 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !text-xs font-mono"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference # <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Reference # <span class="text-muted normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <InputText 
                                       v-model="form.reference_number" 
                                       placeholder="Leave blank to auto-generate" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-[10px] !font-mono text-white placeholder:!text-zinc-800"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !px-4 !text-[10px] !font-mono text-primary placeholder:!text-zinc-800"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Notes <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
-                                 <textarea v-model="form.notes" placeholder="Optional transfer notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-24 resize-none outline-none focus:border-violet-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Notes <span class="text-muted normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional transfer notes..." class="bg-deep border border-panel-border rounded-xl p-4 text-xs text-secondary h-24 resize-none outline-none focus:border-violet-500/30 transition-all"></textarea>
                              </div>
 
                              <div class="p-5 bg-violet-500/5 border border-violet-500/10 rounded-xl">
-                                 <p class="text-[9px] text-zinc-600 leading-relaxed uppercase tracking-wider font-bold">Both locations will be updated instantly upon posting.</p>
+                                 <p class="text-[9px] text-muted leading-relaxed uppercase tracking-wider font-bold">Both locations will be updated instantly upon posting.</p>
                              </div>
                         </div>
                     </aside>
 
-                    <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md">
+                    <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                        <div class="p-6 border-b border-panel-border bg-panel/60 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-violet-400"></div>
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Items to Move</span>
                             </div>
-                            <button @click="addLine" class="px-6 h-10 rounded-xl bg-violet-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-violet-400 transition-all active:scale-95 flex items-center gap-2">
+                            <button @click="addLine" class="px-6 h-10 rounded-xl bg-violet-500 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-violet-400 transition-all active:scale-95 flex items-center gap-2">
                                 <i class="pi pi-plus text-[10px]" />
                                 ADD ITEM
                             </button>
@@ -145,11 +145,11 @@
 
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
                             <div class="flex flex-col gap-3">
-                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-900/20 border border-zinc-800/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-violet-500/20 hover:bg-zinc-900/40">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-panel/20 border border-panel-border/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-violet-500/20 hover:bg-panel/40">
                                     <div class="grid grid-cols-12 gap-4 items-center">
                                         <!-- Product Selection (Col 5) -->
                                         <div class="col-span-12 lg:col-span-5 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Product to Move</span>
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Product to Move</span>
                                             <Select 
                                                 v-model="line.product" 
                                                 :options="products" 
@@ -157,14 +157,14 @@
                                                 placeholder="Search products..." 
                                                 filter 
                                                 @change="onProductSelect(line)"
-                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-violet-500/30"
+                                                class="!w-full !bg-deep/80 !border-panel-border !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-violet-500/30"
                                             />
                                         </div>
 
                                         <!-- Unit Selection (Col 2) -->
                                         <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
                                             <div class="flex flex-col gap-2">
-                                                <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                                <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">UOM</label>
                                                 <Select 
                                                     v-model="line.uom_id" 
                                                     :options="getAvailableUoms(line.product?.id)" 
@@ -173,14 +173,14 @@
                                                     placeholder="UOM" 
                                                     dataKey="id"
                                                     @change="onUomChange(line)"
-                                                    class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-violet-500/50"
+                                                    class="w-full bg-deep border-panel-border text-sm focus:border-violet-500/50"
                                                 >
                                                     <template #value="slotProps">
                                                         <div v-if="slotProps.value" class="flex items-center gap-2">
                                                             <span class="font-bold text-[11px] uppercase">{{ getUomAbbr(slotProps.value) }}</span>
                                                             <span 
                                                                 v-if="getConversionDetails(slotProps.value, line.product?.id)" 
-                                                                class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                                class="text-[9px] text-muted font-mono font-bold tracking-widest hidden 2xl:block uppercase"
                                                             >
                                                                 {{ getConversionDetails(slotProps.value, line.product?.id).text }}
                                                             </span>
@@ -200,7 +200,7 @@
                                                             </div>
                                                             <span 
                                                                 v-if="getConversionDetails(slotProps.option.id, line.product?.id)" 
-                                                                class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                                class="text-[9px] text-secondary font-mono font-bold mt-0.5 tracking-widest"
                                                             >
                                                                 {{ getConversionDetails(slotProps.option.id, line.product?.id).text }}
                                                             </span>
@@ -212,8 +212,8 @@
 
                                         <!-- Quantity Input (Col 4 - Unified Bar) -->
                                         <div class="col-span-6 lg:col-span-4 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Quantity</span>
-                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-violet-500/50 transition-all overflow-hidden h-10 group/input"
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Quantity</span>
+                                            <div class="flex items-center bg-deep/80 border border-panel-border rounded-xl focus-within:border-violet-500/50 transition-all overflow-hidden h-10 group/input"
                                                  :class="{'border-red-500/30 bg-red-500/5': isInsufficient(line)}">
                                                 <InputNumber 
                                                     v-model="line.quantity" 
@@ -238,35 +238,35 @@
                                     </div>
 
                                     <!-- Context Indicator Bar -->
-                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-zinc-800/40 pt-3 mt-1">
+                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-panel-border/40 pt-3 mt-1">
                                         <div class="flex items-center gap-6">
                                             <!-- Availability Stat (CLICKABLE) -->
                                             <div 
                                                 @click="(e) => toggleStockInfo(e, line)"
-                                                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-violet-500/50 transition-all group/stat"
+                                                class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel-border rounded-lg cursor-pointer hover:border-violet-500/50 transition-all group/stat"
                                             >
                                                 <div class="flex flex-col text-left">
-                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">At Source</span>
-                                                    <span class="text-[10px] font-black font-mono text-zinc-200">
+                                                    <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">At Source</span>
+                                                    <span class="text-[10px] font-black font-mono text-primary">
                                                         {{ getScaledQty(line, getLocalStock(line)) }}
                                                     </span>
                                                 </div>
-                                                <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                                <div class="w-px h-4 bg-panel-hover mx-1"></div>
                                                 <div class="flex flex-col text-left">
-                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">Global Pool</span>
-                                                    <span class="text-[10px] font-black text-zinc-400 font-mono">
+                                                    <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/stat:text-violet-500 line-clamp-1">Global Pool</span>
+                                                    <span class="text-[10px] font-black text-secondary font-mono">
                                                         {{ getScaledQty(line, line.product.total_qoh) }}
                                                     </span>
                                                 </div>
-                                                <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover/stat:text-violet-500"></i>
+                                                <i class="pi pi-chevron-down text-[8px] text-muted group-hover/stat:text-violet-500"></i>
                                             </div>
 
                                             <!-- Routing Visual -->
-                                            <div class="flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
+                                            <div class="flex items-center gap-3 px-4 py-2 bg-deep/40 rounded-lg border border-panel-border/50">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">{{ form.from_location?.name || 'SRC' }}</span>
-                                                    <i class="pi pi-arrow-right text-[8px] text-zinc-700"></i>
-                                                    <span class="text-[9px] font-black text-white uppercase tracking-tighter">{{ form.to_location?.name || 'DEST' }}</span>
+                                                    <span class="text-[9px] font-black text-muted uppercase tracking-tighter">{{ form.from_location?.name || 'SRC' }}</span>
+                                                    <i class="pi pi-arrow-right text-[8px] text-muted"></i>
+                                                    <span class="text-[9px] font-black text-primary uppercase tracking-tighter">{{ form.to_location?.name || 'DEST' }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -285,11 +285,11 @@
         </div>
 
         <!-- Location Breakdown Popover -->
-        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
-            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+        <Popover ref="stockOp" class="!bg-deep !border-panel-border !shadow-2xl !p-0 overflow-hidden">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-primary text-left">
                 <div class="text-[9px] font-black text-violet-500 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
                     <span>Stock Availability</span>
-                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
+                    <span class="bg-panel px-2 py-0.5 rounded text-secondary">{{ getUomAbbr(selectedLineForStock.uom_id) }}</span>
                 </div>
                 
                 <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
@@ -301,21 +301,21 @@
                             <span class="text-[10px] font-bold uppercase tracking-tight"
                                   :class="[
                                       loc.location_id === form.from_location?.id ? 'text-violet-400' : 
-                                      loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-zinc-400 group-hover:text-zinc-200'
+                                      loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-secondary group-hover:text-primary'
                                   ]">
                                 {{ loc.location_name }}
                             </span>
-                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-if="loc.location_id === form.from_location?.id">Current Source</span>
-                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-else-if="loc.location_id === form.to_location?.id">Current Target</span>
+                            <span class="text-[7px] font-black text-muted uppercase" v-if="loc.location_id === form.from_location?.id">Current Source</span>
+                            <span class="text-[7px] font-black text-muted uppercase" v-else-if="loc.location_id === form.to_location?.id">Current Target</span>
                         </div>
-                        <span class="font-mono text-[10px] font-bold text-zinc-500 group-hover:text-white">
+                        <span class="font-mono text-[10px] font-bold text-secondary group-hover:text-primary">
                             {{ getScaledQty(selectedLineForStock, loc.quantity_on_hand) }}
                         </span>
                     </div>
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-zinc-900">
-                    <p class="text-[8px] text-zinc-600 font-bold uppercase italic leading-tight">
+                    <p class="text-[8px] text-muted font-bold uppercase italic leading-tight">
                         <i class="pi pi-info-circle text-[7px] mr-1"></i>
                         Click a location to set as Source or Target warehouse.
                     </p>
@@ -623,3 +623,5 @@ onMounted(() => {
     loadData();
 });
 </script>
+
+

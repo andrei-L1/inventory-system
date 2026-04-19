@@ -256,20 +256,20 @@ const cancel = () => {
         <div class="h-full max-w-5xl mx-auto flex flex-col gap-6">
             
             <!-- Header -->
-            <div class="flex items-center justify-between p-6 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+            <div class="flex items-center justify-between p-6 bg-panel/40 border border-panel-border/80 rounded-2xl shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[100px] pointer-events-none"></div>
                 <div class="flex items-center gap-4 z-10">
-                    <button @click="cancel" class="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors hover:border-zinc-600">
+                    <button @click="cancel" class="w-10 h-10 rounded-xl bg-deep border border-panel-border flex items-center justify-center text-secondary hover:text-primary transition-colors hover:border-zinc-600">
                         <i class="pi pi-arrow-left"></i>
                     </button>
                     <div>
-                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Purchase Order' : 'Draft Purchase Order' }}</h1>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Create New Procurement Requisition</p>
+                        <h1 class="text-primary text-xl font-bold tracking-tight mb-1">{{ isEdit ? 'Edit Purchase Order' : 'Draft Purchase Order' }}</h1>
+                        <p class="text-secondary text-[10px] font-bold tracking-[0.2em] uppercase font-mono">Create New Procurement Requisition</p>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3 z-10">
-                    <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-zinc-400 hover:!text-white" @click="cancel" />
+                    <Button label="Discard" icon="pi pi-times" class="p-button-text p-button-sm !text-secondary hover:!text-primary" @click="cancel" />
                     <Button 
                         label="Save Draft" 
                         icon="pi pi-save" 
@@ -284,11 +284,11 @@ const cancel = () => {
             <div class="grid grid-cols-12 gap-6">
                 <!-- Header Info -->
                 <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-3">Supplier Details</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl flex flex-col gap-5">
+                        <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border/50 pb-3">Supplier Details</span>
                         
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Vendor (Supplier)</label>
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Vendor (Supplier)</label>
                             <Select 
                                 v-model="form.vendor_id" 
                                 :options="vendors" 
@@ -297,42 +297,42 @@ const cancel = () => {
                                 placeholder="Select vendor" 
                                 filter
                                 @change="form.lines = [{ product_id: null, uom_id: null, ordered_qty: 1, unit_cost: 0.00 }]"
-                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
+                                class="w-full bg-deep border-panel-border text-sm focus:border-orange-500/50"
                             />
                         </div>
 
 
 
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Expected Delivery</label>
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Expected Delivery</label>
                             <DatePicker 
                                 v-model="form.expected_delivery_date" 
                                 dateFormat="yy-mm-dd" 
                                 placeholder="YYYY-MM-DD"
-                                class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50"
+                                class="w-full bg-deep border-panel-border text-sm focus:border-orange-500/50"
                             />
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Document Notes</label>
-                            <Textarea v-model="form.notes" rows="4" class="w-full bg-zinc-950 border-zinc-800 text-sm focus:border-orange-500/50 resize-none" placeholder="Add terms or instructions..." />
+                            <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Document Notes</label>
+                            <Textarea v-model="form.notes" rows="4" class="w-full bg-deep border-panel-border text-sm focus:border-orange-500/50 resize-none" placeholder="Add terms or instructions..." />
                         </div>
                     </div>
                 </div>
 
                 <!-- Lines Editor -->
                 <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
-                        <div class="flex items-center justify-between border-b border-zinc-800/50 pb-3 mb-2">
-                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Order Lines</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl flex flex-col gap-4 flex-1">
+                        <div class="flex items-center justify-between border-b border-panel-border/50 pb-3 mb-2">
+                            <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Order Lines</span>
                             <span class="text-[10px] font-bold text-emerald-400 font-mono tracking-widest uppercase bg-emerald-500/10 px-3 py-1 rounded">Total: ₱{{ grandTotal.toFixed(2) }}</span>
                         </div>
                         
                         <!-- Line Items -->
                         <div class="flex flex-col gap-4">
-                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-950/50 border border-zinc-800/50 rounded-xl flex flex-col md:flex-row gap-4 items-end relative group transition-all hover:border-zinc-700">
+                            <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-deep/50 border border-panel-border/50 rounded-xl flex flex-col md:flex-row gap-4 items-end relative group transition-all hover:border-zinc-700">
                                 <div class="flex flex-col gap-2 flex-1 w-full relative">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Subject Item</label>
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Subject Item</label>
                                     <Select 
                                         v-model="line.product_id" 
                                         :options="filteredProducts" 
@@ -341,14 +341,14 @@ const cancel = () => {
                                         placeholder="Select product" 
                                         filter
                                         @change="onProductSelect(line)"
-                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-orange-500/50"
+                                        class="w-full bg-deep border-panel-border text-primary focus:border-orange-500/50"
                                     >
                                         <template #option="slotProps">
                                             <div class="flex flex-col">
                                                 <span class="font-bold text-xs">{{ slotProps.option.name }}</span>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-[9px] font-mono text-sky-500 font-bold uppercase tracking-widest">{{ slotProps.option.sku }}</span>
-                                                    <span v-if="slotProps.option.product_code" class="text-[9px] font-mono text-zinc-600 font-bold uppercase tracking-tight">MPN: {{ slotProps.option.product_code }}</span>
+                                                    <span v-if="slotProps.option.product_code" class="text-[9px] font-mono text-muted font-bold uppercase tracking-tight">MPN: {{ slotProps.option.product_code }}</span>
                                                     <span class="text-zinc-800 font-mono text-[9px]">| ₱{{ Number(slotProps.option.average_cost || slotProps.option.selling_price).toFixed(2) }}</span>
                                                 </div>
                                             </div>
@@ -356,7 +356,7 @@ const cancel = () => {
                                     </Select>
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">UOM</label>
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">UOM</label>
                                     <Select 
                                         v-model="line.uom_id" 
                                         :options="getAvailableUoms(line.product_id)" 
@@ -364,14 +364,14 @@ const cancel = () => {
                                         optionValue="id" 
                                         placeholder="UOM" 
                                         @change="onUomChange(line)"
-                                        class="w-full bg-zinc-950 border-zinc-800 text-white focus:border-orange-500/50"
+                                        class="w-full bg-deep border-panel-border text-primary focus:border-orange-500/50"
                                     >
                                         <template #value="slotProps">
                                             <div v-if="slotProps.value" class="flex items-center gap-2">
                                                 <span class="font-bold text-[11px]">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
                                                 <span 
                                                     v-if="getConversionDetails(slotProps.value, line.product_id)" 
-                                                    class="text-[9px] text-zinc-500 font-mono font-bold tracking-widest hidden 2xl:block"
+                                                    class="text-[9px] text-secondary font-mono font-bold tracking-widest hidden 2xl:block"
                                                 >
                                                     {{ getConversionDetails(slotProps.value, line.product_id).text }}
                                                 </span>
@@ -393,7 +393,7 @@ const cancel = () => {
                                                 </div>
                                                 <span 
                                                     v-if="getConversionDetails(slotProps.option.id, line.product_id)" 
-                                                    class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                    class="text-[9px] text-secondary font-mono font-bold mt-0.5 tracking-widest"
                                                 >
                                                     {{ getConversionDetails(slotProps.option.id, line.product_id).text }}
                                                 </span>
@@ -402,30 +402,30 @@ const cancel = () => {
                                     </Select>
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-32 z-0">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Quantity</label>
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Quantity</label>
                                     <InputNumber 
                                         v-model="line.ordered_qty" 
                                         :min="0.01" 
                                         :maxFractionDigits="isUomIdDiscrete(line.uom_id) ? 0 : 4" 
                                         class="w-full" 
-                                        inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" 
+                                        inputClass="w-full bg-deep border border-panel-border text-center text-primary p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" 
                                     />
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-28 z-0">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Unit Cost</label>
-                                    <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-right text-white p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Unit Cost</label>
+                                    <InputNumber v-model="line.unit_cost" mode="decimal" :minFractionDigits="2" class="w-full" inputClass="w-full bg-deep border border-panel-border text-right text-primary p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-24 z-0">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Disc %</label>
-                                    <InputNumber v-model="line.discount_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-rose-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Disc %</label>
+                                    <InputNumber v-model="line.discount_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-deep border border-panel-border text-center text-rose-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <div class="flex flex-col gap-2 w-full md:w-24 z-0">
-                                    <label class="text-[9px] font-bold text-zinc-500 tracking-[0.2em] font-mono uppercase">Tax %</label>
-                                    <InputNumber v-model="line.tax_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-zinc-950 border border-zinc-800 text-center text-blue-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
+                                    <label class="text-[9px] font-bold text-secondary tracking-[0.2em] font-mono uppercase">Tax %</label>
+                                    <InputNumber v-model="line.tax_rate" :min="0" :max="100" class="w-full" inputClass="w-full bg-deep border border-panel-border text-center text-blue-400 p-2 rounded-lg focus:border-orange-500/50 outline-none transition-colors" />
                                 </div>
                                 <Button 
                                     icon="pi pi-trash" 
-                                    class="p-button-rounded p-button-danger p-button-text !text-zinc-600 hover:!text-red-400 absolute md:relative top-2 right-2 md:top-0 md:right-0" 
+                                    class="p-button-rounded p-button-danger p-button-text !text-muted hover:!text-red-400 absolute md:relative top-2 right-2 md:top-0 md:right-0" 
                                     @click="removeLine(index)"
                                     v-if="form.lines.length > 1"
                                 />
@@ -468,3 +468,5 @@ const cancel = () => {
     color: white;
 }
 </style>
+
+

@@ -66,7 +66,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
     <AppLayout>
         <Head title="Stock Movement Receipt" />
 
-        <div class="main-content-wrapper p-8 bg-zinc-950 min-h-screen">
+        <div class="main-content-wrapper p-8 bg-deep min-h-screen">
             <div class="max-w-6xl mx-auto">
 
                 <!-- Toolbar -->
@@ -79,13 +79,13 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest font-mono">AUDIT: VERIFIED</span>
                             </div>
                         </div>
-                        <h1 class="text-3xl font-bold text-white tracking-tighter m-0 flex items-center gap-4">
+                        <h1 class="text-3xl font-bold text-primary tracking-tighter m-0 flex items-center gap-4">
                             Stock Movement Receipt
-                            <span v-if="transaction" class="bg-zinc-950 px-3 py-1 rounded-lg border border-zinc-800 text-sky-400 text-xl font-mono tracking-widest">{{ transaction.reference_number }}</span>
+                            <span v-if="transaction" class="bg-deep px-3 py-1 rounded-lg border border-panel-border text-sky-400 text-xl font-mono tracking-widest">{{ transaction.reference_number }}</span>
                         </h1>
                     </div>
                     <div class="flex items-center gap-4">
-                        <button @click="goBack" class="px-6 h-12 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-500 hover:text-zinc-200 transition-all font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
+                        <button @click="goBack" class="px-6 h-12 rounded-xl bg-deep border border-panel-border text-secondary hover:text-primary transition-all font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
                             <i class="pi pi-arrow-left" /> Go Back
                         </button>
                         <button @click="printSlip" class="px-6 h-12 rounded-xl bg-sky-500 text-zinc-950 hover:bg-sky-400 transition-all font-bold text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-sky-500/10 active:scale-95">
@@ -105,37 +105,37 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
 
                     <!-- Left: Document Info -->
                     <div class="col-span-12 lg:col-span-4 flex flex-col gap-8">
-                        <div class="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div class="px-8 py-4 bg-zinc-900 border-b border-zinc-800 flex justify-between items-center">
-                                <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">Document Summary</span>
+                        <div class="bg-panel/60 border border-panel-border rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div class="px-8 py-4 bg-panel border-b border-panel-border flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Document Summary</span>
                                 <Tag :value="(transaction.status?.name || 'loading').toUpperCase()" :severity="getStatusSeverity(transaction.status?.name)" class="!bg-transparent !border !px-3 font-mono" />
                             </div>
                             <div class="p-8 flex flex-col gap-8">
                                 <div class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Movement Type</label>
-                                    <span class="text-white font-bold tracking-tight text-lg">{{ getTypeLabel(transaction.type?.name) }}</span>
+                                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Movement Type</label>
+                                    <span class="text-primary font-bold tracking-tight text-lg">{{ getTypeLabel(transaction.type?.name) }}</span>
                                 </div>
                                 <div class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Transaction Date</label>
+                                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Transaction Date</label>
                                     <span class="text-zinc-300 font-mono text-sm">{{ transaction.transaction_date }}</span>
                                 </div>
-                                <div class="h-px bg-zinc-800"></div>
+                                <div class="h-px bg-panel-hover"></div>
                                 <div v-if="transaction.from_location_name" class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Origin (Source)</label>
+                                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Origin (Source)</label>
                                     <div class="flex items-center gap-3">
                                         <div class="w-2 h-2 rounded-full bg-orange-500"></div>
-                                        <span class="text-zinc-200 font-bold text-sm tracking-tight">{{ transaction.from_location_name }}</span>
+                                        <span class="text-primary font-bold text-sm tracking-tight">{{ transaction.from_location_name }}</span>
                                     </div>
                                 </div>
                                 <div v-if="transaction.to_location_name" class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Destination (Target)</label>
+                                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Destination (Target)</label>
                                     <div class="flex items-center gap-3">
                                         <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                        <span class="text-zinc-200 font-bold text-sm tracking-tight">{{ transaction.to_location_name }}</span>
+                                        <span class="text-primary font-bold text-sm tracking-tight">{{ transaction.to_location_name }}</span>
                                     </div>
                                 </div>
                                 <div v-if="transaction.vendor_name" class="flex flex-col gap-2">
-                                    <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Affiliated Entity</label>
+                                    <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Affiliated Entity</label>
                                     <div class="flex items-center gap-3">
                                         <i class="pi pi-building text-sky-400 text-xs" />
                                         <span class="text-sky-400 font-bold text-sm">{{ transaction.vendor_name }}</span>
@@ -150,32 +150,32 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 backdrop-blur-sm shadow-xl">
-                            <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono block mb-4">Internal Notes // Paperwork Ref</label>
-                            <p class="text-zinc-400 text-sm leading-relaxed italic m-0">{{ transaction.reference_doc || '-- No manual reference provided --' }}</p>
+                        <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-8 backdrop-blur-sm shadow-xl">
+                            <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono block mb-4">Internal Notes // Paperwork Ref</label>
+                            <p class="text-secondary text-sm leading-relaxed italic m-0">{{ transaction.reference_doc || '-- No manual reference provided --' }}</p>
                         </div>
                     </div>
 
                     <!-- Right: Line Items -->
                     <div class="col-span-12 lg:col-span-8 flex flex-col gap-8">
-                        <section class="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div class="px-8 py-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/40">
+                        <section class="bg-panel/60 border border-panel-border rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div class="px-8 py-5 border-b border-panel-border flex justify-between items-center bg-deep/40">
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Consigned Items Manifest</span>
-                                <span class="bg-zinc-900 border border-zinc-800 text-zinc-500 px-3 py-1 rounded text-[10px] font-bold font-mono tracking-tighter">{{ transaction.lines?.length || 0 }} ITEMS FOUND</span>
+                                <span class="bg-panel border border-panel-border text-secondary px-3 py-1 rounded text-[10px] font-bold font-mono tracking-tighter">{{ transaction.lines?.length || 0 }} ITEMS FOUND</span>
                             </div>
                             <DataTable :value="transaction.lines" class="gh-table" :pt="{ root: { class: '!bg-transparent' }, bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' } }">
                                 <Column header="S/N" style="width: 60px">
                                     <template #body="slotProps">
-                                        <span class="text-[10px] font-bold text-zinc-600 font-mono">{{ slotProps.index + 1 }}</span>
+                                        <span class="text-[10px] font-bold text-muted font-mono">{{ slotProps.index + 1 }}</span>
                                     </template>
                                 </Column>
                                 <Column header="Product / Identifier">
                                     <template #body="{ data }">
                                         <div class="flex flex-col gap-1">
-                                            <span class="text-white font-bold truncate max-w-[350px] tracking-tight leading-tight">{{ data.product_name }}</span>
+                                            <span class="text-primary font-bold truncate max-w-[350px] tracking-tight leading-tight">{{ data.product_name }}</span>
                                             <div class="flex items-center gap-3">
                                                 <span class="text-[9px] font-bold text-sky-400 font-mono tracking-widest uppercase bg-sky-500/5 px-1.5 border border-sky-500/10 rounded">{{ data.product?.sku }}</span>
-                                                <span v-if="data.product?.product_code" class="text-[9px] font-bold text-zinc-600 font-mono tracking-tighter uppercase">{{ data.product?.product_code }}</span>
+                                                <span v-if="data.product?.product_code" class="text-[9px] font-bold text-muted font-mono tracking-tighter uppercase">{{ data.product?.product_code }}</span>
                                             </div>
                                         </div>
                                     </template>
@@ -189,7 +189,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 </Column>
                                 <Column header="Unit" style="width: 100px">
                                     <template #body="{ data }">
-                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-zinc-800 bg-zinc-950 text-zinc-400 uppercase tracking-widest">
+                                        <span class="text-[10px] font-bold font-mono px-2 py-0.5 rounded border border-panel-border bg-deep text-secondary uppercase tracking-widest">
                                             {{ data.base_uom?.abbreviation ?? data.uom_abbreviation ?? '???' }}
                                         </span>
                                     </template>
@@ -203,13 +203,13 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                         </section>
                         <!-- Signature (screen) -->
                         <div class="grid grid-cols-2 gap-8 mt-4 opacity-40">
-                            <div class="p-8 border border-zinc-800 border-dashed rounded-2xl flex flex-col items-center gap-6">
-                                <div class="w-full h-px bg-zinc-800 mt-10"></div>
-                                <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Handled By Inventory Personnel</span>
+                            <div class="p-8 border border-panel-border border-dashed rounded-2xl flex flex-col items-center gap-6">
+                                <div class="w-full h-px bg-panel-hover mt-10"></div>
+                                <span class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Handled By Inventory Personnel</span>
                             </div>
-                            <div class="p-8 border border-zinc-800 border-dashed rounded-2xl flex flex-col items-center gap-6">
-                                <div class="w-full h-px bg-zinc-800 mt-10"></div>
-                                <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Approving Officer Signature</span>
+                            <div class="p-8 border border-panel-border border-dashed rounded-2xl flex flex-col items-center gap-6">
+                                <div class="w-full h-px bg-panel-hover mt-10"></div>
+                                <span class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Approving Officer Signature</span>
                             </div>
                         </div>
                     </div>
@@ -222,3 +222,5 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
 <style scoped>
 /* Scoped styles for screen display only */
 </style>
+
+

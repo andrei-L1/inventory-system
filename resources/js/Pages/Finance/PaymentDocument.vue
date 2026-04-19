@@ -222,7 +222,7 @@ const getStatusColor = (status) => {
                         <i class="pi pi-arrow-left text-xs"></i> Back to Finance Center
                     </button>
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold text-white tracking-tight mb-0">Record: {{ payment?.payment_number }}</h1>
+                        <h1 class="text-2xl font-bold text-primary tracking-tight mb-0">Record: {{ payment?.payment_number }}</h1>
                         <div class="inline-flex px-2 py-0.5 rounded border text-[10px] font-bold tracking-[0.1em] font-mono" :class="getStatusColor(payment?.status)">
                             {{ payment?.status || 'RECEIVED' }}
                         </div>
@@ -230,11 +230,11 @@ const getStatusColor = (status) => {
                 </div>
                 
                 <div v-if="!loading" class="flex items-center gap-3">
-                    <button @click="printDocument" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <button @click="printDocument" class="bg-panel-hover hover:bg-zinc-700 text-primary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-print"></i> Print
                     </button>
                     
-                    <button v-if="payment?.status !== 'VOID'" @click="handleVoid" class="bg-zinc-800 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <button v-if="payment?.status !== 'VOID'" @click="handleVoid" class="bg-panel-hover hover:bg-rose-500 text-primary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-ban" /> Void
                     </button>
                 </div>
@@ -243,7 +243,7 @@ const getStatusColor = (status) => {
             <!-- Loader -->
             <div v-if="loading" class="py-32 flex flex-col items-center justify-center space-y-4">
                 <i class="pi pi-spinner pi-spin text-4xl text-sky-500"></i>
-                <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-zinc-600 animate-pulse">Retrieving Collection Data...</p>
+                <p class="font-mono text-[10px] uppercase tracking-[0.3em] text-muted animate-pulse">Retrieving Collection Data...</p>
             </div>
 
             <!-- Collection Voucher (Classic White) -->
@@ -253,23 +253,23 @@ const getStatusColor = (status) => {
                     <div class="flex justify-between items-start border-b-2 border-zinc-200 pb-8 mb-8">
                         <div>
                             <h2 class="text-4xl font-black tracking-tighter text-zinc-900 uppercase">Payment Receipt</h2>
-                            <p class="text-zinc-500 font-mono text-sm mt-2">{{ payment.payment_number }}</p>
+                            <p class="text-secondary font-mono text-sm mt-2">{{ payment.payment_number }}</p>
                         </div>
                         
                         <div class="text-right">
                             <div class="font-bold text-xl text-zinc-900">Nexus Logistics Corp.</div>
-                            <div class="text-sm text-zinc-500 mt-1">123 Corporate Ave, Matrix City</div>
-                            <div class="text-sm text-zinc-500 uppercase font-mono tracking-tighter">TAX ID: N/A</div>
+                            <div class="text-sm text-secondary mt-1">123 Corporate Ave, Matrix City</div>
+                            <div class="text-sm text-secondary uppercase font-mono tracking-tighter">TAX ID: N/A</div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-12 mb-8">
                         <!-- Remitted By -->
                         <div>
-                            <div class="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Remitted By</div>
+                            <div class="text-xs font-bold uppercase tracking-widest text-secondary mb-2">Remitted By</div>
                             <div class="font-bold text-lg text-zinc-900">{{ payment.customer?.name }}</div>
-                            <div class="text-sm text-zinc-600 mt-1 uppercase font-mono">{{ payment.customer?.customer_code }}</div>
-                            <div class="text-xs text-zinc-500 leading-relaxed font-bold mt-4 max-w-sm">
+                            <div class="text-sm text-muted mt-1 uppercase font-mono">{{ payment.customer?.customer_code }}</div>
+                            <div class="text-xs text-secondary leading-relaxed font-bold mt-4 max-w-sm">
                                 {{ payment.customer?.billing_address || 'Billing Address not specified (N/A)' }}
                             </div>
                         </div>
@@ -277,15 +277,15 @@ const getStatusColor = (status) => {
                         <!-- Meta Info Grid -->
                         <div class="bg-zinc-50 rounded-lg p-4 border border-zinc-100 grid grid-cols-2 gap-4">
                             <div>
-                                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Date</div>
                                 <div class="font-mono text-sm font-bold text-zinc-800">{{ payment.payment_date }}</div>
                             </div>
                             <div>
-                                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Method</div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Method</div>
                                 <div class="font-mono text-sm font-bold text-zinc-800">{{ payment.payment_method || 'N/A' }}</div>
                             </div>
                             <div class="col-span-2">
-                                <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Reference / Check #</div>
+                                <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Reference / Check #</div>
                                 <div class="font-mono text-sm font-bold text-zinc-800">{{ payment.reference_number || '—' }}</div>
                             </div>
                         </div>
@@ -294,12 +294,12 @@ const getStatusColor = (status) => {
                     <!-- Ledger Activity Table -->
                     <div class="mb-8">
                         <div class="flex justify-between items-end mb-4 px-2">
-                            <span class="text-xs font-bold text-zinc-400 uppercase tracking-widest font-mono">Ledger Allocations</span>
+                            <span class="text-xs font-bold text-secondary uppercase tracking-widest font-mono">Ledger Allocations</span>
                             <div class="flex gap-4 print:hidden" v-if="payment.status !== 'VOID'">
-                                <button v-if="Number(payment.unallocated_amount) > 0" @click="openAllocateDialog" class="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 text-sky-600 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-sky-500 hover:text-white transition-all flex items-center gap-2 outline-none">
+                                <button v-if="Number(payment.unallocated_amount) > 0" @click="openAllocateDialog" class="px-3 py-1.5 bg-sky-500/10 border border-sky-500/20 text-sky-600 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-sky-500 hover:text-primary transition-all flex items-center gap-2 outline-none">
                                     <i class="pi pi-plus-circle" /> Allocate Credit
                                 </button>
-                                <button v-if="Number(payment.unallocated_amount) > 0" @click="openRefundDialog" class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all flex items-center gap-2 outline-none">
+                                <button v-if="Number(payment.unallocated_amount) > 0" @click="openRefundDialog" class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-600 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-rose-500 hover:text-primary transition-all flex items-center gap-2 outline-none">
                                     <i class="pi pi-undo" /> Issue Refund
                                 </button>
                             </div>
@@ -307,13 +307,13 @@ const getStatusColor = (status) => {
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-y-2 border-zinc-200">
-                                    <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Allocation Reference</th>
-                                    <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500 text-right">Settled Amount</th>
+                                    <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary">Allocation Reference</th>
+                                    <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary text-right">Settled Amount</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-zinc-100 font-mono">
                                 <tr v-if="!payment.allocations?.length && !payment.refunds?.length">
-                                    <td colspan="2" class="px-2 py-8 text-center text-zinc-400 text-xs italic tracking-widest">No primary allocations recorded</td>
+                                    <td colspan="2" class="px-2 py-8 text-center text-secondary text-xs italic tracking-widest">No primary allocations recorded</td>
                                 </tr>
                                 <!-- Allocations -->
                                 <tr v-for="alloc in payment.allocations" :key="'al-' + alloc.id" class="text-sm group hover:bg-zinc-50 transition-colors cursor-pointer" @click="router.visit('/finance/invoices/' + alloc.invoice_id)">
@@ -343,7 +343,7 @@ const getStatusColor = (status) => {
                     <div class="flex justify-end">
                         <div class="w-72">
                             <div class="flex justify-between py-2 border-b border-zinc-100">
-                                <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Total Remitted</span>
+                                <span class="text-xs font-bold uppercase tracking-widest text-secondary">Total Remitted</span>
                                 <span class="font-mono text-sm text-zinc-800 font-bold">{{ formatCurrency(payment.amount) }}</span>
                             </div>
                             <div class="flex justify-between py-3 bg-zinc-50 px-3 -mx-3 mt-2 border border-zinc-200 rounded-lg">
@@ -353,7 +353,7 @@ const getStatusColor = (status) => {
 
                             <!-- Unallocated / Balance -->
                             <div class="mt-6 flex justify-between py-2 items-center">
-                                <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Allocated to Date</span>
+                                <span class="text-xs font-bold uppercase tracking-widest text-secondary">Allocated to Date</span>
                                 <span class="font-mono text-sm text-zinc-800 font-bold">- {{ formatCurrency(payment.amount - payment.unallocated_amount) }}</span>
                             </div>
                             <div class="flex justify-between py-3 border-t-2 border-zinc-900 mt-1">
@@ -366,7 +366,7 @@ const getStatusColor = (status) => {
                     </div>
 
                     <!-- Document Footer Info -->
-                    <div class="mt-16 pt-8 border-t border-zinc-100 flex justify-between items-center text-zinc-400 font-mono">
+                    <div class="mt-16 pt-8 border-t border-zinc-100 flex justify-between items-center text-secondary font-mono">
                          <div class="flex items-center gap-3">
                             <i class="pi pi-shield text-emerald-600/30"></i>
                             <span class="text-[9px] font-bold uppercase tracking-[0.2em]">Official Cash Receipt • Secure Audit ID: {{ payment.id }}</span>
@@ -384,8 +384,8 @@ const getStatusColor = (status) => {
         <Dialog v-model:visible="showAllocateDialog" modal :style="{ width: '50rem' }" class="p-fluid">
             <template #header>
                 <div class="flex flex-col">
-                    <span class="text-xl font-bold text-white tracking-tight">Allocate Remaining Credit</span>
-                    <span class="text-xs text-zinc-400">Apply leftover funds to open invoices for {{ payment?.customer?.name }}</span>
+                    <span class="text-xl font-bold text-primary tracking-tight">Allocate Remaining Credit</span>
+                    <span class="text-xs text-secondary">Apply leftover funds to open invoices for {{ payment?.customer?.name }}</span>
                 </div>
             </template>
 
@@ -394,37 +394,37 @@ const getStatusColor = (status) => {
                 <span>Allocation Exceeds Remaining Credit! Please review manual allocations.</span>
             </div>
 
-            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-xl flex items-center justify-between mb-6 mt-4">
+            <div class="bg-panel border border-panel-border rounded-xl p-6 shadow-xl flex items-center justify-between mb-6 mt-4">
                 <div class="flex gap-8">
                     <div class="flex flex-col">
-                        <span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">To Allocate</span>
-                        <span class="text-white font-mono font-bold">{{ formatCurrency(totalAllocated) }}</span>
+                        <span class="text-secondary text-[10px] font-bold uppercase tracking-widest mb-1">To Allocate</span>
+                        <span class="text-primary font-mono font-bold">{{ formatCurrency(totalAllocated) }}</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-1">Unallocated Credit left</span>
-                        <span class="font-mono font-bold" :class="unallocatedRemaining > 0 ? 'text-amber-400' : 'text-zinc-600'">
+                        <span class="text-secondary text-[10px] font-bold uppercase tracking-widest mb-1">Unallocated Credit left</span>
+                        <span class="font-mono font-bold" :class="unallocatedRemaining > 0 ? 'text-amber-400' : 'text-muted'">
                             {{ formatCurrency(unallocatedRemaining) }}
                         </span>
                     </div>
                 </div>
-                <button @click="autoAllocate" v-if="allocations.length > 0" class="px-4 py-2 bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500 hover:text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+                <button @click="autoAllocate" v-if="allocations.length > 0" class="px-4 py-2 bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500 hover:text-primary rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
                     Auto Allocate
                 </button>
             </div>
 
-            <div v-if="loadingInvoices" class="flex justify-center p-8 text-zinc-500">
+            <div v-if="loadingInvoices" class="flex justify-center p-8 text-secondary">
                 <i class="pi pi-spinner pi-spin text-3xl"></i>
             </div>
-            <div v-else-if="allocations.length === 0" class="p-8 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+            <div v-else-if="allocations.length === 0" class="p-8 text-center text-secondary border border-dashed border-panel-border rounded-xl">
                 This customer has no other open invoices to allocate funds to!
             </div>
-            <div v-else class="border border-zinc-800 rounded-lg overflow-hidden h-[300px] overflow-y-auto">
+            <div v-else class="border border-panel-border rounded-lg overflow-hidden h-[300px] overflow-y-auto">
                 <DataTable :value="allocations" class="p-datatable-sm bg-transparent border-none">
                     <Column header="Invoice">
                         <template #body="{ data }">
                             <div class="flex flex-col py-1">
-                                <span class="text-sm text-zinc-200 font-bold bg-zinc-950 px-2 py-1 rounded border border-zinc-800 self-start mb-1">{{ data.invoice_number }}</span>
-                                <span class="text-[10px] text-zinc-500 ml-1">{{ data.invoice_date }}</span>
+                                <span class="text-sm text-primary font-bold bg-deep px-2 py-1 rounded border border-panel-border self-start mb-1">{{ data.invoice_number }}</span>
+                                <span class="text-[10px] text-secondary ml-1">{{ data.invoice_date }}</span>
                             </div>
                         </template>
                     </Column>
@@ -436,14 +436,14 @@ const getStatusColor = (status) => {
                     <Column header="Apply Amount" style="width: 35%" class="text-right">
                         <template #body="{ data }">
                             <InputNumber v-model="data.amountToApply" :min="0" :max="data.balance" :minFractionDigits="2" :maxFractionDigits="2"
-                                         class="w-full" inputClass="bg-zinc-950 border-zinc-700 text-sky-400 font-bold text-right text-sm w-full focus:border-sky-500" />
+                                         class="w-full" inputClass="bg-deep border-zinc-700 text-sky-400 font-bold text-right text-sm w-full focus:border-sky-500" />
                         </template>
                     </Column>
                 </DataTable>
             </div>
 
             <template #footer>
-                <button @click="showAllocateDialog = false" class="px-4 py-2 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Cancel</button>
+                <button @click="showAllocateDialog = false" class="px-4 py-2 text-secondary hover:text-primary font-bold text-xs uppercase tracking-widest transition-colors">Cancel</button>
                 <button @click="submitAllocation" :disabled="submitting || totalAllocated <= 0 || isOveralllocated" class="ml-4 px-6 py-2 bg-emerald-500 text-zinc-950 hover:bg-emerald-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors shadow-lg disabled:opacity-50 flex items-center gap-2">
                     <i v-if="submitting" class="pi pi-spinner pi-spin"></i>
                     Confirm Allocation
@@ -455,50 +455,50 @@ const getStatusColor = (status) => {
         <Dialog v-model:visible="showRefundDialog" modal :style="{ width: '32rem' }" class="p-fluid">
             <template #header>
                 <div class="flex flex-col">
-                    <span class="text-xl font-bold text-white tracking-tight">Issue Cash Refund</span>
-                    <span class="text-xs text-zinc-400">Return unallocated credit to {{ payment?.customer?.name }}</span>
+                    <span class="text-xl font-bold text-primary tracking-tight">Issue Cash Refund</span>
+                    <span class="text-xs text-secondary">Return unallocated credit to {{ payment?.customer?.name }}</span>
                 </div>
             </template>
 
-            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-4 mb-6">
-                <div class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Available Unallocated Credit</div>
+            <div class="bg-panel border border-panel-border rounded-xl p-5 mt-4 mb-6">
+                <div class="text-[10px] text-secondary font-bold uppercase tracking-widest mb-1">Available Unallocated Credit</div>
                 <div class="text-2xl font-mono font-black text-amber-400">{{ formatCurrency(payment?.unallocated_amount) }}</div>
             </div>
 
             <div class="space-y-4">
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Refund Amount *</label>
+                    <label class="text-[10px] font-bold text-secondary uppercase tracking-widest">Refund Amount *</label>
                     <InputNumber v-model="refundForm.amount" :min="0.01" :max="Number(payment?.unallocated_amount)" :minFractionDigits="2" :maxFractionDigits="2"
-                                 inputClass="!bg-zinc-900 !border-zinc-700 !text-rose-400 !font-bold !text-lg" />
+                                 inputClass="!bg-panel !border-zinc-700 !text-rose-400 !font-bold !text-lg" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
-                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Refund Date *</label>
+                        <label class="text-[10px] font-bold text-secondary uppercase tracking-widest">Refund Date *</label>
                         <input type="date" v-model="refundForm.refund_date"
-                               class="h-11 bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 text-sm focus:border-rose-500 outline-none" />
+                               class="h-11 bg-panel border border-zinc-700 text-primary rounded-lg px-3 text-sm focus:border-rose-500 outline-none" />
                     </div>
                     <div class="col-span-12 flex flex-col gap-2">
-                        <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Refund Method</label>
+                        <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Refund Method</label>
                         <Select v-model="refundForm.refund_method" :options="['Bank Transfer', 'Cash', 'Check', 'Credit Card']" 
-                                class="!bg-zinc-950 !border-zinc-800 !text-zinc-300" />
+                                class="!bg-deep !border-panel-border !text-zinc-300" />
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Reference / Check #</label>
+                    <label class="text-[10px] font-bold text-secondary uppercase tracking-widest">Reference / Check #</label>
                     <InputText v-model="refundForm.reference_number" placeholder="e.g. CHK-001234"
-                               class="!bg-zinc-900 !border-zinc-700 !text-zinc-300 !h-11" />
+                               class="!bg-panel !border-zinc-700 !text-zinc-300 !h-11" />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Notes</label>
+                    <label class="text-[10px] font-bold text-secondary uppercase tracking-widest">Notes</label>
                     <InputText v-model="refundForm.notes" placeholder="Reason for refund..."
-                               class="!bg-zinc-900 !border-zinc-700 !text-zinc-300 !h-11" />
+                               class="!bg-panel !border-zinc-700 !text-zinc-300 !h-11" />
                 </div>
             </div>
 
             <template #footer>
-                <button @click="showRefundDialog = false" class="px-4 py-2 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-widest transition-colors">Cancel</button>
+                <button @click="showRefundDialog = false" class="px-4 py-2 text-secondary hover:text-primary font-bold text-xs uppercase tracking-widest transition-colors">Cancel</button>
                 <button @click="submitRefund" :disabled="submittingRefund || !refundForm.amount || refundForm.amount <= 0"
-                        class="ml-4 px-6 py-2 bg-rose-500 text-white hover:bg-rose-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors shadow-lg disabled:opacity-50 flex items-center gap-2">
+                        class="ml-4 px-6 py-2 bg-rose-500 text-primary hover:bg-rose-400 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors shadow-lg disabled:opacity-50 flex items-center gap-2">
                     <i v-if="submittingRefund" class="pi pi-spinner pi-spin"></i>
                     <i v-else class="pi pi-undo"></i>
                     Issue Refund
@@ -507,5 +507,7 @@ const getStatusColor = (status) => {
         </Dialog>
     </AppLayout>
 </template>
+
+
 
 

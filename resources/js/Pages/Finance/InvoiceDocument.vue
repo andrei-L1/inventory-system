@@ -36,12 +36,12 @@ const formatCurrency = (val) => {
 
 const getStatusColor = (status) => {
     const map = {
-        'DRAFT': 'border-zinc-500/30 text-zinc-400 bg-zinc-500/10',
+        'DRAFT': 'border-zinc-500/30 text-secondary bg-zinc-500/10',
         'OPEN': 'border-sky-500/30 text-sky-400 bg-sky-500/10',
         'PAID': 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10',
         'VOID': 'border-rose-500/50 text-rose-500 bg-rose-500/10',
     };
-    return map[status] || 'border-zinc-500/50 text-zinc-500';
+    return map[status] || 'border-zinc-500/50 text-secondary';
 };
 
 const printDocument = () => {
@@ -84,7 +84,7 @@ const handleVoid = async () => {
                         <i class="pi pi-arrow-left text-xs"></i> Back to Finance Center
                     </button>
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold text-white tracking-tight mb-0">Record: {{ invoice?.invoice_number }}</h1>
+                        <h1 class="text-2xl font-bold text-primary tracking-tight mb-0">Record: {{ invoice?.invoice_number }}</h1>
                         <div class="inline-flex px-2 py-0.5 rounded border text-[10px] font-bold tracking-[0.1em] font-mono" :class="getStatusColor(invoice?.status)">
                             {{ invoice?.status }}
                         </div>
@@ -92,21 +92,21 @@ const handleVoid = async () => {
                 </div>
                 
                 <div v-if="!loading" class="flex items-center gap-3">
-                    <button @click="printDocument" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <button @click="printDocument" class="bg-panel-hover hover:bg-zinc-700 text-primary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-print"></i> Print
                     </button>
                     <!-- Action Buttons -->
                     <button v-if="invoice?.status === 'DRAFT'" @click="handlePost" class="bg-sky-500 hover:bg-sky-400 text-zinc-950 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-check"></i> Post Invoice
                     </button>
-                    <button v-if="['DRAFT', 'OPEN'].includes(invoice?.status)" @click="handleVoid" class="bg-zinc-800 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
+                    <button v-if="['DRAFT', 'OPEN'].includes(invoice?.status)" @click="handleVoid" class="bg-panel-hover hover:bg-rose-500 text-primary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2">
                         <i class="pi pi-ban"></i> Void
                     </button>
                 </div>
             </div>
 
             <!-- Loader -->
-            <div v-if="loading" class="flex flex-col items-center justify-center py-24 text-zinc-500">
+            <div v-if="loading" class="flex flex-col items-center justify-center py-24 text-secondary">
                 <i class="pi pi-spinner pi-spin text-4xl mb-4 text-sky-500"></i>
                 <p class="font-mono text-xs tracking-widest uppercase animate-pulse">Decrypting Ledger Entry...</p>
             </div>
@@ -120,42 +120,42 @@ const handleVoid = async () => {
                         <h2 class="text-4xl font-black tracking-tighter text-zinc-900 uppercase">
                             {{ invoice.type === 'CREDIT_NOTE' ? 'Credit Note' : 'Tax Invoice' }}
                         </h2>
-                        <p class="text-zinc-500 font-mono text-sm mt-2">{{ invoice.invoice_number }}</p>
+                        <p class="text-secondary font-mono text-sm mt-2">{{ invoice.invoice_number }}</p>
                     </div>
                     
                     <div class="text-right">
                         <div class="font-bold text-xl text-zinc-900">Nexus Logistics Corp.</div>
-                        <div class="text-sm text-zinc-500 mt-1">123 Corporate Ave, Matrix City</div>
-                        <div class="text-sm text-zinc-500 uppercase font-mono">TAX ID: {{ invoice?.company_tax_id || 'N/A' }}</div>
+                        <div class="text-sm text-secondary mt-1">123 Corporate Ave, Matrix City</div>
+                        <div class="text-sm text-secondary uppercase font-mono">TAX ID: {{ invoice?.company_tax_id || 'N/A' }}</div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-12 mb-8">
                     <!-- Bill To -->
                     <div>
-                        <div class="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">Bill To</div>
+                        <div class="text-xs font-bold uppercase tracking-widest text-secondary mb-2">Bill To</div>
                         <div class="font-bold text-lg text-zinc-900">{{ invoice.customer?.name }}</div>
-                        <div class="text-sm text-zinc-600 mt-1 uppercase font-mono">{{ invoice.customer?.customer_code }}</div>
-                        <div class="text-sm text-zinc-500 mt-2">{{ invoice.customer?.billing_address || 'Billing Address not specified (N/A)' }}</div>
-                        <div class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-2">TIN: {{ invoice.customer?.tax_number || 'N/A' }}</div>
+                        <div class="text-sm text-muted mt-1 uppercase font-mono">{{ invoice.customer?.customer_code }}</div>
+                        <div class="text-sm text-secondary mt-2">{{ invoice.customer?.billing_address || 'Billing Address not specified (N/A)' }}</div>
+                        <div class="text-[10px] font-bold text-secondary uppercase tracking-widest mt-2">TIN: {{ invoice.customer?.tax_number || 'N/A' }}</div>
                     </div>
 
                     <!-- Meta -->
                     <div class="bg-zinc-50 rounded-lg p-4 border border-zinc-100 grid grid-cols-2 gap-4">
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Date</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Date</div>
                             <div class="font-mono text-sm font-bold text-zinc-800">{{ invoice.invoice_date }}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Due Date</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Due Date</div>
                             <div class="font-mono text-sm font-bold text-zinc-800">{{ invoice.due_date || 'Upon Receipt' }}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Ref. SO</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Ref. SO</div>
                             <div class="font-mono text-sm font-bold text-zinc-800">{{ invoice.sales_order?.so_number || 'N/A' }}</div>
                         </div>
                         <div>
-                            <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Account</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-secondary">Account</div>
                             <div class="font-mono text-sm font-bold text-zinc-800">AR-{{ invoice.customer_id.toString().padStart(4, '0') }}</div>
                         </div>
                     </div>
@@ -166,17 +166,17 @@ const handleVoid = async () => {
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-y-2 border-zinc-200">
-                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500">Item Description</th>
-                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500 text-right">Qty</th>
-                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500 text-right">Unit Price</th>
-                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-zinc-500 text-right">Subtotal</th>
+                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary">Item Description</th>
+                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary text-right">Qty</th>
+                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary text-right">Unit Price</th>
+                                <th class="py-3 px-2 text-xs font-bold uppercase tracking-widest text-secondary text-right">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-zinc-100">
                             <tr v-for="line in invoice.lines" :key="line.id" class="text-sm">
                                 <td class="py-3 px-2 font-bold text-zinc-800">{{ line.product?.name }}</td>
-                                <td class="py-3 px-2 font-mono text-zinc-600 text-right">{{ Number(line.quantity).toFixed(8) }}</td>
-                                <td class="py-3 px-2 font-mono text-zinc-600 text-right" style="width: 15%">{{ formatCurrency(line.unit_price) }}</td>
+                                <td class="py-3 px-2 font-mono text-muted text-right">{{ Number(line.quantity).toFixed(8) }}</td>
+                                <td class="py-3 px-2 font-mono text-muted text-right" style="width: 15%">{{ formatCurrency(line.unit_price) }}</td>
                                 <td class="py-3 px-2 font-mono font-bold text-zinc-900 text-right" style="width: 20%">{{ formatCurrency(line.subtotal) }}</td>
                             </tr>
                         </tbody>
@@ -187,11 +187,11 @@ const handleVoid = async () => {
                 <div class="flex justify-end">
                     <div class="w-72">
                         <div class="flex justify-between py-2 border-b border-zinc-100">
-                            <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Subtotal</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-secondary">Subtotal</span>
                             <span class="font-mono text-sm text-zinc-800">{{ formatCurrency(invoice.total_amount) }}</span>
                         </div>
                         <div class="flex justify-between py-2 border-b border-zinc-100">
-                            <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Tax</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-secondary">Tax</span>
                             <span class="font-mono text-sm text-zinc-800">{{ formatCurrency(0) }}</span>
                         </div>
                         <div class="flex justify-between py-3 bg-zinc-50 px-3 -mx-3 mt-2 border border-zinc-200 rounded-lg">
@@ -201,7 +201,7 @@ const handleVoid = async () => {
 
                         <!-- Balance Block -->
                         <div class="mt-6 flex justify-between py-2 items-center">
-                            <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Amount Paid</span>
+                            <span class="text-xs font-bold uppercase tracking-widest text-secondary">Amount Paid</span>
                             <span class="font-mono text-sm text-emerald-600 font-bold">- {{ formatCurrency(invoice.total_amount - invoice.balance_due) }}</span>
                         </div>
                         <div class="flex justify-between py-3 border-t-2 border-zinc-900 mt-1">
@@ -230,3 +230,5 @@ const handleVoid = async () => {
     .p-toast { display: none !important; }
 }
 </style>
+
+
