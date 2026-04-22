@@ -91,10 +91,12 @@ class InvoicingAndReturnsTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonPath('message', 'Sales Return processed successfully.');
 
-        // 4. Verify Quantities
+        // 4. Verify Quantities (Strategy B: Physical Truth Counter)
         $soLine->refresh();
-        $this->assertEquals(6, (float) $soLine->shipped_qty);
-        $this->assertEquals(4, (float) $soLine->returned_qty);
+        $this->assertEquals(6, (float) $soLine->shipped_qty, 'Shipped quantity should decrease upon return');
+        $this->assertEquals(6, (float) $soLine->net_shipped_qty, 'Net Shipped accessor should align with counter');
+        $this->assertEquals(6, (float) $soLine->requirement_qty, 'Requirement should be 6 after refund');
+        $this->assertEquals(4, (float) $soLine->returned_qty, 'Returned quantity should match exactly');
 
         // 5. Verify Stock increased (Inventory QOH)
         $inventory = Inventory::where('product_id', $product->id)

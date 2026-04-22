@@ -189,3 +189,64 @@ You buy **1 Box** of water from a premium supplier for **₱150.00** (this inclu
 *   **With 2 decimals**: 22 bottles times 11.36 = **₱249.92** (**₱0.08 is missing!**).
 
 This is why we keep all those extra numbers: to make sure not a single centavo is lost when calculating the value of your warehouse.
+
+---
+
+## 11. Atomic Billing Normalization (A/P Standard)
+
+To maintain 100% parity between your checkbook and your warehouse, the system employs **Atomic Normalization** for all vendor bills.
+
+### 11.1 The Pivot to Pieces
+When a vendor sends a bill for "10 Boxes," the system performs an immediate pivot:
+1.  **Normalization**: 10 Boxes $\times$ 12 pieces/box = **120 pieces**.
+2.  **Price Scaling**: Total Bill Amount / 120 pieces = **Atomic Price per Piece**.
+3.  **The Result**: Both the `inventories` table and the `bills` table now share the same "Atomic Language."
+
+### 11.2 The Guardrail Formula (Validation)
+To prevent accidental over-billing for products with different conversion factors (e.g., Box of 12 vs Box of 24), the backend re-scales pieces back to the original PO unit during validation:
+
+$$ \text{ValidationQty} = \frac{\text{BilledPieces}}{\text{PO\_Line\_Divisor}} $$
+
+*   **Safety**: If `ValidationQty` > `PO_Line_BillableBalance`, the submission is rejected. 
+*   **Precision**: This scaling uses 8-decimal `FinancialMath::div()` to ensure that partial units (e.g., 0.5 Boxes) are validated with absolute mathematical parity. 
+
+---
+
+## 12. Bidirectional Fulfillment Standard (Strategy B)
+
+To support real-time warehouse agility, the system distinguishes between **Gross Record** (the historical log) and **Net Physical Truth** (current state).
+
+### 12.1 The "Net Physical Truth" Counter
+Unlike systems that keep fulfillment counters static, Nexus employs **Strategy B (Counter Reversal)**. When a return occurs:
+1.  **Sales**: The `shipped_qty` on the Sales Order Line is **decremented**.
+2.  **Procurement**: The `received_qty` on the Purchase Order Line is **decremented**.
+
+**Mathematical Benefit**:
+This naturally "restores" the requirement. If 10 units were ordered and 2 are returned, the `net_shipped_qty` becomes 8. The system automatically detects that 2 units are now "Outstanding," re-enabling the Pick/Pack/Ship buttons in the UI without manual status overrides.
+
+### 12.2 Return Validation (Headroom Check)
+To prevent mathematical "Ghosts" (returning more than was shipped), every return transaction must pass the **Headroom Invariant**:
+$$ \text{ProposedReturnQty} \le \text{CurrentNetFulfillmentQty} $$
+
+*   **Logic Source**: `SalesOrderReturnController` and `PurchaseOrderController`.
+*   **Precision**: Validated at 8-decimal pieces using `FinancialMath::lte()`.
+
+---
+
+## 13. Financial Document Voids & Status Propagation
+
+The system maintains a tight "Status Handshake" between financial documents (Invoices/Bills) and their parent orders.
+
+### 13.1 Automated Requirement Restoration
+When a financial adjustment document (Credit Note / Debit Note / Voided Bill) is processed, the system triggers a **Parent Recalculation**:
+1.  **Voiding a Credit Note**: Re-evaluates the Sales Order fulfillment state.
+2.  **Voiding a Debit Note**: Re-evaluates the Purchase Order fulfillment state.
+
+### 13.2 The `recalculateStatus()` Invariant
+The `SalesOrder` and `PurchaseOrder` models contain a centralized `recalculateStatus()` method. This method is the **Single Source of Truth** for the order lifecycle. It compares:
+- `ordered_qty` vs. `net_shipped_qty` (Sales)
+- `ordered_qty` vs. `net_received_qty` (Procurement)
+
+If the net fulfillment drops below the ordered goal due to a void or return, the order status **automatically reverts** from `closed` to `partially_shipped` (or `partially_received`), ensuring no requirements are ever forgotten by the warehouse staff.
+
+---

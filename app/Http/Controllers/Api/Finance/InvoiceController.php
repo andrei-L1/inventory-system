@@ -87,7 +87,8 @@ class InvoiceController extends Controller
 
                 $lineTotals = [];
                 foreach ($request->lines as $item) {
-                    $soLine = SalesOrderLine::findOrFail($item['so_line_id']);
+                    // AUDIT PHASE II: Lock SO Line for update to prevent concurrent over-invoicing
+                    $soLine = SalesOrderLine::lockForUpdate()->findOrFail($item['so_line_id']);
                     $qty = (string) $item['quantity'];
 
                     // Hard Validation: Cannot invoice more than was physically shipped minus already invoiced.
@@ -136,8 +137,10 @@ class InvoiceController extends Controller
                 }
 
                 // Final Header Rounding (The "Dust" Slayer)
-                // Rounds the accumulated high-precision sum to exactly 2 decimal places.
                 $invoice->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
+
+                // Sync the Sales Order Billing Status
+                $salesOrder->syncBillingStatus();
 
                 return $invoice;
             });
@@ -183,20 +186,15 @@ class InvoiceController extends Controller
      */
     public function void(Invoice $invoice): JsonResponse
     {
-        if (! $invoice->isOpen()) {
-            return response()->json(['message' => 'Only OPEN invoices can be voided.'], 400);
+        if ($invoice->isVoid()) {
+            return response()->json(['message' => 'Invoice is already voided.'], 200);
         }
 
-        if (FinancialMath::gt((string) $invoice->paid_amount, '0')) {
-            return response()->json(['message' => 'Cannot void an invoice that has payments allocated. Remove payments first.'], 422);
+        if ($invoice->status === Invoice::STATUS_PAID) {
+            return response()->json(['message' => 'Cannot void a PAID invoice. Remove payment allocations first.'], 422);
         }
 
-        $invoice->update([
-            'status' => Invoice::STATUS_VOID,
-            'notes' => trim(($invoice->notes ?? '').' [VOIDED on '.now()->toDateString().']'),
-            // We do NOT technically alter total_amount because it represents the original invoice value,
-            // but for statements, VOIDED invoices are ignored anyway.
-        ]);
+        $invoice->void();
 
         return response()->json([
             'message' => 'Invoice voided successfully.',

@@ -12,6 +12,8 @@ class SalesOrderLine extends Model
     use HasFactory;
 
     protected $appends = [
+        'requirement_qty',
+        'net_shipped_qty',
         'formatted_ordered_qty',
         'formatted_shipped_qty',
         'formatted_picked_qty',
@@ -81,15 +83,47 @@ class SalesOrderLine extends Model
     }
 
     /**
-     * Quantity to be picked (Ordered - Picked)
+     * The original contracted quantity minus any formalized cancellations/credits.
+     * This is the 'effective' target for fulfillment.
      */
-    public function getRemainingPickQtyAttribute(): string
+    public function getRequirementQtyAttribute(): string
     {
-        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->picked_qty));
+        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->credited_qty));
     }
 
     /**
-     * Quantity to be packed (Picked - Packed)
+     * Sum of all credits processed for this line.
+     */
+    public function getCreditedQtyAttribute(): string
+    {
+        // Credit lines have positive quantities in InvoiceLines usually,
+        // but we'll sum from Credit Notes.
+        return (string) $this->invoiceLines()->whereHas('invoice', function ($q) {
+            $q->where('status', '!=', Invoice::STATUS_VOID)
+                ->where('type', Invoice::TYPE_CREDIT_NOTE);
+        })->sum('quantity');
+    }
+
+    /**
+     * The actual physical stock state (Net Shipped).
+     * Since the controller now decrements shipped_qty directly upon return,
+     * this accessor simply returns the current counter value.
+     */
+    public function getNetShippedQtyAttribute(): string
+    {
+        return (string) $this->shipped_qty;
+    }
+
+    /**
+     * Quantity to be picked (Requirement - Picked)
+     */
+    public function getRemainingPickQtyAttribute(): string
+    {
+        return FinancialMath::max('0', FinancialMath::sub($this->requirement_qty, (string) $this->picked_qty));
+    }
+
+    /**
+     * Quantity to be packed (Requirement capped by Picked - Packed)
      */
     public function getRemainingPackQtyAttribute(): string
     {
@@ -97,7 +131,7 @@ class SalesOrderLine extends Model
     }
 
     /**
-     * Quantity to be shipped (Packed - Shipped)
+     * Quantity to be shipped (Requirement capped by Packed - Shipped)
      */
     public function getRemainingShipQtyAttribute(): string
     {
@@ -124,33 +158,33 @@ class SalesOrderLine extends Model
      */
     public function getUninvoicedQtyAttribute(): string
     {
-        return FinancialMath::max('0', FinancialMath::sub((string) $this->shipped_qty, $this->invoiced_qty));
+        return FinancialMath::max('0', FinancialMath::sub($this->net_shipped_qty, $this->invoiced_qty));
     }
 
     /**
-     * Legacy accessor for total remaining to ship (Ordered - Shipped)
+     * Legacy accessor for total remaining to fulfill (Requirement - Shipped)
      */
     public function getRemainingQtyAttribute(): string
     {
-        return FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->shipped_qty));
+        return FinancialMath::max('0', FinancialMath::sub($this->requirement_qty, (string) $this->shipped_qty));
     }
 
     /**
-     * Quantity that can be returned (Shipped - Returned)
+     * Quantity that can be returned (Net Shipped)
      */
     public function getRemainingReturnQtyAttribute(): string
     {
-        return FinancialMath::max('0', FinancialMath::sub((string) $this->shipped_qty, (string) $this->returned_qty));
+        return $this->net_shipped_qty;
     }
 
     public function getFormattedOrderedQtyAttribute(): string
     {
-        return UomHelper::format($this->ordered_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+        return UomHelper::format($this->requirement_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
 
     public function getFormattedShippedQtyAttribute(): string
     {
-        return UomHelper::format($this->shipped_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
+        return UomHelper::format($this->net_shipped_qty, $this->uom_id ?? $this->product->uom_id, $this->product_id);
     }
 
     public function getFormattedPickedQtyAttribute(): string

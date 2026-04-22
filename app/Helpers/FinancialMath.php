@@ -180,6 +180,12 @@ class FinancialMath
         return bccomp($aNorm, $bNorm, self::LINE_SCALE);
     }
 
+    /** $a == $b */
+    public static function equals(mixed $a, mixed $b): bool
+    {
+        return self::cmp($a, $b) === 0;
+    }
+
     // ─── Semantic Comparators (replace ALL + 0.00000001 epsilon patterns) ─────
 
     /** $a > $b */

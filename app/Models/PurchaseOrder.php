@@ -28,6 +28,7 @@ class PurchaseOrder extends Model
         'shipped_at',
         'carrier',
         'tracking_number',
+        'billing_status',
     ];
 
     /**
@@ -100,14 +101,78 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Synchronize and persist the formal billing status to the database.
+     * Logic: Compares TOTAL Billed Qty vs TOTAL Received Qty.
+     */
+    public function syncBillingStatus(): void
+    {
+        $this->loadMissing('lines');
+
+        $totalReceived = '0';
+        $totalBilled = '0';
+
+        foreach ($this->lines as $line) {
+            $totalReceived = FinancialMath::add($totalReceived, $line->net_received_qty);
+            $totalBilled = FinancialMath::add($totalBilled, (string) $line->billed_qty);
+        }
+
+        if (FinancialMath::isPositive($totalBilled)) {
+            $status = FinancialMath::gte($totalBilled, $totalReceived) ? 'BILLED' : 'PARTIALLY_BILLED';
+        } else {
+            $status = 'UNBILLED';
+        }
+
+        $this->update(['billing_status' => $status]);
+    }
+
+    /**
      * Check if the PO is fully received.
      */
     public function isCompleted(): bool
     {
+        // Re-load lines to ensure we are calculating against fresh ledger data
+        $this->loadMissing('lines');
+
+        if ($this->lines->isEmpty()) {
+            return false;
+        }
+
         return $this->lines->every(function ($line) {
-            // FinancialMath::gte uses cmp() at scale=0 — strictly deterministic, no epsilon.
-            return FinancialMath::gte((string) $line->received_qty, (string) $line->ordered_qty);
+            return FinancialMath::gte($line->net_received_qty, $line->requirement_qty);
         });
+    }
+
+    /**
+     * Determine and persist the correct status based on fulfillment progress.
+     */
+    public function recalculateStatus(): void
+    {
+        $this->loadMissing('lines');
+
+        if (in_array($this->status?->name, ['draft', 'cancelled'])) {
+            return;
+        }
+
+        $isCompleted = $this->isCompleted();
+        $totalReceived = '0';
+        foreach ($this->lines as $l) {
+            $totalReceived = FinancialMath::add($totalReceived, $l->net_received_qty);
+        }
+
+        $statusName = 'closed';
+        if (! $isCompleted) {
+            $statusName = FinancialMath::isPositive($totalReceived) ? 'partially_received' : 'sent';
+
+            // If it was in transit, keep it in transit unless it's received
+            if ($this->status?->name === 'in_transit' && FinancialMath::isZero($totalReceived)) {
+                $statusName = 'in_transit';
+            }
+        }
+
+        $newStatus = PurchaseOrderStatus::where('name', $statusName)->first();
+        if ($newStatus && $this->status_id !== $newStatus->id) {
+            $this->update(['status_id' => $newStatus->id]);
+        }
     }
 
     /**

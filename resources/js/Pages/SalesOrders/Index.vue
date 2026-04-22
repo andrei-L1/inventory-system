@@ -52,7 +52,7 @@ const getStatusColor = (statusName) => {
     <AppLayout>
         <div class="flex flex-col gap-6 h-full">
             <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800/80 shadow-xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-panel/40 p-6 rounded-2xl border border-panel-border/80 shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 blur-[100px] pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 z-10">
@@ -60,8 +60,8 @@ const getStatusColor = (statusName) => {
                         <i class="pi pi-receipt text-xl text-teal-400"></i>
                     </div>
                     <div>
-                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">Sales Orders</h1>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
+                        <h1 class="text-primary text-xl font-bold tracking-tight mb-1">Sales Orders</h1>
+                        <p class="text-secondary text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
                             Order-to-Fulfillment Ledger
                         </p>
                     </div>
@@ -69,12 +69,12 @@ const getStatusColor = (statusName) => {
 
                 <div class="flex items-center gap-3 z-10">
                     <div class="relative w-full md:w-auto">
-                        <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                        <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"></i>
                         <InputText 
                             v-model="search" 
                             @input="loadSalesOrders"
                             placeholder="Search orders..." 
-                            class="!w-full md:!w-72 !pl-11 !pr-4 !bg-zinc-950 !border-zinc-800 !text-sm !text-zinc-300 focus:!border-teal-500/50 !h-11 !rounded-xl transition-all"
+                            class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-zinc-300 focus:!border-teal-500/50 !h-11 !rounded-xl transition-all"
                         />
                     </div>
                     <Link href="/sales-orders/create" class="no-underline pb-1">
@@ -89,7 +89,7 @@ const getStatusColor = (statusName) => {
             </div>
 
             <!-- Content -->
-            <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl">
+            <div class="flex-1 bg-panel/40 border border-panel-border/80 rounded-2xl flex flex-col overflow-hidden shadow-xl">
                 <DataTable 
                     :value="salesOrders" 
                     :loading="loading" 
@@ -102,8 +102,8 @@ const getStatusColor = (statusName) => {
                 >
                     <template #empty>
                         <div class="flex flex-col items-center justify-center p-12 opacity-50">
-                            <i class="pi pi-inbox text-4xl text-zinc-600 mb-4"></i>
-                            <span class="text-xs font-bold text-zinc-500 uppercase tracking-widest font-mono">No sales orders found.</span>
+                            <i class="pi pi-inbox text-4xl text-muted mb-4"></i>
+                            <span class="text-xs font-bold text-secondary uppercase tracking-widest font-mono">No sales orders found.</span>
                         </div>
                     </template>
 
@@ -115,13 +115,13 @@ const getStatusColor = (statusName) => {
 
                     <Column field="customer_name" header="CUSTOMER">
                         <template #body="{ data }">
-                            <span @click.stop="router.visit(`/customer-center?customer_id=${data.customer_id}`)" class="text-white font-bold text-xs hover:text-teal-400 cursor-pointer transition-colors">{{ data.customer_name }}</span>
+                            <span @click.stop="router.visit(`/customer-center?customer_id=${data.customer_id}`)" class="text-primary font-bold text-xs hover:text-teal-400 cursor-pointer transition-colors">{{ data.customer_name }}</span>
                         </template>
                     </Column>
 
                     <Column field="order_date" header="DATE">
                         <template #body="{ data }">
-                            <span class="text-zinc-400 text-xs font-mono">{{ data.order_date }}</span>
+                            <span class="text-secondary text-xs font-mono">{{ data.order_date }}</span>
                         </template>
                     </Column>
 
@@ -145,7 +145,7 @@ const getStatusColor = (statusName) => {
                         <template #body="{ data }">
                             <Button 
                                 icon="pi pi-chevron-right" 
-                                class="p-button-text p-button-rounded p-button-sm !text-zinc-500 hover:!text-teal-400 transition-colors"
+                                class="p-button-text p-button-rounded p-button-sm !text-secondary hover:!text-teal-400 transition-colors"
                                 @click.stop="router.visit(`/sales-orders/${data.id}`)"
                             />
                         </template>
@@ -210,3 +210,5 @@ const getStatusColor = (statusName) => {
     border: 1px solid rgba(139, 92, 246, 0.2);
 }
 </style>
+
+

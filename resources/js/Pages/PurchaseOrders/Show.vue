@@ -24,6 +24,13 @@ const toast = useToast();
 const po = ref(null);
 const loading = ref(true);
 
+const canBill = computed(() => {
+    if (!po.value) return false;
+    // Industry standard: Bill is possible if there is at least one received item that hasn't been billed yet
+    return (['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.value.status)) &&
+           po.value.lines.some(l => Number(l.received_qty) > Number(l.billed_qty || 0));
+});
+
 const approveLoading = ref(false);
 const sendLoading = ref(false);
 const shipLoading = ref(false);
@@ -71,7 +78,10 @@ const getScaledQty = (line, rawPieces) => {
     if (rawPieces === undefined || rawPieces === null) return '0';
     const factor = Number(getFactorToBase(line.uom_id, line.product_id).factor);
     const scaled = Number(rawPieces) / factor;
-    return isUomIdDiscrete(line.uom_id) ? Math.floor(scaled + 0.0001).toString() : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const getLocalStock = (line) => {
@@ -340,9 +350,9 @@ const openGrnMode = async () => {
                 pending_qty: Number(l.pending_qty),
                 formatted_pending_qty: l.formatted_pending_qty,
                 received_qty: Number(l.pending_qty),
-                unit: l.uom || 'PCS',
+                unit: l.uom ?? l.base_uom ?? '???',
                 uom_id: l.uom_id,
-                product_uom: l.uom || 'PCS',
+                product_uom: l.uom ?? l.base_uom ?? '???',
                 inventories: invMap[l.product_id] || []
             }));
         
@@ -425,7 +435,7 @@ const openReturnMode = async () => {
                 received_qty_in_po_unit: Number(l.received_qty), // Keep track of base received qty
                 uom: l.uom,
                 uom_id: l.uom_id,
-                product_uom: l.uom || 'PCS',
+                product_uom: l.uom ?? l.base_uom ?? '???',
                 return_qty: 0,
                 resolution: 'replacement',
                 reason: ''
@@ -544,16 +554,16 @@ const openPrint = () => {
         <div class="h-full flex flex-col gap-4">
 
             <!-- Header Panel -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl shadow-xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-panel/40 border border-panel-border/80 rounded-2xl shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[100px] pointer-events-none"></div>
 
                 <div class="flex items-center gap-4 z-10">
-                    <button @click="router.visit('/purchase-orders')" class="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-colors hover:border-zinc-600">
+                    <button @click="router.visit('/purchase-orders')" class="w-10 h-10 rounded-xl bg-deep border border-panel-border flex items-center justify-center text-secondary hover:text-primary transition-colors hover:border-zinc-600">
                         <i class="pi pi-arrow-left"></i>
                     </button>
                     <div>
                         <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-white text-2xl font-black tracking-tight font-mono">{{ po.po_number }}</h1>
+                            <h1 class="text-primary text-2xl font-black tracking-tight font-mono">{{ po.po_number }}</h1>
                             <Tag 
                                 :severity="getStatusColor(po.status)" 
                                 :value="po.status.replace('_', ' ').toUpperCase()" 
@@ -561,9 +571,9 @@ const openPrint = () => {
                             />
                         </div>
                         <p class="text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
-                            <span @click="router.visit(`/vendor-center?vendor_id=${po.vendor_id}`)" class="text-zinc-500 hover:text-sky-400 cursor-pointer transition-colors">{{ po.vendor_name }}</span>
-                            <span class="text-zinc-700 mx-2">&bull;</span>
-                            <span class="text-zinc-500">₱{{ po.formatted_total_amount }}</span>
+                            <span @click="router.visit(`/vendor-center?vendor_id=${po.vendor_id}`)" class="text-secondary hover:text-sky-400 cursor-pointer transition-colors">{{ po.vendor_name }}</span>
+                            <span class="text-muted mx-2">&bull;</span>
+                            <span class="text-secondary">₱{{ po.formatted_total_amount }}</span>
                         </p>
                     </div>
                 </div>
@@ -581,7 +591,7 @@ const openPrint = () => {
                         v-if="po.status === 'draft' && can('manage-purchase-orders')" 
                         label="Edit" 
                         icon="pi pi-pen-to-square" 
-                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-panel-hover hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="router.visit(`/purchase-orders/${po.id}/edit`)"
                     />
                     
@@ -607,7 +617,7 @@ const openPrint = () => {
                         v-if="['open', 'sent'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Mark Shipped" 
                         icon="pi pi-truck" 
-                        class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-panel-hover hover:!bg-zinc-700 !text-zinc-300 !border-zinc-700 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="shipDialog = true"
                     />
 
@@ -617,7 +627,7 @@ const openPrint = () => {
                         label="Cancel PO" 
                         icon="pi pi-ban" 
                         :loading="cancelLoading"
-                        class="p-button-sm !bg-zinc-800 hover:!bg-red-900/30 !text-red-400 !border-red-500/20 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-panel-hover hover:!bg-red-900/30 !text-red-400 !border-red-500/20 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="cancelPO"
                     />
 
@@ -626,15 +636,23 @@ const openPrint = () => {
                         v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && po.lines.some(l => Number(l.received_qty) > 0) && can('manage-purchase-orders')" 
                         label="Return Items (RTV)" 
                         icon="pi pi-replay" 
-                        class="p-button-sm !bg-zinc-800 hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-panel-hover hover:!bg-red-900/40 !text-red-400 !border-red-500/30 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="openReturnMode"
                     />
 
                     <Button 
+                        v-if="canBill && can('manage-purchase-orders')" 
+                        label="Convert to Bill" 
+                        icon="pi pi-file-export" 
+                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
+                        @click="router.visit(`/finance/bills/create?from_po=${po.id}`)"
+                    />
+                    
+                    <Button 
                         v-if="['open', 'sent', 'in_transit', 'partially_received', 'closed'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Print PO" 
                         icon="pi pi-print" 
-                        class="p-button-sm !bg-white/5 hover:!bg-white/10 !text-white !border-white/10 font-bold tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-white/5 hover:!bg-white/10 !text-primary !border-white/10 font-bold tracking-widest uppercase font-mono transition-all" 
                         @click="openPrint"
                     />
 
@@ -652,104 +670,104 @@ const openPrint = () => {
             <div class="grid grid-cols-12 gap-4">
                 <!-- Meta Info Side -->
                 <div class="col-span-12 lg:col-span-3 flex flex-col gap-4">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2">Order Metadata</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                        <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border/50 pb-2">Order Metadata</span>
                         
-                        <div class="flex justify-between items-center py-1.5 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Drafted By</span>
-                            <span class="text-xs font-bold text-white">{{ po.created_by }}</span>
+                        <div class="flex justify-between items-center py-1.5 border-b border-panel-border/30">
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Drafted By</span>
+                            <span class="text-xs font-bold text-primary">{{ po.created_by }}</span>
                         </div>
-                        <div class="flex justify-between items-center py-1.5 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Created On</span>
-                            <span class="text-xs font-bold text-zinc-400">{{ po.created_at }}</span>
+                        <div class="flex justify-between items-center py-1.5 border-b border-panel-border/30">
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Created On</span>
+                            <span class="text-xs font-bold text-secondary">{{ po.created_at }}</span>
                         </div>
-                        <div v-if="po.approved_by" class="flex flex-col gap-2 py-2 border-b border-zinc-800/30">
+                        <div v-if="po.approved_by" class="flex flex-col gap-2 py-2 border-b border-panel-border/30">
                             <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Approved By</span>
+                                <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Approved By</span>
                                 <span class="text-xs font-bold text-emerald-400">{{ po.approved_by }}</span>
                             </div>
                             <div v-if="po.approved_at" class="flex justify-between items-center mt-1">
-                                <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-tighter uppercase">Approved At</span>
-                                <span class="text-[10px] font-bold text-zinc-500 uppercase">{{ po.approved_at }}</span>
+                                <span class="text-[9px] font-bold text-muted font-mono tracking-tighter uppercase">Approved At</span>
+                                <span class="text-[10px] font-bold text-secondary uppercase">{{ po.approved_at }}</span>
                             </div>
                         </div>
 
                         <!-- Workflow Timestamps -->
-                        <div v-if="po.sent_at" class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Sent To Vendor</span>
+                        <div v-if="po.sent_at" class="flex justify-between items-center py-2 border-b border-panel-border/30">
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Sent To Vendor</span>
                             <span class="text-xs font-bold text-sky-400">{{ po.sent_at }}</span>
                         </div>
 
-                        <div v-if="po.shipped_at" class="flex flex-col gap-2 py-2 border-b border-zinc-800/30">
+                        <div v-if="po.shipped_at" class="flex flex-col gap-2 py-2 border-b border-panel-border/30">
                             <div class="flex justify-between items-center">
-                                <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Shipped On</span>
+                                <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Shipped On</span>
                                 <span class="text-xs font-bold text-orange-400">{{ po.shipped_at }}</span>
                             </div>
-                            <div class="flex flex-col gap-1 mt-1 p-2 bg-zinc-950 rounded border border-zinc-800">
+                            <div class="flex flex-col gap-1 mt-1 p-2 bg-deep rounded border border-panel-border">
                                 <div class="flex justify-between text-[10px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Carrier:</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter">Carrier:</span>
                                     <span class="text-zinc-300 font-bold">{{ po.carrier }}</span>
                                 </div>
                                 <div class="flex justify-between text-[10px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter">Tracking:</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter">Tracking:</span>
                                     <span class="text-sky-500 font-mono">{{ po.tracking_number || 'N/A' }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex justify-between items-center py-2 border-b border-zinc-800/30">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Latest Receiver</span>
-                            <span class="text-xs font-bold" :class="po.receipts.length > 0 ? 'text-orange-400' : 'text-zinc-600'">
+                        <div class="flex justify-between items-center py-2 border-b border-panel-border/30">
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Latest Receiver</span>
+                            <span class="text-xs font-bold" :class="po.receipts.length > 0 ? 'text-orange-400' : 'text-muted'">
                                 {{ po.receipts.length > 0 ? po.receipts[po.receipts.length - 1].received_by : 'N/A' }}
                             </span>
                         </div>
                         <div v-if="po.notes" class="flex flex-col gap-2 pt-2">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono tracking-widest uppercase">Notes</span>
-                            <p class="text-xs text-zinc-400 leading-relaxed bg-zinc-950/50 p-3 rounded-lg border border-zinc-800/50">{{ po.notes }}</p>
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Notes</span>
+                            <p class="text-xs text-secondary leading-relaxed bg-deep/50 p-3 rounded-lg border border-panel-border/50">{{ po.notes }}</p>
                         </div>
                     </div>
 
                     <!-- Receipt History (GRN) -->
-                    <div v-if="po.receipts && po.receipts.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700">
+                    <div v-if="po.receipts && po.receipts.length > 0" class="bg-panel/40 border border-panel-border/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700">
                         <span class="text-[10px] font-bold text-sky-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-2">Goods Receipt History (GRN)</span>
                         
-                        <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-sky-500/20 transition-all">
+                        <div v-for="receipt in po.receipts" :key="receipt.id" class="flex flex-col gap-3 p-4 bg-deep/50 rounded-xl border border-panel-border/50 group hover:border-sky-500/20 transition-all">
                             <div class="flex justify-between items-center">
                                 <span @click="viewGrnDetails(receipt)" 
                                       class="text-[10px] font-mono text-sky-400 font-bold cursor-pointer hover:underline">{{ receipt.reference_number }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500">{{ receipt.received_at }}</span>
+                                <span class="text-[9px] font-mono text-secondary">{{ receipt.received_at }}</span>
                             </div>
                             <div class="flex flex-col gap-1">
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Logistics:</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter text-[9px]">Logistics:</span>
                                     <span class="text-zinc-300 font-bold text-[10px]">{{ receipt.received_by }}</span>
                                 </div>
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Receipt Bin:</span>
-                                    <span class="text-zinc-400 text-[10px]">{{ receipt.to_location }}</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter text-[9px]">Receipt Bin:</span>
+                                    <span class="text-secondary text-[10px]">{{ receipt.to_location }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Return History (PRN) -->
-                    <div v-if="po.returns && po.returns.length > 0" class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700 border-l-2 border-l-red-900/50">
+                    <div v-if="po.returns && po.returns.length > 0" class="bg-panel/40 border border-panel-border/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700 border-l-2 border-l-red-900/50">
                         <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest font-mono border-b border-white/[0.03] pb-2">Purchase Return History (PRN)</span>
                         
-                        <div v-for="ret in po.returns" :key="ret.id" class="flex flex-col gap-3 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50 group hover:border-red-500/20 transition-all">
+                        <div v-for="ret in po.returns" :key="ret.id" class="flex flex-col gap-3 p-4 bg-deep/50 rounded-xl border border-panel-border/50 group hover:border-red-500/20 transition-all">
                             <div class="flex justify-between items-center">
                                 <span @click="viewReturnDetails(ret)" 
                                       class="text-[10px] font-mono text-red-400 font-bold cursor-pointer hover:underline">{{ ret.reference_number }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500">{{ ret.returned_at }}</span>
+                                <span class="text-[9px] font-mono text-secondary">{{ ret.returned_at }}</span>
                             </div>
                             <div class="flex flex-col gap-1">
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Authorized:</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter text-[9px]">Authorized:</span>
                                     <span class="text-zinc-300 font-bold text-[10px]">{{ ret.returned_by }}</span>
                                 </div>
                                 <div class="flex justify-between text-[11px]">
-                                    <span class="text-zinc-600 font-bold uppercase tracking-tighter text-[9px]">Origin Bin:</span>
-                                    <span class="text-zinc-400 text-[10px]">{{ ret.from_location }}</span>
+                                    <span class="text-muted font-bold uppercase tracking-tighter text-[9px]">Origin Bin:</span>
+                                    <span class="text-secondary text-[10px]">{{ ret.from_location }}</span>
                                 </div>
                             </div>
                         </div>
@@ -758,8 +776,8 @@ const openPrint = () => {
 
                 <!-- Lines Data -->
                 <div class="col-span-12 lg:col-span-9 flex flex-col gap-4">
-                    <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-4">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800/50 pb-2 mb-3 block">Line Items</span>
+                    <div class="flex-1 bg-panel/40 border border-panel-border/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-4">
+                        <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border/50 pb-2 mb-3 block">Line Items</span>
                         
                         <DataTable 
                             :value="po.lines" 
@@ -775,43 +793,49 @@ const openPrint = () => {
                             <Column field="product_name" header="PRODUCT">
                                 <template #body="{ data }">
                                     <div class="flex flex-col">
-                                        <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
-                                        <span v-if="data.product_code" class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                        <span class="text-primary font-bold text-xs">{{ data.product_name }}</span>
+                                        <span v-if="data.product_code" class="text-[9px] font-bold text-muted font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
                                     </div>
                                 </template>
                             </Column>
 
                             <Column field="unit_cost" header="UNIT COST">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-400 font-mono text-xs">{{ data.formatted_unit_cost }}</span>
+                                    <span class="text-secondary font-mono text-xs">{{ data.formatted_unit_cost }}</span>
                                 </template>
                             </Column>
 
-                            <Column field="ordered_qty" header="REQ QTY">
+                            <Column field="ordered_qty" header="ORDER GOAL">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">{{ data.formatted_ordered_qty || data.ordered_qty }}</span>
+                                    <div class="flex flex-col">
+                                        <span class="text-primary font-mono text-xs font-bold">{{ data.formatted_ordered_qty || data.ordered_qty }}</span>
+                                        <span class="text-[8px] font-bold text-muted uppercase tracking-widest">Requirement</span>
+                                    </div>
                                 </template>
                             </Column>
 
-                            <Column field="received_qty" header="RCV QTY">
+                            <Column field="received_qty" header="NET RCV">
                                 <template #body="{ data }">
-                                    <span :class="[Number(data.received_qty) >= Number(data.ordered_qty) ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
-                                        {{ data.formatted_received_qty || data.received_qty }}
-                                    </span>
+                                    <div class="flex flex-col">
+                                        <span :class="[Number(data.net_received_qty) >= Number(data.requirement_qty) ? 'text-emerald-400' : 'text-amber-400', 'font-mono text-xs font-bold']">
+                                            {{ data.formatted_received_qty || data.received_qty }}
+                                        </span>
+                                        <span class="text-[8px] font-bold text-muted uppercase tracking-widest">Balanced</span>
+                                    </div>
                                 </template>
                             </Column>
 
-                            <Column field="returned_qty" header="RET QTY">
+                            <Column field="returned_qty" header="RETURNED">
                                 <template #body="{ data }">
-                                    <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-zinc-700', 'font-mono text-xs']">
-                                        {{ data.formatted_returned_qty || data.returned_qty }}
+                                    <span :class="[data.returned_qty > 0 ? 'text-red-400 font-black' : 'text-muted', 'font-mono text-xs']">
+                                        {{ Number(data.returned_qty) > 0 ? (data.formatted_returned_qty || data.returned_qty) : '-' }}
                                     </span>
                                 </template>
                             </Column>
                             
-                            <Column field="pending_qty" header="REM QTY">
+                            <Column field="pending_qty" header="REMAINING">
                                 <template #body="{ data }">
-                                    <span :class="[Number(data.pending_qty) === 0 ? 'text-zinc-600' : 'text-orange-500', 'font-mono text-xs font-bold']">
+                                    <span :class="[Number(data.pending_qty) === 0 ? 'text-muted' : 'text-orange-500', 'font-mono text-xs font-bold']">
                                         {{ data.formatted_pending_qty || data.pending_qty }}
                                     </span>
                                 </template>
@@ -819,7 +843,7 @@ const openPrint = () => {
 
                             <Column field="total_line_cost" header="TOTAL">
                                 <template #body="{ data }">
-                                    <span class="text-white font-mono text-xs font-bold">₱{{ Number(data.total_line_cost).toFixed(2) }}</span>
+                                    <span class="text-primary font-mono text-xs font-bold">₱{{ Number(data.total_line_cost).toFixed(2) }}</span>
                                 </template>
                             </Column>
                         </DataTable>
@@ -839,7 +863,7 @@ const openPrint = () => {
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Receiving Location (Destination Bin)</label>
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Receiving Location (Destination Bin)</label>
                     <Select 
                         v-model="grnForm.location_id" 
                         :options="locations" 
@@ -847,7 +871,7 @@ const openPrint = () => {
                         optionValue="id" 
                         placeholder="Select active bin" 
                         filter
-                        class="w-full bg-zinc-950 border-zinc-700 text-sm focus:border-orange-500/50"
+                        class="w-full bg-deep border-zinc-700 text-sm focus:border-orange-500/50"
                     >
                         <template #option="slotProps">
                             <span class="font-bold text-xs">{{ slotProps.option.code }} — {{ slotProps.option.name }}</span>
@@ -855,7 +879,7 @@ const openPrint = () => {
                     </Select>
                 </div>
 
-                <div class="border border-zinc-800 rounded-xl overflow-hidden mt-2">
+                <div class="border border-panel-border rounded-xl overflow-hidden mt-2">
                     <DataTable :value="grnForm.lines" class="p-datatable-sm w-full">
                         <Column field="sku" header="SKU">
                             <template #body="{ data }">
@@ -865,8 +889,8 @@ const openPrint = () => {
                         <Column field="product_name" header="PRODUCT">
                             <template #body="{ data }">
                                 <div class="flex flex-col">
-                                    <span class="text-white font-bold text-xs">{{ data.product_name }}</span>
-                                    <span v-if="data.product_code" class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
+                                    <span class="text-primary font-bold text-xs">{{ data.product_name }}</span>
+                                    <span v-if="data.product_code" class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase">MPN: {{ data.product_code }}</span>
                                 </div>
                             </template>
                         </Column>
@@ -879,34 +903,34 @@ const openPrint = () => {
                             <template #body="{ data }">
                                 <div class="flex flex-col items-start gap-1">
                                     <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStockInfo($event, data)">
-                                        <div class="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 flex items-center gap-1.5 transition-all group-hover/stock:border-orange-500/30">
+                                        <div class="px-2 py-0.5 rounded bg-panel border border-panel-border flex items-center gap-1.5 transition-all group-hover/stock:border-orange-500/30">
                                             <div class="w-1 h-1 rounded-full animate-pulse" :class="getLocalStock(data) > 0 ? 'bg-emerald-500' : 'bg-red-500'"></div>
-                                            <span class="text-[10px] font-mono font-bold" :class="getLocalStock(data) > 0 ? 'text-emerald-400' : 'text-zinc-500'">
+                                            <span class="text-[10px] font-mono font-bold" :class="getLocalStock(data) > 0 ? 'text-emerald-400' : 'text-secondary'">
                                                 {{ getScaledQty(data, getLocalStock(data)) }}
                                             </span>
                                         </div>
-                                        <i class="pi pi-info-circle text-[10px] text-zinc-700 group-hover/stock:text-orange-500/50 italic transition-colors"></i>
+                                        <i class="pi pi-info-circle text-[10px] text-muted group-hover/stock:text-orange-500/50 italic transition-colors"></i>
                                     </div>
-                                    <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter">Existing in Bin</span>
+                                    <span class="text-[8px] font-bold text-muted uppercase tracking-tighter">Existing in Bin</span>
                                 </div>
                             </template>
                         </Column>
                         <Column field="received_qty" header="RECEIVE QTY" style="width: 14rem">
                             <template #body="{ data }">
-                                <div class="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-orange-500/50 transition-all shadow-inner h-9 group">
+                                <div class="flex items-center bg-deep border border-panel-border rounded-lg overflow-hidden focus-within:border-orange-500/50 transition-all shadow-inner h-9 group">
                                     <div class="flex-1 flex items-center px-1">
                                         <InputNumber 
                                             v-model="data.received_qty" 
                                             :min="0" 
                                             :minFractionDigits="0" 
                                             :maxFractionDigits="isUomIdDiscrete(data.uom_id) ? 0 : 4" 
-                                            class="p-inputtext-sm text-center font-mono font-bold text-white border-0 bg-transparent flex-1 focus:ring-0 w-full"
+                                            class="p-inputtext-sm text-center font-mono font-bold text-primary border-0 bg-transparent flex-1 focus:ring-0 w-full"
                                             :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: 'white', width: '100%', boxShadow: 'none' }"
                                         />
                                     </div>
                                     
                                     <!-- Simple Divider -->
-                                    <div class="w-px h-5 bg-zinc-800 group-focus-within:bg-orange-500/20"></div>
+                                    <div class="w-px h-5 bg-panel-hover group-focus-within:bg-orange-500/20"></div>
                                     
                                     <div class="w-24">
                                         <Select 
@@ -919,7 +943,7 @@ const openPrint = () => {
                                             class="!bg-transparent !border-0 !shadow-none !h-full w-full !text-[10px] font-mono font-black"
                                             pt:root:class="!border-0 !bg-transparent !shadow-none"
                                             pt:label:class="!text-amber-500 !p-1.5 !text-center !uppercase font-black"
-                                            pt:dropdown:class="!text-zinc-600 !w-6"
+                                            pt:dropdown:class="!text-muted !w-6"
                                         >
                                             <template #value="slotProps">
                                                 <span v-if="slotProps.value" class="text-amber-500 uppercase font-black">
@@ -936,7 +960,7 @@ const openPrint = () => {
                                                             CUSTOM
                                                         </span>
                                                     </div>
-                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-zinc-500 font-mono italic">
+                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-secondary font-mono italic">
                                                         {{ slotProps.option.conversion_text }}
                                                     </div>
                                                 </div>
@@ -950,7 +974,7 @@ const openPrint = () => {
                 </div>
             </div>
             <template #footer>
-                <Button label="Cancel" icon="pi pi-times" @click="grnDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
+                <Button label="Cancel" icon="pi pi-times" @click="grnDialog = false" class="p-button-text !text-secondary hover:!text-primary" />
                 <Button label="Post Receipt" icon="pi pi-check" @click="postReceipt" :loading="grnLoading" class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold tracking-widest uppercase font-mono shadow-[0_0_15px_rgba(249,115,22,0.3)]" />
             </template>
         </Dialog>
@@ -958,34 +982,34 @@ const openPrint = () => {
         <!-- H-1: Popover for per-location stock breakdown -->
         <Popover ref="stockPopover">
             <div v-if="popoverLine" class="flex flex-col gap-2 p-1 min-w-[200px]">
-                <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest font-mono border-b border-zinc-800 pb-1">Stock by Location</span>
+                <span class="text-[9px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border pb-1">Stock by Location</span>
                 <div v-if="popoverLine.inventories && popoverLine.inventories.length > 0">
                     <div v-for="inv in popoverLine.inventories" :key="inv.location_id" class="flex justify-between items-center py-1">
-                        <span class="text-[10px] text-zinc-400 font-mono">{{ inv.location_name || inv.location?.name || 'Unknown' }}</span>
-                        <span class="text-[10px] font-bold" :class="Number(inv.quantity_on_hand) > 0 ? 'text-emerald-400' : 'text-zinc-600'">{{ inv.quantity_on_hand }}</span>
+                        <span class="text-[10px] text-secondary font-mono">{{ inv.location_name || inv.location?.name || 'Unknown' }}</span>
+                        <span class="text-[10px] font-bold" :class="Number(inv.quantity_on_hand) > 0 ? 'text-emerald-400' : 'text-muted'">{{ inv.quantity_on_hand }}</span>
                     </div>
                 </div>
-                <span v-else class="text-[10px] text-zinc-600 italic">No stock in any location.</span>
+                <span v-else class="text-[10px] text-muted italic">No stock in any location.</span>
             </div>
         </Popover>
         <!-- Return Items (RTV) Dialog (Surgical Precision Redesign) -->
         <Dialog v-model:visible="returnDialog" modal :closable="false" :style="{ width: '65rem' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" pt:root:class="!border-0 !bg-transparent !shadow-2xl" pt:header:class="!hidden" pt:content:class="!p-0 !bg-transparent !overflow-hidden">
-            <div class="flex flex-col bg-zinc-950 border border-red-900/40 rounded-2xl overflow-hidden relative shadow-[0_0_50px_rgba(220,38,38,0.15)] ring-1 ring-white/5">
+            <div class="flex flex-col bg-deep border border-red-900/40 rounded-2xl overflow-hidden relative shadow-[0_0_50px_rgba(220,38,38,0.15)] ring-1 ring-white/5">
                 <!-- Red Ambient Glow -->
                 <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-red-600/10 blur-[100px] pointer-events-none"></div>
 
                 <!-- Modal Header (Premium) -->
-                <div class="px-6 py-5 border-b border-red-900/30 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center relative z-10">
+                <div class="px-6 py-5 border-b border-red-900/30 bg-deep/80 backdrop-blur-xl flex justify-between items-center relative z-10">
                     <div class="flex items-center gap-4">
                         <div class="w-10 h-10 rounded-xl bg-red-900/30 border border-red-500/20 flex items-center justify-center">
                             <i class="pi pi-replay text-red-500 text-lg"></i>
                         </div>
                         <div class="flex flex-col">
-                            <h2 class="text-lg font-black text-white tracking-tight font-mono">PROCESS REVERSAL (RTV)</h2>
-                            <p class="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Revert previously received stock from <span class="text-sky-400">PO-{{ po.po_number }}</span></p>
+                            <h2 class="text-lg font-black text-primary tracking-tight font-mono">PROCESS REVERSAL (RTV)</h2>
+                            <p class="text-[9px] text-secondary font-bold uppercase tracking-widest mt-0.5">Revert previously received stock from <span class="text-sky-400">PO-{{ po.po_number }}</span></p>
                         </div>
                     </div>
-                    <button @click="returnDialog = false" class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+                    <button @click="returnDialog = false" class="w-8 h-8 rounded-full bg-panel border border-panel-border flex items-center justify-center text-secondary hover:text-primary hover:bg-panel-hover transition-colors">
                         <i class="pi pi-times text-xs"></i>
                     </button>
                 </div>
@@ -995,9 +1019,9 @@ const openPrint = () => {
                     <!-- Technical Alert (Sleeker integration) -->
                     <div class="bg-red-500/5 border-l-2 border-l-red-500/50 p-4 rounded-r-xl flex items-center gap-4">
                         <i class="pi pi-shield text-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.2)]"></i>
-                        <p class="text-[11px] text-zinc-400 font-medium leading-relaxed">
-                            <span class="text-white font-mono font-black mr-2 tracking-tighter uppercase opacity-80">System Protocol: Stock Reversal</span>
-                            Executing a return generates a <span class="text-white font-mono font-bold">PRET</span> ledger. 
+                        <p class="text-[11px] text-secondary font-medium leading-relaxed">
+                            <span class="text-primary font-mono font-black mr-2 tracking-tighter uppercase opacity-80">System Protocol: Stock Reversal</span>
+                            Executing a return generates a <span class="text-primary font-mono font-bold">PRET</span> ledger. 
                             <span class="text-emerald-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Replacement</span> resets status. 
                             <span class="text-sky-400/80 font-black text-[10px] tracking-wide uppercase mx-1">Credit</span> adjusts valuation layers.
                         </p>
@@ -1005,7 +1029,7 @@ const openPrint = () => {
 
                     <!-- Filter Configuration (More Integrated) -->
                     <div class="flex flex-col gap-2">
-                        <label class="text-[9px] font-black text-zinc-600 tracking-widest uppercase font-mono pl-1">Source Picking Location</label>
+                        <label class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Source Picking Location</label>
                         <Select 
                             v-model="returnForm.location_id" 
                             :options="filteredReturnLocations" 
@@ -1013,7 +1037,7 @@ const openPrint = () => {
                             optionValue="id" 
                             placeholder="SELECT ORIGIN BIN..." 
                             filter
-                            class="!w-full !bg-zinc-900/30 !border-zinc-800/80 !rounded-xl !h-12 !flex !items-center font-mono focus-within:!border-red-500/30 shadow-none transition-all"
+                            class="!w-full !bg-panel/30 !border-panel-border/80 !rounded-xl !h-12 !flex !items-center font-mono focus-within:!border-red-500/30 shadow-none transition-all"
                         >
                             <template #option="slotProps">
                                 <div class="flex items-center justify-between w-full">
@@ -1026,31 +1050,31 @@ const openPrint = () => {
 
                     <!-- Item Matrix (Box-less Design) -->
                     <div class="flex flex-col gap-2">
-                        <label class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Inventory Position Context</label>
+                        <label class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Inventory Position Context</label>
                         
                         <div class="flex flex-col gap-3">
                             <div v-for="(line, index) in returnForm.lines" :key="line.po_line_id" 
-                                 class="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 items-center bg-zinc-900/20 border border-zinc-800/40 rounded-2xl hover:bg-zinc-900/40 transition-all hover:border-red-500/20 group/row"
+                                 class="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 items-center bg-panel/20 border border-panel-border/40 rounded-2xl hover:bg-panel/40 transition-all hover:border-red-500/20 group/row"
                             >
                                 <!-- Product Identity (Col 3) -->
                                 <div class="xl:col-span-3 flex flex-col gap-1">
-                                    <span class="text-xs font-black text-white group-hover/row:text-red-400 transition-colors">{{ line.product_name }}</span>
+                                    <span class="text-xs font-black text-primary group-hover/row:text-red-400 transition-colors">{{ line.product_name }}</span>
                                     <div class="flex items-center gap-2">
                                         <span class="text-[9px] font-mono font-black text-sky-500/60 uppercase tracking-tighter bg-sky-500/5 px-1.5 py-0.5 rounded border border-sky-500/10">{{ line.sku }}</span>
-                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-tighter">REF: {{ line.product_code }}</span>
+                                        <span v-if="line.product_code" class="text-[8px] font-mono font-bold text-muted uppercase tracking-tighter">REF: {{ line.product_code }}</span>
                                     </div>
                                 </div>
 
                                 <!-- Status Indicators (Col 2 - Simplified) -->
                                 <div class="xl:col-span-2 flex items-center gap-3">
                                     <div class="flex flex-col">
-                                        <span class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Orig RCV</span>
+                                        <span class="text-[8px] font-black text-muted uppercase tracking-widest">Orig RCV</span>
                                         <span class="text-[11px] font-mono font-bold text-zinc-300">{{ line.formatted_received_qty || line.received_qty }}</span>
                                     </div>
-                                    <div class="w-px h-6 bg-zinc-800/50"></div>
+                                    <div class="w-px h-6 bg-panel-hover/50"></div>
                                     <div class="flex flex-col">
-                                        <span class="text-[8px] font-black uppercase tracking-widest" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-500/60' : 'text-zinc-700'">In Bin</span>
-                                        <span class="text-[11px] font-mono font-bold" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-400' : 'text-zinc-600'">
+                                        <span class="text-[8px] font-black uppercase tracking-widest" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-500/60' : 'text-muted'">In Bin</span>
+                                        <span class="text-[11px] font-mono font-bold" :class="getStockInSelectedLocation(line.product_id) > 0 ? 'text-emerald-400' : 'text-muted'">
                                             {{ getStockInSelectedLocation(line.product_id) ?? '0' }}
                                         </span>
                                     </div>
@@ -1059,14 +1083,14 @@ const openPrint = () => {
                                 <!-- Entries (Col 7 - Unified Action Bar) -->
                                 <div class="xl:col-span-7 grid grid-cols-12 gap-2 h-10">
                                     <!-- Qty + UOM (5) -->
-                                    <div class="col-span-5 flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-red-500/50 transition-all overflow-hidden h-full group/input">
+                                    <div class="col-span-5 flex items-center bg-deep/80 border border-panel-border rounded-xl focus-within:border-red-500/50 transition-all overflow-hidden h-full group/input">
                                         <InputNumber 
                                             v-model="line.return_qty" 
                                             class="w-full h-full"
                                             :inputStyle="{ background: 'transparent', border: '0', textAlign: 'center', color: '#f87171', width: '100%', fontWeight: '900', fontSize: '14px', fontFamily: 'monospace' }"
                                             placeholder="0"
                                         />
-                                        <div class="w-px h-4 bg-zinc-800/50 group-focus-within/input:bg-red-500/20"></div>
+                                        <div class="w-px h-4 bg-panel-hover/50 group-focus-within/input:bg-red-500/20"></div>
                                         <Select 
                                             v-model="line.uom_id" 
                                             :options="getFilteredUoms(line)" 
@@ -1075,7 +1099,7 @@ const openPrint = () => {
                                             @change="onReturnUomChange(line)"
                                             class="!bg-transparent !border-0 !shadow-none !h-full w-24 !text-[11px] font-black"
                                             pt:label:class="!text-red-400 !font-black !p-0 !flex !items-center !justify-center !text-center !uppercase !h-full"
-                                            pt:dropdown:class="!text-zinc-700 !w-4"
+                                            pt:dropdown:class="!text-muted !w-4"
                                         >
                                             <template #value="slotProps">
                                                 <span v-if="slotProps.value" class="text-red-400 uppercase font-black">
@@ -1091,7 +1115,7 @@ const openPrint = () => {
                                                             CUSTOM
                                                         </span>
                                                     </div>
-                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-zinc-500 font-mono italic">
+                                                    <div v-if="slotProps.option.conversion_text" class="text-[9px] text-secondary font-mono italic">
                                                         {{ slotProps.option.conversion_text }}
                                                     </div>
                                                 </div>
@@ -1106,7 +1130,7 @@ const openPrint = () => {
                                             :options="[{label: 'REPLACE', value: 'replacement'}, {label: 'CREDIT', value: 'credit'}]" 
                                             optionLabel="label" 
                                             optionValue="value" 
-                                            class="!w-full !bg-zinc-950/80 !border-zinc-800 !rounded-xl !h-full !flex !items-center !text-[10px] !font-black tracking-widest focus-within:!border-red-500/20" 
+                                            class="!w-full !bg-deep/80 !border-panel-border !rounded-xl !h-full !flex !items-center !text-[10px] !font-black tracking-widest focus-within:!border-red-500/20" 
                                             pt:label:class="!pl-3 !flex !items-center !h-full"
                                         >
                                             <template #value="slotProps">
@@ -1122,7 +1146,7 @@ const openPrint = () => {
                                         <InputText 
                                             v-model="line.reason" 
                                             placeholder="Reason..." 
-                                            class="!w-full !bg-zinc-950/80 !border-zinc-800 !rounded-xl !text-[11px] !font-bold !h-full !px-4 focus:!border-red-500/30 text-zinc-300 placeholder:text-zinc-700 placeholder:font-bold" 
+                                            class="!w-full !bg-deep/80 !border-panel-border !rounded-xl !text-[11px] !font-bold !h-full !px-4 focus:!border-red-500/30 text-zinc-300 placeholder:text-muted placeholder:font-bold" 
                                         />
                                     </div>
                                 </div>
@@ -1132,12 +1156,12 @@ const openPrint = () => {
                 </div>
 
                 <!-- Action Footer -->
-                <div class="px-6 py-5 border-t border-red-900/30 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center z-10 relative">
+                <div class="px-6 py-5 border-t border-red-900/30 bg-deep/80 backdrop-blur-xl flex justify-between items-center z-10 relative">
                     <Button 
                         label="Cancel" 
                         icon="pi pi-times"
                         @click="returnDialog = false" 
-                        class="p-button-text !text-zinc-500 hover:!text-white !font-bold !text-[11px] !tracking-widest uppercase" 
+                        class="p-button-text !text-secondary hover:!text-primary !font-bold !text-[11px] !tracking-widest uppercase" 
                     />
                     
                     <div class="flex items-center gap-6">
@@ -1150,7 +1174,7 @@ const openPrint = () => {
                             icon="pi pi-replay"
                             @click="postReturn" 
                             :loading="returnLoading" 
-                            class="!min-h-[2.5rem] !px-8 !bg-red-600 hover:!bg-red-500 !text-white !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)]" 
+                            class="!min-h-[2.5rem] !px-8 !bg-red-600 hover:!bg-red-500 !text-primary !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)]" 
                         />
                     </div>
                 </div>
@@ -1161,16 +1185,16 @@ const openPrint = () => {
         <Dialog v-model:visible="shipDialog" modal header="Log Vendor Shipment" :style="{ width: '30rem' }">
             <div class="flex flex-col gap-4 py-2">
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Carrier Name</label>
-                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, LBC" class="w-full !bg-zinc-950 !border-zinc-700 !text-zinc-500 !text-sm" />
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Carrier Name</label>
+                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, LBC" class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" />
                 </div>
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-zinc-400 tracking-widest font-mono uppercase">Tracking Number</label>
-                    <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking #" class="w-full !bg-zinc-950 !border-zinc-700 !text-zinc-500 !text-sm" />
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Tracking Number</label>
+                    <InputText v-model="shipForm.tracking_number" placeholder="Optional tracking #" class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" />
                 </div>
             </div>
             <template #footer>
-                <Button label="Cancel" icon="pi pi-times" @click="shipDialog = false" class="p-button-text !text-zinc-400 hover:!text-white" />
+                <Button label="Cancel" icon="pi pi-times" @click="shipDialog = false" class="p-button-text !text-secondary hover:!text-primary" />
                 <Button label="Confirm Shipment" icon="pi pi-truck" @click="submitShipment" :loading="shipLoading" class="p-button-sm !bg-white hover:!bg-zinc-200 !border-none !text-zinc-950 font-bold uppercase tracking-widest transition-all" />
             </template>
         </Dialog>
@@ -1179,9 +1203,9 @@ const openPrint = () => {
         <Dialog v-model:visible="grnDetailDialog" modal header="Goods Receipt Note Details" :style="{ width: '45rem' }">
             <div v-if="selectedGrn" class="flex flex-col gap-6">
                 <!-- Receipt Header Info -->
-                <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800">
+                <div class="grid grid-cols-2 gap-4 p-4 bg-deep rounded-xl border border-panel-border">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Reference Number</label>
                         <span 
                             class="text-sm font-black text-sky-400 font-mono cursor-pointer hover:underline"
                             @click="router.visit(`/movements/${selectedGrn.id}`)"
@@ -1190,21 +1214,21 @@ const openPrint = () => {
                         </span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Received At</label>
-                        <span class="text-sm font-bold text-white">{{ selectedGrn.received_at }}</span>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Received At</label>
+                        <span class="text-sm font-bold text-primary">{{ selectedGrn.received_at }}</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Received By</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Received By</label>
                         <span class="text-sm font-bold text-orange-400">{{ selectedGrn.received_by }}</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Storage Location</label>
-                        <span class="text-sm font-bold text-white">{{ selectedGrn.to_location }}</span>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Storage Location</label>
+                        <span class="text-sm font-bold text-primary">{{ selectedGrn.to_location }}</span>
                     </div>
                 </div>
 
                 <!-- Receipt Line Items -->
-                <div class="border border-zinc-800 rounded-xl overflow-hidden">
+                <div class="border border-panel-border rounded-xl overflow-hidden">
                     <DataTable :value="selectedGrn.lines" class="p-datatable-sm w-full">
                         <Column field="sku" header="SKU">
                             <template #body="{ data }">
@@ -1218,14 +1242,14 @@ const openPrint = () => {
                         </Column>
                         <Column field="quantity" header="RECEIVED">
                             <template #body="{ data }">
-                                <span class="text-white font-mono text-xs font-bold">{{ data.formatted_quantity }}</span>
+                                <span class="text-primary font-mono text-xs font-bold">{{ data.formatted_quantity }}</span>
                             </template>
                         </Column>
                     </DataTable>
                 </div>
             </div>
             <template #footer>
-                <Button label="Close Audit Trail" icon="pi pi-times" @click="grnDetailDialog = false" class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
+                <Button label="Close Audit Trail" icon="pi pi-times" @click="grnDetailDialog = false" class="p-button-sm !bg-panel-hover hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
             </template>
         </Dialog>
 
@@ -1233,9 +1257,9 @@ const openPrint = () => {
         <Dialog v-model:visible="returnDetailDialog" modal header="Purchase Return Note Details" :style="{ width: '45rem' }">
             <div v-if="selectedReturn" class="flex flex-col gap-6">
                 <!-- Return Header Info -->
-                <div class="grid grid-cols-2 gap-4 p-4 bg-zinc-950 rounded-xl border border-zinc-800 border-l-4 border-l-red-600">
+                <div class="grid grid-cols-2 gap-4 p-4 bg-deep rounded-xl border border-panel-border border-l-4 border-l-red-600">
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference Number</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Reference Number</label>
                         <span 
                             class="text-sm font-black text-red-500 font-mono cursor-pointer hover:underline"
                             @click="router.visit(`/movements/${selectedReturn.id}`)"
@@ -1244,21 +1268,21 @@ const openPrint = () => {
                         </span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Returned At</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Returned At</label>
                         <span class="text-sm font-bold text-zinc-300">{{ selectedReturn.returned_at }}</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Authorized By</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Authorized By</label>
                         <span class="text-sm font-bold text-zinc-100">{{ selectedReturn.returned_by }}</span>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Origin Location</label>
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Origin Location</label>
                         <span class="text-sm font-bold text-zinc-300">{{ selectedReturn.from_location }}</span>
                     </div>
                 </div>
 
                 <!-- Return Line Items -->
-                <div class="border border-zinc-800 rounded-xl overflow-hidden">
+                <div class="border border-panel-border rounded-xl overflow-hidden">
                     <DataTable :value="selectedReturn.lines" class="p-datatable-sm w-full">
                         <Column field="sku" header="SKU">
                             <template #body="{ data }">
@@ -1267,7 +1291,7 @@ const openPrint = () => {
                         </Column>
                         <Column field="product_name" header="PRODUCT">
                             <template #body="{ data }">
-                                <span class="text-xs font-bold text-zinc-200">{{ data.product_name }}</span>
+                                <span class="text-xs font-bold text-primary">{{ data.product_name }}</span>
                             </template>
                         </Column>
                         <Column field="notes" header="RESOLUTION">
@@ -1291,7 +1315,7 @@ const openPrint = () => {
                 </div>
             </div>
             <template #footer>
-                <Button label="Close Audit Trail" icon="pi pi-times" @click="returnDetailDialog = false" class="p-button-sm !bg-zinc-800 hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
+                <Button label="Close Audit Trail" icon="pi pi-times" @click="returnDetailDialog = false" class="p-button-sm !bg-panel-hover hover:!bg-zinc-700 !text-zinc-300 !border-none font-bold tracking-widest uppercase font-mono transition-all" />
             </template>
         </Dialog>
 
@@ -1342,3 +1366,5 @@ const openPrint = () => {
 :deep(.p-inputnumber-button) { background: #18181b; border-color: #27272a; color: #a1a1aa; }
 :deep(.p-inputnumber-button:hover) { background: #27272a; color: white; }
 </style>
+
+

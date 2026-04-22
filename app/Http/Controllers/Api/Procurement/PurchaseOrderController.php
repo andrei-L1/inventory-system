@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
+use App\Models\Bill;
 use App\Models\InventoryCostLayer;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
@@ -66,6 +67,7 @@ class PurchaseOrderController extends Controller
             'transactions.toLocation',
             'transactions.fromLocation',
             'transactions.lines.product.uom',
+            'transactions.lines.billLines', // New: load billing history for each receipt line
         ]);
 
         return new PurchaseOrderResource($purchaseOrder);
@@ -93,9 +95,28 @@ class PurchaseOrderController extends Controller
             foreach ($data['lines'] as $lineData) {
                 $qty = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
+                $discountRate = (string) ($lineData['discount_rate'] ?? 0);
+                $taxRate = (string) ($lineData['tax_rate'] ?? 0);
 
-                $lineCost = FinancialMath::poLineCost($qty, $cost);
-                $lineTotals[] = $lineCost;
+                // Gross line cost before discount
+                $grossCost = FinancialMath::poLineCost($qty, $cost);
+
+                // Discount amount = gross * rate / 100
+                $discountAmount = FinancialMath::round(
+                    FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                // Tax amount = (gross - discount) * taxRate / 100
+                $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                $taxAmount = FinancialMath::round(
+                    FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                // Net line cost = gross - discount + tax
+                $netCost = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
+                $lineTotals[] = $netCost;
 
                 $po->lines()->create([
                     'product_id' => $lineData['product_id'],
@@ -103,6 +124,10 @@ class PurchaseOrderController extends Controller
                     'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
                     'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate' => FinancialMath::round($discountRate, 2),
+                    'discount_amount' => $discountAmount,
+                    'tax_rate' => FinancialMath::round($taxRate, 2),
+                    'tax_amount' => $taxAmount,
                 ]);
             }
 
@@ -150,9 +175,23 @@ class PurchaseOrderController extends Controller
             foreach ($data['lines'] as $lineData) {
                 $qty = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
+                $discountRate = (string) ($lineData['discount_rate'] ?? 0);
+                $taxRate = (string) ($lineData['tax_rate'] ?? 0);
 
-                $lineCost = FinancialMath::poLineCost($qty, $cost);
-                $lineTotals[] = $lineCost;
+                $grossCost = FinancialMath::poLineCost($qty, $cost);
+                $discountAmount = FinancialMath::round(
+                    FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                $taxableAmount = FinancialMath::sub($grossCost, $discountAmount);
+                $taxAmount = FinancialMath::round(
+                    FinancialMath::mul($taxableAmount, FinancialMath::div($taxRate, '100')),
+                    FinancialMath::LINE_SCALE
+                );
+
+                $netCost = FinancialMath::add(FinancialMath::sub($grossCost, $discountAmount), $taxAmount);
+                $lineTotals[] = $netCost;
 
                 $purchaseOrder->lines()->create([
                     'product_id' => $lineData['product_id'],
@@ -160,6 +199,10 @@ class PurchaseOrderController extends Controller
                     'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
                     'received_qty' => 0,
                     'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate' => FinancialMath::round($discountRate, 2),
+                    'discount_amount' => $discountAmount,
+                    'tax_rate' => FinancialMath::round($taxRate, 2),
+                    'tax_amount' => $taxAmount,
                 ]);
             }
 
@@ -413,12 +456,16 @@ class PurchaseOrderController extends Controller
                         abort(422, "Cannot process receipt: The entered quantity ({$formattedReceived}) is greater than the pending quantity ({$formattedMax}) remaining on this line for SKU {$poLine->product->sku}.");
                     }
 
-                    $unitCost = $poLine->unit_cost;
+                    $discountPct = FinancialMath::div((string) ($poLine->discount_rate ?? '0'), '100');
+                    $discountAmountPerUnit = FinancialMath::mul((string) $poLine->unit_cost, $discountPct);
+                    $netUnitCostRaw = FinancialMath::sub((string) $poLine->unit_cost, $discountAmountPerUnit);
+
+                    $unitCost = $netUnitCostRaw;
                     if ((int) $receivedUomId !== (int) $lineUomId) {
                         // Factor ($receivedUom to $lineUom) was calculated at line 373.
                         // Cost per $receivedUom = Cost per $lineUom * Factor.
                         // e.g. Box cost P100 * (1 Piece = 0.25 Box) = P25 Piece cost.
-                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
+                        $unitCost = FinancialMath::round(FinancialMath::mul($netUnitCostRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     $transactionData['lines'][] = [
@@ -437,15 +484,7 @@ class PurchaseOrderController extends Controller
                 $transaction = $stockService->recordMovement($transactionData);
 
                 // Update PO Status
-                // C-3: Must load('lines') after refresh() so isCompleted() uses fresh data,
-                // not the stale in-memory collection from before the receive loop.
-                $purchaseOrder->refresh();
-                $purchaseOrder->load('lines');
-                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
-                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
-
-                $purchaseOrder->status_id = $poStatus->id;
-                $purchaseOrder->save();
+                $purchaseOrder->recalculateStatus();
 
                 return $transaction;
             });
@@ -511,6 +550,7 @@ class PurchaseOrderController extends Controller
                 // and both decrement — causing received_qty to go negative.
                 $poLines = $purchaseOrder->lines()->lockForUpdate()->get()->keyBy('id');
 
+                $totalCreditAmount = '0';
                 foreach ($request->lines as $item) {
                     $poLine = $poLines->get($item['po_line_id']);
 
@@ -543,10 +583,13 @@ class PurchaseOrderController extends Controller
                         abort(422, "Cannot process return: The entered quantity ({$formattedReturn}) is greater than the quantity currently received ({$formattedMax}) for SKU {$poLine->product->sku}.");
                     }
 
-                    $unitCost = $poLine->unit_cost;
+                    $discountPct = FinancialMath::div((string) ($poLine->discount_rate ?? '0'), '100');
+                    $discountAmountPerUnit = FinancialMath::mul((string) $poLine->unit_cost, $discountPct);
+                    $netUnitCostRaw = FinancialMath::sub((string) $poLine->unit_cost, $discountAmountPerUnit);
+
+                    $unitCost = $netUnitCostRaw;
                     if ((int) $returnUomId !== (int) $lineUomId) {
-                        // Factor ($returnUomId to $lineUomId) was calculated at line 488.
-                        $unitCost = FinancialMath::round(FinancialMath::mul((string) $poLine->unit_cost, $factor), FinancialMath::LINE_SCALE);
+                        $unitCost = FinancialMath::round(FinancialMath::mul($netUnitCostRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     // Negative quantity → issue path (consumes layers and reduces QOH).
@@ -559,13 +602,15 @@ class PurchaseOrderController extends Controller
                         'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
 
-                    $newReceived = FinancialMath::sub((string) $poLine->received_qty, (string) $qtyToUpdatePO);
-                    $poLine->received_qty = FinancialMath::isNegative($newReceived) ? '0' : $newReceived;
+                    // [INDUSTRY STANDARD]: We maintain historical 'returned' count
+                    // but we MUST decrement 'received_qty' to allow "re-receipt" of replacements.
                     $poLine->returned_qty = FinancialMath::add((string) $poLine->returned_qty, (string) $qtyToUpdatePO);
+                    $poLine->received_qty = FinancialMath::max('0', FinancialMath::sub((string) $poLine->received_qty, (string) $qtyToUpdatePO));
 
                     if ($item['resolution'] === 'credit') {
-                        $newOrdered = FinancialMath::sub((string) $poLine->ordered_qty, (string) $qtyToUpdatePO);
-                        $poLine->ordered_qty = FinancialMath::isNegative($newOrdered) ? '0' : $newOrdered;
+                        // Financial Credit Accumulation
+                        $lineCredit = FinancialMath::round(FinancialMath::mul((string) $qtyToUpdatePO, (string) $poLine->unit_cost), FinancialMath::LINE_SCALE);
+                        $totalCreditAmount = FinancialMath::add($totalCreditAmount, $lineCredit);
                     }
 
                     $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
@@ -573,23 +618,59 @@ class PurchaseOrderController extends Controller
                 }
 
                 // H-7: Record movement FIRST, then recalculate total.
-                // This guarantees all line saves have committed before summing.
                 $transaction = $stockService->recordMovement($transactionData);
 
-                $this->recalculatePurchaseOrderTotal($purchaseOrder);
+                // ─── Phase 5.7: Generate Debit Note (Consolidated in Bills) ───
+                if (FinancialMath::gt($totalCreditAmount, '0')) {
+                    $debitNote = Bill::create([
+                        'bill_number' => 'DN-'.now()->format('YmdHi').'-'.mt_rand(1001, 9999),
+                        'type' => Bill::TYPE_DEBIT_NOTE,
+                        'vendor_id' => $purchaseOrder->vendor_id,
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'ref_transaction_id' => $transaction->id ?? null,
+                        'bill_date' => now()->toDateString(),
+                        'total_amount' => $totalCreditAmount,
+                        'paid_amount' => 0,
+                        'status' => Bill::STATUS_POSTED,
+                        'notes' => 'Generated from Purchase Return: '.($transaction->reference_number ?? 'N/A'),
+                        'reason' => $request->lines[0]['reason'] ?? 'Purchase Return',
+                    ]);
 
-                $purchaseOrder->refresh();
-                $purchaseOrder->load('lines');
+                    // Generate Line Items for the Debit Note to support Dynamic Quantity Release
+                    foreach ($request->lines as $item) {
+                        // IMPORTANT: Only generate lines for items that opted for CREDIT resolution
+                        if (($item['resolution'] ?? '') !== 'credit') {
+                            continue;
+                        }
 
-                $newStatusName = $purchaseOrder->isCompleted() ? 'closed' : 'partially_received';
+                        $poLine = $purchaseOrder->lines()->where('id', $item['po_line_id'])->first();
+                        if ($poLine) {
+                            $returnQtyRaw = (string) $item['return_qty'];
+                            $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
 
-                if ($wasManuallyClosed) {
-                    $newStatusName = 'closed';
+                            // Convert return qty to ATOMIC PIECES for BillLine storage
+                            $piecesMultiplier = (string) UomHelper::getMultiplierToSmallest($returnUomId, $poLine->product_id);
+                            $qtyPieces = FinancialMath::mul($returnQtyRaw, $piecesMultiplier);
+
+                            // Calculate line credit amount
+                            $multiplier = (string) UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
+                            $unitPricePieces = FinancialMath::div((string) $poLine->unit_cost, $multiplier);
+                            $lineCreditRaw = FinancialMath::mul($qtyPieces, $unitPricePieces);
+
+                            // Note: We store the returned quantity as NEGATIVE in the BillLine
+                            // to correctly re-balance the net billed quantity in the dynamic accessor.
+                            $debitNote->lines()->create([
+                                'purchase_order_line_id' => $poLine->id,
+                                'quantity' => '-'.$qtyPieces,
+                                'unit_price' => $unitPricePieces,
+                                'subtotal' => '-'.FinancialMath::round($lineCreditRaw, FinancialMath::LINE_SCALE),
+                                'notes' => 'Credit for Return: '.($item['reason'] ?? 'N/A'),
+                            ]);
+                        }
+                    }
                 }
 
-                $poStatus = PurchaseOrderStatus::where('name', $newStatusName)->firstOrFail();
-                $purchaseOrder->status_id = $poStatus->id;
-                $purchaseOrder->save();
+                $purchaseOrder->recalculateStatus();
 
                 return $transaction;
             });

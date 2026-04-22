@@ -73,14 +73,14 @@ onMounted(loadDashboard);
         <div class="mb-10 flex justify-between items-end">
             <div class="flex flex-col">
                 <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">Real-time Inventory Overview</span>
-                <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Dashboard Overview</h1>
-                <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                <h1 class="text-3xl font-bold text-primary tracking-tight m-0 mb-2">Dashboard Overview</h1>
+                <p class="text-secondary text-sm max-w-2xl leading-relaxed">
                     Key performance indicators, inventory valuations, and global system activity across the network.
                 </p>
             </div>
             <div class="flex items-center gap-4">
                 <button @click="loadDashboard" 
-                        class="bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 flex items-center gap-3 shadow-lg hover:border-zinc-700"
+                        class="bg-panel border border-panel-border text-secondary hover:text-primary px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 flex items-center gap-3 shadow-lg hover:border-zinc-700"
                 >
                     <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
                     <span>REFRESH</span>
@@ -90,18 +90,18 @@ onMounted(loadDashboard);
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             <!-- Global Valuation -->
-            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+            <div class="group relative bg-panel/40 border border-panel-border/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
                 <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
                 
                 <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                            <i class="pi pi-dollar text-zinc-500 group-hover:text-sky-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-deep flex items-center justify-center border border-panel-border group-hover:border-sky-500/30 transition-colors">
+                            <i class="pi pi-dollar text-secondary group-hover:text-sky-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase line-clamp-1">Stock Value</span>
+                        <span class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase line-clamp-1">Stock Value</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Total Inventory Value</div>
-                    <div class="text-3xl font-bold leading-none text-white tracking-tighter">{{ formatCurrency(stats.inventory_value) }}</div>
+                    <div class="text-secondary text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Total Inventory Value</div>
+                    <div class="text-3xl font-bold leading-none text-primary tracking-tighter">{{ formatCurrency(stats.inventory_value) }}</div>
                     
                     <!-- Trend Mini Chart -->
                     <div class="mt-4 flex items-end gap-1 h-8" v-if="stats.stock_value_trend && stats.stock_value_trend.length > 0">
@@ -125,159 +125,159 @@ onMounted(loadDashboard);
                             />
                         </svg>
                     </div>
-                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Total value of all on-hand stock assets.</div>
+                    <div class="text-muted text-[11px] mt-4 font-medium leading-relaxed">Total value of all on-hand stock assets.</div>
                 </div>
             </div>
 
             <!-- Risk Profile -->
-            <div class="group relative bg-zinc-900/40 border rounded-2xl p-6 transition-all duration-500 overflow-hidden shadow-xl"
-                 :class="stats.low_stock_count > 0 ? 'border-red-500/40' : 'border-zinc-800/80 hover:border-sky-500/40'">
+            <div class="group relative bg-panel/40 border rounded-2xl p-6 transition-all duration-500 overflow-hidden shadow-xl"
+                 :class="stats.low_stock_count > 0 ? 'border-red-500/40' : 'border-panel-border/80 hover:border-sky-500/40'">
                 <div class="absolute -right-10 -bottom-10 w-24 h-24 blur-3xl rounded-full transition-colors"
                      :class="stats.low_stock_count > 0 ? 'bg-red-500/5 group-hover:bg-red-500/10' : 'bg-sky-500/5 group-hover:bg-sky-500/10'"></div>
                 
                 <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                            <i class="pi pi-exclamation-triangle text-zinc-500 group-hover:text-red-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-deep flex items-center justify-center border border-panel-border group-hover:border-sky-500/30 transition-colors">
+                            <i class="pi pi-exclamation-triangle text-secondary group-hover:text-red-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Critical Stock</span>
+                        <span class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase">Critical Stock</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Low Stock Items</div>
-                    <div class="text-3xl font-bold leading-none tracking-tighter" :class="stats.low_stock_count > 0 ? 'text-red-400' : 'text-white'">
+                    <div class="text-secondary text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Low Stock Items</div>
+                    <div class="text-3xl font-bold leading-none tracking-tighter" :class="stats.low_stock_count > 0 ? 'text-red-400' : 'text-primary'">
                         {{ stats.low_stock_count }}
                     </div>
-                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Active assets below safety threshold.</div>
+                    <div class="text-muted text-[11px] mt-4 font-medium leading-relaxed">Active assets below safety threshold.</div>
                 </div>
             </div>
 
             <!-- Stakeholders Summary -->
-            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+            <div class="group relative bg-panel/40 border border-panel-border/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
                  <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
                  <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                            <i class="pi pi-server text-zinc-500 group-hover:text-emerald-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-deep flex items-center justify-center border border-panel-border group-hover:border-sky-500/30 transition-colors">
+                            <i class="pi pi-server text-secondary group-hover:text-emerald-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">System Records</span>
+                        <span class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase">System Records</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">System Directory</div>
+                    <div class="text-secondary text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">System Directory</div>
                     <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">VENDORS</span>
-                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.total_vendors }}</span>
+                        <div class="flex items-center justify-between bg-deep/50 p-2 rounded-lg border border-panel-border/50">
+                            <span class="text-[10px] font-bold text-secondary font-mono uppercase">VENDORS</span>
+                            <span class="text-sm font-bold text-primary tracking-tighter">{{ stats.total_vendors }}</span>
                         </div>
-                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">PRODUCTS</span>
-                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.total_products }}</span>
+                        <div class="flex items-center justify-between bg-deep/50 p-2 rounded-lg border border-panel-border/50">
+                            <span class="text-[10px] font-bold text-secondary font-mono uppercase">PRODUCTS</span>
+                            <span class="text-sm font-bold text-primary tracking-tighter">{{ stats.total_products }}</span>
                         </div>
                     </div>
                 </div>
             </div>
             
             <!-- Operations Summary -->
-            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+            <div class="group relative bg-panel/40 border border-panel-border/80 rounded-2xl p-6 hover:border-sky-500/40 transition-all duration-500 overflow-hidden shadow-xl">
                  <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-sky-500/5 blur-3xl rounded-full group-hover:bg-sky-500/10 transition-colors"></div>
                  <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-sky-500/30 transition-colors">
-                            <i class="pi pi-briefcase text-zinc-500 group-hover:text-amber-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-deep flex items-center justify-center border border-panel-border group-hover:border-sky-500/30 transition-colors">
+                            <i class="pi pi-briefcase text-secondary group-hover:text-amber-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Operations</span>
+                        <span class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase">Operations</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">Pending Workflow</div>
+                    <div class="text-secondary text-[10px] font-bold uppercase tracking-wider mb-2 font-mono">Pending Workflow</div>
                     <div class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 hover:border-amber-500/30 transition-colors cursor-pointer" @click="$inertia.visit('/purchase-orders')">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">PURCHASE ORDERS</span>
-                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.pending_po_count }}</span>
+                        <div class="flex items-center justify-between bg-deep/50 p-2 rounded-lg border border-panel-border/50 hover:border-amber-500/30 transition-colors cursor-pointer" @click="$inertia.visit('/purchase-orders')">
+                            <span class="text-[10px] font-bold text-secondary font-mono uppercase">PURCHASE ORDERS</span>
+                            <span class="text-sm font-bold text-primary tracking-tighter">{{ stats.pending_po_count }}</span>
                         </div>
-                        <div class="flex items-center justify-between bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50 hover:border-amber-500/30 transition-colors cursor-pointer">
-                            <span class="text-[10px] font-bold text-zinc-500 font-mono uppercase">SALES ORDERS</span>
-                            <span class="text-sm font-bold text-white tracking-tighter">{{ stats.pending_so_count }}</span>
+                        <div class="flex items-center justify-between bg-deep/50 p-2 rounded-lg border border-panel-border/50 hover:border-amber-500/30 transition-colors cursor-pointer">
+                            <span class="text-[10px] font-bold text-secondary font-mono uppercase">SALES ORDERS</span>
+                            <span class="text-sm font-bold text-primary tracking-tighter">{{ stats.pending_so_count }}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Today's Activity -->
-            <div class="group relative bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-xl">
+            <div class="group relative bg-panel/40 border border-panel-border/80 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-xl">
                 <div class="absolute -right-10 -bottom-10 w-24 h-24 bg-emerald-500/5 blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-colors"></div>
                 <div class="relative z-10">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="w-10 h-10 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-800 group-hover:border-emerald-500/30 transition-colors">
-                            <i class="pi pi-calendar-clock text-zinc-500 group-hover:text-emerald-400 text-sm transition-colors"></i>
+                        <div class="w-10 h-10 rounded-xl bg-deep flex items-center justify-center border border-panel-border group-hover:border-emerald-500/30 transition-colors">
+                            <i class="pi pi-calendar-clock text-secondary group-hover:text-emerald-400 text-sm transition-colors"></i>
                         </div>
-                        <span class="text-[8px] font-bold text-zinc-600 font-mono tracking-widest uppercase">Today</span>
+                        <span class="text-[8px] font-bold text-muted font-mono tracking-widest uppercase">Today</span>
                     </div>
-                    <div class="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Transactions Today</div>
-                    <div class="text-3xl font-bold font-mono tracking-tighter" :class="stats.transactions_today > 0 ? 'text-emerald-400' : 'text-zinc-600'">
+                    <div class="text-secondary text-[10px] font-bold uppercase tracking-wider mb-1 font-mono">Transactions Today</div>
+                    <div class="text-3xl font-bold font-mono tracking-tighter" :class="stats.transactions_today > 0 ? 'text-emerald-400' : 'text-muted'">
                         {{ stats.transactions_today }}
                     </div>
-                    <div class="text-zinc-600 text-[11px] mt-4 font-medium leading-relaxed">Stock movements posted today.</div>
+                    <div class="text-muted text-[11px] mt-4 font-medium leading-relaxed">Stock movements posted today.</div>
                 </div>
             </div>
         </div>
 
         <!-- Dynamic Activity Feed Section -->
         <div class="grid grid-cols-12 gap-8">
-            <div class="col-span-12 lg:col-span-8 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8 shadow-xl relative overflow-hidden group">
+            <div class="col-span-12 lg:col-span-8 bg-panel/40 border border-panel-border/80 rounded-2xl p-8 shadow-xl relative overflow-hidden group">
                  <div class="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 blur-[100px] -mr-32 -mt-32 rounded-full opacity-50"></div>
                  
                  <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-8 pb-6 border-b border-zinc-800/60">
+                    <div class="flex items-center justify-between mb-8 pb-6 border-b border-panel-border/60">
                         <div class="flex flex-col">
-                            <span class="text-[9px] font-bold text-zinc-500 font-mono tracking-widest uppercase mb-1">Live Activity</span>
-                            <h3 class="text-white font-bold text-xl tracking-tight">Recent Activity Log</h3>
+                            <span class="text-[9px] font-bold text-secondary font-mono tracking-widest uppercase mb-1">Live Activity</span>
+                            <h3 class="text-primary font-bold text-xl tracking-tight">Recent Activity Log</h3>
                         </div>
-                        <i class="pi pi-history text-zinc-700 text-xl"></i>
+                        <i class="pi pi-history text-muted text-xl"></i>
                     </div>
 
                     <div v-if="recentTransactions.length > 0" class="flex flex-col gap-2">
                         <div v-for="t in recentTransactions" :key="t.id" 
-                             class="flex justify-between items-center bg-zinc-950/30 p-4 border border-zinc-800/50 rounded-xl hover:bg-zinc-800/20 transition-all group/item">
+                             class="flex justify-between items-center bg-deep/30 p-4 border border-panel-border/50 rounded-xl hover:bg-panel-hover/20 transition-all group/item">
                             <div class="flex items-center gap-4">
-                                <span class="bg-zinc-900 px-3 py-1 rounded text-[9px] font-bold text-zinc-400 border border-zinc-800 group-hover/item:text-sky-400 transition-colors uppercase font-mono">{{ t.type_name }}</span>
+                                <span class="bg-panel px-3 py-1 rounded text-[9px] font-bold text-secondary border border-panel-border group-hover/item:text-sky-400 transition-colors uppercase font-mono">{{ t.type_name }}</span>
                                 <div class="flex flex-col">
-                                    <span class="text-sm font-bold text-zinc-200 group-hover/item:text-white transition-colors">{{ t.product_name }}</span>
-                                    <span class="text-[9px] text-zinc-600 font-mono uppercase tracking-widest">{{ t.transaction.reference_number }} • {{ t.transaction.transaction_date }}</span>
+                                    <span class="text-sm font-bold text-primary group-hover/item:text-primary transition-colors">{{ t.product_name }}</span>
+                                    <span class="text-[9px] text-muted font-mono uppercase tracking-widest">{{ t.transaction.reference_number }} • {{ t.transaction.transaction_date }}</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-8">
                                 <div class="flex flex-col items-end">
-                                    <span class="text-[10px] font-bold text-zinc-500 uppercase font-mono tracking-widest">Quantity</span>
+                                    <span class="text-[10px] font-bold text-secondary uppercase font-mono tracking-widest">Quantity</span>
                                     <span class="text-sm font-bold text-sky-400">{{ t.formatted_quantity }}</span>
                                 </div>
-                                <div class="w-8 h-8 rounded-full border border-zinc-800 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
-                                    <i class="pi pi-arrow-right text-[10px] text-zinc-500"></i>
+                                <div class="w-8 h-8 rounded-full border border-panel-border flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
+                                    <i class="pi pi-arrow-right text-[10px] text-secondary"></i>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div v-else class="py-12 flex flex-col items-center justify-center border border-dashed border-zinc-800/50 rounded-2xl bg-zinc-950/20">
+                    <div v-else class="py-12 flex flex-col items-center justify-center border border-dashed border-panel-border/50 rounded-2xl bg-deep/20">
                         <i class="pi pi-inbox text-zinc-800 text-3xl mb-4"></i>
-                        <span class="text-zinc-600 font-mono text-[10px] uppercase tracking-[0.3em]">No recent activity found</span>
+                        <span class="text-muted font-mono text-[10px] uppercase tracking-[0.3em]">No recent activity found</span>
                     </div>
                  </div>
             </div>
 
             <!-- Side Intelligence Panel: Low Stock Alerts -->
             <div class="col-span-12 lg:col-span-4 flex flex-col gap-8">
-                 <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex-1 shadow-xl">
-                      <div class="flex items-center justify-between mb-6 pb-4 border-b border-zinc-800/50">
-                          <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Critical Low Stock Alerts</span>
+                 <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 flex-1 shadow-xl">
+                      <div class="flex items-center justify-between mb-6 pb-4 border-b border-panel-border/50">
+                          <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Critical Low Stock Alerts</span>
                           <span class="bg-red-500/10 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded border border-red-500/20 font-mono">{{ lowStockItems.length }} ITEMS</span>
                       </div>
                       <div class="space-y-4" v-if="lowStockItems.length > 0">
-                           <div v-for="item in lowStockItems" :key="item.id" class="flex flex-col gap-2 p-4 bg-zinc-950/50 rounded-xl border border-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer" @click="$inertia.visit('/inventory-center?product_id=' + item.id)">
+                           <div v-for="item in lowStockItems" :key="item.id" class="flex flex-col gap-2 p-4 bg-deep/50 rounded-xl border border-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer" @click="$inertia.visit('/inventory-center?product_id=' + item.id)">
                                 <div class="flex justify-between items-start">
                                      <div class="flex flex-col">
-                                         <span class="text-xs font-bold text-white tracking-tight line-clamp-1">{{ item.name }}</span>
-                                         <span class="text-[9px] font-bold text-zinc-600 font-mono tracking-widest uppercase mt-1">Shortage: {{ item.formatted_shortage }}</span>
+                                         <span class="text-xs font-bold text-primary tracking-tight line-clamp-1">{{ item.name }}</span>
+                                         <span class="text-[9px] font-bold text-muted font-mono tracking-widest uppercase mt-1">Shortage: {{ item.formatted_shortage }}</span>
                                      </div>
                                      <div class="flex flex-col items-end">
                                          <span class="text-[10px] font-bold text-red-400 font-mono tracking-tighter">{{ item.formatted_quantity_on_hand }} / {{ item.reorder_point }}</span>
                                      </div>
                                 </div>
-                                <div class="w-full bg-zinc-800 rounded-full h-1 mt-1 overflow-hidden">
+                                <div class="w-full bg-panel-hover rounded-full h-1 mt-1 overflow-hidden">
                                      <div class="bg-red-500 h-full rounded-full" :style="{ width: Math.max(5, (Number(item.quantity_on_hand) / Number(item.reorder_point)) * 100) + '%' }"></div>
                                 </div>
                            </div>
@@ -295,3 +295,5 @@ onMounted(loadDashboard);
 <style scoped>
 /* Scoped styles migrated to Tailwind Utility Classes */
 </style>
+
+

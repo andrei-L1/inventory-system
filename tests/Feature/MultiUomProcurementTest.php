@@ -114,9 +114,10 @@ class MultiUomProcurementTest extends TestCase
         $inventory->refresh();
         $this->assertEquals(10.0, (float) $inventory->quantity_on_hand);
 
-        // 9. Verify PO Line Received Qty (should reflect original UOM unit: 2 received - 1 returned = 1 box)
+        // 9. Verify PO Line Received Qty (Strategy B: Counter reversed for replacement)
         $poLine = PurchaseOrderLine::find($poLineId);
-        $this->assertEquals(1.0, (float) $poLine->received_qty);
+        $this->assertEquals(1.0, (float) $poLine->received_qty, 'Received Qty should decrease to 1 box');
+        $this->assertEquals(1.0, (float) $poLine->net_received_qty, 'Net Received should match the counter');
     }
 
     public function test_purchase_order_with_inverse_uom_conversion(): void

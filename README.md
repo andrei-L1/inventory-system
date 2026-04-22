@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"/>
   </a>
   <img src="https://img.shields.io/badge/Tests-43%20passing-brightgreen" alt="Tests"/>
-  <img src="https://img.shields.io/badge/phase-5%20of%2010-blue" alt="Phase"/>
+  <img src="https://img.shields.io/badge/phase-5.7%20of%2010-blue" alt="Phase"/>
 </p>
 
 ---
@@ -67,7 +67,8 @@ npm run dev             # Frontend → http://localhost:5173
 | 2 | Warehouse Operations (Stock Movements, Intelligence Grid) | ✅ Complete |
 | 3 | Dashboard & KPIs | ✅ Complete |
 | 4 | Procurement (Purchase Orders, GRN, Returns, Replenishment) | ✅ Complete |
-| 5 | Sales Orders | 🚧 ~30% |
+| 5 | Sales Orders (Mission Control Fulfill, CRM, Returns) | ✅ Complete |
+| 5.5 | Finance (Invoicing, Payments, Atomic A/R & A/P) | ✅ Complete |
 | 6 | Logistics & Serial Tracking | ⬜ Not started |
 | 7 | Pricing & Discounts | ⬜ Not started |
 | 8 | Reporting & Financial Analysis | ⬜ Not started |
@@ -82,6 +83,8 @@ npm run dev             # Frontend → http://localhost:5173
 - **Layered Costing Engine** — Physical `inventory_cost_layers` rows are created on every receipt and consumed on every issue. FIFO, LIFO, and Weighted Average all consume layers for perfect ledger↔valuation synchronisation.
 - **Multi-Layer Pessimistic Locking** — Seven distinct `lockForUpdate()` targets cover inventory rows, cost layers, transaction headers, PO headers, and PO lines. Race conditions are structurally impossible within the service layer.
 - **Draft / Posted Enforcement** — Inventory is only touched when a transaction transitions to `posted`. Drafts are full records that leave stock untouched until approved.
+- **Contextual Atomic Billing** — Bridges the gap between logistical bulk (Boxes) and financial pieces. Standardizes the General Ledger to the absolute base unit while preserving audit context for accountants.
+- **Three-Way Match Engine** — Biology-inspired validation that strictly links every Vendor Bill to a verified physical Warehouse Receipt (GRN) and its parent PO.
 
 ---
 

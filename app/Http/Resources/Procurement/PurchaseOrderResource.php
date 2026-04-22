@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Procurement;
 
 use App\Helpers\FinancialMath;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -39,11 +40,35 @@ class PurchaseOrderResource extends JsonResource
                     'received_at' => $t->created_at->format('Y-m-d H:i'),
                     'to_location' => $t->toLocation->name ?? $t->lines->first()?->location?->name ?? 'Mixed/Unknown',
                     'lines' => $t->lines->map(fn ($l) => [
+                        'transaction_line_id' => $l->id,
+                        'po_line_id' => $this->lines->firstWhere('product_id', $l->product_id)?->id,
                         'sku' => $l->product->sku ?? 'N/A',
                         'product_name' => $l->product->name ?? 'Unknown',
                         'quantity' => (string) $l->quantity,
+                        'billed_qty' => (string) $l->billed_qty,
+                        'billable_qty' => (string) ($this->lines->firstWhere('product_id', $l->product_id)?->billable_qty ?? '0'),
                         'formatted_quantity' => $l->formatted_quantity,
+                        'uom_id' => $l->uom_id ?? $l->product->uom_id,
+                        'product_id' => $l->product_id,
                         'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
+                        'base_uom' => (function () use ($l) {
+                            $category = $l->product?->uom?->category;
+                            if (! $category) {
+                                return null;
+                            }
+                            $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                            if (! $baseUom) {
+                                return null;
+                            }
+
+                            return [
+                                'id' => $baseUom->id,
+                                'abbreviation' => $baseUom->abbreviation,
+                                'name' => $baseUom->name,
+                                'category' => $baseUom->category,
+                                'decimals' => $baseUom->decimals,
+                            ];
+                        })(),
                     ]),
                 ]);
             }),
@@ -70,6 +95,24 @@ class PurchaseOrderResource extends JsonResource
                             'quantity' => str_replace('-', '', (string) $l->quantity),
                             'formatted_quantity' => $l->formatted_quantity,
                             'uom_abbreviation' => $l->uom->abbreviation ?? $l->product->uom->abbreviation ?? 'PCS',
+                            'base_uom' => (function () use ($l) {
+                                $category = $l->product?->uom?->category;
+                                if (! $category) {
+                                    return null;
+                                }
+                                $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                                if (! $baseUom) {
+                                    return null;
+                                }
+
+                                return [
+                                    'id' => $baseUom->id,
+                                    'abbreviation' => $baseUom->abbreviation,
+                                    'name' => $baseUom->name,
+                                    'category' => $baseUom->category,
+                                    'decimals' => $baseUom->decimals,
+                                ];
+                            })(),
                             'notes' => $notes,
                         ];
                     }),

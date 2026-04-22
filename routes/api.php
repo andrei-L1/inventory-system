@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Finance\BillController;
 use App\Http\Controllers\Api\Finance\CustomerStatementController;
 use App\Http\Controllers\Api\Finance\InvoiceController;
 use App\Http\Controllers\Api\Finance\PaymentController;
+use App\Http\Controllers\Api\Finance\VendorPaymentController;
+use App\Http\Controllers\Api\Finance\VendorStatementController;
 use App\Http\Controllers\Api\Inventory\AdjustmentController;
 use App\Http\Controllers\Api\Inventory\AdjustmentReasonController;
 use App\Http\Controllers\Api\Inventory\CategoryController;
@@ -149,6 +152,22 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('payments/{payment}/allocate', [PaymentController::class, 'allocate'])->middleware('permission:manage-sales-orders');
     Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->middleware('permission:manage-sales-orders');
     Route::delete('payments/{payment}/unallocate/{allocation}', [PaymentController::class, 'unallocate'])->middleware('permission:manage-sales-orders');
+    Route::patch('payments/{payment}/void', [PaymentController::class, 'void'])->middleware('permission:manage-sales-orders');
+
+    // -----------------------------------------------------------------------
+    // Accounts Payable (A/P) - Phase 5.7
+    // -----------------------------------------------------------------------
+    Route::apiResource('bills', BillController::class)->only(['index', 'show', 'destroy', 'store'])->middleware('permission:view-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/bill', [BillController::class, 'storeFromPurchaseOrder'])->middleware('permission:manage-purchase-orders');
+    Route::patch('bills/{bill}/post', [BillController::class, 'post'])->middleware('permission:manage-purchase-orders');
+    Route::patch('bills/{bill}/void', [BillController::class, 'void'])->middleware('permission:manage-purchase-orders');
+
+    Route::apiResource('vendor-payments', VendorPaymentController::class)->only(['index', 'show', 'store', 'destroy'])->parameters(['vendor-payments' => 'payment'])->middleware('permission:view-purchase-orders');
+    Route::post('vendor-payments/{payment}/allocate', [VendorPaymentController::class, 'allocate'])->middleware('permission:manage-purchase-orders');
+    Route::post('vendor-payments/{payment}/refund', [VendorPaymentController::class, 'refund'])->middleware('permission:manage-purchase-orders');
+    Route::delete('vendor-payments/{payment}/unallocate/{allocation}', [VendorPaymentController::class, 'unallocate'])->middleware('permission:manage-purchase-orders');
+    Route::patch('vendor-payments/{payment}/void', [VendorPaymentController::class, 'void'])->middleware('permission:manage-purchase-orders');
+    Route::get('vendors/{vendor}/statement', [VendorStatementController::class, 'show'])->middleware('permission:view-purchase-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

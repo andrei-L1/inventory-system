@@ -54,15 +54,25 @@ The system is a production-ready ERP-grade inventory management solution built w
 - **Packaging**: Support for multi-package shipments with weights and dimensions.
 - **Audit Logs**: Full traceability of all data changes and system activities via `audit_logs` and `activity_logs`.
 
+| [`INVENTORY_ARCHITECTURE.md`](./INVENTORY_ARCHITECTURE.md) | Deep-dive: locking, costing engine, and **Three-Way Match** |
+| [`TECHNICAL_INVENTORY_MATH_SPEC.md`](./TECHNICAL_INVENTORY_MATH_SPEC.md) | Rationale for **8-Decimal BCMath** and **Atomic Scaling** |
+| [`FINANCE_CENTER_GUIDE.md`](./finance_center_guide.md) | Operational guide for Invoicing, Bills, and Disbursements |
+
+### E. The Finance Hub (A/R & A/P)
+- **Settlement Center**: Integrated module for managing Customer Invoices (Receivables) and Vendor Bills (Payables).
+- **Three-Way Match**: Mandatory verification cycle linking Purchase Orders to Warehouse Receipts and final Bills.
+- **Contextual Atomic Billing**: Proprietary logic that bridges logistical bulk units (Boxes) to financial base units (Pieces) to eliminate rounding drift in the General Ledger.
+
 ## 5. Database Schema (Summary)
-The database contains **48 tables**, highly normalized and strictly constrained with foreign keys to ensure data integrity.
+The database contains **50+ tables**, highly normalized and strictly constrained with foreign keys to ensure data integrity.
 
 - **Master Data**: `products`, `categories`, `users`, `roles`, `customers`, `vendors`.
 - **Reference Data**: `location_types`, `transaction_types`, `transaction_statuses`, `sales_order_statuses`, `purchase_order_statuses`.
-- **Operational Data**: `transactions`, `sales_orders`, `purchase_orders`, `shipments`.
+- **Financial Operational Data**: `bills`, `vendor_payments`, `invoices`, `payments`, `bill_allocations`.
+- **Logistical Operational Data**: `transactions`, `sales_orders`, `purchase_orders`, `shipments`.
 
 ## 6. Git Workflow
 The standardization and ERP enhancements are contained within the `feat/inventory-standardization` branch, following a clean feature-branch development model.
 
 ---
-*Last Updated: 2026-04-03*
+*Last Updated: 2026-04-13. Covers Contextual Atomic Billing and Finance Center integration.*

@@ -33,6 +33,7 @@ class SalesOrder extends Model
         'sent_at',
         'shipped_at',
         'delivered_at',
+        'billing_status',
     ];
 
     /**
@@ -186,15 +187,22 @@ class SalesOrder extends Model
         $totalPicked = '0';
 
         foreach ($lines as $l) {
-            $totalOrdered = FinancialMath::add($totalOrdered, (string) $l->ordered_qty);
-            $totalShipped = FinancialMath::add($totalShipped, (string) $l->shipped_qty);
-            $totalPacked = FinancialMath::add($totalPacked, (string) $l->packed_qty);
-            $totalPicked = FinancialMath::add($totalPicked, (string) $l->picked_qty);
+            // [CUMULATIVE LEDGER]: We now compare fulfillment against the NET REQUIREMENT
+            // (Original Ordered - Credits).
+            $totalOrdered = FinancialMath::add($totalOrdered, $l->requirement_qty);
+            $totalShipped = FinancialMath::add($totalShipped, $l->net_shipped_qty);
+
+            // For packed/picked, we also cap them by the current requirement to prevent
+            // "Phantom" progress if the customer cancelled part of the order.
+            $totalPacked = FinancialMath::add($totalPacked, FinancialMath::min($l->requirement_qty, (string) $l->packed_qty));
+            $totalPicked = FinancialMath::add($totalPicked, FinancialMath::min($l->requirement_qty, (string) $l->picked_qty));
         }
 
         // Walk the fulfillment hierarchy top-down.
-        // FinancialMath::gte/gt use cmp() at scale=0 — no epsilon needed.
-        if (FinancialMath::gte($totalShipped, $totalOrdered)) {
+        if (FinancialMath::isZero($totalOrdered)) {
+            // If everything was cancelled, the order is CLOSED/DONE.
+            $statusName = SalesOrderStatus::SHIPPED;
+        } elseif (FinancialMath::gte($totalShipped, $totalOrdered)) {
             $statusName = SalesOrderStatus::SHIPPED;
         } elseif (FinancialMath::isPositive($totalShipped)) {
             $statusName = SalesOrderStatus::PARTIALLY_SHIPPED;
@@ -249,9 +257,9 @@ class SalesOrder extends Model
 
     /**
      * Determine the overall billing status of the SO based on Shipped vs Invoiced quantities.
-     * Returns: NONE, PARTIAL, or FULL.
+     * Logic: Persists formal indexed status (UNBILLED, PARTIALLY_BILLED, BILLED) to DB.
      */
-    public function getInvoiceStatusAttribute(): string
+    public function syncBillingStatus(): void
     {
         $this->loadMissing('lines');
 
@@ -263,15 +271,13 @@ class SalesOrder extends Model
             $totalInvoiced = FinancialMath::add($totalInvoiced, $line->invoiced_qty);
         }
 
-        if (FinancialMath::isZero($totalInvoiced)) {
-            return 'NONE';
+        if (FinancialMath::isPositive($totalInvoiced)) {
+            $status = FinancialMath::gte($totalInvoiced, $totalShipped) ? 'BILLED' : 'PARTIALLY_BILLED';
+        } else {
+            $status = 'UNBILLED';
         }
 
-        if (FinancialMath::gte($totalInvoiced, $totalShipped)) {
-            return 'FULL';
-        }
-
-        return 'PARTIAL';
+        $this->update(['billing_status' => $status]);
     }
 
     /**

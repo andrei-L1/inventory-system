@@ -192,10 +192,13 @@ class UomHelper
         // Contextual Counting layer uses the Product-aware conversions table
         $query = self::$conversions->where('from_uom_id', $fromUomId);
 
+        // Step 1: product-specific rule (highest priority)
         $bestConv = null;
         if ($productId) {
             $bestConv = $query->where('product_id', $productId)->first();
         }
+
+        // Step 2: global rule (null product_id)
         if (! $bestConv) {
             $bestConv = $query->whereNull('product_id')->first();
         }
@@ -204,12 +207,24 @@ class UomHelper
             return (string) $bestConv->conversion_factor;
         }
 
+        // Step 3: UOM's own conversion_factor_to_base as a global default.
+        // Triple-validated: must be not null, numeric, AND strictly > 0.
+        // FinancialMath::gt handles "0.000" correctly — it returns false for any zero variant.
+        if (
+            $uom->conversion_factor_to_base !== null &&
+            is_numeric($uom->conversion_factor_to_base) &&
+            FinancialMath::gt((string) $uom->conversion_factor_to_base, '0')
+        ) {
+            return (string) $uom->conversion_factor_to_base;
+        }
+
+        // Step 4: give up gracefully or throw
         if (! $throw) {
             return '1';
         }
 
         throw ValidationException::withMessages([
-            'uom_id' => 'Missing conversion rule for this unit ('.$uom->abbreviation.'). Please define its packaging size.',
+            'uom_id' => 'Missing conversion rule for this unit ('.$uom->abbreviation.'). Please define its packaging size or set a global multiplier on the unit.',
         ]);
     }
 

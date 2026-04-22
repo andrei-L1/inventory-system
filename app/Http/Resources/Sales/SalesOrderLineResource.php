@@ -4,6 +4,7 @@ namespace App\Http\Resources\Sales;
 
 use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class SalesOrderLineResource extends JsonResource
@@ -33,9 +34,28 @@ class SalesOrderLineResource extends JsonResource
                 'name' => $this->uom->name,
                 'abbreviation' => $this->uom->abbreviation,
             ],
+            'base_uom' => (function () {
+                $category = $this->product?->uom?->category;
+                if (! $category) {
+                    return null;
+                }
+                $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                if (! $baseUom) {
+                    return null;
+                }
+
+                return [
+                    'id' => $baseUom->id,
+                    'abbreviation' => $baseUom->abbreviation,
+                    'name' => $baseUom->name,
+                    'category' => $baseUom->category,
+                    'decimals' => $baseUom->decimals,
+                ];
+            })(),
             'ordered_qty' => (string) $this->ordered_qty,
             'formatted_ordered_qty' => $this->formatted_ordered_qty,
             'shipped_qty' => (string) $this->shipped_qty,
+            'net_shipped_qty' => (string) $this->net_shipped_qty,
             'formatted_shipped_qty' => $this->formatted_shipped_qty,
             'uninvoiced_qty' => (string) $this->uninvoiced_qty,
             'picked_qty' => (string) $this->picked_qty,

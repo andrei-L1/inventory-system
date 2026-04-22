@@ -120,7 +120,7 @@ const formatReason = (reason) => {
     <AppLayout>
         <div class="flex flex-col gap-6 h-full">
             <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800/80 shadow-xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-panel/40 p-6 rounded-2xl border border-panel-border/80 shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 blur-[100px] pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 z-10">
@@ -128,8 +128,8 @@ const formatReason = (reason) => {
                         <i class="pi pi-shopping-bag text-xl text-orange-400"></i>
                     </div>
                     <div>
-                        <h1 class="text-white text-xl font-bold tracking-tight mb-1">Procurement</h1>
-                        <p class="text-zinc-500 text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
+                        <h1 class="text-primary text-xl font-bold tracking-tight mb-1">Procurement</h1>
+                        <p class="text-secondary text-[10px] font-bold tracking-[0.2em] uppercase font-mono">
                             {{ activeTab === 'orders' ? 'Purchase Order Ledger' : 'Replenishment Suggestions' }}
                         </p>
                     </div>
@@ -159,12 +159,12 @@ const formatReason = (reason) => {
 
                     <template v-if="activeTab === 'orders'">
                         <div class="relative w-full md:w-auto">
-                            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+                            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"></i>
                             <InputText 
                                 v-model="search" 
                                 @input="loadPurchaseOrders"
                                 placeholder="Search orders..." 
-                                class="!w-full md:!w-72 !pl-11 !pr-4 !bg-zinc-950 !border-zinc-800 !text-sm !text-zinc-300 focus:!border-orange-500/50 !h-11 !rounded-xl transition-all"
+                                class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-zinc-300 focus:!border-orange-500/50 !h-11 !rounded-xl transition-all"
                             />
                         </div>
                         <Link href="/purchase-orders/create" class="no-underline pb-1">
@@ -183,7 +183,7 @@ const formatReason = (reason) => {
                             label="Run Reorder Audit" 
                             :loading="auditLoading"
                             @click="runAudit"
-                            class="p-button-sm p-button-text !text-zinc-400 hover:!text-white font-bold tracking-widest uppercase text-[10px]"
+                            class="p-button-sm p-button-text !text-secondary hover:!text-primary font-bold tracking-widest uppercase text-[10px]"
                         />
                         <Button 
                             v-if="selectedSuggestions.length > 0 && can('manage-purchase-orders')"
@@ -198,7 +198,7 @@ const formatReason = (reason) => {
             </div>
 
             <!-- Content -->
-            <div class="flex-1 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl flex flex-col overflow-hidden shadow-xl">
+            <div class="flex-1 bg-panel/40 border border-panel-border/80 rounded-2xl flex flex-col overflow-hidden shadow-xl">
                 <!-- Tab: Purchase Orders -->
                 <DataTable 
                     v-if="activeTab === 'orders'"
@@ -213,8 +213,8 @@ const formatReason = (reason) => {
                 >
                     <template #empty>
                         <div class="flex flex-col items-center justify-center p-12 opacity-50">
-                            <i class="pi pi-inbox text-4xl text-zinc-600 mb-4"></i>
-                            <span class="text-xs font-bold text-zinc-500 uppercase tracking-widest font-mono">No purchase orders found.</span>
+                            <i class="pi pi-inbox text-4xl text-muted mb-4"></i>
+                            <span class="text-xs font-bold text-secondary uppercase tracking-widest font-mono">No purchase orders found.</span>
                         </div>
                     </template>
 
@@ -226,13 +226,13 @@ const formatReason = (reason) => {
 
                     <Column field="vendor_name" header="VENDOR">
                         <template #body="{ data }">
-                            <span @click.stop="router.visit(`/vendor-center?vendor_id=${data.vendor_id}`)" class="text-white font-bold text-xs hover:text-sky-400 cursor-pointer transition-colors">{{ data.vendor_name }}</span>
+                            <span @click.stop="router.visit(`/vendor-center?vendor_id=${data.vendor_id}`)" class="text-primary font-bold text-xs hover:text-sky-400 cursor-pointer transition-colors">{{ data.vendor_name }}</span>
                         </template>
                     </Column>
 
                     <Column field="order_date" header="DOCUMENT DATE">
                         <template #body="{ data }">
-                            <span class="text-zinc-400 text-xs font-mono">{{ data.order_date }}</span>
+                            <span class="text-secondary text-xs font-mono">{{ data.order_date }}</span>
                         </template>
                     </Column>
 
@@ -256,7 +256,7 @@ const formatReason = (reason) => {
                         <template #body="{ data }">
                             <Button 
                                 icon="pi pi-chevron-right" 
-                                class="p-button-text p-button-rounded p-button-sm !text-zinc-500 hover:!text-orange-400 transition-colors"
+                                class="p-button-text p-button-rounded p-button-sm !text-secondary hover:!text-orange-400 transition-colors"
                                 @click.stop="router.visit(`/purchase-orders/${data.id}`)"
                             />
                         </template>
@@ -276,8 +276,8 @@ const formatReason = (reason) => {
                 >
                     <template #empty>
                         <div class="flex flex-col items-center justify-center p-12 opacity-50">
-                            <i class="pi pi-sparkles text-4xl text-zinc-600 mb-4"></i>
-                            <span class="text-xs font-bold text-zinc-500 uppercase tracking-widest font-mono">No replenishment suggestions pending.</span>
+                            <i class="pi pi-sparkles text-4xl text-muted mb-4"></i>
+                            <span class="text-xs font-bold text-secondary uppercase tracking-widest font-mono">No replenishment suggestions pending.</span>
                         </div>
                     </template>
 
@@ -286,8 +286,8 @@ const formatReason = (reason) => {
                     <Column field="product.name" header="PRODUCT">
                         <template #body="{ data }">
                             <div class="flex flex-col gap-0.5">
-                                <span class="text-white font-bold text-xs">{{ data.product?.name }}</span>
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">{{ data.product?.sku }}</span>
+                                <span class="text-primary font-bold text-xs">{{ data.product?.name }}</span>
+                                <span class="text-[9px] font-mono text-secondary uppercase tracking-tighter">{{ data.product?.sku }}</span>
                             </div>
                         </template>
                     </Column>
@@ -295,13 +295,13 @@ const formatReason = (reason) => {
                     <Column field="product.preferredVendor.name" header="PREFERRED VENDOR">
                         <template #body="{ data }">
                             <span v-if="data.product?.preferredVendor" class="text-sky-400 font-bold text-xs">{{ data.product.preferredVendor.name }}</span>
-                            <span v-else class="text-zinc-700 italic text-[10px]">No vendor assigned</span>
+                            <span v-else class="text-muted italic text-[10px]">No vendor assigned</span>
                         </template>
                     </Column>
 
                     <Column field="current_stock" header="CURRENT STOCK">
                         <template #body="{ data }">
-                            <span class="text-zinc-400 text-xs font-mono">{{ formatQuantity(data.current_stock) }} {{ data.product?.uom?.name }}</span>
+                            <span class="text-secondary text-xs font-mono">{{ formatQuantity(data.current_stock) }} {{ data.product?.uom?.name }}</span>
                         </template>
                     </Column>
 
@@ -313,7 +313,7 @@ const formatReason = (reason) => {
 
                     <Column field="reason" header="REASON">
                         <template #body="{ data }">
-                            <span class="text-[10px] text-zinc-500 font-medium italic">{{ formatReason(data.reason) }}</span>
+                            <span class="text-[10px] text-secondary font-medium italic">{{ formatReason(data.reason) }}</span>
                         </template>
                     </Column>
                 </DataTable>
@@ -448,3 +448,5 @@ const formatReason = (reason) => {
     border: 1px solid rgba(139, 92, 246, 0.2);
 }
 </style>
+
+

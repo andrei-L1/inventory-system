@@ -3,21 +3,21 @@
         <Head title="Inventory Receipt" />
         <Toast />
         
-        <div class="p-8 bg-zinc-950 min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+        <div class="p-8 bg-deep min-h-[calc(100vh-64px)] overflow-hidden flex flex-col">
             <div class="max-w-[1600px] w-full mx-auto mb-10 flex justify-between items-end">
                 <div class="flex flex-col">
                     <span class="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] block mb-2 font-mono">New Stock Entry</span>
-                    <h1 class="text-3xl font-bold text-white tracking-tight m-0 mb-2">Receive Stock</h1>
-                    <p class="text-zinc-500 text-sm max-w-2xl leading-relaxed">
+                    <h1 class="text-3xl font-bold text-primary tracking-tight m-0 mb-2">Receive Stock</h1>
+                    <p class="text-secondary text-sm max-w-2xl leading-relaxed">
                         Add new stock items into your warehouse. Verify items and quantities against the vendor's documentation.
                     </p>
                 </div>
                 
                 <div class="flex items-center gap-4">
-                    <button @click="router.visit('/inventory-center')" class="!bg-zinc-900 !border-zinc-800 !text-zinc-400 hover:!text-white !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
+                    <button @click="router.visit('/inventory-center')" class="!bg-panel !border-panel-border !text-secondary hover:!text-primary !px-6 !h-12 !font-bold !text-[11px] uppercase tracking-widest transition-all rounded-xl border">
                         CANCEL
                     </button>
-                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-sky-500 !border-none !text-white !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button @click="submitForm" :disabled="isSubmitting" class="!bg-sky-500 !border-none !text-primary !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ isSubmitting ? 'PROCESSING...' : 'RECEIVE ITEMS' }}
                     </button>
                 </div>
@@ -26,27 +26,27 @@
             <div class="max-w-[1600px] w-full mx-auto flex-1 flex flex-col min-h-0">
                 <!-- Summary Bar -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_ITEMS</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ form.lines.length.toString().padStart(2, '0') }}</div>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_ITEMS</span>
+                        <div class="text-2xl font-bold text-primary tracking-tight text-center lg:text-left">{{ form.lines.length.toString().padStart(2, '0') }}</div>
                     </div>
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_PIECES</span>
-                        <div class="text-2xl font-bold text-white tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_PIECES</span>
+                        <div class="text-2xl font-bold text-primary tracking-tight text-center lg:text-left">{{ totalQty.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 8 }) }}</div>
                     </div>
-                    <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
-                        <span class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_VALUE</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl p-6 shadow-xl backdrop-blur-sm">
+                        <span class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono mb-2 block text-center lg:text-left">TOTAL_VALUE</span>
                         <div class="text-2xl font-bold text-emerald-400 tracking-tight text-center lg:text-left">₱ {{ totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}</div>
                     </div>
-                    <div class="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 border-l-4 border-l-sky-500 shadow-xl backdrop-blur-sm">
+                    <div class="bg-panel/30 border border-panel-border/50 rounded-2xl p-6 border-l-4 border-l-sky-500 shadow-xl backdrop-blur-sm">
                         <span class="text-[9px] font-bold text-sky-500/80 uppercase tracking-widest font-mono mb-2 block text-center lg:text-left italic">LOCATION</span>
                         <div class="text-[11px] font-bold text-zinc-300 uppercase truncate text-center lg:text-left tracking-tight">{{ form.to_location?.name || 'NOT_SELECTED' }}</div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-12 gap-8 flex-1 min-h-0">
-                    <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
+                    <aside class="col-span-12 lg:col-span-3 flex flex-col min-h-0 bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                        <div class="p-6 border-b border-panel-border bg-panel/60 flex justify-between items-center">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-sky-500"></div>
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">General Info</span>
@@ -55,60 +55,60 @@
                         
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Supplier <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Supplier <span class="text-muted normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <Select 
                                       v-model="form.vendor" 
                                       :options="vendors" 
                                       optionLabel="name" 
                                       placeholder="Select Vendor" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !text-xs font-mono"
                                  />
                              </div>
                              
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Destination Location</label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Destination Location</label>
                                  <Select 
                                       v-model="form.to_location" 
                                       :options="locations" 
                                       optionLabel="name" 
                                       dataKey="id"
                                       placeholder="Select Location" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !text-xs font-mono"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !text-xs font-mono"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Reference / PO # <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Reference / PO # <span class="text-muted normal-case font-sans tracking-normal">(Optional)</span></label>
                                  <InputText 
                                       v-model="form.reference_number" 
                                       placeholder="Leave blank to auto-generate" 
-                                      class="!w-full !bg-zinc-950 !border-zinc-800 !h-12 !rounded-xl !px-4 !text-xs !font-mono text-white placeholder:!text-zinc-800"
+                                      class="!w-full !bg-deep !border-panel-border !h-12 !rounded-xl !px-4 !text-xs !font-mono text-primary placeholder:!text-zinc-800"
                                  />
                              </div>
 
                              <div class="flex flex-col gap-3">
-                                 <label class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest font-mono">Remarks <span class="text-zinc-700 normal-case font-sans tracking-normal">(Optional)</span></label>
-                                 <textarea v-model="form.notes" placeholder="Optional notes..." class="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 h-32 resize-none outline-none focus:border-sky-500/30 transition-all"></textarea>
+                                 <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Remarks <span class="text-muted normal-case font-sans tracking-normal">(Optional)</span></label>
+                                 <textarea v-model="form.notes" placeholder="Optional notes..." class="bg-deep border border-panel-border rounded-xl p-4 text-xs text-secondary h-32 resize-none outline-none focus:border-sky-500/30 transition-all"></textarea>
                              </div>
                         </div>
 
-                        <div class="p-6 bg-zinc-950/50 border-t border-zinc-800">
+                        <div class="p-6 bg-deep/50 border-t border-panel-border">
                              <div class="flex items-center justify-between">
                                  <div class="flex flex-col">
-                                     <span class="text-white font-bold text-[10px] uppercase tracking-tight">Print Barcodes</span>
+                                     <span class="text-primary font-bold text-[10px] uppercase tracking-tight">Print Barcodes</span>
                                  </div>
                                  <ToggleSwitch v-model="form.print_label" />
                              </div>
                         </div>
                     </aside>
 
-                    <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
-                        <div class="p-6 border-b border-zinc-800 bg-zinc-900/60 flex justify-between items-center">
+                    <main class="col-span-12 lg:col-span-9 flex flex-col min-h-0 bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                        <div class="p-6 border-b border-panel-border bg-panel/60 flex justify-between items-center">
                             <div class="flex items-center gap-3">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
                                 <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Items to Receive</span>
                             </div>
-                            <button @click="addLine" class="px-6 h-10 rounded-xl bg-sky-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-sky-400 transition-all active:scale-95 flex items-center gap-2">
+                            <button @click="addLine" class="px-6 h-10 rounded-xl bg-sky-500 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-sky-400 transition-all active:scale-95 flex items-center gap-2">
                                 <i class="pi pi-plus text-[10px]" />
                                 ADD ITEM
                             </button>
@@ -116,11 +116,11 @@
 
                         <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
                             <div class="flex flex-col gap-3">
-                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-zinc-900/20 border border-zinc-800/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-sky-500/20 hover:bg-zinc-900/40">
+                                <div v-for="(line, index) in form.lines" :key="index" class="p-4 bg-panel/20 border border-panel-border/40 rounded-2xl flex flex-col gap-4 relative group transition-all hover:border-sky-500/20 hover:bg-panel/40">
                                     <div class="grid grid-cols-12 gap-4 items-center">
                                         <!-- Product Selection (Col 4) -->
                                         <div class="col-span-12 lg:col-span-4 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Product</span>
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Product</span>
                                             <Select 
                                                 v-model="line.product" 
                                                 :options="products" 
@@ -128,13 +128,13 @@
                                                 placeholder="Search products..." 
                                                 filter 
                                                 @change="onProductSelect(line)"
-                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-sky-500/30"
+                                                class="!w-full !bg-deep/80 !border-panel-border !h-10 !rounded-xl !text-xs !flex !items-center focus-within:!border-sky-500/30"
                                             />
                                         </div>
 
                                         <!-- Unit Selection (Col 2) -->
                                         <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Unit</span>
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Unit</span>
                                             <Select 
                                                 v-model="line.uom_id" 
                                                 :options="getAvailableUoms(line.product?.id)" 
@@ -143,14 +143,14 @@
                                                 placeholder="Unit" 
                                                 dataKey="id"
                                                 @change="onUomChange(line)"
-                                                class="!w-full !bg-zinc-950/80 !border-zinc-800 !h-10 !rounded-xl !text-[11px] !font-black !flex !items-center focus-within:!border-sky-500/30"
+                                                class="!w-full !bg-deep/80 !border-panel-border !h-10 !rounded-xl !text-[11px] !font-black !flex !items-center focus-within:!border-sky-500/30"
                                             >
                                                 <template #value="slotProps">
                                                     <div v-if="slotProps.value" class="flex items-center gap-2">
                                                         <span class="font-bold text-[11px] uppercase">{{ uoms.find(u => u.id === slotProps.value)?.abbreviation }}</span>
                                                         <span 
                                                             v-if="getConversionDetails(slotProps.value, line.product?.id)" 
-                                                            class="text-[9px] text-zinc-600 font-mono font-bold tracking-widest hidden 2xl:block uppercase"
+                                                            class="text-[9px] text-muted font-mono font-bold tracking-widest hidden 2xl:block uppercase"
                                                         >
                                                             {{ getConversionDetails(slotProps.value, line.product?.id).text }}
                                                         </span>
@@ -170,7 +170,7 @@
                                                         </div>
                                                         <span 
                                                             v-if="getConversionDetails(slotProps.option.id, line.product?.id)" 
-                                                            class="text-[9px] text-zinc-500 font-mono font-bold mt-0.5 tracking-widest"
+                                                            class="text-[9px] text-secondary font-mono font-bold mt-0.5 tracking-widest"
                                                         >
                                                             {{ getConversionDetails(slotProps.option.id, line.product?.id).text }}
                                                         </span>
@@ -181,8 +181,8 @@
 
                                         <!-- Quantity Input (Col 2) -->
                                         <div class="col-span-6 lg:col-span-2 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Quantity</span>
-                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-sky-500/50 transition-all overflow-hidden h-10 group/input">
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Quantity</span>
+                                            <div class="flex items-center bg-deep/80 border border-panel-border rounded-xl focus-within:border-sky-500/50 transition-all overflow-hidden h-10 group/input">
                                                 <InputNumber 
                                                     v-model="line.quantity" 
                                                     class="w-full h-full"
@@ -196,9 +196,9 @@
 
                                         <!-- Unit Cost Input (Col 3) -->
                                         <div class="col-span-12 lg:col-span-3 flex flex-col gap-1">
-                                            <span class="text-[9px] font-black text-zinc-700 tracking-widest uppercase font-mono pl-1">Cost per Unit (₱)</span>
-                                            <div class="flex items-center bg-zinc-950/80 border border-zinc-800 rounded-xl focus-within:border-emerald-500/50 transition-all overflow-hidden h-10 group/input">
-                                                <div class="px-3 text-[10px] text-zinc-600 font-black border-r border-zinc-900 bg-zinc-950 h-full flex items-center">₱</div>
+                                            <span class="text-[9px] font-black text-muted tracking-widest uppercase font-mono pl-1">Cost per Unit (₱)</span>
+                                            <div class="flex items-center bg-deep/80 border border-panel-border rounded-xl focus-within:border-emerald-500/50 transition-all overflow-hidden h-10 group/input">
+                                                <div class="px-3 text-[10px] text-muted font-black border-r border-zinc-900 bg-deep h-full flex items-center">₱</div>
                                                 <InputNumber 
                                                     v-model="line.unit_cost" 
                                                     class="w-full h-full"
@@ -223,35 +223,35 @@
                                     </div>
 
                                     <!-- Context Indicator Bar -->
-                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-zinc-800/40 pt-3 mt-1">
+                                    <div v-if="line.product" class="grid grid-cols-1 container border-t border-panel-border/40 pt-3 mt-1">
                                         <div class="flex items-center gap-6">
                                             <!-- Availability Stat (CLICKABLE) -->
                                             <div 
                                                 @click="(e) => toggleStockInfo(e, line)"
-                                                class="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-sky-500/50 transition-all group/stat"
+                                                class="flex items-center gap-2 px-3 py-1.5 bg-panel border border-panel-border rounded-lg cursor-pointer hover:border-sky-500/50 transition-all group/stat"
                                             >
                                                 <div class="flex flex-col text-left">
-                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">At Target</span>
-                                                    <span class="text-[10px] font-black font-mono text-zinc-200">
+                                                    <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">At Target</span>
+                                                    <span class="text-[10px] font-black font-mono text-primary">
                                                         {{ getScaledQty(line, (line.inventories?.find(i => i.location_id === form.to_location?.id)?.quantity_on_hand || 0)) }}
                                                     </span>
                                                 </div>
-                                                <div class="w-px h-4 bg-zinc-800 mx-1"></div>
+                                                <div class="w-px h-4 bg-panel-hover mx-1"></div>
                                                 <div class="flex flex-col text-left">
-                                                    <span class="text-[7px] font-bold text-zinc-500 uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">Global Pool</span>
-                                                    <span class="text-[10px] font-black text-zinc-400 font-mono">
+                                                    <span class="text-[7px] font-bold text-secondary uppercase tracking-widest font-mono group-hover/stat:text-sky-400 line-clamp-1">Global Pool</span>
+                                                    <span class="text-[10px] font-black text-secondary font-mono">
                                                         {{ getScaledQty(line, line.product.total_qoh) }}
                                                     </span>
                                                 </div>
-                                                <i class="pi pi-chevron-down text-[8px] text-zinc-600 group-hover/stat:text-sky-400"></i>
+                                                <i class="pi pi-chevron-down text-[8px] text-muted group-hover/stat:text-sky-400"></i>
                                             </div>
 
                                             <!-- Financial Result -->
-                                            <div v-if="line.quantity > 0" class="flex-1 flex items-center gap-3 px-4 py-2 bg-zinc-950/40 rounded-lg border border-zinc-800/50">
-                                                <i class="pi pi-calculator text-[10px] text-zinc-700"></i>
+                                            <div v-if="line.quantity > 0" class="flex-1 flex items-center gap-3 px-4 py-2 bg-deep/40 rounded-lg border border-panel-border/50">
+                                                <i class="pi pi-calculator text-[10px] text-muted"></i>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">Line Subtotal:</span>
-                                                    <span class="text-[11px] font-mono font-black text-white">
+                                                    <span class="text-[9px] font-black text-muted uppercase tracking-tighter">Line Subtotal:</span>
+                                                    <span class="text-[11px] font-mono font-black text-primary">
                                                         ₱ {{ ((Number(line.quantity) || 0) * (Number(line.unit_cost) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }}
                                                     </span>
                                                 </div>
@@ -272,11 +272,11 @@
         </div>
 
         <!-- Location Breakdown Popover -->
-        <Popover ref="stockOp" class="!bg-zinc-950 !border-zinc-800 !shadow-2xl !p-0 overflow-hidden">
-            <div v-if="selectedLineForStock" class="w-72 p-4 text-white text-left">
+        <Popover ref="stockOp" class="!bg-deep !border-panel-border !shadow-2xl !p-0 overflow-hidden">
+            <div v-if="selectedLineForStock" class="w-72 p-4 text-primary text-left">
                 <div class="text-[9px] font-black text-sky-400 uppercase tracking-[0.2em] mb-3 border-b border-zinc-900 pb-2 flex justify-between items-center">
                     <span>Stock Availability</span>
-                    <span class="bg-zinc-900 px-2 py-0.5 rounded text-zinc-500">{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
+                    <span class="bg-panel px-2 py-0.5 rounded text-secondary">{{ uoms.find(u => u.id == selectedLineForStock.uom_id)?.abbreviation }}</span>
                 </div>
                 
                 <div class="space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
@@ -286,19 +286,19 @@
                          class="group flex justify-between items-center px-2 py-2 rounded-lg border border-transparent hover:border-sky-500/20 hover:bg-sky-500/5 transition-all cursor-pointer">
                         <div class="flex flex-col">
                             <span class="text-[10px] font-bold uppercase tracking-tight"
-                                  :class="[loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-zinc-400 group-hover:text-zinc-200']">
+                                  :class="[loc.location_id === form.to_location?.id ? 'text-sky-400' : 'text-secondary group-hover:text-primary']">
                                 {{ loc.location_name }}
                             </span>
-                            <span class="text-[7px] font-black text-zinc-700 uppercase" v-if="loc.location_id === form.to_location?.id">Target Warehouse</span>
+                            <span class="text-[7px] font-black text-muted uppercase" v-if="loc.location_id === form.to_location?.id">Target Warehouse</span>
                         </div>
-                        <span class="font-mono text-[10px] font-bold text-zinc-500 group-hover:text-white">
+                        <span class="font-mono text-[10px] font-bold text-secondary group-hover:text-primary">
                             {{ getScaledQty(selectedLineForStock, loc.quantity_on_hand) }}
                         </span>
                     </div>
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-zinc-900 text-center">
-                    <p class="text-[8px] text-zinc-600 font-bold uppercase italic leading-tight">
+                    <p class="text-[8px] text-muted font-bold uppercase italic leading-tight">
                         <i class="pi pi-info-circle text-[7px] mr-1"></i>
                         Click a location to switch target warehouse.
                     </p>
@@ -401,10 +401,11 @@ const getScaledQty = (line, rawPieces) => {
     if (!line.product || rawPieces === undefined || rawPieces === null) return '0';
     const { factor } = getFactorToBase(line.uom_id, line.product?.id);
     const scaled = (Number(rawPieces) / factor);
-    
-    return isUomIdDiscrete(line.uom_id) 
-        ? Math.floor(scaled + 0.0001).toLocaleString() 
-        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+    const uom = uoms.value.find(u => u.id === line.uom_id);
+
+    return (uom?.category === 'count')
+        ? Math.floor(scaled + 0.0001).toLocaleString()
+        : scaled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: uom?.decimals ?? 8 });
 };
 
 const getScaledAvailableStock = (line) => {
@@ -575,3 +576,5 @@ onMounted(() => {
 
 <style scoped>
 </style>
+
+

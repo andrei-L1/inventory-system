@@ -80,9 +80,27 @@ The deepest analytical view available in the application for an individual asset
 
 ---
 
-## 5. Hyper-Navigation Shortcuts
-The interface is designed for rapid traversal across modules so you don't have to use the sidebar.
+### 5. Sales Order Mission Control
+The Mission Control center (`SalesOrders/Show.vue`) is the surgical interface for order fulfillment.
 
-1. **Dashboard to Inventory:** Click any "Critical Low Stock" alert to jump immediately to its Inventory profile.
-2. **Catalog to Inventory:** Click *anywhere* on a product row within the Catalog module to instantly boot up its physical Inventory data and begin transacting.
-3. **Inventory to Vendor:** When inspecting transaction history inside the Inventory Center, clicking the highlighted name of the Supplier under the `Entity / Vendor` column will cross-link you straight into the Vendor Center specifically loaded onto that partner's profile!
+* **Fulfillment Stages**: Process orders through `Pick`, `Pack`, and `Ship` stages. Each stage only allows you to process what is currently "outstanding" based on the net physical state of the order.
+* **Smart Progress Tracking**: Progress bars at the top of each item line show you exactly how many pieces are in each stage of the warehouse lifecycle.
+* **Inventory Intelligence**: Before confirming a quotation, hover over the "Stock Health" indicator to see a real-time breakdown of local QOH vs. Reserved stock across all locations.
+
+### 6. Processing Returns (RMA & RTV)
+Returns in Nexus use **Strategy B (Net Physical Truth)**, meaning they are bidirectional and restore order requirements automatically.
+
+#### 6.1. Customer Returns (Sales)
+Navigate to a Shipped Sales Order and click **"Process Return"**.
+* **UOM Flexibility**: You can receive returns in any valid unit (e.g., if a customer returns a whole "Box" of an item ordered in "Pieces").
+* **Requirement Restoration**: When you post a return, the system **decrements** the `shipped_qty`. This automatically re-enables the `Pick`, `Pack`, and `Ship` buttons for that order, allowing you to quickly dispatch a replacement.
+* **Status Reversion**: If a `Closed` order receives a return, its status automatically reverts to `Partial`, signaling to the warehouse team that there is outstanding work.
+
+#### 6.2. Vendor Returns (Procurement)
+Navigate to a Received Purchase Order and click **"Return to Vendor"**.
+* **Stock Logic**: Returning items to a vendor decrements the `received_qty` on the PO.
+* **Re-receipt**: Just like Sales, this re-opens the "Receive Goods" capability for that PO, making it easy to track the arrival of replacement stock from the vendor.
+
+---
+
+## 7. Hyper-Navigation Shortcuts

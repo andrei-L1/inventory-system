@@ -4,6 +4,7 @@ namespace App\Http\Resources\Inventory;
 
 use App\Helpers\FinancialMath;
 use App\Models\Transaction;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -68,7 +69,25 @@ class TransactionResource extends JsonResource
             'product_name' => $line->product->name ?? null,
             'quantity' => $line && $line->quantity !== null ? (string) $line->quantity : null,
             'formatted_quantity' => $line->formatted_quantity ?? null,
-            'uom_abbreviation' => $line->uom->abbreviation ?? 'PCS',
+            'uom_abbreviation' => $line?->uom?->abbreviation ?? null,
+            'base_uom' => (function () use ($line) {
+                $category = $line?->product?->uom?->category;
+                if (! $category) {
+                    return null;
+                }
+                $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                if (! $baseUom) {
+                    return null;
+                }
+
+                return [
+                    'id' => $baseUom->id,
+                    'abbreviation' => $baseUom->abbreviation,
+                    'name' => $baseUom->name,
+                    'category' => $baseUom->category,
+                    'decimals' => $baseUom->decimals,
+                ];
+            })(),
             'unit_cost' => $line && $line->unit_cost ? (string) $line->unit_cost : '0',
             'formatted_unit_cost' => $line->formatted_unit_cost ?? null,
             'formatted_unit_cost_8dp' => $line->formatted_unit_cost_8dp ?? null,

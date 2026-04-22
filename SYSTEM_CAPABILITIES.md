@@ -44,7 +44,8 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 
 - **Full PO Lifecycle**: `Draft` ➔ `Approved` ➔ `Sent` ➔ `Partially Received` ➔ `Closed`.
 - **Intelligent Replenishment**: The system automatically generates PO suggestions based on `reorder_point` and `reorder_rules`.
-- **Integrated Goods Receipt (GRN)**: Clicking "Receive" on a PO automatically triggers the `StockService` to increase inventory, create a receipt transaction, update cost layers, and advance the PO status.
+- **Integrated Goods Receipt (GRN)**: Clicking "Receive" on a PO automatically triggers the `StockService` to increase inventory, update cost layers, and advance the PO status.
+- **Advanced Purchase Returns (RTV)**: Standardized "Strategy B" support for returning goods to vendors. Returns automatically decrement fulfillment counters, restoring ordering requirements and allowing for seamless re-receipt of replacement stock.
 - **Vendor Scorecarding**: Track average lead times and historical pricing per vendor.
 
 ---
@@ -55,6 +56,10 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 - **Full SO Lifecycle**: `Quotation` ➔ `Confirmed` ➔ `Picked` ➔ `Shipped` ➔ `Invoiced` ➔ `Closed`.
 - **Real-Time Stock Allocation**: Visually exposes available stock during quotation creation to prevent promising out-of-stock items.
 - **Integrated Fulfillment**: Marking an order "Shipped" automatically triggers the `StockService` to issue stock, consume cost layers, and lock the margin.
+- **Enterprise Sales Returns (RMA)**: Full "Net Physical Truth" support for customer returns.
+  - **Counter Reversal**: Returning an item decrements the `shipped_qty`, automatically "unlocking" the order for re-fulfillment.
+  - **UOM-Dynamic Returns**: Warehouse staff can process returns in any valid unit (e.g., returning a "Box" of a "Pieces" order), with absolute 8-decimal scaling accuracy.
+  - **Automated Requirement Restoration**: Order statuses naturally revert from `closed` to `partial` upon return, ensuring the warehouse dashboard stays aligned with physical reality.
 
 ---
 
@@ -108,4 +113,16 @@ This document serves as the **Complete System Capability Map**, detailing all fe
 - **Stateless API Architecture**: Built around Laravel Sanctum tokens, allowing for easy expansion into mobile apps, barcode scanners, or third-party EDI integrations.
 
 ---
-*Last Updated: 2026-04-03. Covers complete designed feature set, including Strategy Pattern costing engine, multi-location WAC, and COGS tracing.*
+---
+ 
+## 💰 11. The Finance Hub (A/R & A/P)
+*Focus: Bridging the gap between the warehouse and the general ledger.*
+ 
+- **Three-Way Match (A/P Standard)**: The system enforces a biological link between `Purchase Order` ➔ `Receiving Note (GRN)` ➔ `Vendor Bill`. You cannot bill for items that were never physically received. 
+- **Atomic Payables Pivot**: To prevent rounding drift in your checkbook, all Vendor Bills are standardized to the product's **Base Unit (Pieces)**. This ensures that the liability recorded in the ledger exactly matches the value on your shelves to 8 decimal places.
+- **Receivables & Aging**: Manage customer invoices, record collections, and monitor account aging.
+- **Smart Payment Allocation**: Apply a single disbursement (check/cash) to multiple bills or invoices with automated "Oldest-First" allocation logic.
+- **Vendor & Customer Statements**: Real-time generation of Statement of Account (SOA), providing a historical ledger of every invoice, bill, payment, and refund per entity.
+ 
+---
+*Last Updated: 2026-04-13. Covers Strategy B Bidirectional Returns and high-precision RMA workflows.*

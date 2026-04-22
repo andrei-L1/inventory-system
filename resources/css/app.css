@@ -5,8 +5,36 @@
 @layer primevue;
 @layer custom;
 
+@theme inline {
+    --color-deep: var(--bg-deep);
+    --color-panel: var(--bg-panel);
+    --color-panel-border: var(--bg-panel-border);
+    --color-panel-hover: var(--bg-panel-hover);
+    --color-primary: var(--text-primary);
+    --color-secondary: var(--text-secondary);
+    --color-muted: var(--text-muted);
+}
+
 @layer custom {
-    :root, .app-dark {
+    :root {
+        /* Theme: Clean Technical Light */
+        --bg-deep: #f8fafc; /* Slate 50 - Soft light background */
+        --bg-panel: #ffffff; /* Pure white for panels */
+        --bg-panel-border: #e2e8f0; /* Slate 200 - Subtle borders */
+        --bg-panel-hover: #f1f5f9; /* Slate 100 */
+        
+        --accent-primary: #0f172a; /* Slate 900 - Deep slate for primary buttons */
+        --accent-hover: #1e293b; /* Slate 800 */
+        --accent-subtle: #0369a1; /* Sky 700 */
+        
+        --text-primary: #0f172a; /* Slate 900 */
+        --text-secondary: #475569; /* Slate 600 */
+        --text-muted: #94a3b8; /* Slate 400 */
+
+        --bg-input: #ffffff;
+    }
+
+    .app-dark {
         /* Theme: Monochrome Slate (Minimalist Technical) */
         --bg-deep: #09090b; /* Zinc 950 - Absolute deep background */
         --bg-panel: #141415; /* Custom dark slate for panels */
@@ -20,6 +48,8 @@
         --text-primary: #f4f4f5; /* Zinc 100 */
         --text-secondary: #a1a1aa; /* Zinc 400 */
         --text-muted: #52525b; /* Zinc 600 */
+
+        --bg-input: #000000;
     }
 
     /* Base Body Styling */
@@ -42,7 +72,7 @@
         font-family: inherit;
         font-weight: 600;
         margin-top: 0;
-        color: #ffffff; 
+        color: var(--text-primary); 
         letter-spacing: -0.02em;
     }
 
@@ -83,7 +113,7 @@
     .brand-title {
         font-size: 1.15rem;
         font-weight: 700;
-        color: #ffffff;
+        color: var(--text-primary);
         letter-spacing: 0.05em;
         text-transform: uppercase;
     }
@@ -96,7 +126,7 @@
     .p-button-primary {
         background: var(--accent-primary) !important; 
         border: 1px solid var(--accent-primary) !important;
-        color: #000000 !important; /* Inverted text for stark contrast */
+        color: var(--bg-deep) !important; /* Inverted text for stark contrast */
         font-weight: 600 !important;
         border-radius: 4px !important;
         padding: 6px 18px !important;
@@ -125,12 +155,12 @@
     .p-button-secondary:enabled:hover {
         background: var(--bg-panel-hover) !important;
         border-color: var(--text-secondary) !important;
-        color: #ffffff !important;
+        color: var(--text-primary) !important;
     }
 
     /* Form Inputs - Technical Aesthetic */
     .p-inputtext, .p-password input {
-        background: #000000 !important; /* Pitch black inputs for depth */
+        background: var(--bg-input) !important; 
         border: 1px solid var(--bg-panel-border) !important;
         color: var(--text-primary) !important;
         padding: 8px 12px; /* Removed !important to allow utility overrides */
