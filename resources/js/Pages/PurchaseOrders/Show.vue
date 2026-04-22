@@ -196,6 +196,8 @@ const onReturnUomChange = (line) => {
 
 const grnForm = ref({
     location_id: null,
+    delivery_note_number: '',
+    notes: '',
     lines: []
 });
 const returnForm = ref({
@@ -339,6 +341,8 @@ const openGrnMode = async () => {
         });
 
         grnForm.value.location_id = null;
+        grnForm.value.delivery_note_number = '';
+        grnForm.value.notes = '';
         grnForm.value.lines = po.value.lines
             .filter(l => l.pending_qty > 0)
             .map(l => ({
@@ -395,6 +399,8 @@ const postReceipt = async () => {
     try {
         await axios.post(`/api/purchase-orders/${po.value.id}/receive`, {
             location_id: grnForm.value.location_id,
+            delivery_note_number: grnForm.value.delivery_note_number || null,
+            notes: grnForm.value.notes || null,
             lines: payloadLines.map(l => ({ 
                 po_line_id: l.po_line_id, 
                 received_qty: l.received_qty,
@@ -681,6 +687,10 @@ const openPrint = () => {
                             <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Created On</span>
                             <span class="text-xs font-bold text-secondary">{{ po.created_at }}</span>
                         </div>
+                        <div class="flex justify-between items-center py-1.5 border-b border-panel-border/30">
+                            <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Expected Delivery</span>
+                            <span class="text-xs font-bold" :class="po.expected_delivery_date ? 'text-amber-400' : 'text-muted'">{{ po.expected_delivery_date || 'Not Set' }}</span>
+                        </div>
                         <div v-if="po.approved_by" class="flex flex-col gap-2 py-2 border-b border-panel-border/30">
                             <div class="flex justify-between items-center">
                                 <span class="text-[10px] font-bold text-secondary font-mono tracking-widest uppercase">Approved By</span>
@@ -745,6 +755,9 @@ const openPrint = () => {
                                 <div class="flex justify-between text-[11px]">
                                     <span class="text-muted font-bold uppercase tracking-tighter text-[9px]">Receipt Bin:</span>
                                     <span class="text-secondary text-[10px]">{{ receipt.to_location }}</span>
+                                </div>
+                                <div v-if="receipt.notes" class="mt-1 p-2 bg-panel/30 rounded border border-panel-border/40">
+                                    <p class="text-[9px] text-secondary font-mono leading-relaxed line-clamp-2" :title="receipt.notes">{{ receipt.notes }}</p>
                                 </div>
                             </div>
                         </div>
@@ -862,21 +875,39 @@ const openPrint = () => {
                     </p>
                 </div>
 
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Receiving Location (Destination Bin)</label>
-                    <Select 
-                        v-model="grnForm.location_id" 
-                        :options="locations" 
-                        optionLabel="name" 
-                        optionValue="id" 
-                        placeholder="Select active bin" 
-                        filter
-                        class="w-full bg-deep border-zinc-700 text-sm focus:border-orange-500/50"
-                    >
-                        <template #option="slotProps">
-                            <span class="font-bold text-xs">{{ slotProps.option.code }} — {{ slotProps.option.name }}</span>
-                        </template>
-                    </Select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-2 col-span-2">
+                        <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Receiving Location (Destination Bin)</label>
+                        <Select 
+                            v-model="grnForm.location_id" 
+                            :options="locations" 
+                            optionLabel="name" 
+                            optionValue="id" 
+                            placeholder="Select active bin" 
+                            filter
+                            class="w-full bg-deep border-zinc-700 text-sm focus:border-orange-500/50"
+                        >
+                            <template #option="slotProps">
+                                <span class="font-bold text-xs">{{ slotProps.option.code }} — {{ slotProps.option.name }}</span>
+                            </template>
+                        </Select>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Vendor Delivery Note #</label>
+                        <InputText 
+                            v-model="grnForm.delivery_note_number" 
+                            placeholder="e.g. DN-2024-00123" 
+                            class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm focus:!border-orange-500/50" 
+                        />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Receiving Notes / Remarks</label>
+                        <InputText 
+                            v-model="grnForm.notes" 
+                            placeholder="e.g. Partial delivery, 2 boxes damaged..." 
+                            class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm focus:!border-orange-500/50" 
+                        />
+                    </div>
                 </div>
 
                 <div class="border border-panel-border rounded-xl overflow-hidden mt-2">
@@ -1224,6 +1255,10 @@ const openPrint = () => {
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Storage Location</label>
                         <span class="text-sm font-bold text-primary">{{ selectedGrn.to_location }}</span>
+                    </div>
+                    <div v-if="selectedGrn.notes" class="col-span-2 flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">GRN Notes / Remarks</label>
+                        <p class="text-sm text-secondary font-mono leading-relaxed bg-panel/30 p-2 rounded border border-panel-border/50">{{ selectedGrn.notes }}</p>
                     </div>
                 </div>
 

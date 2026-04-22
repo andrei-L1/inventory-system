@@ -39,6 +39,7 @@ class PurchaseOrderResource extends JsonResource
                     'received_by' => $t->createdBy->name ?? 'System',
                     'received_at' => $t->created_at->format('Y-m-d H:i'),
                     'to_location' => $t->toLocation->name ?? $t->lines->first()?->location?->name ?? 'Mixed/Unknown',
+                    'notes' => $t->notes,
                     'lines' => $t->lines->map(fn ($l) => [
                         'transaction_line_id' => $l->id,
                         'po_line_id' => $this->lines->firstWhere('product_id', $l->product_id)?->id,
