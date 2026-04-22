@@ -6,6 +6,7 @@ use App\Helpers\FinancialMath;
 use App\Helpers\UomHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrderLine extends Model
 {
@@ -25,15 +26,15 @@ class PurchaseOrderLine extends Model
     ];
 
     protected $casts = [
-        'ordered_qty'      => 'decimal:8',
-        'received_qty'     => 'decimal:8',
-        'returned_qty'     => 'decimal:8',
-        'unit_cost'        => 'decimal:8',
-        'discount_rate'    => 'decimal:2',
-        'discount_amount'  => 'decimal:8',
-        'tax_rate'         => 'decimal:2',
-        'tax_amount'       => 'decimal:8',
-        'total_cost'       => 'decimal:8', // Virtual column from DB
+        'ordered_qty' => 'decimal:8',
+        'received_qty' => 'decimal:8',
+        'returned_qty' => 'decimal:8',
+        'unit_cost' => 'decimal:8',
+        'discount_rate' => 'decimal:2',
+        'discount_amount' => 'decimal:8',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:8',
+        'total_cost' => 'decimal:8', // Virtual column from DB
     ];
 
     protected $appends = [
@@ -90,11 +91,11 @@ class PurchaseOrderLine extends Model
     public function getCreditedQtyAttribute(): string
     {
         $multiplier = (string) UomHelper::getMultiplierToSmallest($this->uom_id, $this->product_id);
-        
+
         // Sum negative quantities from posted Debit Notes
         $totalPieces = (string) abs($this->billLines()->whereHas('bill', function ($q) {
             $q->where('status', '!=', Bill::STATUS_VOID)
-              ->where('type', Bill::TYPE_DEBIT_NOTE);
+                ->where('type', Bill::TYPE_DEBIT_NOTE);
         })->where('quantity', '<', 0)->sum('quantity'));
 
         return FinancialMath::div($totalPieces, $multiplier);
@@ -121,7 +122,7 @@ class PurchaseOrderLine extends Model
     /**
      * Get the bill lines linked to this PO line.
      */
-    public function billLines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function billLines(): HasMany
     {
         return $this->hasMany(BillLine::class);
     }
@@ -129,7 +130,7 @@ class PurchaseOrderLine extends Model
     /**
      * DYNAMIC ACCESSOR: Calculate billed quantity from the master ledger.
      * Logic: Sum(BillLine.quantity) where Bill.status != VOID.
-     * 
+     *
      * NOTE: BillLine stores quantities in ATOMIC PIECES.
      * We must scale back to the ordering UOM for these calculations.
      */

@@ -191,7 +191,7 @@ class SalesOrder extends Model
             // (Original Ordered - Credits).
             $totalOrdered = FinancialMath::add($totalOrdered, $l->requirement_qty);
             $totalShipped = FinancialMath::add($totalShipped, $l->net_shipped_qty);
-            
+
             // For packed/picked, we also cap them by the current requirement to prevent
             // "Phantom" progress if the customer cancelled part of the order.
             $totalPacked = FinancialMath::add($totalPacked, FinancialMath::min($l->requirement_qty, (string) $l->packed_qty));
@@ -200,8 +200,8 @@ class SalesOrder extends Model
 
         // Walk the fulfillment hierarchy top-down.
         if (FinancialMath::isZero($totalOrdered)) {
-             // If everything was cancelled, the order is CLOSED/DONE.
-             $statusName = SalesOrderStatus::SHIPPED; 
+            // If everything was cancelled, the order is CLOSED/DONE.
+            $statusName = SalesOrderStatus::SHIPPED;
         } elseif (FinancialMath::gte($totalShipped, $totalOrdered)) {
             $statusName = SalesOrderStatus::SHIPPED;
         } elseif (FinancialMath::isPositive($totalShipped)) {

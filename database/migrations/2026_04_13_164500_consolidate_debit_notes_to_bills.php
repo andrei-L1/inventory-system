@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -14,10 +14,10 @@ return new class extends Migration
     {
         // 1. Add audit columns to bills table
         Schema::table('bills', function (Blueprint $table) {
-            if (!Schema::hasColumn('bills', 'ref_transaction_id')) {
+            if (! Schema::hasColumn('bills', 'ref_transaction_id')) {
                 $table->foreignId('ref_transaction_id')->nullable()->after('purchase_order_id')->constrained('transactions')->nullOnDelete();
             }
-            if (!Schema::hasColumn('bills', 'reason')) {
+            if (! Schema::hasColumn('bills', 'reason')) {
                 $table->text('reason')->nullable()->after('notes');
             }
         });

@@ -28,8 +28,9 @@ class VendorPaymentController extends Controller
     public function show(VendorPayment $payment): JsonResponse
     {
         $payment->load(['vendor', 'allocations.bill', 'refunds']);
+
         return response()->json([
-            'data' => $payment
+            'data' => $payment,
         ]);
     }
 
@@ -46,7 +47,7 @@ class VendorPaymentController extends Controller
 
         return response()->json([
             'message' => 'Disbursement voided successfully. Funds released back to bill balances.',
-            'payment' => $payment
+            'payment' => $payment,
         ]);
     }
 
@@ -70,7 +71,7 @@ class VendorPaymentController extends Controller
         try {
             $payment = DB::transaction(function () use ($request) {
                 // Parity: Disbursement Numbering
-                $dsbNumber = 'DSB-' . now()->format('Ym') . '-' . str_pad(VendorPayment::max('id') + 1, 4, '0', STR_PAD_LEFT);
+                $dsbNumber = 'DSB-'.now()->format('Ym').'-'.str_pad(VendorPayment::max('id') + 1, 4, '0', STR_PAD_LEFT);
 
                 $payment = VendorPayment::create([
                     'payment_number' => $dsbNumber,
@@ -82,7 +83,7 @@ class VendorPaymentController extends Controller
                     'notes' => $request->notes,
                 ]);
 
-                if ($request->has('allocations') && !empty($request->allocations)) {
+                if ($request->has('allocations') && ! empty($request->allocations)) {
                     // We call the internal allocation logic to reuse guards
                     $this->performAllocations($payment, $request->allocations);
                 }
@@ -189,7 +190,7 @@ class VendorPaymentController extends Controller
                     'vendor_payment_id' => $payment->id,
                     'vendor_id' => $payment->vendor_id,
                     'amount' => $amountToRefund,
-                    'refund_number' => 'VRF-' . now()->format('Ym') . '-' . str_pad(VendorPaymentRefund::max('id') + 1, 4, '0', STR_PAD_LEFT),
+                    'refund_number' => 'VRF-'.now()->format('Ym').'-'.str_pad(VendorPaymentRefund::max('id') + 1, 4, '0', STR_PAD_LEFT),
                     'refund_date' => $request->input('refund_date'),
                     'refund_method' => $request->input('refund_method'),
                     'reference_number' => $request->input('reference_number'),
@@ -243,7 +244,7 @@ class VendorPaymentController extends Controller
 
             // Update Bill Progress
             $bill->paid_amount = FinancialMath::add((string) $bill->paid_amount, $amountToAllocate);
-            
+
             if (FinancialMath::equals((string) $bill->paid_amount, (string) $bill->total_amount, FinancialMath::HEADER_SCALE)) {
                 $bill->status = Bill::STATUS_PAID;
             }

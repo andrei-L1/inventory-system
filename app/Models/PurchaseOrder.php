@@ -107,7 +107,7 @@ class PurchaseOrder extends Model
     public function syncBillingStatus(): void
     {
         $this->loadMissing('lines');
-        
+
         $totalReceived = '0';
         $totalBilled = '0';
 
@@ -160,9 +160,9 @@ class PurchaseOrder extends Model
         }
 
         $statusName = 'closed';
-        if (!$isCompleted) {
+        if (! $isCompleted) {
             $statusName = FinancialMath::isPositive($totalReceived) ? 'partially_received' : 'sent';
-            
+
             // If it was in transit, keep it in transit unless it's received
             if ($this->status?->name === 'in_transit' && FinancialMath::isZero($totalReceived)) {
                 $statusName = 'in_transit';

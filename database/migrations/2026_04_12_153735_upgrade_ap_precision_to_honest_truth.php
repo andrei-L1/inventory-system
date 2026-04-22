@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('bills', function (Blueprint $table) {
             $table->decimal('total_amount', 18, 8)->change();
-            if (!Schema::hasColumn('bills', 'paid_amount')) {
+            if (! Schema::hasColumn('bills', 'paid_amount')) {
                 $table->decimal('paid_amount', 18, 8)->default(0)->after('total_amount');
             } else {
                 $table->decimal('paid_amount', 18, 8)->change();

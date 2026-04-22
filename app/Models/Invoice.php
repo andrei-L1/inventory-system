@@ -100,11 +100,11 @@ class Invoice extends Model
 
     /**
      * Formally void the invoice and reverse its financial impact.
-     * 
+     *
      * Actions:
      * 1. Clears payment allocations (returning funds to the customer payment pool).
      * 2. Sets status to VOID.
-     * 
+     *
      * Note: SalesOrderLine invoicing progress is calculated dynamically,
      * so it will automatically reflect the release of these items.
      */

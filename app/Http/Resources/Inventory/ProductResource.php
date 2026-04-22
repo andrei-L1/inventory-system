@@ -92,17 +92,22 @@ class ProductResource extends JsonResource
             'preferred_vendor_id' => $this->preferred_vendor_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'uom' => new UnitOfMeasureResource($this->whenLoaded('uom')),
-            'base_uom' => (function() {
+            'base_uom' => (function () {
                 $category = $this->uom?->category;
-                if (!$category) return null;
+                if (! $category) {
+                    return null;
+                }
                 $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
-                if (!$baseUom) return null;
+                if (! $baseUom) {
+                    return null;
+                }
+
                 return [
-                    'id'           => $baseUom->id,
+                    'id' => $baseUom->id,
                     'abbreviation' => $baseUom->abbreviation,
-                    'name'         => $baseUom->name,
-                    'category'     => $baseUom->category,
-                    'decimals'     => $baseUom->decimals,
+                    'name' => $baseUom->name,
+                    'category' => $baseUom->category,
+                    'decimals' => $baseUom->decimals,
                 ];
             })(),
             'preferred_vendor' => new VendorResource($this->whenLoaded('preferredVendor')),

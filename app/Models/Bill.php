@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
 use App\Helpers\FinancialMath;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,6 +23,7 @@ class Bill extends Model
     const STATUS_VOID = 'VOID';
 
     const TYPE_BILL = 'BILL';
+
     const TYPE_DEBIT_NOTE = 'DEBIT_NOTE';
 
     protected $fillable = [
@@ -97,7 +97,7 @@ class Bill extends Model
 
     /**
      * Formally void the bill and reverse its impact on procurement and finance.
-     * 
+     *
      * Actions:
      * 1. Reverts billed_qty on linked PO lines.
      * 2. Clears payment allocations (returning funds to the vendor payment pool).

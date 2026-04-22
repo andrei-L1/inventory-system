@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\Finance;
 
 use App\Helpers\FinancialMath;
+use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Bill;
-use App\Models\BillLine;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\TransactionLine;
@@ -33,6 +33,7 @@ class BillController extends Controller
     public function show(Bill $bill): JsonResponse
     {
         $bill->load(['vendor', 'purchaseOrder', 'lines.product', 'lines.transactionLine']);
+
         return response()->json($bill);
     }
 
@@ -77,11 +78,11 @@ class BillController extends Controller
                     $qtyPieces = (string) $item['quantity'];
 
                     // Incoming price is ATOMIC (Price per Piece)
-                    $unitPrice = $item['unit_price'] ?? ($poLine->unit_cost / \App\Helpers\UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id));
+                    $unitPrice = $item['unit_price'] ?? ($poLine->unit_cost / UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id));
 
                     // Scale the quantity back to the PO Line's UOM for validation and tracking
                     // (Pieces / Factor) = PO Unit Qty
-                    $factor = (string) \App\Helpers\UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
+                    $factor = (string) UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
                     $qtyPoUom = FinancialMath::div($qtyPieces, $factor);
 
                     // Validation: Transaction line must be part of this PO
@@ -91,7 +92,7 @@ class BillController extends Controller
 
                     // Validation: PO line must match the receipt line's product
                     if ($poLine->product_id !== $grnLine->product_id) {
-                        abort(422, "Product Mismatch: Line SKU DOES NOT MATCH receipt SKU.");
+                        abort(422, 'Product Mismatch: Line SKU DOES NOT MATCH receipt SKU.');
                     }
 
                     // Hard Validation: Compare SCALED quantity against PO limit
@@ -225,6 +226,7 @@ class BillController extends Controller
                 }
 
                 $bill->update(['total_amount' => FinancialMath::headerTotal($lineTotals)]);
+
                 return $bill;
             });
 
@@ -240,7 +242,7 @@ class BillController extends Controller
 
     public function post(Bill $bill): JsonResponse
     {
-        if (!$bill->isDraft()) {
+        if (! $bill->isDraft()) {
             return response()->json(['message' => 'Only draft bills can be posted.'], 400);
         }
 

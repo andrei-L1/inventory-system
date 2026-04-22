@@ -11,8 +11,11 @@ class DebitNote extends Model
     use HasFactory;
 
     const STATUS_DRAFT = 'DRAFT';
+
     const STATUS_POSTED = 'POSTED';
+
     const STATUS_APPLIED = 'APPLIED';
+
     const STATUS_VOID = 'VOID';
 
     protected $fillable = [

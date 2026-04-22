@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Sales;
 
 use App\Helpers\FinancialMath;
+use App\Helpers\UomHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Invoice;
@@ -76,7 +77,7 @@ class SalesOrderReturnController extends Controller
 
                     // Convert return qty to SO line UOM for validation and tracking
                     $qtyToUpdateSO = $returnedQtyRaw;
-                    if ((int)$returnUomId !== (int)$lineUomId) {
+                    if ((int) $returnUomId !== (int) $lineUomId) {
                         $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $soLine->product_id);
                         $qtyToUpdateSO = FinancialMath::round(FinancialMath::mul($returnedQtyRaw, $factor), FinancialMath::LINE_SCALE);
                     }
@@ -95,16 +96,16 @@ class SalesOrderReturnController extends Controller
                         'quantity' => $returnedQtyRaw, // Receipt is positive string in its provided UOM
                         'uom_id' => $returnUomId,
                     ];
- 
+
                     // [INDUSTRY STANDARD]: We maintain cumulative historical values for returns
                     // but we MUST decrement fulfillment counters to allow "re-dispatch" of replacements.
                     $soLine->returned_qty = FinancialMath::add((string) $soLine->returned_qty, $qtyToUpdateSO);
-                    
+
                     // Rebalance fulfillment counters
                     $soLine->shipped_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->shipped_qty, $qtyToUpdateSO));
                     $soLine->packed_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->packed_qty, $qtyToUpdateSO));
                     $soLine->picked_qty = FinancialMath::max('0', FinancialMath::sub((string) $soLine->picked_qty, $qtyToUpdateSO));
- 
+
                     if ($item['resolution'] === 'refund') {
                         // Credit Note line values (Capture tax/discount from original line)
                         // Use base-unit cost (soLine->unit_price) and the scaled quantity (qtyToUpdateSO)
@@ -191,7 +192,7 @@ class SalesOrderReturnController extends Controller
     private function getUomConversionFactor(int $fromId, int $toId, ?int $productId = null): string
     {
         try {
-            return (string) \App\Helpers\UomHelper::getConversionFactor($fromId, $toId, $productId);
+            return (string) UomHelper::getConversionFactor($fromId, $toId, $productId);
         } catch (\Exception $e) {
             abort(422, $e->getMessage());
         }

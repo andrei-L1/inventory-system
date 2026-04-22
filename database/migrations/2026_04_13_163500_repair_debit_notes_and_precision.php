@@ -13,15 +13,15 @@ return new class extends Migration
     {
         Schema::table('debit_notes', function (Blueprint $table) {
             // Add missing columns if they don't exist
-            if (!Schema::hasColumn('debit_notes', 'notes')) {
+            if (! Schema::hasColumn('debit_notes', 'notes')) {
                 $table->text('notes')->nullable()->after('status');
             }
-            
-            if (!Schema::hasColumn('debit_notes', 'reason')) {
+
+            if (! Schema::hasColumn('debit_notes', 'reason')) {
                 $table->text('reason')->nullable()->after('notes');
             }
 
-            if (!Schema::hasColumn('debit_notes', 'ref_transaction_id')) {
+            if (! Schema::hasColumn('debit_notes', 'ref_transaction_id')) {
                 $table->foreignId('ref_transaction_id')->nullable()->after('purchase_order_id')->constrained('transactions')->nullOnDelete();
             }
 

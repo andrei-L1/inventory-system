@@ -8,9 +8,9 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * THE PURGE: Removing the physical 'billed_qty' column from purchase_order_lines.
-     * This forces the system to use the new Dynamic Accessor, ensuring 100% 
+     * This forces the system to use the new Dynamic Accessor, ensuring 100%
      * architectural parity with the Sales module and preventing 'stuck' quantities.
      */
     public function up(): void

@@ -96,11 +96,11 @@ class SalesOrderLine extends Model
      */
     public function getCreditedQtyAttribute(): string
     {
-        // Credit lines have positive quantities in InvoiceLines usually, 
+        // Credit lines have positive quantities in InvoiceLines usually,
         // but we'll sum from Credit Notes.
-        return (string) $this->invoiceLines()->whereHas('invoice', function($q) {
+        return (string) $this->invoiceLines()->whereHas('invoice', function ($q) {
             $q->where('status', '!=', Invoice::STATUS_VOID)
-              ->where('type', Invoice::TYPE_CREDIT_NOTE);
+                ->where('type', Invoice::TYPE_CREDIT_NOTE);
         })->sum('quantity');
     }
 

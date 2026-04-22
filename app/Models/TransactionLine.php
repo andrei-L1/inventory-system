@@ -114,8 +114,8 @@ class TransactionLine extends Model
         // Use sum() on the relationship to handle filtering efficiently
         // if billLines is not loaded. If loaded, this might cause a query.
         // We'll use a collection sum if it's already loaded for performance.
-        $lines = $this->relationLoaded('billLines') 
-            ? $this->billLines 
+        $lines = $this->relationLoaded('billLines')
+            ? $this->billLines
             : $this->billLines()->with('bill')->get();
 
         $total = '0';

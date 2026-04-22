@@ -10,8 +10,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Procurement\PurchaseOrderStoreRequest;
 use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
+use App\Models\Bill;
 use App\Models\InventoryCostLayer;
-use App\Models\DebitNote;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
@@ -93,7 +93,7 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $qty  = (string) $lineData['ordered_qty'];
+                $qty = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
                 $discountRate = (string) ($lineData['discount_rate'] ?? 0);
                 $taxRate = (string) ($lineData['tax_rate'] ?? 0);
@@ -119,15 +119,15 @@ class PurchaseOrderController extends Controller
                 $lineTotals[] = $netCost;
 
                 $po->lines()->create([
-                    'product_id'      => $lineData['product_id'],
-                    'uom_id'          => $lineData['uom_id'],
-                    'ordered_qty'     => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
-                    'received_qty'    => 0,
-                    'unit_cost'       => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
-                    'discount_rate'   => FinancialMath::round($discountRate, 2),
+                    'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'received_qty' => 0,
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate' => FinancialMath::round($discountRate, 2),
                     'discount_amount' => $discountAmount,
-                    'tax_rate'        => FinancialMath::round($taxRate, 2),
-                    'tax_amount'      => $taxAmount,
+                    'tax_rate' => FinancialMath::round($taxRate, 2),
+                    'tax_amount' => $taxAmount,
                 ]);
             }
 
@@ -173,12 +173,12 @@ class PurchaseOrderController extends Controller
 
             $lineTotals = [];
             foreach ($data['lines'] as $lineData) {
-                $qty  = (string) $lineData['ordered_qty'];
+                $qty = (string) $lineData['ordered_qty'];
                 $cost = (string) $lineData['unit_cost'];
                 $discountRate = (string) ($lineData['discount_rate'] ?? 0);
                 $taxRate = (string) ($lineData['tax_rate'] ?? 0);
 
-                $grossCost    = FinancialMath::poLineCost($qty, $cost);
+                $grossCost = FinancialMath::poLineCost($qty, $cost);
                 $discountAmount = FinancialMath::round(
                     FinancialMath::mul($grossCost, FinancialMath::div($discountRate, '100')),
                     FinancialMath::LINE_SCALE
@@ -194,15 +194,15 @@ class PurchaseOrderController extends Controller
                 $lineTotals[] = $netCost;
 
                 $purchaseOrder->lines()->create([
-                    'product_id'      => $lineData['product_id'],
-                    'uom_id'          => $lineData['uom_id'],
-                    'ordered_qty'     => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
-                    'received_qty'    => 0,
-                    'unit_cost'       => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
-                    'discount_rate'   => FinancialMath::round($discountRate, 2),
+                    'product_id' => $lineData['product_id'],
+                    'uom_id' => $lineData['uom_id'],
+                    'ordered_qty' => FinancialMath::round($qty, FinancialMath::LINE_SCALE),
+                    'received_qty' => 0,
+                    'unit_cost' => FinancialMath::round($cost, FinancialMath::LINE_SCALE),
+                    'discount_rate' => FinancialMath::round($discountRate, 2),
                     'discount_amount' => $discountAmount,
-                    'tax_rate'        => FinancialMath::round($taxRate, 2),
-                    'tax_amount'      => $taxAmount,
+                    'tax_rate' => FinancialMath::round($taxRate, 2),
+                    'tax_amount' => $taxAmount,
                 ]);
             }
 
@@ -554,31 +554,31 @@ class PurchaseOrderController extends Controller
                 foreach ($request->lines as $item) {
                     $poLine = $poLines->get($item['po_line_id']);
 
-                    if (!$poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
+                    if (! $poLine || $poLine->purchase_order_id !== $purchaseOrder->id) {
                         abort(400, 'Invalid PO line ID.');
                     }
 
-                    $returnQtyRaw = (string)$item['return_qty'];
+                    $returnQtyRaw = (string) $item['return_qty'];
                     $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
                     $lineUomId = $poLine->uom_id ?? $poLine->product->uom_id;
 
                     // Convert return qty to PO line UOM for validation and tracking
                     $qtyToUpdatePO = $returnQtyRaw;
-                    if ((int)$returnUomId !== (int)$lineUomId) {
+                    if ((int) $returnUomId !== (int) $lineUomId) {
                         $factor = $this->getUomConversionFactor($returnUomId, $lineUomId, $poLine->product_id);
                         $qtyToUpdatePO = FinancialMath::round(FinancialMath::mul($returnQtyRaw, $factor), FinancialMath::LINE_SCALE);
                     }
 
                     // Guard: cannot return more than received
-                    if (FinancialMath::gt($qtyToUpdatePO, (string)$poLine->received_qty)) {
-                        $receivedInReturnUnit = (string)$poLine->received_qty;
-                        if ((int)$returnUomId !== (int)$lineUomId) {
+                    if (FinancialMath::gt($qtyToUpdatePO, (string) $poLine->received_qty)) {
+                        $receivedInReturnUnit = (string) $poLine->received_qty;
+                        if ((int) $returnUomId !== (int) $lineUomId) {
                             $revFactor = $this->getUomConversionFactor($lineUomId, $returnUomId, $poLine->product_id);
-                            $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string)$poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
+                            $receivedInReturnUnit = FinancialMath::round(FinancialMath::mul((string) $poLine->received_qty, $revFactor), FinancialMath::LINE_SCALE);
                         }
 
-                        $formattedReturn = UomHelper::format($returnQtyRaw, (int)$returnUomId, $poLine->product_id);
-                        $formattedMax = UomHelper::format($receivedInReturnUnit, (int)$returnUomId, $poLine->product_id);
+                        $formattedReturn = UomHelper::format($returnQtyRaw, (int) $returnUomId, $poLine->product_id);
+                        $formattedMax = UomHelper::format($receivedInReturnUnit, (int) $returnUomId, $poLine->product_id);
 
                         abort(422, "Cannot process return: The entered quantity ({$formattedReturn}) is greater than the quantity currently received ({$formattedMax}) for SKU {$poLine->product->sku}.");
                     }
@@ -588,51 +588,51 @@ class PurchaseOrderController extends Controller
                     $netUnitCostRaw = FinancialMath::sub((string) $poLine->unit_cost, $discountAmountPerUnit);
 
                     $unitCost = $netUnitCostRaw;
-                    if ((int)$returnUomId !== (int)$lineUomId) {
+                    if ((int) $returnUomId !== (int) $lineUomId) {
                         $unitCost = FinancialMath::round(FinancialMath::mul($netUnitCostRaw, $factor), FinancialMath::LINE_SCALE);
                     }
- 
+
                     // Negative quantity → issue path (consumes layers and reduces QOH).
                     $transactionData['lines'][] = [
                         'product_id' => $poLine->product_id,
                         'location_id' => $request->location_id,
                         'quantity' => -abs($returnQtyRaw),
-                        'unit_cost' => (string)$unitCost,
+                        'unit_cost' => (string) $unitCost,
                         'uom_id' => $returnUomId,
-                        'notes' => 'Resolution: ' . ucfirst($item['resolution']),
+                        'notes' => 'Resolution: '.ucfirst($item['resolution']),
                     ];
- 
+
                     // [INDUSTRY STANDARD]: We maintain historical 'returned' count
                     // but we MUST decrement 'received_qty' to allow "re-receipt" of replacements.
-                    $poLine->returned_qty = FinancialMath::add((string)$poLine->returned_qty, (string)$qtyToUpdatePO);
-                    $poLine->received_qty = FinancialMath::max('0', FinancialMath::sub((string)$poLine->received_qty, (string)$qtyToUpdatePO));
- 
+                    $poLine->returned_qty = FinancialMath::add((string) $poLine->returned_qty, (string) $qtyToUpdatePO);
+                    $poLine->received_qty = FinancialMath::max('0', FinancialMath::sub((string) $poLine->received_qty, (string) $qtyToUpdatePO));
+
                     if ($item['resolution'] === 'credit') {
                         // Financial Credit Accumulation
-                        $lineCredit = FinancialMath::round(FinancialMath::mul((string)$qtyToUpdatePO, (string)$poLine->unit_cost), FinancialMath::LINE_SCALE);
+                        $lineCredit = FinancialMath::round(FinancialMath::mul((string) $qtyToUpdatePO, (string) $poLine->unit_cost), FinancialMath::LINE_SCALE);
                         $totalCreditAmount = FinancialMath::add($totalCreditAmount, $lineCredit);
                     }
- 
-                    $poLine->notes = trim(($poLine->notes ?? '') . ' | Return Reason: ' . ($item['reason'] ?? 'N/A') . ' (' . $item['resolution'] . ')');
+
+                    $poLine->notes = trim(($poLine->notes ?? '').' | Return Reason: '.($item['reason'] ?? 'N/A').' ('.$item['resolution'].')');
                     $poLine->save();
                 }
- 
+
                 // H-7: Record movement FIRST, then recalculate total.
                 $transaction = $stockService->recordMovement($transactionData);
- 
+
                 // ─── Phase 5.7: Generate Debit Note (Consolidated in Bills) ───
                 if (FinancialMath::gt($totalCreditAmount, '0')) {
-                    $debitNote = \App\Models\Bill::create([
-                        'bill_number' => 'DN-' . now()->format('YmdHi') . '-' . mt_rand(1001, 9999),
-                        'type' => \App\Models\Bill::TYPE_DEBIT_NOTE,
+                    $debitNote = Bill::create([
+                        'bill_number' => 'DN-'.now()->format('YmdHi').'-'.mt_rand(1001, 9999),
+                        'type' => Bill::TYPE_DEBIT_NOTE,
                         'vendor_id' => $purchaseOrder->vendor_id,
                         'purchase_order_id' => $purchaseOrder->id,
                         'ref_transaction_id' => $transaction->id ?? null,
                         'bill_date' => now()->toDateString(),
                         'total_amount' => $totalCreditAmount,
                         'paid_amount' => 0,
-                        'status' => \App\Models\Bill::STATUS_POSTED,
-                        'notes' => 'Generated from Purchase Return: ' . ($transaction->reference_number ?? 'N/A'),
+                        'status' => Bill::STATUS_POSTED,
+                        'notes' => 'Generated from Purchase Return: '.($transaction->reference_number ?? 'N/A'),
                         'reason' => $request->lines[0]['reason'] ?? 'Purchase Return',
                     ]);
 
@@ -647,24 +647,24 @@ class PurchaseOrderController extends Controller
                         if ($poLine) {
                             $returnQtyRaw = (string) $item['return_qty'];
                             $returnUomId = $item['uom_id'] ?? $poLine->uom_id ?? $poLine->product->uom_id;
-                            
+
                             // Convert return qty to ATOMIC PIECES for BillLine storage
-                            $piecesMultiplier = (string) \App\Helpers\UomHelper::getMultiplierToSmallest($returnUomId, $poLine->product_id);
+                            $piecesMultiplier = (string) UomHelper::getMultiplierToSmallest($returnUomId, $poLine->product_id);
                             $qtyPieces = FinancialMath::mul($returnQtyRaw, $piecesMultiplier);
 
                             // Calculate line credit amount
-                            $multiplier = (string) \App\Helpers\UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
-                            $unitPricePieces = FinancialMath::div((string)$poLine->unit_cost, $multiplier);
+                            $multiplier = (string) UomHelper::getMultiplierToSmallest($poLine->uom_id, $poLine->product_id);
+                            $unitPricePieces = FinancialMath::div((string) $poLine->unit_cost, $multiplier);
                             $lineCreditRaw = FinancialMath::mul($qtyPieces, $unitPricePieces);
 
-                            // Note: We store the returned quantity as NEGATIVE in the BillLine 
+                            // Note: We store the returned quantity as NEGATIVE in the BillLine
                             // to correctly re-balance the net billed quantity in the dynamic accessor.
                             $debitNote->lines()->create([
                                 'purchase_order_line_id' => $poLine->id,
-                                'quantity' => '-' . $qtyPieces,
+                                'quantity' => '-'.$qtyPieces,
                                 'unit_price' => $unitPricePieces,
-                                'subtotal' => '-' . FinancialMath::round($lineCreditRaw, FinancialMath::LINE_SCALE),
-                                'notes' => 'Credit for Return: ' . ($item['reason'] ?? 'N/A'),
+                                'subtotal' => '-'.FinancialMath::round($lineCreditRaw, FinancialMath::LINE_SCALE),
+                                'notes' => 'Credit for Return: '.($item['reason'] ?? 'N/A'),
                             ]);
                         }
                     }

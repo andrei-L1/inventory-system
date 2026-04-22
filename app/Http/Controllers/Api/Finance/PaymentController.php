@@ -229,7 +229,7 @@ class PaymentController extends Controller
 
         return response()->json([
             'message' => 'Payment voided successfully. Funds released back to invoice balances.',
-            'payment' => $payment
+            'payment' => $payment,
         ]);
     }
 

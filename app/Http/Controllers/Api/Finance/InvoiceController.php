@@ -190,7 +190,7 @@ class InvoiceController extends Controller
             return response()->json(['message' => 'Invoice is already voided.'], 200);
         }
 
-        if ($invoice->status === \App\Models\Invoice::STATUS_PAID) {
+        if ($invoice->status === Invoice::STATUS_PAID) {
             return response()->json(['message' => 'Cannot void a PAID invoice. Remove payment allocations first.'], 422);
         }
 

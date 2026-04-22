@@ -3,7 +3,6 @@
 use App\Models\PurchaseOrder;
 use App\Models\SalesOrder;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {

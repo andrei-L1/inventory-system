@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Procurement;
 
 use App\Helpers\FinancialMath;
+use App\Models\UnitOfMeasure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,17 +27,22 @@ class PurchaseOrderLineResource extends JsonResource
             'pending_qty' => FinancialMath::max('0', FinancialMath::sub((string) $this->ordered_qty, (string) $this->received_qty)), // H-6: guard against negative after credit return
             'uom_id' => $this->uom_id,
             'uom_abbreviation' => $this->uom->abbreviation ?? $this->product->uom->abbreviation ?? null,
-            'base_uom' => (function() {
+            'base_uom' => (function () {
                 $category = $this->product?->uom?->category;
-                if (!$category) return null;
-                $baseUom = \App\Models\UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
-                if (!$baseUom) return null;
+                if (! $category) {
+                    return null;
+                }
+                $baseUom = UnitOfMeasure::where('category', $category)->where('is_base', 1)->first();
+                if (! $baseUom) {
+                    return null;
+                }
+
                 return [
-                    'id'           => $baseUom->id,
+                    'id' => $baseUom->id,
                     'abbreviation' => $baseUom->abbreviation,
-                    'name'         => $baseUom->name,
-                    'category'     => $baseUom->category,
-                    'decimals'     => $baseUom->decimals,
+                    'name' => $baseUom->name,
+                    'category' => $baseUom->category,
+                    'decimals' => $baseUom->decimals,
                 ];
             })(),
             'ordered_qty' => (string) $this->ordered_qty,

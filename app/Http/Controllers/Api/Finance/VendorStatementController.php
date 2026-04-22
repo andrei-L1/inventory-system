@@ -2,20 +2,18 @@
 
 namespace App\Http\Controllers\Api\Finance;
 
-use App\Http\Controllers\Controller;
-use App\Models\Vendor;
-use App\Models\Bill;
-use App\Models\VendorPayment;
-use App\Models\DebitNote;
 use App\Helpers\FinancialMath;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Models\Bill;
+use App\Models\DebitNote;
+use App\Models\Vendor;
+use App\Models\VendorPayment;
 
 class VendorStatementController extends Controller
 {
     /**
      * Generate a unified running-balance ledger for a vendor.
-     * 
+     *
      * Formula:
      * - Bill (STATUS_POSTED, PAID) = Debit (Inc balance)
      * - Payment = Credit (Dec balance)
@@ -43,7 +41,7 @@ class VendorStatementController extends Controller
                 'type' => 'BILL',
                 'id' => $bill->id,
                 'reference' => $bill->bill_number,
-                'description' => 'Vendor Bill: ' . $bill->bill_number,
+                'description' => 'Vendor Bill: '.$bill->bill_number,
                 'debit' => $bill->total_amount,
                 'credit' => '0',
                 'timestamp' => $bill->created_at,
@@ -57,7 +55,7 @@ class VendorStatementController extends Controller
                 'type' => 'PAYMENT',
                 'id' => $payment->id,
                 'reference' => $payment->reference_number,
-                'description' => 'Vendor Payment: ' . $payment->reference_number,
+                'description' => 'Vendor Payment: '.$payment->reference_number,
                 'debit' => '0',
                 'credit' => $payment->amount,
                 'timestamp' => $payment->created_at,
@@ -71,7 +69,7 @@ class VendorStatementController extends Controller
                 'type' => 'DEBIT_NOTE',
                 'id' => $dn->id,
                 'reference' => $dn->debit_note_number,
-                'description' => 'Debit Note (Return Credit): ' . $dn->debit_note_number,
+                'description' => 'Debit Note (Return Credit): '.$dn->debit_note_number,
                 'debit' => '0',
                 'credit' => $dn->amount,
                 'timestamp' => $dn->created_at,
@@ -81,7 +79,7 @@ class VendorStatementController extends Controller
         // Sort by date then timestamp
         $lines = $lines->sortBy([
             ['date', 'asc'],
-            ['timestamp', 'asc']
+            ['timestamp', 'asc'],
         ])->values();
 
         $runningBalance = '0';
@@ -91,7 +89,7 @@ class VendorStatementController extends Controller
         $processedLines = $lines->map(function ($line) use (&$runningBalance, &$totalDebits, &$totalCredits) {
             $totalDebits = FinancialMath::add($totalDebits, $line['debit']);
             $totalCredits = FinancialMath::add($totalCredits, $line['credit']);
-            
+
             // For Vendors: Bill increases what we owe (Debit), Payment decreases it (Credit)
             $runningBalance = FinancialMath::add($runningBalance, $line['debit']);
             $runningBalance = FinancialMath::sub($runningBalance, $line['credit']);
@@ -104,8 +102,8 @@ class VendorStatementController extends Controller
 
             return array_merge($line, [
                 'balance' => $runningBalance,
-                'balance_raw' => (float)$runningBalance,
-                'link' => $link
+                'balance_raw' => (float) $runningBalance,
+                'link' => $link,
             ]);
         });
 
@@ -120,7 +118,7 @@ class VendorStatementController extends Controller
                 'total_credits' => $totalCredits,
                 'closing_balance' => $runningBalance,
             ],
-            'lines' => $processedLines
+            'lines' => $processedLines,
         ]);
     }
 }

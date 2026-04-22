@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('amount', 18, 8);
             $table->string('refund_number')->unique();
             $table->date('refund_date');
-            $table->string('refund_method')->nullable(); 
+            $table->string('refund_method')->nullable();
             $table->string('reference_number')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

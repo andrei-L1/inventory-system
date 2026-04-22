@@ -134,7 +134,7 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     })->name('sales-orders.show');
 
     // --- Finance (Phase 5.5 / 5.7) ---
-    Route::get('/finance', fn() => redirect()->route('finance.center'));
+    Route::get('/finance', fn () => redirect()->route('finance.center'));
     Route::get('/finance-center', function () {
         return Inertia::render('Finance/FinanceCenter');
     })->name('finance.center');

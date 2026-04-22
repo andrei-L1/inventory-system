@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Payment extends Model
 {
     use HasFactory, SoftDeletes;
 
     const STATUS_PAID = 'PAID';
+
     const STATUS_VOID = 'VOID';
 
     protected $fillable = [
@@ -36,14 +38,14 @@ class Payment extends Model
             return true;
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () {
+        return DB::transaction(function () {
             foreach ($this->allocations as $allocation) {
                 $invoice = $allocation->invoice;
                 if ($invoice) {
                     $newPaidAmount = FinancialMath::sub((string) $invoice->paid_amount, (string) $allocation->amount);
                     $invoice->update([
                         'paid_amount' => $newPaidAmount,
-                        'status' => Invoice::STATUS_OPEN // Revert to open
+                        'status' => Invoice::STATUS_OPEN, // Revert to open
                     ]);
                 }
                 $allocation->delete();
@@ -84,6 +86,7 @@ class Payment extends Model
         foreach ($this->refunds as $refund) {
             $refunded = FinancialMath::add($refunded, (string) $refund->amount);
         }
+
         return $refunded;
     }
 
