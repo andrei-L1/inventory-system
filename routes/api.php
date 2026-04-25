@@ -22,8 +22,12 @@ use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
 use App\Http\Controllers\Api\Logistics\CarrierController;
+use App\Http\Controllers\Api\Logistics\ProductSerialController;
 use App\Http\Controllers\Api\Logistics\ShipmentController;
+use App\Http\Controllers\Api\Procurement\LandedCostController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Api\Sales\DiscountController;
+use App\Http\Controllers\Api\Sales\PriceListController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderReturnController;
 use Illuminate\Http\Request;
@@ -128,6 +132,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:manage-purchase-orders');
 
+    // Landed Costs (Phase 6.4) — nested under purchase orders
+    Route::get('purchase-orders/{purchaseOrder}/landed-costs', [LandedCostController::class, 'index'])->middleware('permission:view-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/landed-costs', [LandedCostController::class, 'store'])->middleware('permission:manage-purchase-orders');
+    Route::delete('purchase-orders/{purchaseOrder}/landed-costs/{landedCost}', [LandedCostController::class, 'destroy'])->middleware('permission:manage-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/landed-costs/{landedCost}/allocate', [LandedCostController::class, 'allocate'])->middleware('permission:manage-purchase-orders');
+
     // -----------------------------------------------------------------------
     // Sales API (Phase 5)
     // -----------------------------------------------------------------------
@@ -140,6 +150,19 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('sales-orders/{salesOrder}/ship', [SalesOrderController::class, 'ship'])->middleware('permission:manage-sales-orders');
     Route::post('sales-orders/{salesOrder}/return', [SalesOrderReturnController::class, 'store'])->middleware('permission:manage-sales-orders');
     Route::patch('sales-orders/{salesOrder}/cancel', [SalesOrderController::class, 'cancel'])->middleware('permission:manage-sales-orders');
+
+    // -----------------------------------------------------------------------
+    // Price Lists & Discounts (Phase 7.2)
+    // -----------------------------------------------------------------------
+    Route::apiResource('price-lists', PriceListController::class)->only(['index', 'show'])->middleware('permission:view-sales-orders');
+    Route::apiResource('price-lists', PriceListController::class)->except(['index', 'show'])->middleware('permission:manage-sales-orders');
+    Route::post('price-lists/{priceList}/items', [PriceListController::class, 'upsertItem'])->middleware('permission:manage-sales-orders');
+    Route::delete('price-lists/{priceList}/items/{priceListItem}', [PriceListController::class, 'destroyItem'])->middleware('permission:manage-sales-orders');
+    Route::get('price-lists/{priceList}/resolve', [PriceListController::class, 'resolvePrice'])->middleware('permission:view-sales-orders');
+
+    Route::apiResource('discounts', DiscountController::class)->only(['index'])->middleware('permission:view-sales-orders');
+    Route::apiResource('discounts', DiscountController::class)->except(['index', 'show'])->middleware('permission:manage-sales-orders');
+    Route::get('discounts/resolve', [DiscountController::class, 'resolve'])->middleware('permission:view-sales-orders');
 
     // -----------------------------------------------------------------------
     // Finance API (Phase 5.5)
@@ -188,6 +211,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('shipments', [ShipmentController::class, 'store'])->middleware('permission:manage-sales-orders');
     Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->middleware('permission:manage-sales-orders');
     Route::delete('shipments/{shipment}', [ShipmentController::class, 'destroy'])->middleware('permission:manage-sales-orders');
+
+    // Serials (Phase 6.3) — read: view-products, write: manage-products
+    Route::get('serials', [ProductSerialController::class, 'index'])->middleware('permission:view-products');
+    Route::get('serials/{serial}', [ProductSerialController::class, 'show'])->middleware('permission:view-products');
+    Route::post('serials', [ProductSerialController::class, 'store'])->middleware('permission:manage-products');
+    Route::patch('serials/{serial}', [ProductSerialController::class, 'update'])->middleware('permission:manage-products');
+    Route::delete('serials/{serial}', [ProductSerialController::class, 'destroy'])->middleware('permission:manage-products');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

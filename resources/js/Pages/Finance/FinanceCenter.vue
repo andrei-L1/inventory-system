@@ -214,19 +214,19 @@ const formatCurrency = (val) => {
 
 const getStatusColor = (status) => {
     switch (status) {
-        case 'DRAFT': return 'bg-panel-hover text-secondary border-zinc-700';
+        case 'DRAFT': return 'bg-panel-hover text-secondary border-panel-border';
         case 'OPEN': 
         case 'POSTED': return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
         case 'PAID': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
         case 'VOID': return 'bg-red-500/10 text-red-400 border-red-500/20';
-        default: return 'bg-panel-hover text-secondary border-zinc-700';
+        default: return 'bg-panel-hover text-secondary border-panel-border';
     }
 };
 
 const tablePt = {
     root: { class: '!bg-transparent' },
-    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200 cursor-pointer' },
-    header: { class: '!bg-panel/60 !border-panel-border !text-secondary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
+    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200 cursor-pointer' },
+    header: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
 };
 
 const handleAction = async (type, id, action) => {
@@ -263,7 +263,7 @@ const handleAction = async (type, id, action) => {
                             {{ financeMode === 'RECEIVABLE' ? 'Accounts Receivable' : 'Accounts Payable' }}
                         </span>
                         <div class="h-px w-8 bg-panel-hover"></div>
-                        <div class="flex p-1 rounded-xl border border-zinc-900 bg-deep/40 backdrop-blur-xl shadow-inner">
+                        <div class="flex p-1 rounded-xl border border-panel-border bg-deep/40 backdrop-blur-xl shadow-inner">
                             <button @click="financeMode = 'RECEIVABLE'" 
                                     :class="financeMode === 'RECEIVABLE' 
                                         ? 'bg-sky-500/10 border-sky-500/40 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.1)]' 
@@ -294,7 +294,7 @@ const handleAction = async (type, id, action) => {
             </div>
 
             <!-- Actions Bar (Sharp Design) -->
-            <div class="mb-8 p-6 bg-panel/40 border border-zinc-900 rounded-2xl backdrop-blur-md flex items-center gap-8 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
+            <div class="mb-8 p-6 bg-panel/40 border border-panel-border rounded-2xl backdrop-blur-md flex items-center gap-8 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-700">
                 <div class="flex flex-col border-r border-panel-border pr-8">
                     <span class="text-[9px] font-bold text-muted uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
                     <span class="text-[11px] font-bold text-secondary uppercase tracking-tight">
@@ -305,11 +305,11 @@ const handleAction = async (type, id, action) => {
                 <!-- Receivable Actions -->
                 <div v-if="financeMode === 'RECEIVABLE'" class="flex gap-4">
                     <button @click="router.visit('/finance/invoices/create')" 
-                            class="px-6 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-bold uppercase tracking-widest hover:bg-sky-500 hover:text-zinc-950 transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-bold uppercase tracking-widest hover:bg-sky-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-file-invoice" /> New Invoice
                     </button>
                     <button @click="router.visit('/finance/payments/create')" 
-                            class="px-6 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-zinc-950 transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-credit-card" /> Record Payment
                     </button>
                     <button @click="activeTab = 'statements'" 
@@ -321,7 +321,7 @@ const handleAction = async (type, id, action) => {
                 <!-- Payable Actions -->
                 <div v-if="financeMode === 'PAYABLE'" class="flex gap-4">
                     <button @click="router.visit('/finance/bills/create')" 
-                            class="px-6 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-zinc-950 transition-all active:scale-95 flex items-center gap-2">
+                            class="px-6 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2">
                         <i class="pi pi-file-plus" /> Generate Bill
                     </button>
                     <button @click="router.visit('/finance/vendor-payments/create')" 
@@ -336,20 +336,20 @@ const handleAction = async (type, id, action) => {
             </div>
 
             <!-- Tabs Navigation -->
-            <div class="w-full mb-6 flex items-center gap-6 border-b border-zinc-900 pb-0">
+            <div class="w-full mb-6 flex items-center gap-6 border-b border-panel-border pb-0">
                 <div @click="activeTab = 'invoices'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'invoices' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'invoices' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-primary'">
                     {{ financeMode === 'RECEIVABLE' ? 'Invoices & Credit Notes' : 'Bills & Debit Notes' }}
                 </div>
                 <div @click="activeTab = 'payments'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'payments' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'payments' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-primary'">
                     Payments
                 </div>
                 <div @click="activeTab = 'statements'" 
                      class="pb-4 px-2 cursor-pointer font-bold text-[11px] uppercase tracking-widest transition-all border-b-2"
-                     :class="activeTab === 'statements' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-zinc-300'">
+                     :class="activeTab === 'statements' ? (financeMode === 'RECEIVABLE' ? 'text-sky-400 border-sky-400' : 'text-amber-500 border-amber-500') : 'text-secondary border-transparent hover:text-primary'">
                     {{ financeMode === 'RECEIVABLE' ? 'Customer Statements' : 'Vendor Statements' }}
                 </div>
             </div>
@@ -581,9 +581,9 @@ const handleAction = async (type, id, action) => {
                         <div class="flex items-center gap-4 mb-6 relative z-30">
                             <div class="w-80">
                                 <Select v-if="financeMode === 'RECEIVABLE'" v-model="selectedStatementCustomer" :options="customers" optionLabel="name" placeholder="Select Customer to View Statement" 
-                                        class="w-full bg-deep/80 border-zinc-700 text-primary shadow-xl backdrop-blur-md" filter />
+                                        class="w-full bg-deep/80 border-panel-border text-primary shadow-xl backdrop-blur-md" filter />
                                 <Select v-else v-model="selectedStatementVendor" :options="vendors" optionLabel="name" placeholder="Select Vendor to View Statement" 
-                                        class="w-full bg-deep/80 border-zinc-700 text-primary shadow-xl backdrop-blur-md" filter />
+                                        class="w-full bg-deep/80 border-panel-border text-primary shadow-xl backdrop-blur-md" filter />
                             </div>
                         </div>
 
@@ -595,7 +595,7 @@ const handleAction = async (type, id, action) => {
                                 </div>
                                 <div class="bg-deep/80 border border-panel-border rounded-xl p-4 flex flex-col justify-center">
                                     <span class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Total Debits</span>
-                                    <span class="text-xl font-bold font-mono text-zinc-300">{{ formatCurrency(statementData.summary.total_debits) }}</span>
+                                    <span class="text-xl font-bold font-mono text-primary/80">{{ formatCurrency(statementData.summary.total_debits) }}</span>
                                 </div>
                                 <div class="bg-deep/80 border border-panel-border rounded-xl p-4 flex flex-col justify-center">
                                     <span class="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Total Credits</span>
@@ -623,7 +623,7 @@ const handleAction = async (type, id, action) => {
                                                   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20': data.type === 'PAYMENT' && financeMode==='RECEIVABLE',
                                                   'bg-amber-500/10 text-amber-400 border-amber-500/20': data.type === 'PAYMENT' && financeMode==='PAYABLE',
                                                   'bg-rose-500/10 text-rose-400 border-rose-500/20': data.type === 'CREDIT_NOTE' || data.type === 'DEBIT_NOTE' || data.type === 'REFUND',
-                                                  'bg-panel-hover text-secondary border-zinc-700': data.type === 'OPENING_BALANCE'
+                                                  'bg-panel-hover text-secondary border-panel-border': data.type === 'OPENING_BALANCE'
                                               }">
                                             {{ data.type }}
                                         </span>
@@ -642,7 +642,7 @@ const handleAction = async (type, id, action) => {
                                 </Column>
                                 <Column header="Debit (+)" style="width: 130px" class="text-right">
                                     <template #body="{ data }">
-                                        <span v-if="Number(data.debit) > 0" class="font-mono text-xs text-zinc-300 font-bold">{{ formatCurrency(data.debit) }}</span>
+                                        <span v-if="Number(data.debit) > 0" class="font-mono text-xs text-primary/70 font-bold">{{ formatCurrency(data.debit) }}</span>
                                         <span v-else class="text-muted font-mono">-</span>
                                     </template>
                                 </Column>

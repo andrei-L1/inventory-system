@@ -257,10 +257,10 @@ const getTrackingPreview = (template) => {
                                 class="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all cursor-pointer"
                                 :class="data.is_active
                                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
-                                    : 'bg-zinc-800/50 border-zinc-700/50 text-muted hover:bg-zinc-700/40'"
+                                    : 'bg-panel border-panel-border text-muted hover:bg-panel-hover/60'"
                             >
                                 <div class="w-1.5 h-1.5 rounded-full"
-                                    :class="data.is_active ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-zinc-600'"
+                                    :class="data.is_active ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-muted'"
                                 ></div>
                                 <span class="text-[9px] font-black uppercase tracking-widest font-mono">
                                     {{ data.is_active ? 'Active' : 'Inactive' }}
@@ -386,7 +386,7 @@ const getTrackingPreview = (template) => {
                                 : 'bg-panel border-panel-border text-muted'"
                         >
                             <div class="w-2 h-2 rounded-full transition-all"
-                                :class="form.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-zinc-600'"
+                                :class="form.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-muted'"
                             ></div>
                             {{ form.is_active ? 'Active' : 'Inactive' }}
                         </button>
@@ -398,7 +398,7 @@ const getTrackingPreview = (template) => {
                         <Button
                             label="Cancel"
                             icon="pi pi-times"
-                            class="!bg-panel-hover hover:!bg-zinc-700 !text-secondary !border-panel-border font-bold tracking-widest uppercase font-mono text-xs"
+                            class="!bg-panel-hover hover:!bg-panel-hover/80 !text-secondary !border-panel-border font-bold tracking-widest uppercase font-mono text-xs"
                             @click="dialogVisible = false"
                         />
                         <Button

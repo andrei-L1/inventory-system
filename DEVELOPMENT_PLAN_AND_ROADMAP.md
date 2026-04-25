@@ -500,33 +500,32 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Carriers lookup management page** (`/carriers`) — full DataTable with Create/Edit dialog, active toggle, tracking URL preview, delete guard.
 
 ### 6.3 Serial / Batch Tracking
-- [ ] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
-- [ ] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
-- [ ] On Issue/Ship: select specific serial numbers to fulfill.
-- [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
-- [ ] **Serial Registry page** — search serials, view status, view transaction history per unit.
+- [x] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
+- [x] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
+- [x] On Issue/Ship: select specific serial numbers to fulfill.
+- [x] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
+- [x] **Serial Registry page** — search serials, view status, view transaction history per unit.
 
 ### 6.4 Landed Costs & Valuation Adjustment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] `LandedCostController` — allocation of freight, tax, and insurance.
+- [x] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
+- [x] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
 
 ---
 
 ## 💰 Phase 7 — Pricing & Discounts
-> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
+> Status: ✅ COMPLETE
 
 ### 7.1 Landed Costs & Valuation Alignment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance using `landed_costs` table.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] Completed under Phase 6.4 — see above.
 
 ### 7.2 Price Lists & Discounts API
-- [ ] `PriceListController` — CRUD (`/api/price-lists`).
-- [ ] `PriceListItemController` — manage per-product prices within a list.
-- [ ] `DiscountController` — CRUD for discount rules.
-- [ ] Price list assignment: to customer, to customer group, or default.
-- [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price.
+- [x] `PriceListController` — CRUD (`/api/price-lists`) with item upsert, quantity-break price tiers, and customer assignment.
+- [x] `DiscountController` — CRUD for scoped discount rules (product / category / customer) with `active` scope.
+- [x] Price list assignment: to customer via `price_list_id` on Customer model.
+- [x] Price resolution logic on SO creation: customer price list → quantity break → default `product.selling_price`.
+- [x] **Price Lists page** (`/price-lists`) — manage lists, add per-product pricing with min-qty breaks.
+- [x] **Discounts page** (`/discounts`) — manage percentage & fixed rules with validity windows and scope targeting.
 
 ---
 

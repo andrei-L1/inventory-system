@@ -328,7 +328,7 @@ const formatCurrency = (val) => {
                                             <div class="w-8 h-8 rounded-lg bg-transparent flex items-center justify-center border border-panel-border">
                                                 <i class="pi pi-user text-secondary text-xs"></i>
                                             </div>
-                                            <span class="text-zinc-300 font-bold text-xs uppercase">{{ selectedVendor.contact_person || 'N/A' }}</span>
+                                            <span class="text-secondary font-bold text-xs uppercase">{{ selectedVendor.contact_person || 'N/A' }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -376,10 +376,10 @@ const formatCurrency = (val) => {
                                 :pt="{
                                     root: { class: '!bg-transparent' },
                                     column: {
-                                    headercell: { class: '!bg-transparent !border-panel-border !text-muted !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
-                                        bodycell: { class: '!border-panel-border/40 !py-4 !px-8 !text-[13px] !text-zinc-300' }
+                                    headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                                        bodycell: { class: '!border-panel-border/40 !py-4 !px-8 !text-[13px] !text-secondary' }
                                     },
-                                    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' }
+                                    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' }
                                 }"
                             >
                                 <template #empty>
@@ -485,10 +485,10 @@ const formatCurrency = (val) => {
                                 :pt="{
                                     root: { class: '!bg-transparent' },
                                     column: {
-                                    headercell: { class: '!bg-transparent !border-panel-border !text-muted !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
-                                        bodycell: { class: '!border-panel-border/40 !py-4 !px-8 !text-[13px] !text-zinc-300' }
+                                    headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                                        bodycell: { class: '!border-panel-border/40 !py-4 !px-8 !text-[13px] !text-secondary' }
                                     },
-                                    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200 cursor-pointer' }
+                                    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200 cursor-pointer' }
                                 }"
                                 @row-click="(e) => handleLinkClick('Product', e.data.name, e.data.id)"
                             >
@@ -551,7 +551,7 @@ const formatCurrency = (val) => {
             >
                 <div class="bg-deep border border-panel-border rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-500 ring-1 ring-white/5">
                     <!-- Header -->
-                    <div class="px-8 py-6 border-b border-zinc-900 bg-panel/50 flex justify-between items-center">
+                    <div class="px-8 py-6 border-b border-panel-border bg-panel/50 flex justify-between items-center">
                         <div class="flex flex-col">
                             <div class="text-[9px] font-bold text-sky-500 font-mono tracking-[0.2em] mb-1">VENDOR_DETAILS</div>
                             <h2 class="text-primary text-xl font-bold tracking-tight m-0">{{ vendorForm.id ? 'Edit Vendor Details' : 'New Vendor Registration' }}</h2>
@@ -575,16 +575,16 @@ const formatCurrency = (val) => {
 
                             <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Email Address</label>
-                                <InputText v-model="vendorForm.email" placeholder="contact@nexus.com" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                                <InputText v-model="vendorForm.email" placeholder="contact@nexus.com" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30" />
                             </div>
                             <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Phone Number</label>
-                                <InputText v-model="vendorForm.phone" placeholder="+1 (000) 000-0000" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                                <InputText v-model="vendorForm.phone" placeholder="+1 (000) 000-0000" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30" />
                             </div>
 
                             <div class="col-span-12 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Physical Address</label>
-                                <InputText v-model="vendorForm.address" placeholder="Main Facility Sector 7" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30" />
+                                <InputText v-model="vendorForm.address" placeholder="Main Facility Sector 7" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30" />
                             </div>
 
                             <div class="col-span-12 md:col-span-8 flex flex-col gap-2">
@@ -600,7 +600,7 @@ const formatCurrency = (val) => {
                                 <ToggleSwitch v-model="vendorForm.is_active" 
                                              :pt="{
                                                  slider: ({ props }) => ({
-                                                     class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700'
+                                                     class: props.modelValue ? '!bg-sky-500' : '!bg-panel-border'
                                                  })
                                              }" />
                             </div>
@@ -608,7 +608,7 @@ const formatCurrency = (val) => {
                     </div>
 
                     <!-- Footer -->
-                    <div class="px-8 py-6 border-t border-zinc-900 bg-panel/50 flex justify-end gap-3">
+                    <div class="px-8 py-5 border-t border-panel-border bg-panel/50 flex justify-end gap-3">
                         <Button label="CANCEL" class="!bg-transparent !border-panel-border !text-secondary hover:!text-primary hover:!border-zinc-600 !px-6 !h-11 !font-bold !text-[10px] uppercase tracking-widest border transition-colors" @click="dialogVisible = false" />
                         <Button label="SAVE VENDOR" 
                                 class="!bg-sky-500 !border-none !text-primary !px-10 !h-11 !font-bold !text-[10px] uppercase tracking-widest shadow-lg shadow-sky-500/10 hover:!bg-sky-400 active:scale-95 transition-all" 

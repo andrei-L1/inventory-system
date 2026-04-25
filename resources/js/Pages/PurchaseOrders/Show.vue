@@ -49,6 +49,15 @@ const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const uomConversions = ref([]);
 const loadingConversions = ref(false);
+const carriers = ref([]);
+
+// ── Phase 6.4: Landed Costs ────────────────────────────────────────────────
+const landedCosts = ref([]);
+const landedCostDialog = ref(false);
+const landedCostLoading = ref(false);
+const newLandedCost = ref({ cost_type: 'Freight', amount: '', notes: '' });
+const allocatingId = ref(null);
+const COST_TYPES = ['Freight', 'Duty', 'Insurance', 'Handling', 'Other'];
 
 // H-1: Popover for per-location stock breakdown in the GRN dialog
 const stockPopover = ref(null);
@@ -255,11 +264,99 @@ const loadConversions = async () => {
     }
 };
 
+const loadCarriers = async () => {
+    try {
+        const res = await axios.get('/api/carriers?limit=100');
+        carriers.value = res.data.data;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+// ── Phase 6.4: Landed Cost Helpers ─────────────────────────────────────────
+const loadLandedCosts = async () => {
+    if (!po.value?.id) return;
+    try {
+        const res = await axios.get(`/api/purchase-orders/${po.value.id}/landed-costs`);
+        landedCosts.value = res.data.data;
+    } catch { /* silent */ }
+};
+
+const addLandedCost = async () => {
+    if (!newLandedCost.value.amount || Number(newLandedCost.value.amount) <= 0) {
+        toast.add({ severity: 'warn', summary: 'Validation', detail: 'Enter a valid amount greater than zero.', life: 3000 });
+        return;
+    }
+    landedCostLoading.value = true;
+    try {
+        await axios.post(`/api/purchase-orders/${po.value.id}/landed-costs`, {
+            cost_type: newLandedCost.value.cost_type,
+            amount: newLandedCost.value.amount,
+            notes: newLandedCost.value.notes || null,
+        });
+        toast.add({ severity: 'success', summary: 'Added', detail: `${newLandedCost.value.cost_type} charge recorded.`, life: 3000 });
+        newLandedCost.value = { cost_type: 'Freight', amount: '', notes: '' };
+        landedCostDialog.value = false;
+        loadLandedCosts();
+    } catch (e) {
+        toast.add({ severity: 'error', summary: 'Failed', detail: e.response?.data?.message || 'Could not save.', life: 3000 });
+    } finally {
+        landedCostLoading.value = false;
+    }
+};
+
+const deleteLandedCost = (lc) => {
+    confirm.require({
+        message: `Delete this ${lc.cost_type} charge of ₱${lc.formatted_amount}?`,
+        header: 'Delete Landed Cost',
+        icon: 'pi pi-trash',
+        rejectClass: 'p-button-secondary p-button-text',
+        acceptClass: 'p-button-danger',
+        acceptLabel: 'Delete',
+        accept: async () => {
+            try {
+                await axios.delete(`/api/purchase-orders/${po.value.id}/landed-costs/${lc.id}`);
+                toast.add({ severity: 'success', summary: 'Deleted', detail: 'Landed cost removed.', life: 3000 });
+                loadLandedCosts();
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Cannot Delete', detail: e.response?.data?.message, life: 3000 });
+            }
+        }
+    });
+};
+
+const allocateLandedCost = (lc, method) => {
+    const methodLabel = method === 'by_value' ? 'By Value (proportional)' : 'By Quantity (uniform per unit)';
+    confirm.require({
+        message: `Allocate ₱${lc.formatted_amount} ${lc.cost_type} into cost layers using "${methodLabel}"? This cannot be undone.`,
+        header: 'Confirm Allocation',
+        icon: 'pi pi-calculator',
+        rejectClass: 'p-button-secondary p-button-text',
+        acceptClass: 'p-button-success',
+        acceptLabel: 'Allocate',
+        accept: async () => {
+            allocatingId.value = lc.id;
+            try {
+                await axios.post(`/api/purchase-orders/${po.value.id}/landed-costs/${lc.id}/allocate`, { method });
+                toast.add({ severity: 'success', summary: 'Allocated!', detail: `Cost layers updated with ${lc.cost_type} overhead.`, life: 4000 });
+                loadLandedCosts();
+            } catch (e) {
+                toast.add({ severity: 'error', summary: 'Allocation Failed', detail: e.response?.data?.message, life: 4000 });
+            } finally {
+                allocatingId.value = null;
+            }
+        }
+    });
+};
+
 onMounted(() => {
     loadPO();
     loadLocations();
     loadUoms();
     loadConversions();
+    loadCarriers();
+    // Delay landed costs load until PO is ready
+    setTimeout(loadLandedCosts, 600);
 });
 
 const getStatusColor = (statusName) => {
@@ -357,7 +454,10 @@ const openGrnMode = async () => {
                 unit: l.uom ?? l.base_uom ?? '???',
                 uom_id: l.uom_id,
                 product_uom: l.uom ?? l.base_uom ?? '???',
-                inventories: invMap[l.product_id] || []
+                inventories: invMap[l.product_id] || [],
+                // Phase 6.3: optional serial numbers (comma-separated input)
+                serial_numbers_input: '',
+                serial_numbers: [],
             }));
         
         if (grnForm.value.lines.length === 0) {
@@ -401,10 +501,14 @@ const postReceipt = async () => {
             location_id: grnForm.value.location_id,
             delivery_note_number: grnForm.value.delivery_note_number || null,
             notes: grnForm.value.notes || null,
-            lines: payloadLines.map(l => ({ 
-                po_line_id: l.po_line_id, 
+            lines: payloadLines.map(l => ({
+                po_line_id: l.po_line_id,
                 received_qty: l.received_qty,
-                uom_id: l.uom_id
+                uom_id: l.uom_id,
+                // Phase 6.3: parse comma/newline-separated serial numbers (optional)
+                serial_numbers: l.serial_numbers_input
+                    ? l.serial_numbers_input.split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
+                    : [],
             }))
         });
         toast.add({ severity: 'success', summary: 'Success', detail: 'Goods Receipt Note posted!', life: 3000 });
@@ -650,7 +754,7 @@ const openPrint = () => {
                         v-if="canBill && can('manage-purchase-orders')" 
                         label="Convert to Bill" 
                         icon="pi pi-file-export" 
-                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
+                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-primary font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
                         @click="router.visit(`/finance/bills/create?from_po=${po.id}`)"
                     />
                     
@@ -666,7 +770,7 @@ const openPrint = () => {
                         v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
-                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openGrnMode"
                     />
                 </div>
@@ -784,6 +888,69 @@ const openPrint = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Landed Costs (Phase 6.4) -->
+                <div class="bg-panel/40 border border-amber-500/20 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700">
+                    <div class="flex items-center justify-between border-b border-white/[0.03] pb-2">
+                        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest font-mono">Landed Costs</span>
+                        <Button
+                            v-if="can('manage-purchase-orders')"
+                            icon="pi pi-plus"
+                            size="small"
+                            text
+                            v-tooltip.left="'Add freight, duty, insurance...'"
+                            class="!w-6 !h-6 !text-amber-400"
+                            @click="landedCostDialog = true"
+                        />
+                    </div>
+
+                    <div v-if="landedCosts.length === 0" class="text-[9px] font-mono text-muted italic py-1">
+                        No landed costs recorded.
+                    </div>
+
+                    <div v-for="lc in landedCosts" :key="lc.id"
+                        class="flex flex-col gap-2 p-3 rounded-xl border transition-all"
+                        :class="lc.is_allocated ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-deep/50 border-panel-border/50 hover:border-amber-500/20'">
+
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex flex-col gap-0.5">
+                                <span class="text-[10px] font-black text-primary">{{ lc.cost_type }}</span>
+                                <span class="text-[11px] font-mono font-black text-amber-400">₱{{ lc.formatted_amount }}</span>
+                            </div>
+                            <span v-if="lc.is_allocated"
+                                class="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                APPLIED
+                            </span>
+                            <Button v-else icon="pi pi-trash" size="small" text severity="danger"
+                                class="!w-5 !h-5" v-tooltip.top="'Delete'" @click="deleteLandedCost(lc)" />
+                        </div>
+
+                        <p v-if="lc.notes" class="text-[9px] text-muted font-mono leading-relaxed">{{ lc.notes }}</p>
+
+                        <div v-if="lc.is_allocated" class="text-[9px] font-mono text-muted">
+                            Applied <span class="text-emerald-400 font-bold">{{ lc.allocation_method === 'by_value' ? 'by value' : 'by quantity' }}</span>
+                            by {{ lc.allocated_by }} on {{ lc.allocated_at?.split(' ')[0] }}
+                        </div>
+
+                        <div v-else class="flex gap-1.5 mt-1">
+                            <Button label="By Value" size="small" :loading="allocatingId === lc.id"
+                                class="!text-[8px] !h-6 !px-2 !bg-amber-500/10 hover:!bg-amber-500/20 !text-amber-400 !border-amber-500/20 font-black uppercase tracking-widest transition-all"
+                                @click="allocateLandedCost(lc, 'by_value')"
+                                v-tooltip.top="'Prorate proportional to line cost'" />
+                            <Button label="By Qty" size="small" :loading="allocatingId === lc.id"
+                                class="!text-[8px] !h-6 !px-2 !bg-panel hover:!bg-panel-hover !text-secondary !border-panel-border font-black uppercase tracking-widest transition-all"
+                                @click="allocateLandedCost(lc, 'by_quantity')"
+                                v-tooltip.top="'Spread equally per unit received'" />
+                        </div>
+                    </div>
+
+                    <div v-if="landedCosts.length > 0" class="mt-1 pt-2 border-t border-panel-border/30 flex justify-between text-[9px] font-mono">
+                        <span class="text-muted font-bold uppercase tracking-widest">Total Overhead</span>
+                        <span class="text-amber-400 font-black">
+                            ₱{{ landedCosts.reduce((s, lc) => +(s + parseFloat(lc.amount || 0)).toFixed(2), 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}
+                        </span>
                     </div>
                 </div>
 
@@ -998,6 +1165,24 @@ const openPrint = () => {
                                             </template>
                                         </Select>
                                     </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <!-- Phase 6.3: Optional Serial Numbers input per line -->
+                        <Column header="SERIAL #s (OPT.)" style="width: 16rem">
+                            <template #body="{ data }">
+                                <div class="flex flex-col gap-1">
+                                    <InputText
+                                        v-model="data.serial_numbers_input"
+                                        placeholder="e.g. SN001, SN002"
+                                        class="!bg-deep !border-panel-border !rounded-lg !h-9 !px-3 !text-[10px] font-mono text-violet-300 w-full focus:!border-violet-500/50 transition-all"
+                                    />
+                                    <span class="text-[8px] font-mono text-muted">Comma-separated. Optional.</span>
+                                    <!-- Count validation hint -->
+                                    <span v-if="data.serial_numbers_input && data.serial_numbers_input.split(/[,\n]+/).filter(s => s.trim()).length !== Math.round(data.received_qty)"
+                                        class="text-[8px] text-amber-400 font-mono">
+                                        ⚠ Count ({{ data.serial_numbers_input.split(/[,\n]+/).filter(s => s.trim()).length }}) ≠ qty ({{ Math.round(data.received_qty) }})
+                                    </span>
                                 </div>
                             </template>
                         </Column>
@@ -1216,8 +1401,20 @@ const openPrint = () => {
         <Dialog v-model:visible="shipDialog" modal header="Log Vendor Shipment" :style="{ width: '30rem' }">
             <div class="flex flex-col gap-4 py-2">
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Carrier Name</label>
-                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, LBC" class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" />
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Carrier Name</label>
+                        <a href="/carriers" target="_blank" class="text-[9px] text-sky-400 font-mono hover:underline">Manage Carriers →</a>
+                    </div>
+                    <Select 
+                        v-model="shipForm.carrier" 
+                        :options="carriers" 
+                        optionLabel="name" 
+                        optionValue="name" 
+                        placeholder="SELECT CARRIER..." 
+                        filter 
+                        filterPlaceholder="Search carriers..." 
+                        class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" 
+                    />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Tracking Number</label>
@@ -1355,14 +1552,52 @@ const openPrint = () => {
         </Dialog>
 
         <!-- Global ConfirmDialog is provided by AppLayout -->
+
+        <!-- Add Landed Cost Dialog (Phase 6.4) -->
+        <Dialog v-model:visible="landedCostDialog" modal header="Add Landed Cost" :style="{ width: '28rem' }">
+            <div class="flex flex-col gap-4 py-2">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Cost Type</label>
+                    <Select
+                        v-model="newLandedCost.cost_type"
+                        :options="COST_TYPES"
+                        class="!bg-deep !border-zinc-700 !text-secondary w-full"
+                    />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Amount (₱)</label>
+                    <InputNumber
+                        v-model="newLandedCost.amount"
+                        :min="0"
+                        :minFractionDigits="2"
+                        :maxFractionDigits="8"
+                        placeholder="0.00"
+                        class="w-full"
+                        :inputStyle="{ background: 'var(--deep)', border: '1px solid var(--panel-border)', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }"
+                    />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Notes (Optional)</label>
+                    <InputText v-model="newLandedCost.notes" placeholder="e.g. Freight invoice #1234" class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" />
+                </div>
+                <p class="text-[9px] text-muted font-mono">
+                    After saving, you can allocate this charge into inventory cost layers using "By Value" (proportional to line total) or "By Qty" (equal per unit).
+                </p>
+            </div>
+            <template #footer>
+                <Button label="Cancel" icon="pi pi-times" @click="landedCostDialog = false" class="p-button-text !text-secondary hover:!text-primary" />
+                <Button label="Save Charge" icon="pi pi-check" @click="addLandedCost" :loading="landedCostLoading"
+                    class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !border-none !text-primary font-bold uppercase tracking-widest font-mono" />
+            </template>
+        </Dialog>
     </AppLayout>
 </template>
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #18181b; /* zinc-950 */
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
-    color: #a1a1aa; /* zinc-400 */
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -1373,8 +1608,8 @@ const openPrint = () => {
     background: transparent;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5); /* zinc-800/50 */
-    color: #e4e4e7; /* zinc-200 */
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 0.5rem 0.75rem;
 }
 :deep(.p-tag.p-tag-warning) { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
@@ -1384,22 +1619,22 @@ const openPrint = () => {
 :deep(.p-tag.p-tag-help) { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
 
 :deep(.p-dialog) {
-    background: #09090b;
-    border: 1px solid #27272a;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
     border-radius: 1rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 :deep(.p-dialog-header) {
-    background: rgba(24, 24, 27, 0.8);
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8);
-    color: white;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 1rem;
 }
-:deep(.p-dialog-content) { background: transparent; padding: 1rem; color: #a1a1aa; }
-:deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1rem; }
-:deep(.p-select), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
-:deep(.p-inputnumber-button) { background: #18181b; border-color: #27272a; color: #a1a1aa; }
-:deep(.p-inputnumber-button:hover) { background: #27272a; color: white; }
+:deep(.p-dialog-content) { background: transparent; padding: 1rem; color: var(--text-secondary); }
+:deep(.p-dialog-footer) { background: var(--bg-panel); border-top: 1px solid var(--bg-panel-border); padding: 1rem; }
+:deep(.p-select), :deep(.p-inputnumber-input) { background: var(--bg-input) !important; border-color: var(--bg-panel-border); color: var(--text-primary); }
+:deep(.p-inputnumber-button) { background: var(--bg-panel-hover); border-color: var(--bg-panel-border); color: var(--text-secondary); }
+:deep(.p-inputnumber-button:hover) { background: var(--bg-panel-border); color: var(--text-primary); }
 </style>
 
 
