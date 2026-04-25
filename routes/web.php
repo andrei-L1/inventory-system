@@ -46,6 +46,8 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/category-center', fn () => Inertia::render('CategoryCenter'))->name('category-center');
     Route::get('/carriers', fn () => Inertia::render('Carriers/Index'))->name('carriers.index');
     Route::get('/serials', fn () => Inertia::render('Serials/Index'))->name('serials.index');
+    Route::get('/price-lists', fn () => Inertia::render('PriceLists/Index'))->name('price-lists.index');
+    Route::get('/discounts', fn () => Inertia::render('Discounts/Index'))->name('discounts.index');
 
     Route::get('/customer-center', fn () => Inertia::render('CustomerCenter'))->name('customer-center');
     Route::get('/vendor-center', fn () => Inertia::render('VendorCenter'))->name('vendor-center');

@@ -26,6 +26,8 @@ use App\Http\Controllers\Api\Logistics\ProductSerialController;
 use App\Http\Controllers\Api\Logistics\ShipmentController;
 use App\Http\Controllers\Api\Procurement\LandedCostController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
+use App\Http\Controllers\Api\Sales\DiscountController;
+use App\Http\Controllers\Api\Sales\PriceListController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderReturnController;
 use Illuminate\Http\Request;
@@ -148,6 +150,19 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('sales-orders/{salesOrder}/ship', [SalesOrderController::class, 'ship'])->middleware('permission:manage-sales-orders');
     Route::post('sales-orders/{salesOrder}/return', [SalesOrderReturnController::class, 'store'])->middleware('permission:manage-sales-orders');
     Route::patch('sales-orders/{salesOrder}/cancel', [SalesOrderController::class, 'cancel'])->middleware('permission:manage-sales-orders');
+
+    // -----------------------------------------------------------------------
+    // Price Lists & Discounts (Phase 7.2)
+    // -----------------------------------------------------------------------
+    Route::apiResource('price-lists', PriceListController::class)->only(['index', 'show'])->middleware('permission:view-sales-orders');
+    Route::apiResource('price-lists', PriceListController::class)->except(['index', 'show'])->middleware('permission:manage-sales-orders');
+    Route::post('price-lists/{priceList}/items', [PriceListController::class, 'upsertItem'])->middleware('permission:manage-sales-orders');
+    Route::delete('price-lists/{priceList}/items/{priceListItem}', [PriceListController::class, 'destroyItem'])->middleware('permission:manage-sales-orders');
+    Route::get('price-lists/{priceList}/resolve', [PriceListController::class, 'resolvePrice'])->middleware('permission:view-sales-orders');
+
+    Route::apiResource('discounts', DiscountController::class)->only(['index'])->middleware('permission:view-sales-orders');
+    Route::apiResource('discounts', DiscountController::class)->except(['index', 'show'])->middleware('permission:manage-sales-orders');
+    Route::get('discounts/resolve', [DiscountController::class, 'resolve'])->middleware('permission:view-sales-orders');
 
     // -----------------------------------------------------------------------
     // Finance API (Phase 5.5)

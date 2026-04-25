@@ -514,19 +514,18 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 ---
 
 ## 💰 Phase 7 — Pricing & Discounts
-> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
+> Status: ✅ COMPLETE
 
 ### 7.1 Landed Costs & Valuation Alignment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance using `landed_costs` table.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] Completed under Phase 6.4 — see above.
 
 ### 7.2 Price Lists & Discounts API
-- [ ] `PriceListController` — CRUD (`/api/price-lists`).
-- [ ] `PriceListItemController` — manage per-product prices within a list.
-- [ ] `DiscountController` — CRUD for discount rules.
-- [ ] Price list assignment: to customer, to customer group, or default.
-- [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price.
+- [x] `PriceListController` — CRUD (`/api/price-lists`) with item upsert, quantity-break price tiers, and customer assignment.
+- [x] `DiscountController` — CRUD for scoped discount rules (product / category / customer) with `active` scope.
+- [x] Price list assignment: to customer via `price_list_id` on Customer model.
+- [x] Price resolution logic on SO creation: customer price list → quantity break → default `product.selling_price`.
+- [x] **Price Lists page** (`/price-lists`) — manage lists, add per-product pricing with min-qty breaks.
+- [x] **Discounts page** (`/discounts`) — manage percentage & fixed rules with validity windows and scope targeting.
 
 ---
 

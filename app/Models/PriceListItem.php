@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PriceListItem extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'price_list_id',
         'product_id',
@@ -16,13 +14,18 @@ class PriceListItem extends Model
         'min_quantity',
     ];
 
-    public function priceList()
+    protected $casts = [
+        'price'        => 'decimal:6',
+        'min_quantity' => 'decimal:4',
+    ];
+
+    public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
     }
 
-    public function product()
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 }

@@ -29,6 +29,7 @@ const products = ref([]);
 const locations = ref([]);
 const uoms = ref([]);
 const uomConversions = ref([]);
+const activePriceListId = ref(null); // tracks customer's assigned price list
 
 const isUomIdDiscrete = (id) => {
     const uom = uoms.value.find(u => u.id === id);
@@ -257,15 +258,39 @@ const loadLookups = async () => {
     }
 };
 
-const onProductSelect = (line) => {
+const onProductSelect = async (line) => {
     const product = products.value.find(p => p.id === line.product_id);
     if (product) {
         line.uom_id = product.uom_id;
         line.prev_uom_id = product.uom_id;
-        if (!line.unit_price || line.unit_price == 0) {
+
+        // Phase 7.2: Try to resolve price from the customer's active price list
+        let resolved = null;
+        if (activePriceListId.value) {
+            try {
+                const res = await axios.get(`/api/price-lists/${activePriceListId.value}/resolve`, {
+                    params: { product_id: product.id, qty: line.ordered_qty || 1 }
+                });
+                resolved = res.data.resolved_price;
+            } catch { /* silent */ }
+        }
+
+        if (resolved !== null) {
+            line.unit_price = parseFloat(resolved);
+            toast.add({ severity: 'info', summary: 'Price List Applied', detail: `Unit price set from customer price list: ₱${parseFloat(resolved).toFixed(2)}`, life: 3000 });
+        } else if (!line.unit_price || line.unit_price == 0) {
             line.unit_price = product.selling_price || 0;
         }
+
         fetchProductInventory(line);
+    }
+};
+
+const onCustomerChange = () => {
+    const customer = customers.value.find(c => c.id === form.value.customer_id);
+    activePriceListId.value = customer?.price_list_id || null;
+    if (activePriceListId.value) {
+        toast.add({ severity: 'success', summary: 'Price List Active', detail: `${customer.name}'s price list will auto-fill product prices.`, life: 3000 });
     }
 };
 
@@ -503,6 +528,7 @@ const cancel = () => {
                                 optionValue="id" 
                                 placeholder="Select customer" 
                                 filter
+                                @change="onCustomerChange"
                                 class="w-full bg-deep border-panel-border text-sm focus:border-teal-500/50"
                             />
                         </div>
