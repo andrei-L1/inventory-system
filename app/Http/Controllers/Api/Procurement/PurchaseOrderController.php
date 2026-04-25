@@ -363,6 +363,8 @@ class PurchaseOrderController extends Controller
     {
         $request->validate([
             'location_id' => 'required|exists:locations,id',
+            'delivery_note_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
             'lines' => 'required|array',
             'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.received_qty' => 'required|numeric|min:0.01',
@@ -378,6 +380,14 @@ class PurchaseOrderController extends Controller
                 $receiptType = TransactionType::where('name', 'receipt')->firstOrFail();
                 $postedStatus = TransactionStatus::where('name', 'posted')->firstOrFail();
 
+                $grnNotes = 'Goods Receipt Note for PO: '.$purchaseOrder->po_number;
+                if ($request->filled('delivery_note_number')) {
+                    $grnNotes .= ' | Vendor DN#: '.$request->delivery_note_number;
+                }
+                if ($request->filled('notes')) {
+                    $grnNotes .= ' | '.$request->notes;
+                }
+
                 $transactionData = [
                     'header' => [
                         'transaction_type_id' => $receiptType->id,
@@ -387,7 +397,7 @@ class PurchaseOrderController extends Controller
                         'vendor_id' => $purchaseOrder->vendor_id,
                         'purchase_order_id' => $purchaseOrder->id,
                         'reference_doc' => $purchaseOrder->po_number,
-                        'notes' => 'Goods Receipt Note for PO: '.$purchaseOrder->po_number,
+                        'notes' => $grnNotes,
                         'created_by' => $request->user()->id,
                         'to_location_id' => $request->location_id,
                     ],
