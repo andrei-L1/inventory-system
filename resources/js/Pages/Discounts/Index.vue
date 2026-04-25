@@ -189,7 +189,11 @@ const TYPES = [
                     <span class="text-[10px] font-mono text-muted font-bold">{{ filtered.length }} rules</span>
                 </div>
 
-                <DataTable :value="filtered" :loading="loading" rowHover stripedRows :pt="{ table: { class: 'w-full' } }">
+                <DataTable :value="filtered" :loading="loading" rowHover stripedRows :pt="{ 
+                    table: { class: 'w-full' },
+                    headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' }
+                }">
                     <Column field="name" header="Name">
                         <template #body="{ data }">
                             <span class="text-primary font-bold text-sm">{{ data.name }}</span>
@@ -240,19 +244,19 @@ const TYPES = [
             <div class="flex flex-col gap-4 py-2">
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Name</label>
-                    <InputText v-model="form.name" placeholder="e.g. Summer Sale, VIP 20% off" class="!bg-deep !border-zinc-700 !text-secondary w-full" />
+                    <InputText v-model="form.name" placeholder="e.g. Summer Sale, VIP 20% off" class="!bg-deep !border-panel-border !text-primary w-full" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
                         <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Type</label>
-                        <Select v-model="form.type" :options="TYPES" optionLabel="label" optionValue="value" class="!bg-deep !border-zinc-700 w-full" />
+                        <Select v-model="form.type" :options="TYPES" optionLabel="label" optionValue="value" class="!bg-deep !border-panel-border w-full" />
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">
                             Value {{ form.type === 'percentage' ? '(%)' : '(₱)' }}
                         </label>
                         <InputNumber v-model="form.value" :min="0" :minFractionDigits="2" placeholder="0.00"
-                            :inputStyle="{ background: '#09090b', border: '1px solid #27272a', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
+                            :inputStyle="{ background: 'var(--bg-input)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
                     </div>
                 </div>
 

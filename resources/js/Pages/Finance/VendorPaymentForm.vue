@@ -255,7 +255,7 @@ const formatCurrency = (val) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="alloc in form.allocations" :key="alloc.bill_id" class="border-b border-panel-border/50 hover:bg-white/[0.01] transition-colors">
+                                <tr v-for="alloc in form.allocations" :key="alloc.bill_id" class="border-b border-panel-border/50 hover:bg-panel-hover transition-colors">
                                     <td class="py-3 px-6">
                                         <span class="text-xs font-bold text-primary bg-deep px-2 py-1 rounded border border-panel-border font-mono">{{ alloc.bill_number }}</span>
                                     </td>

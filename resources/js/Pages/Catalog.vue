@@ -596,9 +596,9 @@ const getBaseUomForSelected = computed(() => {
                 <div class="px-6 py-4 border-b border-panel-border flex justify-between items-center bg-panel/80">
                     <div class="flex items-center gap-3">
                         <div class="w-2 h-2 rounded-full bg-sky-500"></div>
-                        <span class="text-[11px] font-bold text-zinc-300 tracking-[0.15em] uppercase">All Registered Items</span>
+                        <span class="text-[11px] font-bold text-secondary tracking-[0.15em] uppercase">All Registered Items</span>
                     </div>
-                    <span class="bg-panel-hover/50 text-secondary px-3 py-1 rounded-md text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ products.length }} PRODUCTS</span>
+                    <span class="bg-panel-hover/50 text-secondary px-3 py-1 rounded-md text-[10px] font-bold border border-panel-border font-mono tracking-tighter">{{ products.length }} PRODUCTS</span>
                 </div>
                 
                 <DataTable 
@@ -613,10 +613,10 @@ const getBaseUomForSelected = computed(() => {
                     @row-click="(e) => goToInventory(e.data)"
                     :pt="{
                         column: {
-                            headercell: { class: '!bg-panel/90 !border-panel-border !text-zinc-300 !text-[11px] !uppercase !font-bold !tracking-[0.1em] !py-4 !px-6' },
-                            bodycell: { class: '!border-panel-border/40 !py-4 !px-6 !text-[13px] !text-zinc-300' }
+                            headercell: { class: '!bg-panel/90 !border-panel-border !text-secondary !text-[11px] !uppercase !font-bold !tracking-[0.1em] !py-4 !px-6' },
+                            bodycell: { class: '!border-panel-border/40 !py-4 !px-6 !text-[13px] !text-secondary' }
                         },
-                        bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200 cursor-pointer' },
+                        bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200 cursor-pointer' },
                         paginator: {
                             root: { class: '!bg-panel/80 !border-t !border-panel-border !py-3' },
                             pagelink: ({ props, state, context }) => ({
@@ -636,7 +636,7 @@ const getBaseUomForSelected = computed(() => {
                         <template #body="{ data }">
                             <div class="w-12 h-12 bg-deep border border-panel-border rounded-lg flex items-center justify-center overflow-hidden group/img transition-all hover:border-sky-500/40 cursor-zoom-in">
                                 <img v-if="data.main_image_url" :src="data.main_image_url" class="w-full h-full object-cover group-hover/img:scale-110 transition-transform duration-500" />
-                                <i v-else class="pi pi-image text-zinc-800 text-xl"></i>
+                                <i v-else class="pi pi-image text-muted text-xl"></i>
                             </div>
                         </template>
                     </Column>
@@ -656,7 +656,7 @@ const getBaseUomForSelected = computed(() => {
                     <Column field="name" header="Product Name">
                         <template #body="{ data }">
                             <div class="flex flex-col gap-0.5">
-                                <span class="font-bold text-zinc-100 truncate max-w-[280px] tracking-tight">{{ data.name }}</span>
+                                <span class="font-bold text-primary truncate max-w-[280px] tracking-tight">{{ data.name }}</span>
                                 <span v-if="data.brand" class="text-[9px] font-bold text-muted uppercase tracking-[0.1em] font-mono leading-none">{{ data.brand }}</span>
                             </div>
                         </template>
@@ -676,7 +676,7 @@ const getBaseUomForSelected = computed(() => {
                                 <span class="text-[10px] font-bold text-primary tracking-tight">{{ data.preferred_vendor.name }}</span>
                                 <span class="text-[8px] font-bold text-muted uppercase tracking-widest font-mono">{{ data.preferred_vendor.vendor_code }}</span>
                             </div>
-                            <span v-else class="text-[9px] font-bold px-3 py-1 bg-panel-hover/50 border border-zinc-700/50 rounded text-secondary uppercase tracking-widest font-mono">
+                            <span v-else class="text-[9px] font-bold px-3 py-1 bg-panel-hover/50 border border-panel-border rounded text-secondary uppercase tracking-widest font-mono">
                                 INTERNAL
                             </span>
                         </template>
@@ -694,7 +694,7 @@ const getBaseUomForSelected = computed(() => {
                                 <div class="flex items-center gap-2 cursor-help group/stock" @click="toggleStock($event, data)">
                                     <div class="px-2 py-0.5 rounded bg-deep border border-panel-border flex items-center gap-1.5 transition-all group-hover/stock:border-sky-500/30">
                                         <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="Number(data.total_qoh || 0) > Number(data.reorder_point || 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'"></div>
-                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="Number(data.total_qoh || 0) > Number(data.reorder_point || 0) ? 'text-zinc-100' : 'text-amber-400'">
+                                        <span class="text-[11px] font-mono font-bold tracking-tight" :class="Number(data.total_qoh || 0) > Number(data.reorder_point || 0) ? 'text-primary' : 'text-amber-400'">
                                             {{ data.formatted_total_qoh }}
                                         </span>
                                     </div>
@@ -711,8 +711,8 @@ const getBaseUomForSelected = computed(() => {
                     <Column header="Status" style="width: 150px">
                         <template #body="{ data }">
                             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold tracking-widest transition-all font-mono"
-                                 :class="data.is_active ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.05)]' : 'bg-panel-hover/50 text-muted border-zinc-700/50'">
-                                <span class="w-1.5 h-1.5 rounded-full" :class="data.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-zinc-700'"></span>
+                                 :class="data.is_active ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.05)]' : 'bg-panel-hover/50 text-muted border-panel-border'">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="data.is_active ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-panel-border'"></span>
                                 {{ data.is_active ? 'ACTIVE' : 'INACTIVE' }}
                             </div>
                         </template>
@@ -752,30 +752,30 @@ const getBaseUomForSelected = computed(() => {
                         <nav class="flex flex-col gap-2">
                             <button @click="activeTab = 'basic'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
-                                    :class="activeTab === 'basic' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-zinc-100 hover:bg-panel-hover/80 hover:border-zinc-700'">
+                                    :class="activeTab === 'basic' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-primary hover:bg-panel-hover/80 hover:border-panel-border'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors" 
-                                      :class="activeTab === 'basic' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-deep text-secondary group-hover:text-zinc-300'">01</span>
+                                      :class="activeTab === 'basic' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-panel-border bg-deep text-secondary group-hover:text-secondary'">01</span>
                                 01. BASIC INFO
                             </button>
                             <button @click="activeTab = 'inventory'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
-                                    :class="activeTab === 'inventory' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-zinc-100 hover:bg-panel-hover/80 hover:border-zinc-700'">
+                                    :class="activeTab === 'inventory' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-primary hover:bg-panel-hover/80 hover:border-panel-border'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
-                                      :class="activeTab === 'inventory' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-deep text-secondary group-hover:text-zinc-300'">02</span>
+                                      :class="activeTab === 'inventory' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-panel-border bg-deep text-secondary group-hover:text-secondary'">02</span>
                                 02. PRICING & LEVELS
                             </button>
                             <button @click="activeTab = 'media'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
-                                    :class="activeTab === 'media' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-zinc-100 hover:bg-panel-hover/80 hover:border-zinc-700'">
+                                    :class="activeTab === 'media' ? 'bg-sky-500/10 text-sky-400 border-sky-500/30 shadow-[0_0_15px_rgba(56,189,248,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-primary hover:bg-panel-hover/80 hover:border-panel-border'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
-                                      :class="activeTab === 'media' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-zinc-700 bg-deep text-secondary group-hover:text-zinc-300'">03</span>
+                                      :class="activeTab === 'media' ? 'border-sky-500/40 bg-sky-500/20 text-sky-400' : 'border-panel-border bg-deep text-secondary group-hover:text-secondary'">03</span>
                                 03. PRODUCT PHOTO
                             </button>
                             <button @click="activeTab = 'packaging'" 
                                     class="flex items-center gap-3 px-3 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-left border"
-                                    :class="activeTab === 'packaging' ? 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-zinc-100 hover:bg-panel-hover/80 hover:border-zinc-700'">
+                                    :class="activeTab === 'packaging' ? 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.1)]' : 'bg-panel-hover/20 text-secondary border-panel-border shadow-sm hover:text-primary hover:bg-panel-hover/80 hover:border-panel-border'">
                                 <span class="font-mono text-[9px] w-6 h-6 flex items-center justify-center rounded border transition-colors"
-                                      :class="activeTab === 'packaging' ? 'border-fuchsia-500/40 bg-fuchsia-500/20 text-fuchsia-400' : 'border-zinc-700 bg-deep text-secondary group-hover:text-zinc-300'">04</span>
+                                      :class="activeTab === 'packaging' ? 'border-fuchsia-500/40 bg-fuchsia-500/20 text-fuchsia-400' : 'border-panel-border bg-deep text-secondary group-hover:text-secondary'">04</span>
                                 04. PACKAGING (UOM)
                                 <span v-if="isNonBaseUOMMissingRule || isPackagingConfigured" 
                                       class="ml-auto w-2 h-2 rounded-full shadow-[0_0_8px_rgba(217,70,239,0.3)]"
@@ -797,7 +797,7 @@ const getBaseUomForSelected = computed(() => {
                         <!-- Content Scrollable -->
                         <div class="flex-1 overflow-y-auto p-10 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.03),transparent_40%)]">
                             <!-- System Status Banner -->
-                            <div class="flex justify-between items-center mb-10 pb-6 border-b border-zinc-900">
+                            <div class="flex justify-between items-center mb-10 pb-6 border-b border-panel-border">
                                 <div class="flex flex-col">
                                     <div class="text-[9px] font-bold text-muted font-mono uppercase tracking-[0.2em] mb-1">Product Information</div>
                                     <h2 class="text-primary text-2xl font-bold tracking-tight m-0">{{ isEditing ? 'Edit Product' : 'New Product' }}</h2>
@@ -836,7 +836,7 @@ const getBaseUomForSelected = computed(() => {
                                         </div>
                                         <InputText v-model="product.sku" placeholder="CAT-ABBR-0001" 
                                                   :disabled="isEditing && product.has_history"
-                                                  class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 !font-mono !px-4 focus:!border-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                  class="!bg-panel/50 !border-panel-border !text-secondary !h-12 !font-mono !px-4 focus:!border-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                                                   :class="{'!border-red-500/50': errors.sku}" />
                                         <p v-if="isEditing && product.has_history" class="text-[8px] font-bold text-muted uppercase tracking-widest font-mono mt-1 italic">Identifier locked due to audit history</p>
                                     </div>
@@ -898,7 +898,7 @@ const getBaseUomForSelected = computed(() => {
                                     <div class="flex flex-col gap-3 md:col-span-2">
                                         <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Description</label>
                                         <Textarea v-model="product.description" rows="4" placeholder="Enter product description..." 
-                                                  class="!bg-panel/50 !border-panel-border !text-zinc-300 focus:!border-sky-500/30 transition-all !p-5 leading-relaxed" />
+                                                  class="!bg-panel/50 !border-panel-border !text-secondary focus:!border-sky-500/30 transition-all !p-5 leading-relaxed" />
                                     </div>
                                 </div>
                             </div>
@@ -948,7 +948,7 @@ const getBaseUomForSelected = computed(() => {
                                             <ToggleSwitch v-model="product.is_active" 
                                                          :pt="{
                                                              slider: ({ props }) => ({
-                                                                 class: props.modelValue ? '!bg-emerald-500' : '!bg-zinc-700'
+                                                                 class: props.modelValue ? '!bg-emerald-500' : '!bg-panel-border'
                                                              })
                                                          }" />
                                         </div>
@@ -957,7 +957,7 @@ const getBaseUomForSelected = computed(() => {
                             </div>
 
                             <div v-show="activeTab === 'media'" class="animate-in slide-in-from-right-4 duration-500 h-full">
-                                <div class="h-96 border-2 border-dashed border-zinc-900 bg-deep/50 rounded-2xl flex items-center justify-center relative group hover:border-sky-500/20 transition-all cursor-pointer overflow-hidden shadow-inner" 
+                                <div class="h-96 border-2 border-dashed border-panel-border bg-deep/50 rounded-2xl flex items-center justify-center relative group hover:border-sky-500/20 transition-all cursor-pointer overflow-hidden shadow-inner" 
                                      @click="$refs.fileInput.click()">
                                     <input type="file" ref="fileInput" @change="onImageSelect" hidden />
                                     
@@ -1043,13 +1043,13 @@ const getBaseUomForSelected = computed(() => {
                                             </div>
                                         </div>
                                         <div class="flex justify-end gap-3 mt-2 pt-4 border-t border-fuchsia-500/10">
-                                            <Button label="CANCEL CONFIG" class="!bg-transparent !border-zinc-700 !text-secondary hover:!text-primary !px-4 !h-8 !border !text-[9px] font-bold tracking-widest transition-colors" @click="addingRule = false" />
+                                            <Button label="CANCEL CONFIG" class="!bg-transparent !border-panel-border !text-secondary hover:!text-primary !px-4 !h-8 !border !text-[9px] font-bold tracking-widest transition-colors" @click="addingRule = false" />
                                             <Button label="COMMIT RULE" class="!bg-fuchsia-500 hover:!bg-fuchsia-400 !text-primary !border-none !px-6 !h-8 !text-[9px] !font-bold tracking-widest" @click="saveProductConversion" />
                                         </div>
                                     </div>
 
                                     <div class="flex flex-col gap-3" v-if="!loadingConversions">
-                                        <div v-for="rule in productConversions" :key="rule.id" class="flex justify-between items-center p-4 bg-panel/50 border border-panel-border rounded-lg group hover:border-zinc-700 transition-colors">
+                                        <div v-for="rule in productConversions" :key="rule.id" class="flex justify-between items-center p-4 bg-panel/50 border border-panel-border rounded-lg group hover:border-panel-border-hover transition-colors">
                                             <div class="flex items-center gap-4">
                                                 <div class="px-3 py-1.5 bg-deep rounded text-[12px] font-mono font-black text-primary border border-panel-border shadow-inner">1 {{ rule.from_uom?.abbreviation || '?' }}</div>
                                                 <i class="pi pi-arrow-right text-muted text-[10px]"></i>
@@ -1066,7 +1066,7 @@ const getBaseUomForSelected = computed(() => {
                                         <i class="pi pi-spin pi-spinner text-fuchsia-400 text-3xl opacity-50"></i>
                                     </div>
                                 </div>
-                                <div v-else class="p-8 border-2 border-dashed border-zinc-900 bg-deep/50 rounded-2xl flex flex-col items-center justify-center text-center opacity-60">
+                                <div v-else class="p-8 border-2 border-dashed border-panel-border bg-deep/50 rounded-2xl flex flex-col items-center justify-center text-center opacity-60">
                                     <i class="pi pi-info-circle text-3xl text-muted mb-4 font-light"></i>
                                     <p class="text-[10px] font-mono uppercase tracking-[0.2em] leading-relaxed m-0 text-secondary">Select a Unit of Measure in the Basic Info tab<br/><span class="opacity-70 text-[8px]">Then you can configure packaging here.</span></p>
                                 </div>
@@ -1074,13 +1074,13 @@ const getBaseUomForSelected = computed(() => {
                         </div>
 
                         <!-- Global Footer -->
-                        <footer class="px-10 py-8 border-t border-zinc-900 bg-panel/50 flex flex-col sm:flex-row justify-between items-center gap-8">
+                        <footer class="px-10 py-8 border-t border-panel-border bg-panel/50 flex flex-col sm:flex-row justify-between items-center gap-8">
                             <div class="flex flex-col gap-1">
                                 <div class="text-[9px] font-bold text-secondary uppercase tracking-widest font-mono">Product ID</div>
                                 <div class="text-[10px] text-sky-400 font-mono">{{ isEditing ? `ID-${product.id}` : 'PENDING' }}</div>
                             </div>
                             <div class="flex items-center gap-4 w-full sm:w-auto">
-                                <Button label="CANCEL" class="!bg-transparent !border-panel-border !text-secondary hover:!text-primary hover:!border-zinc-600 !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest flex-1 sm:flex-none border transition-colors" @click="dialogVisible = false" />
+                                <Button label="CANCEL" class="!bg-transparent !border-panel-border !text-secondary hover:!text-primary hover:!border-panel-border-hover !px-8 !h-12 !font-bold !text-[11px] uppercase tracking-widest flex-1 sm:flex-none border transition-colors" @click="dialogVisible = false" />
                                 <Button :label="isEditing ? 'SAVE CHANGES' : 'SAVE PRODUCT'" 
                                         class="!bg-emerald-500 !border-none !text-primary !px-12 !h-12 !font-bold !text-[11px] uppercase tracking-widest flex-1 sm:flex-none shadow-lg shadow-emerald-500/10 hover:!bg-emerald-400 active:scale-95 transition-all" 
                                         @click="saveProduct" :loading="saving" />
@@ -1093,7 +1093,7 @@ const getBaseUomForSelected = computed(() => {
             <!-- Scattered Stock Popover -->
             <Popover ref="stockOp" class="!bg-deep !border-panel-border !shadow-2xl !p-0 overflow-hidden">
                 <div v-if="selectedProductForStock" class="flex flex-col w-72">
-                    <div class="px-4 py-3 border-b border-zinc-900 bg-panel/30 flex justify-between items-center">
+                    <div class="px-4 py-3 border-b border-panel-border bg-panel/30 flex justify-between items-center">
                         <div class="flex flex-col">
                             <span class="text-[9px] font-bold text-sky-500 uppercase tracking-widest font-mono">{{ selectedProductForStock.sku }}</span>
                             <span class="text-[10px] font-bold text-primary truncate max-w-[180px]">{{ selectedProductForStock.name }}</span>
@@ -1106,9 +1106,9 @@ const getBaseUomForSelected = computed(() => {
                     <div class="max-h-60 overflow-y-auto custom-scrollbar">
                         <div v-if="selectedProductForStock.inventories?.length > 0" class="flex flex-col">
                             <div v-for="inv in selectedProductForStock.inventories" :key="inv.id" 
-                                 class="px-4 py-2.5 border-b border-zinc-900/50 flex justify-between items-center hover:bg-white/[0.02] transition-colors">
+                                 class="px-4 py-2.5 border-b border-panel-border/50 flex justify-between items-center hover:bg-panel-hover transition-colors">
                                 <div class="flex flex-col">
-                                    <span class="text-[10px] font-bold text-zinc-300 leading-none">{{ inv.location?.name }}</span>
+                                    <span class="text-[10px] font-bold text-secondary leading-none">{{ inv.location?.name }}</span>
                                     <span class="text-[8px] font-mono font-bold text-muted uppercase tracking-tighter mt-1">{{ inv.location?.code }}</span>
                                 </div>
                                 <span class="text-[10px] font-mono font-bold text-emerald-400">
@@ -1121,7 +1121,7 @@ const getBaseUomForSelected = computed(() => {
                             <span class="text-[9px] font-bold uppercase tracking-widest font-mono">No physical stock found</span>
                         </div>
                     </div>
-                    <div class="px-4 py-2 bg-panel/10 flex justify-center border-t border-zinc-900">
+                    <div class="px-4 py-2 bg-panel/10 flex justify-center border-t border-panel-border">
                         <button @click="goToInventory(selectedProductForStock)" class="text-[9px] font-bold text-secondary hover:text-sky-400 transition-colors uppercase tracking-[0.2em] font-mono">View Inventory Ledger</button>
                     </div>
                 </div>

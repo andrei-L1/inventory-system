@@ -754,7 +754,7 @@ const openPrint = () => {
                         v-if="canBill && can('manage-purchase-orders')" 
                         label="Convert to Bill" 
                         icon="pi pi-file-export" 
-                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
+                        class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !text-primary font-black tracking-widest uppercase font-mono transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]" 
                         @click="router.visit(`/finance/bills/create?from_po=${po.id}`)"
                     />
                     
@@ -770,7 +770,7 @@ const openPrint = () => {
                         v-if="['open', 'sent', 'in_transit', 'partially_received'].includes(po.status) && can('manage-purchase-orders')" 
                         label="Receive Stock (GRN)" 
                         icon="pi pi-download" 
-                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openGrnMode"
                     />
                 </div>
@@ -1587,7 +1587,7 @@ const openPrint = () => {
             <template #footer>
                 <Button label="Cancel" icon="pi pi-times" @click="landedCostDialog = false" class="p-button-text !text-secondary hover:!text-primary" />
                 <Button label="Save Charge" icon="pi pi-check" @click="addLandedCost" :loading="landedCostLoading"
-                    class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !border-none !text-zinc-950 font-bold uppercase tracking-widest font-mono" />
+                    class="p-button-sm !bg-amber-500 hover:!bg-amber-400 !border-none !text-primary font-bold uppercase tracking-widest font-mono" />
             </template>
         </Dialog>
     </AppLayout>
@@ -1595,9 +1595,9 @@ const openPrint = () => {
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #18181b; /* zinc-950 */
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
-    color: #a1a1aa; /* zinc-400 */
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -1608,8 +1608,8 @@ const openPrint = () => {
     background: transparent;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5); /* zinc-800/50 */
-    color: #e4e4e7; /* zinc-200 */
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 0.5rem 0.75rem;
 }
 :deep(.p-tag.p-tag-warning) { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
@@ -1619,22 +1619,22 @@ const openPrint = () => {
 :deep(.p-tag.p-tag-help) { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
 
 :deep(.p-dialog) {
-    background: #09090b;
-    border: 1px solid #27272a;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
     border-radius: 1rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 :deep(.p-dialog-header) {
-    background: rgba(24, 24, 27, 0.8);
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8);
-    color: white;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 1rem;
 }
-:deep(.p-dialog-content) { background: transparent; padding: 1rem; color: #a1a1aa; }
-:deep(.p-dialog-footer) { background: rgba(24, 24, 27, 0.8); border-top: 1px solid rgba(39, 39, 42, 0.8); padding: 1rem; }
-:deep(.p-select), :deep(.p-inputnumber-input) { background: #09090b !important; border-color: #27272a; color: white; }
-:deep(.p-inputnumber-button) { background: #18181b; border-color: #27272a; color: #a1a1aa; }
-:deep(.p-inputnumber-button:hover) { background: #27272a; color: white; }
+:deep(.p-dialog-content) { background: transparent; padding: 1rem; color: var(--text-secondary); }
+:deep(.p-dialog-footer) { background: var(--bg-panel); border-top: 1px solid var(--bg-panel-border); padding: 1rem; }
+:deep(.p-select), :deep(.p-inputnumber-input) { background: var(--bg-input) !important; border-color: var(--bg-panel-border); color: var(--text-primary); }
+:deep(.p-inputnumber-button) { background: var(--bg-panel-hover); border-color: var(--bg-panel-border); color: var(--text-secondary); }
+:deep(.p-inputnumber-button:hover) { background: var(--bg-panel-border); color: var(--text-primary); }
 </style>
 
 

@@ -637,7 +637,7 @@ const totalDiscount = computed(() => {
                         v-if="canShip && can('manage-sales-orders')" 
                         label="Ship / Fulfill" 
                         icon="pi pi-truck" 
-                        class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openShipDialog"
                     />
 
@@ -1424,7 +1424,7 @@ const totalDiscount = computed(() => {
                             label="EXECUTE RETURN" 
                             @click="submitReturn" 
                             :loading="returnLoading" 
-                            class="!min-h-[2.5rem] !px-10 !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
+                            class="!min-h-[2.5rem] !px-10 !bg-amber-500 hover:!bg-amber-400 !text-primary !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
                         />
                     </div>
                 </div>
@@ -1436,9 +1436,9 @@ const totalDiscount = computed(() => {
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: transparent;
-    border-bottom: 1px solid rgba(20, 184, 166, 0.1);
-    color: #52525b;
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 8px;
     font-weight: 900;
     text-transform: uppercase;
@@ -1446,22 +1446,22 @@ const totalDiscount = computed(() => {
     padding: 1rem 0.75rem;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5);
+    border-bottom: 1px solid var(--bg-panel-border);
     padding: 1rem 0.75rem;
 }
 :deep(.p-dialog) {
-    background: #09090b;
-    border: 1px solid #27272a;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
     border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 :deep(.p-dialog-header) {
-    background: #09090b;
-    color: white;
+    background: var(--bg-panel);
+    color: var(--text-primary);
     padding: 1.5rem 1.5rem 1rem 1.5rem;
 }
 :deep(.p-dialog-content) {
-    background: #09090b;
+    background: var(--bg-panel);
     padding: 0 1.5rem 1.5rem 1.5rem;
 }
 .no-print {

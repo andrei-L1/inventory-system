@@ -191,7 +191,11 @@ const CURRENCIES = ['PHP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];
                 </div>
 
                 <DataTable :value="filtered" :loading="loading" rowHover stripedRows
-                    class="flex-1" :pt="{ table: { class: 'w-full' } }">
+                    class="flex-1" :pt="{ 
+                        table: { class: 'w-full' },
+                        headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                        bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' }
+                    }">
                     <Column field="name" header="Name" class="!font-mono">
                         <template #body="{ data }">
                             <span class="text-primary font-bold text-sm">{{ data.name }}</span>
@@ -242,11 +246,11 @@ const CURRENCIES = ['PHP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];
             <div class="flex flex-col gap-4 py-2">
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Name</label>
-                    <InputText v-model="listForm.name" placeholder="e.g. Wholesale, VIP, Export" class="!bg-deep !border-zinc-700 !text-secondary w-full" />
+                    <InputText v-model="listForm.name" placeholder="e.g. Wholesale, VIP, Export" class="!bg-deep !border-panel-border !text-primary w-full" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Currency</label>
-                    <Select v-model="listForm.currency" :options="CURRENCIES" class="!bg-deep !border-zinc-700 w-full" />
+                    <Select v-model="listForm.currency" :options="CURRENCIES" class="!bg-deep !border-panel-border w-full" />
                 </div>
                 <div class="flex items-center gap-3">
                     <ToggleSwitch v-model="listForm.is_active" />
@@ -277,12 +281,12 @@ const CURRENCIES = ['PHP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];
                         <div class="flex flex-col gap-1.5">
                             <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Custom Price</label>
                             <InputNumber v-model="itemForm.price" :minFractionDigits="2" :maxFractionDigits="6" placeholder="0.00"
-                                :inputStyle="{ background: 'var(--p-panel)', border: '1px solid var(--panel-border)', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
+                                :inputStyle="{ background: 'var(--bg-input)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
                         </div>
                         <div class="flex flex-col gap-1.5">
                             <label class="text-[9px] font-bold text-muted uppercase tracking-widest font-mono">Min Qty (Break)</label>
                             <InputNumber v-model="itemForm.min_quantity" :min="0" :minFractionDigits="0" placeholder="0"
-                                :inputStyle="{ background: 'var(--p-panel)', border: '1px solid var(--panel-border)', color: 'white', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
+                                :inputStyle="{ background: 'var(--bg-input)', border: '1px solid var(--panel-border)', color: 'var(--text-primary)', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', width: '100%' }" />
                         </div>
                     </div>
                     <Button label="Save Price" icon="pi pi-check" size="small" :loading="itemLoading"
@@ -292,7 +296,11 @@ const CURRENCIES = ['PHP', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];
 
                 <!-- Items Table -->
                 <DataTable :value="selectedList.items || []" stripedRows size="small"
-                    :pt="{ table: { class: 'w-full' } }">
+                    :pt="{ 
+                        table: { class: 'w-full' },
+                        headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                        bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' }
+                    }">
                     <Column header="Product" class="!font-mono">
                         <template #body="{ data }">
                             <div class="flex flex-col">

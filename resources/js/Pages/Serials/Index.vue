@@ -47,13 +47,18 @@
                     @row-collapse="onRowCollapse"
                     scrollable
                     scrollHeight="60vh"
+                    :pt="{ 
+                        table: { class: 'w-full' },
+                        headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                        bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' }
+                    }"
                 >
                     <!-- Expand toggle -->
                     <Column expander style="width: 3rem" />
 
                     <Column field="serial_number" header="SERIAL #" style="min-width: 160px">
                         <template #body="{ data }">
-                            <span class="font-mono text-xs font-bold text-violet-300">{{ data.serial_number }}</span>
+                            <span class="font-mono text-xs font-bold text-violet-500 dark:text-violet-300">{{ data.serial_number }}</span>
                         </template>
                     </Column>
 
@@ -82,7 +87,7 @@
 
                     <Column header="LOCATION" style="min-width: 150px">
                         <template #body="{ data }">
-                            <span v-if="data.current_location" class="text-[11px] text-zinc-300 font-mono">
+                            <span v-if="data.current_location" class="text-[11px] text-secondary font-mono">
                                 {{ data.current_location.name }}
                             </span>
                             <span v-else class="text-[10px] text-muted italic font-mono">—</span>
@@ -141,8 +146,8 @@
                                 <tbody>
                                     <tr v-for="tx in data.transaction_history" :key="tx.transaction_line_id"
                                         class="border-b border-panel-border/20 hover:bg-panel/40 transition-colors">
-                                        <td class="py-1.5 pr-6 text-violet-300 font-bold">{{ tx.reference_number }}</td>
-                                        <td class="py-1.5 pr-6 text-zinc-300 capitalize">{{ tx.transaction_type }}</td>
+                                        <td class="py-1.5 pr-6 text-violet-500 dark:text-violet-300 font-bold">{{ tx.reference_number }}</td>
+                                        <td class="py-1.5 pr-6 text-secondary capitalize">{{ tx.transaction_type }}</td>
                                         <td class="py-1.5 pr-6 text-muted">{{ tx.transaction_date }}</td>
                                         <td class="py-1.5 text-right text-primary">{{ tx.formatted_quantity }}</td>
                                     </tr>
