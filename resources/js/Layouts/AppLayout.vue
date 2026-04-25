@@ -214,7 +214,6 @@ const navSections = [
             { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
             { label: 'Carriers', href: '/carriers', icon: 'pi pi-truck', color: 'text-sky-400' },
             { label: 'Serial Registry', href: '/serials', icon: 'pi pi-barcode', color: 'text-violet-400' },
-            { label: 'Price Lists', href: '/price-lists', icon: 'pi pi-list', color: 'text-violet-300' },
             { label: 'Discounts', href: '/discounts', icon: 'pi pi-percentage', color: 'text-rose-400' },
         ]
     }

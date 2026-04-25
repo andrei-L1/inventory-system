@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PriceList extends Model
 {
-
     protected $fillable = ['name', 'currency', 'is_active'];
 
     protected $casts = [

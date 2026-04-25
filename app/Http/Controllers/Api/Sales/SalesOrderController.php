@@ -545,6 +545,7 @@ class SalesOrderController extends Controller
 
                         $serialsToShip = ProductSerial::whereIn('id', $serialIds)
                             ->where('product_id', $soLine->product_id)
+                            ->where('status', ProductSerial::STATUS_IN_STOCK)
                             ->get();
 
                         foreach ($serialsToShip as $serial) {

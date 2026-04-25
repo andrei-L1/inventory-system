@@ -37,6 +37,12 @@ class LandedCostController extends Controller
      */
     public function store(Request $request, PurchaseOrder $purchaseOrder): JsonResponse
     {
+        abort_if(
+            in_array($purchaseOrder->status?->name ?? '', ['cancelled', 'closed'], true),
+            422,
+            'Cannot add landed costs to a cancelled or closed Purchase Order.'
+        );
+
         $validated = $request->validate([
             'cost_type' => ['required', 'string', Rule::in(LandedCost::COST_TYPES)],
             'amount' => 'required|numeric|min:0.00000001',
@@ -96,7 +102,7 @@ class LandedCostController extends Controller
             'method' => ['required', Rule::in([LandedCost::METHOD_BY_VALUE, LandedCost::METHOD_BY_QUANTITY])],
         ]);
 
-        $method = $request->method;
+        $method = $request->input('method');
 
         // Load PO lines that have actually been received
         $purchaseOrder->loadMissing('lines.product');

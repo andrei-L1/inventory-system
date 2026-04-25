@@ -33,7 +33,7 @@ class DiscountController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'type' => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
-            'value' => 'required|numeric|min:0',
+            'value' => 'required|numeric|min:0.01',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'product_id' => 'nullable|exists:products,id',
@@ -57,7 +57,7 @@ class DiscountController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'type' => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
-            'value' => 'required|numeric|min:0',
+            'value' => 'required|numeric|min:0.01',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'product_id' => 'nullable|exists:products,id',
