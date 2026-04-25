@@ -49,6 +49,7 @@ const uoms = ref([]);
 const availableInventory = ref([]); // Stores { product_id, location_id, qoh, location_name, location_code }
 const uomConversions = ref([]);
 const loadingConversions = ref(false);
+const carriers = ref([]);
 
 // H-1: Popover for per-location stock breakdown in the GRN dialog
 const stockPopover = ref(null);
@@ -255,11 +256,21 @@ const loadConversions = async () => {
     }
 };
 
+const loadCarriers = async () => {
+    try {
+        const res = await axios.get('/api/carriers?limit=100');
+        carriers.value = res.data.data;
+    } catch (e) {
+        console.error(e);
+    }
+};
+
 onMounted(() => {
     loadPO();
     loadLocations();
     loadUoms();
     loadConversions();
+    loadCarriers();
 });
 
 const getStatusColor = (statusName) => {
@@ -1241,8 +1252,20 @@ const openPrint = () => {
         <Dialog v-model:visible="shipDialog" modal header="Log Vendor Shipment" :style="{ width: '30rem' }">
             <div class="flex flex-col gap-4 py-2">
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Carrier Name</label>
-                    <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, DHL, LBC" class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" />
+                    <div class="flex justify-between items-center">
+                        <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Carrier Name</label>
+                        <a href="/carriers" target="_blank" class="text-[9px] text-sky-400 font-mono hover:underline">Manage Carriers →</a>
+                    </div>
+                    <Select 
+                        v-model="shipForm.carrier" 
+                        :options="carriers" 
+                        optionLabel="name" 
+                        optionValue="name" 
+                        placeholder="SELECT CARRIER..." 
+                        filter 
+                        filterPlaceholder="Search carriers..." 
+                        class="w-full !bg-deep !border-zinc-700 !text-secondary !text-sm" 
+                    />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] font-bold text-secondary tracking-widest font-mono uppercase">Tracking Number</label>
