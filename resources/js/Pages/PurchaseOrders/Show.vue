@@ -357,7 +357,10 @@ const openGrnMode = async () => {
                 unit: l.uom ?? l.base_uom ?? '???',
                 uom_id: l.uom_id,
                 product_uom: l.uom ?? l.base_uom ?? '???',
-                inventories: invMap[l.product_id] || []
+                inventories: invMap[l.product_id] || [],
+                // Phase 6.3: optional serial numbers (comma-separated input)
+                serial_numbers_input: '',
+                serial_numbers: [],
             }));
         
         if (grnForm.value.lines.length === 0) {
@@ -401,10 +404,14 @@ const postReceipt = async () => {
             location_id: grnForm.value.location_id,
             delivery_note_number: grnForm.value.delivery_note_number || null,
             notes: grnForm.value.notes || null,
-            lines: payloadLines.map(l => ({ 
-                po_line_id: l.po_line_id, 
+            lines: payloadLines.map(l => ({
+                po_line_id: l.po_line_id,
                 received_qty: l.received_qty,
-                uom_id: l.uom_id
+                uom_id: l.uom_id,
+                // Phase 6.3: parse comma/newline-separated serial numbers (optional)
+                serial_numbers: l.serial_numbers_input
+                    ? l.serial_numbers_input.split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
+                    : [],
             }))
         });
         toast.add({ severity: 'success', summary: 'Success', detail: 'Goods Receipt Note posted!', life: 3000 });
@@ -998,6 +1005,24 @@ const openPrint = () => {
                                             </template>
                                         </Select>
                                     </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <!-- Phase 6.3: Optional Serial Numbers input per line -->
+                        <Column header="SERIAL #s (OPT.)" style="width: 16rem">
+                            <template #body="{ data }">
+                                <div class="flex flex-col gap-1">
+                                    <InputText
+                                        v-model="data.serial_numbers_input"
+                                        placeholder="e.g. SN001, SN002"
+                                        class="!bg-deep !border-panel-border !rounded-lg !h-9 !px-3 !text-[10px] font-mono text-violet-300 w-full focus:!border-violet-500/50 transition-all"
+                                    />
+                                    <span class="text-[8px] font-mono text-muted">Comma-separated. Optional.</span>
+                                    <!-- Count validation hint -->
+                                    <span v-if="data.serial_numbers_input && data.serial_numbers_input.split(/[,\n]+/).filter(s => s.trim()).length !== Math.round(data.received_qty)"
+                                        class="text-[8px] text-amber-400 font-mono">
+                                        ⚠ Count ({{ data.serial_numbers_input.split(/[,\n]+/).filter(s => s.trim()).length }}) ≠ qty ({{ Math.round(data.received_qty) }})
+                                    </span>
                                 </div>
                             </template>
                         </Column>

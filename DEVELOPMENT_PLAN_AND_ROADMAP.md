@@ -500,11 +500,11 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Carriers lookup management page** (`/carriers`) — full DataTable with Create/Edit dialog, active toggle, tracking URL preview, delete guard.
 
 ### 6.3 Serial / Batch Tracking
-- [ ] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
-- [ ] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
-- [ ] On Issue/Ship: select specific serial numbers to fulfill.
-- [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
-- [ ] **Serial Registry page** — search serials, view status, view transaction history per unit.
+- [x] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
+- [x] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
+- [x] On Issue/Ship: select specific serial numbers to fulfill.
+- [x] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
+- [x] **Serial Registry page** — search serials, view status, view transaction history per unit.
 
 ### 6.4 Landed Costs & Valuation Adjustment
 - [ ] `LandedCostController` — allocation of freight, tax, and insurance.

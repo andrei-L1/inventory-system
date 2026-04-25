@@ -15,6 +15,7 @@ use App\Models\InventoryCostLayer;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
+use App\Models\ProductSerial;
 use App\Models\ReplenishmentSuggestion;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
@@ -362,13 +363,16 @@ class PurchaseOrderController extends Controller
     public function receive(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'location_id' => 'required|exists:locations,id',
+            'location_id'          => 'required|exists:locations,id',
             'delivery_note_number' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:500',
-            'lines' => 'required|array',
-            'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
+            'notes'                => 'nullable|string|max:500',
+            'lines'                => 'required|array',
+            'lines.*.po_line_id'   => 'required|exists:purchase_order_lines,id',
             'lines.*.received_qty' => 'required|numeric|min:0.01',
-            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
+            'lines.*.uom_id'       => 'nullable|exists:units_of_measure,id',
+            // Phase 6.3: optional serial numbers per line (warn-but-allow if count mismatches)
+            'lines.*.serial_numbers'   => 'nullable|array',
+            'lines.*.serial_numbers.*' => 'string|max:100',
         ]);
 
         if (in_array($purchaseOrder->status->name, ['draft', 'closed', 'cancelled'])) {
@@ -492,6 +496,50 @@ class PurchaseOrderController extends Controller
 
                 // Record movement in Stock Engine
                 $transaction = $stockService->recordMovement($transactionData);
+
+                // --- Phase 6.3: Assign serial numbers to transaction lines (opt-in) ---
+                // Map product_id → [serial_numbers] from the request for quick lookup
+                $serialsByProductId = [];
+                foreach ($request->lines as $item) {
+                    if (! empty($item['serial_numbers'])) {
+                        $poLine = $poLines->get($item['po_line_id']);
+                        if ($poLine) {
+                            $serialsByProductId[$poLine->product_id] = $item['serial_numbers'];
+                        }
+                    }
+                }
+
+                if (! empty($serialsByProductId)) {
+                    // Reload transaction lines for attaching serials
+                    $transaction->load('lines');
+                    foreach ($transaction->lines as $txLine) {
+                        $serialNumbers = $serialsByProductId[$txLine->product_id] ?? [];
+                        foreach ($serialNumbers as $sn) {
+                            $sn = trim($sn);
+                            if (empty($sn)) continue;
+
+                            // Create or update the serial record
+                            $serial = ProductSerial::firstOrCreate(
+                                ['product_id' => $txLine->product_id, 'serial_number' => $sn],
+                                [
+                                    'status'              => ProductSerial::STATUS_IN_STOCK,
+                                    'current_location_id' => $request->location_id,
+                                ]
+                            );
+
+                            // If serial already existed but was returned, set it back in stock
+                            if ($serial->status === ProductSerial::STATUS_RETURNED) {
+                                $serial->update([
+                                    'status'              => ProductSerial::STATUS_IN_STOCK,
+                                    'current_location_id' => $request->location_id,
+                                ]);
+                            }
+
+                            // Link to the transaction line
+                            $txLine->serials()->syncWithoutDetaching([$serial->id]);
+                        }
+                    }
+                }
 
                 // Update PO Status
                 $purchaseOrder->recalculateStatus();

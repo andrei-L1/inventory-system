@@ -368,22 +368,42 @@ const printVoucher = () => {
     window.open(window.location.href + '/print', '_blank');
 };
 
-const openShipDialog = () => {
+const openShipDialog = async () => {
     shipForm.value.lines = so.value.lines
         .filter(l => Number(l.shipped_qty) < Number(l.packed_qty))
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
+            product_id: l.product_id,
+            location_id: l.location_id,
             packed_qty: Number(l.packed_qty),
             shipped_qty: Number(l.shipped_qty),
             to_ship: Number(l.remaining_ship_qty),
-            uom: l.uom?.abbreviation
+            uom: l.uom?.abbreviation,
+            // Phase 6.3: optional serial selection
+            serial_ids: [],
+            available_serials: [],
+            loadingSerials: false,
         }));
     shipForm.value.carrier_id = null;
     shipForm.value.tracking_number = '';
     shipForm.value.notes = '';
     shipDialog.value = true;
+
+    // Phase 6.3: eagerly load available in_stock serials per line
+    for (const line of shipForm.value.lines) {
+        if (line.product_id) {
+            line.loadingSerials = true;
+            try {
+                const params = { status: 'in_stock', product_id: line.product_id, limit: 200 };
+                if (line.location_id) params.location_id = line.location_id;
+                const res = await axios.get('/api/serials', { params });
+                line.available_serials = res.data.data;
+            } catch { /* silent — no serials available */ }
+            finally { line.loadingSerials = false; }
+        }
+    }
 };
 
 const fulfill = async () => {
@@ -400,7 +420,9 @@ const fulfill = async () => {
             notes: shipForm.value.notes,
             lines: shipForm.value.lines.filter(l => Number(l.to_ship) > 0).map(l => ({
                 so_line_id: l.so_line_id,
-                shipped_qty: l.to_ship
+                shipped_qty: l.to_ship,
+                // Phase 6.3: only send if serials were selected
+                serial_ids: l.serial_ids?.length ? l.serial_ids : undefined,
             }))
         };
         await axios.post(`/api/sales-orders/${so.value.id}/ship`, payload);
@@ -1182,6 +1204,31 @@ const totalDiscount = computed(() => {
                                     <div class="px-3 border-l border-panel-border bg-panel/50 h-full flex items-center">
                                         <span class="text-[9px] font-black text-secondary uppercase">{{ data.uom }}</span>
                                     </div>
+                                </div>
+                            </template>
+                        </Column>
+                        <!-- Phase 6.3: Optional Serial Selection -->
+                        <Column header="ASSIGN SERIALS (OPT.)" style="width: 200px">
+                            <template #body="{ data }">
+                                <div class="flex flex-col gap-1">
+                                    <span v-if="data.loadingSerials" class="text-[9px] text-muted font-mono italic">Loading serials...</span>
+                                    <span v-else-if="data.available_serials.length === 0" class="text-[9px] text-muted font-mono italic">No serials tracked</span>
+                                    <template v-else>
+                                        <div class="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1 bg-deep/50 rounded-lg border border-panel-border/50">
+                                            <label v-for="serial in data.available_serials" :key="serial.id"
+                                                class="flex items-center gap-1 cursor-pointer hover:bg-panel/50 px-1.5 py-0.5 rounded transition-colors">
+                                                <input type="checkbox"
+                                                    :value="serial.id"
+                                                    v-model="data.serial_ids"
+                                                    class="accent-violet-500 w-3 h-3" />
+                                                <span class="text-[9px] font-mono text-violet-300">{{ serial.serial_number }}</span>
+                                            </label>
+                                        </div>
+                                        <span v-if="data.serial_ids.length > 0 && data.serial_ids.length !== Math.round(data.to_ship)"
+                                            class="text-[8px] text-amber-400 font-mono">
+                                            ⚠ {{ data.serial_ids.length }} selected ≠ qty {{ Math.round(data.to_ship) }}
+                                        </span>
+                                    </template>
                                 </div>
                             </template>
                         </Column>

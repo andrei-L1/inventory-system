@@ -11,6 +11,7 @@ use App\Http\Requests\Sales\SalesOrderStoreRequest;
 use App\Http\Requests\Sales\SalesOrderUpdateRequest;
 use App\Http\Resources\Sales\SalesOrderResource;
 use App\Models\Carrier;
+use App\Models\ProductSerial;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderStatus;
 use App\Models\Shipment;
@@ -401,14 +402,17 @@ class SalesOrderController extends Controller
     public function ship(Request $request, SalesOrder $salesOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'lines'           => 'required|array|min:1',
-            'lines.*.so_line_id'   => 'required|exists:sales_order_lines,id',
-            'lines.*.shipped_qty'  => 'required|numeric|min:0.0001',
-            'carrier_id'      => 'required|exists:carriers,id',
-            'tracking_number' => 'nullable|string|max:100',
-            'notes'           => 'nullable|string|max:1000',
+            'lines'                    => 'required|array|min:1',
+            'lines.*.so_line_id'       => 'required|exists:sales_order_lines,id',
+            'lines.*.shipped_qty'      => 'required|numeric|min:0.0001',
+            // Phase 6.3: optional serial IDs per line (must be in_stock serials)
+            'lines.*.serial_ids'       => 'nullable|array',
+            'lines.*.serial_ids.*'     => 'integer|exists:product_serials,id',
+            'carrier_id'               => 'required|exists:carriers,id',
+            'tracking_number'          => 'nullable|string|max:100',
+            'notes'                    => 'nullable|string|max:1000',
         ], [
-            'lines.min'          => 'Please select at least one item to ship.',
+            'lines.min'           => 'Please select at least one item to ship.',
             'carrier_id.required' => 'A carrier is required for fulfillment.',
             'carrier_id.exists'   => 'The selected carrier does not exist.',
         ]);
@@ -508,6 +512,44 @@ class SalesOrderController extends Controller
                     'shipped_at'      => now(),
                     'notes'           => $request->notes ?? null,
                 ]);
+
+                // --- Phase 6.3: Mark shipped serials as sold (opt-in) ---
+                // Build a map of so_line_id → [serial_ids]
+                $serialIdsByLineId = [];
+                foreach ($request->lines as $item) {
+                    if (! empty($item['serial_ids'])) {
+                        $serialIdsByLineId[$item['so_line_id']] = $item['serial_ids'];
+                    }
+                }
+
+                if (! empty($serialIdsByLineId)) {
+                    $transaction->load('lines');
+                    // Map product_id → transaction_line for quick lookup
+                    $txLinesByProductId = $transaction->lines->keyBy('product_id');
+
+                    foreach ($request->lines as $item) {
+                        $serialIds = $item['serial_ids'] ?? [];
+                        if (empty($serialIds)) continue;
+
+                        $soLine = $soLines->get($item['so_line_id']);
+                        if (! $soLine) continue;
+
+                        $txLine = $txLinesByProductId->get($soLine->product_id);
+                        if (! $txLine) continue;
+
+                        $serialsToShip = ProductSerial::whereIn('id', $serialIds)
+                            ->where('product_id', $soLine->product_id)
+                            ->get();
+
+                        foreach ($serialsToShip as $serial) {
+                            $serial->update([
+                                'status'              => ProductSerial::STATUS_SOLD,
+                                'current_location_id' => null,
+                            ]);
+                            $txLine->serials()->syncWithoutDetaching([$serial->id]);
+                        }
+                    }
+                }
 
                 return $transaction;
             });

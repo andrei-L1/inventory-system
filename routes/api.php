@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
 use App\Http\Controllers\Api\Logistics\CarrierController;
+use App\Http\Controllers\Api\Logistics\ProductSerialController;
 use App\Http\Controllers\Api\Logistics\ShipmentController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
@@ -188,6 +189,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('shipments', [ShipmentController::class, 'store'])->middleware('permission:manage-sales-orders');
     Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->middleware('permission:manage-sales-orders');
     Route::delete('shipments/{shipment}', [ShipmentController::class, 'destroy'])->middleware('permission:manage-sales-orders');
+
+    // Serials (Phase 6.3) — read: view-products, write: manage-products
+    Route::get('serials', [ProductSerialController::class, 'index'])->middleware('permission:view-products');
+    Route::get('serials/{serial}', [ProductSerialController::class, 'show'])->middleware('permission:view-products');
+    Route::post('serials', [ProductSerialController::class, 'store'])->middleware('permission:manage-products');
+    Route::patch('serials/{serial}', [ProductSerialController::class, 'update'])->middleware('permission:manage-products');
+    Route::delete('serials/{serial}', [ProductSerialController::class, 'destroy'])->middleware('permission:manage-products');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');
