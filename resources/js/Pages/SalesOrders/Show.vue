@@ -26,6 +26,7 @@ const loading = ref(true);
 const uoms = ref([]);
 const uomConversions = ref([]);
 const locations = ref([]);
+const carriers = ref([]);
 const availableInventory = ref([]);
 const loadingConversions = ref(false);
 
@@ -43,8 +44,9 @@ const packForm = ref({ lines: [] });
 const shipDialog = ref(false);
 const shipForm = ref({ 
     lines: [],
-    carrier: '', 
-    tracking_number: '' 
+    carrier_id: null,
+    tracking_number: '',
+    notes: ''
 });
 
 const returnDialog = ref(false);
@@ -173,14 +175,16 @@ const getAvailabilityStatus = (line) => {
 
 const loadMasterData = async () => {
     try {
-        const [uomRes, convRes, locRes] = await Promise.all([
+        const [uomRes, convRes, locRes, carrierRes] = await Promise.all([
             axios.get('/api/uom'),
             axios.get('/api/uom-conversions'),
-            axios.get('/api/locations?limit=1000')
+            axios.get('/api/locations?limit=1000'),
+            axios.get('/api/carriers?active=1&limit=500'),
         ]);
         uoms.value = uomRes.data.data;
         uomConversions.value = convRes.data.data;
         locations.value = locRes.data.data;
+        carriers.value = carrierRes.data.data;
     } catch (e) {
         console.error("Failed to load metadata", e);
     }
@@ -376,20 +380,24 @@ const openShipDialog = () => {
             to_ship: Number(l.remaining_ship_qty),
             uom: l.uom?.abbreviation
         }));
+    shipForm.value.carrier_id = null;
+    shipForm.value.tracking_number = '';
+    shipForm.value.notes = '';
     shipDialog.value = true;
 };
 
 const fulfill = async () => {
-    if (!shipForm.value.carrier) {
-        toast.add({ severity: 'warn', summary: 'Required', detail: 'Please specify a carrier', life: 3000 });
+    if (!shipForm.value.carrier_id) {
+        toast.add({ severity: 'warn', summary: 'Required', detail: 'Please select a carrier from the list', life: 3000 });
         return;
     }
 
     try {
         fulfillLoading.value = true;
         const payload = {
-            carrier: shipForm.value.carrier,
+            carrier_id: shipForm.value.carrier_id,
             tracking_number: shipForm.value.tracking_number,
+            notes: shipForm.value.notes,
             lines: shipForm.value.lines.filter(l => Number(l.to_ship) > 0).map(l => ({
                 so_line_id: l.so_line_id,
                 shipped_qty: l.to_ship
@@ -692,6 +700,50 @@ const totalDiscount = computed(() => {
                                 <span class="text-[9px] font-black text-muted uppercase tracking-widest">Status</span>
                                 <Tag :severity="tx.status.name === 'posted' ? 'success' : 'warning'" :value="tx.status.name.toUpperCase()" class="text-[8px] font-black px-1.5 py-0.5 rounded-md" />
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Shipments Panel (Phase 6.1) -->
+                    <div v-if="so.shipments && so.shipments.length > 0" class="bg-panel/40 border border-sky-900/30 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+                        <div class="flex items-center justify-between border-b border-panel-border/50 pb-2">
+                            <span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest font-mono">Shipment Records</span>
+                            <span class="text-[9px] font-black text-muted font-mono">{{ so.shipments.length }} {{ so.shipments.length === 1 ? 'Entry' : 'Entries' }}</span>
+                        </div>
+
+                        <div v-for="shp in so.shipments" :key="shp.id" class="flex flex-col gap-2 p-3 bg-deep/50 rounded-xl border border-panel-border/50 hover:border-sky-500/30 transition-all group">
+                            <!-- Header row -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-mono text-sky-400 font-bold uppercase tracking-tight">{{ shp.shipment_number }}</span>
+                                <span class="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded font-mono"
+                                    :class="{
+                                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20': shp.status === 'delivered',
+                                        'bg-sky-500/10 text-sky-400 border border-sky-500/20': shp.status === 'in_transit',
+                                        'bg-teal-500/10 text-teal-400 border border-teal-500/20': shp.status === 'shipped',
+                                        'bg-zinc-700/50 text-muted border border-zinc-700/50': shp.status === 'pending',
+                                        'bg-red-500/10 text-red-400 border border-red-500/20': shp.status === 'failed',
+                                    }"
+                                >{{ shp.status.replace('_', ' ') }}</span>
+                            </div>
+                            <!-- Carrier + Date row -->
+                            <div class="flex items-center gap-2">
+                                <i class="pi pi-truck text-[9px] text-muted"></i>
+                                <span class="text-[10px] font-bold text-zinc-300">{{ shp.carrier?.name || '—' }}</span>
+                                <span class="text-[9px] text-muted font-mono ml-auto">{{ shp.shipped_at ? shp.shipped_at.split(' ')[0] : '—' }}</span>
+                            </div>
+                            <!-- Tracking number with link -->
+                            <div v-if="shp.tracking_number" class="flex items-center gap-2">
+                                <a
+                                    v-if="shp.tracking_url"
+                                    :href="shp.tracking_url"
+                                    target="_blank"
+                                    class="text-[10px] font-mono text-sky-400 hover:text-sky-300 underline decoration-sky-500/30 transition-colors flex items-center gap-1"
+                                >
+                                    <i class="pi pi-external-link text-[8px]"></i>
+                                    {{ shp.tracking_number }}
+                                </a>
+                                <span v-else class="text-[10px] font-mono text-zinc-400">{{ shp.tracking_number }}</span>
+                            </div>
+                            <div v-else class="text-[9px] text-muted italic font-mono">No tracking number</div>
                         </div>
                     </div>
                 </div>
@@ -1053,14 +1105,49 @@ const totalDiscount = computed(() => {
                     </div>
 
                     <div class="grid grid-cols-2 gap-6 bg-panel/40 p-4 rounded-2xl border border-panel-border/50">
+                        <!-- Carrier Select (Option A — linked to Carrier entity) -->
                         <div class="flex flex-col gap-2">
-                            <label class="text-[9px] font-black text-muted tracking-[0.2em] uppercase font-mono">Carrier Service Name</label>
-                            <InputText v-model="shipForm.carrier" placeholder="e.g. FedEx, Internal Runner" class="!w-full !bg-deep !border-panel-border !rounded-xl !h-11 !px-4 !text-xs !font-bold text-primary focus:!border-emerald-500/50 transition-all shadow-inner" />
+                            <label class="text-[9px] font-black text-muted tracking-[0.2em] uppercase font-mono">
+                                Carrier <span class="text-red-400">*</span>
+                            </label>
+                            <Select
+                                id="ship-carrier-select"
+                                v-model="shipForm.carrier_id"
+                                :options="carriers"
+                                optionLabel="name"
+                                optionValue="id"
+                                placeholder="SELECT CARRIER..."
+                                filter
+                                filterPlaceholder="Search carriers..."
+                                class="!w-full !bg-deep !border-panel-border !rounded-xl !h-11 font-mono focus-within:!border-emerald-500/50 transition-all shadow-inner"
+                                :pt="{ input: { class: '!text-xs !font-bold !text-primary !px-3' }, filterInput: { class: '!text-xs' } }"
+                            >
+                                <template #option="slotProps">
+                                    <div class="flex items-center justify-between w-full gap-3">
+                                        <div class="flex items-center gap-2">
+                                            <i class="pi pi-truck text-emerald-400 text-xs"></i>
+                                            <span class="text-xs font-bold text-primary">{{ slotProps.option.name }}</span>
+                                        </div>
+                                        <span v-if="slotProps.option.phone" class="text-[9px] font-mono text-muted">{{ slotProps.option.phone }}</span>
+                                    </div>
+                                </template>
+                                <template #empty>
+                                    <div class="text-center py-4">
+                                        <p class="text-xs text-muted">No carriers found.</p>
+                                        <a href="/carriers" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline">Manage Carriers →</a>
+                                    </div>
+                                </template>
+                            </Select>
                         </div>
                         <div class="flex flex-col gap-2">
                             <label class="text-[9px] font-black text-muted tracking-[0.2em] uppercase font-mono">Tracking Reference / AWB</label>
                             <InputText v-model="shipForm.tracking_number" placeholder="Enter Ref #" class="!w-full !bg-deep !border-panel-border !rounded-xl !h-11 !px-4 !text-xs !font-bold text-primary focus:!border-emerald-500/50 transition-all shadow-inner" />
                         </div>
+                    </div>
+                    <!-- Notes field -->
+                    <div class="flex flex-col gap-2 bg-panel/40 p-3 rounded-2xl border border-panel-border/50">
+                        <label class="text-[9px] font-black text-muted tracking-[0.2em] uppercase font-mono">Shipment Notes (Optional)</label>
+                        <InputText v-model="shipForm.notes" placeholder="e.g. Handle with care, requires signature..." class="!w-full !bg-deep !border-panel-border !rounded-xl !h-11 !px-4 !text-xs text-primary focus:!border-emerald-500/50 transition-all shadow-inner" />
                     </div>
                 
                     <DataTable :value="shipForm.lines" class="p-datatable-sm" scrollable scrollHeight="250px">

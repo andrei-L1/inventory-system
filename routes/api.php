@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\Inventory\TransactionController;
 use App\Http\Controllers\Api\Inventory\UnitOfMeasureController;
 use App\Http\Controllers\Api\Inventory\UomConversionController;
 use App\Http\Controllers\Api\Inventory\VendorController;
+use App\Http\Controllers\Api\Logistics\CarrierController;
+use App\Http\Controllers\Api\Logistics\ShipmentController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderReturnController;
@@ -168,6 +170,24 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::delete('vendor-payments/{payment}/unallocate/{allocation}', [VendorPaymentController::class, 'unallocate'])->middleware('permission:manage-purchase-orders');
     Route::patch('vendor-payments/{payment}/void', [VendorPaymentController::class, 'void'])->middleware('permission:manage-purchase-orders');
     Route::get('vendors/{vendor}/statement', [VendorStatementController::class, 'show'])->middleware('permission:view-purchase-orders');
+
+    // -----------------------------------------------------------------------
+    // Logistics API (Phase 6.1)
+    // -----------------------------------------------------------------------
+
+    // Carriers (read by anyone with view-products, write requires manage-products)
+    Route::get('carriers', [CarrierController::class, 'index'])->middleware('permission:view-products');
+    Route::get('carriers/{carrier}', [CarrierController::class, 'show'])->middleware('permission:view-products');
+    Route::post('carriers', [CarrierController::class, 'store'])->middleware('permission:manage-products');
+    Route::patch('carriers/{carrier}', [CarrierController::class, 'update'])->middleware('permission:manage-products');
+    Route::delete('carriers/{carrier}', [CarrierController::class, 'destroy'])->middleware('permission:manage-products');
+
+    // Shipments (read requires view-sales-orders, write requires manage-sales-orders)
+    Route::get('shipments', [ShipmentController::class, 'index'])->middleware('permission:view-sales-orders');
+    Route::get('shipments/{shipment}', [ShipmentController::class, 'show'])->middleware('permission:view-sales-orders');
+    Route::post('shipments', [ShipmentController::class, 'store'])->middleware('permission:manage-sales-orders');
+    Route::patch('shipments/{shipment}', [ShipmentController::class, 'update'])->middleware('permission:manage-sales-orders');
+    Route::delete('shipments/{shipment}', [ShipmentController::class, 'destroy'])->middleware('permission:manage-sales-orders');
 
     // Replenishment (Phase 4.2)
     Route::get('replenishment/suggestions', [PurchaseOrderController::class, 'getSuggestions'])->middleware('permission:view-purchase-orders');

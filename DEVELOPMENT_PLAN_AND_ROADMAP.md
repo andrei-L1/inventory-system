@@ -484,19 +484,20 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 ---
 
 ## 🚚 Phase 6 — Logistics: Shipments & Carriers
-> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
+> Status: 🚧 IN PROGRESS (6.1 + 6.2 complete)
 
 ### 6.1 Shipments API
-- [ ] `ShipmentController` — CRUD (`/api/shipments`).
-- [ ] `CarrierController` — Read/Write (`/api/carriers`).
-- [ ] Shipment linked to SO — one SO can have multiple shipments (partial).
-- [ ] Fields: tracking number, carrier, ship date, estimated delivery, status.
+- [x] `ShipmentController` — CRUD (`/api/shipments`), filterable by `?sales_order_id`.
+- [x] `CarrierController` — Full CRUD (`/api/carriers`) with active/inactive toggle and delete guard.
+- [x] Shipment linked to SO — one SO can have multiple shipments (partial). Each `ship()` call auto-creates a `Shipment` record.
+- [x] Fields: tracking number, carrier (FK to `carriers`), ship date, estimated delivery, status (`pending/shipped/in_transit/delivered/failed`).
+- [x] **Option A (Carrier Entity)** — Ship Dialog uses carrier dropdown backed by `/api/carriers`; carrier name + tracking stored on SO header for quick display.
+- [x] `ShipmentResource` — includes `tracking_url` computed from carrier template + tracking number.
 
 ### 6.2 Shipments Frontend
-- [ ] **Shipments panel** on SO Detail page.
-  - Log a shipment with carrier + tracking number.
-  - View all shipments for an SO.
-- [ ] **Carriers lookup management page** (in Settings).
+- [x] **Shipments panel** on SO Detail page — shows all shipment records per SO with carrier name, status badge, shipped date, and clickable tracking link (when URL template configured).
+- [x] **Ship Dialog upgraded** — carrier free-text replaced with `<Select>` dropdown from `/api/carriers`. Notes field added. "Manage Carriers →" fallback link when empty.
+- [x] **Carriers lookup management page** (`/carriers`) — full DataTable with Create/Edit dialog, active toggle, tracking URL preview, delete guard.
 
 ### 6.3 Serial / Batch Tracking
 - [ ] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
