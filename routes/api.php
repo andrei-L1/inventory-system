@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Inventory\VendorController;
 use App\Http\Controllers\Api\Logistics\CarrierController;
 use App\Http\Controllers\Api\Logistics\ProductSerialController;
 use App\Http\Controllers\Api\Logistics\ShipmentController;
+use App\Http\Controllers\Api\Procurement\LandedCostController;
 use App\Http\Controllers\Api\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderController;
 use App\Http\Controllers\Api\Sales\SalesOrderReturnController;
@@ -128,6 +129,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('purchase-orders/{purchaseOrder}/return', [PurchaseOrderController::class, 'processReturn'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:manage-purchase-orders');
     Route::patch('purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:manage-purchase-orders');
+
+    // Landed Costs (Phase 6.4) — nested under purchase orders
+    Route::get('purchase-orders/{purchaseOrder}/landed-costs', [LandedCostController::class, 'index'])->middleware('permission:view-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/landed-costs', [LandedCostController::class, 'store'])->middleware('permission:manage-purchase-orders');
+    Route::delete('purchase-orders/{purchaseOrder}/landed-costs/{landedCost}', [LandedCostController::class, 'destroy'])->middleware('permission:manage-purchase-orders');
+    Route::post('purchase-orders/{purchaseOrder}/landed-costs/{landedCost}/allocate', [LandedCostController::class, 'allocate'])->middleware('permission:manage-purchase-orders');
 
     // -----------------------------------------------------------------------
     // Sales API (Phase 5)

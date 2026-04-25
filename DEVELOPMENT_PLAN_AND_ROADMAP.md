@@ -507,9 +507,9 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Serial Registry page** — search serials, view status, view transaction history per unit.
 
 ### 6.4 Landed Costs & Valuation Adjustment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] `LandedCostController` — allocation of freight, tax, and insurance.
+- [x] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
+- [x] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
 
 ---
 

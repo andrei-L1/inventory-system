@@ -85,6 +85,14 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Get the landed costs (freight, duty, insurance, etc.) for this PO.
+     */
+    public function landedCosts(): HasMany
+    {
+        return $this->hasMany(LandedCost::class);
+    }
+
+    /**
      * Get the user who created this PO.
      */
     public function creator(): BelongsTo
