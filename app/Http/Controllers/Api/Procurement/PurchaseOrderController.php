@@ -12,10 +12,10 @@ use App\Http\Requests\Procurement\PurchaseOrderUpdateRequest;
 use App\Http\Resources\Procurement\PurchaseOrderResource;
 use App\Models\Bill;
 use App\Models\InventoryCostLayer;
+use App\Models\ProductSerial;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
 use App\Models\PurchaseOrderStatus;
-use App\Models\ProductSerial;
 use App\Models\ReplenishmentSuggestion;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
@@ -363,15 +363,15 @@ class PurchaseOrderController extends Controller
     public function receive(Request $request, PurchaseOrder $purchaseOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'location_id'          => 'required|exists:locations,id',
+            'location_id' => 'required|exists:locations,id',
             'delivery_note_number' => 'nullable|string|max:100',
-            'notes'                => 'nullable|string|max:500',
-            'lines'                => 'required|array',
-            'lines.*.po_line_id'   => 'required|exists:purchase_order_lines,id',
+            'notes' => 'nullable|string|max:500',
+            'lines' => 'required|array',
+            'lines.*.po_line_id' => 'required|exists:purchase_order_lines,id',
             'lines.*.received_qty' => 'required|numeric|min:0.01',
-            'lines.*.uom_id'       => 'nullable|exists:units_of_measure,id',
+            'lines.*.uom_id' => 'nullable|exists:units_of_measure,id',
             // Phase 6.3: optional serial numbers per line (warn-but-allow if count mismatches)
-            'lines.*.serial_numbers'   => 'nullable|array',
+            'lines.*.serial_numbers' => 'nullable|array',
             'lines.*.serial_numbers.*' => 'string|max:100',
         ]);
 
@@ -516,13 +516,15 @@ class PurchaseOrderController extends Controller
                         $serialNumbers = $serialsByProductId[$txLine->product_id] ?? [];
                         foreach ($serialNumbers as $sn) {
                             $sn = trim($sn);
-                            if (empty($sn)) continue;
+                            if (empty($sn)) {
+                                continue;
+                            }
 
                             // Create or update the serial record
                             $serial = ProductSerial::firstOrCreate(
                                 ['product_id' => $txLine->product_id, 'serial_number' => $sn],
                                 [
-                                    'status'              => ProductSerial::STATUS_IN_STOCK,
+                                    'status' => ProductSerial::STATUS_IN_STOCK,
                                     'current_location_id' => $request->location_id,
                                 ]
                             );
@@ -530,7 +532,7 @@ class PurchaseOrderController extends Controller
                             // If serial already existed but was returned, set it back in stock
                             if ($serial->status === ProductSerial::STATUS_RETURNED) {
                                 $serial->update([
-                                    'status'              => ProductSerial::STATUS_IN_STOCK,
+                                    'status' => ProductSerial::STATUS_IN_STOCK,
                                     'current_location_id' => $request->location_id,
                                 ]);
                             }

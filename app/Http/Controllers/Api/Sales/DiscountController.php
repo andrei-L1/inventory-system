@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Sales;
 use App\Helpers\FinancialMath;
 use App\Http\Controllers\Controller;
 use App\Models\Discount;
+use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,15 +31,15 @@ class DiscountController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
-            'type'        => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
-            'value'       => 'required|numeric|min:0',
-            'start_date'  => 'nullable|date',
-            'end_date'    => 'nullable|date|after_or_equal:start_date',
-            'product_id'  => 'nullable|exists:products,id',
+            'name' => 'required|string|max:100',
+            'type' => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
+            'value' => 'required|numeric|min:0',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'product_id' => 'nullable|exists:products,id',
             'category_id' => 'nullable|exists:categories,id',
             'customer_id' => 'nullable|exists:customers,id',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $validated['value'] = FinancialMath::round((string) $validated['value'], 4);
@@ -54,15 +55,15 @@ class DiscountController extends Controller
     public function update(Request $request, Discount $discount): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:100',
-            'type'        => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
-            'value'       => 'required|numeric|min:0',
-            'start_date'  => 'nullable|date',
-            'end_date'    => 'nullable|date|after_or_equal:start_date',
-            'product_id'  => 'nullable|exists:products,id',
+            'name' => 'required|string|max:100',
+            'type' => ['required', Rule::in([Discount::TYPE_PERCENTAGE, Discount::TYPE_FIXED])],
+            'value' => 'required|numeric|min:0',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'product_id' => 'nullable|exists:products,id',
             'category_id' => 'nullable|exists:categories,id',
             'customer_id' => 'nullable|exists:customers,id',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $validated['value'] = FinancialMath::round((string) $validated['value'], 4);
@@ -91,15 +92,15 @@ class DiscountController extends Controller
     public function resolve(Request $request): JsonResponse
     {
         $request->validate([
-            'product_id'  => 'required|exists:products,id',
+            'product_id' => 'required|exists:products,id',
             'customer_id' => 'nullable|exists:customers,id',
         ]);
 
-        $productId  = $request->product_id;
+        $productId = $request->product_id;
         $customerId = $request->customer_id;
 
         // Load product to get its category
-        $product = \App\Models\Product::select('id', 'category_id')->findOrFail($productId);
+        $product = Product::select('id', 'category_id')->findOrFail($productId);
 
         $discount = Discount::active()
             ->where(function ($q) use ($productId, $customerId, $product) {
@@ -129,7 +130,7 @@ class DiscountController extends Controller
             ->first();
 
         return response()->json([
-            'discount'   => $discount ? $this->format($discount) : null,
+            'discount' => $discount ? $this->format($discount) : null,
             'product_id' => $productId,
             'customer_id' => $customerId,
         ]);
@@ -140,23 +141,23 @@ class DiscountController extends Controller
     private function format(Discount $d): array
     {
         return [
-            'id'          => $d->id,
-            'name'        => $d->name,
-            'type'        => $d->type,
-            'value'       => (string) $d->value,
-            'label'       => $d->type === Discount::TYPE_PERCENTAGE
+            'id' => $d->id,
+            'name' => $d->name,
+            'type' => $d->type,
+            'value' => (string) $d->value,
+            'label' => $d->type === Discount::TYPE_PERCENTAGE
                 ? FinancialMath::format($d->value, 2).'%'
                 : '₱'.FinancialMath::format($d->value, 2).' off',
-            'start_date'  => $d->start_date?->toDateString(),
-            'end_date'    => $d->end_date?->toDateString(),
-            'is_active'   => $d->is_active,
-            'product_id'  => $d->product_id,
-            'product'     => $d->product ? ['id' => $d->product->id, 'name' => $d->product->name, 'sku' => $d->product->sku] : null,
+            'start_date' => $d->start_date?->toDateString(),
+            'end_date' => $d->end_date?->toDateString(),
+            'is_active' => $d->is_active,
+            'product_id' => $d->product_id,
+            'product' => $d->product ? ['id' => $d->product->id, 'name' => $d->product->name, 'sku' => $d->product->sku] : null,
             'category_id' => $d->category_id,
-            'category'    => $d->category ? ['id' => $d->category->id, 'name' => $d->category->name] : null,
+            'category' => $d->category ? ['id' => $d->category->id, 'name' => $d->category->name] : null,
             'customer_id' => $d->customer_id,
-            'customer'    => $d->customer ? ['id' => $d->customer->id, 'name' => $d->customer->name] : null,
-            'created_at'  => $d->created_at?->toDateString(),
+            'customer' => $d->customer ? ['id' => $d->customer->id, 'name' => $d->customer->name] : null,
+            'created_at' => $d->created_at?->toDateString(),
         ];
     }
 }

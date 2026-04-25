@@ -402,19 +402,19 @@ class SalesOrderController extends Controller
     public function ship(Request $request, SalesOrder $salesOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'lines'                    => 'required|array|min:1',
-            'lines.*.so_line_id'       => 'required|exists:sales_order_lines,id',
-            'lines.*.shipped_qty'      => 'required|numeric|min:0.0001',
+            'lines' => 'required|array|min:1',
+            'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
+            'lines.*.shipped_qty' => 'required|numeric|min:0.0001',
             // Phase 6.3: optional serial IDs per line (must be in_stock serials)
-            'lines.*.serial_ids'       => 'nullable|array',
-            'lines.*.serial_ids.*'     => 'integer|exists:product_serials,id',
-            'carrier_id'               => 'required|exists:carriers,id',
-            'tracking_number'          => 'nullable|string|max:100',
-            'notes'                    => 'nullable|string|max:1000',
+            'lines.*.serial_ids' => 'nullable|array',
+            'lines.*.serial_ids.*' => 'integer|exists:product_serials,id',
+            'carrier_id' => 'required|exists:carriers,id',
+            'tracking_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
         ], [
-            'lines.min'           => 'Please select at least one item to ship.',
+            'lines.min' => 'Please select at least one item to ship.',
             'carrier_id.required' => 'A carrier is required for fulfillment.',
-            'carrier_id.exists'   => 'The selected carrier does not exist.',
+            'carrier_id.exists' => 'The selected carrier does not exist.',
         ]);
 
         if (! $salesOrder->canBeShipped()) {
@@ -495,22 +495,22 @@ class SalesOrderController extends Controller
                 $carrier = Carrier::findOrFail($request->carrier_id);
 
                 $salesOrder->update([
-                    'status_id'      => $status->id,
-                    'shipped_at'     => now(),
-                    'carrier'        => $carrier->name,
-                    'tracking_number'=> $request->tracking_number,
+                    'status_id' => $status->id,
+                    'shipped_at' => now(),
+                    'carrier' => $carrier->name,
+                    'tracking_number' => $request->tracking_number,
                 ]);
 
                 // --- Phase 6.1: Auto-create a Shipment entity ---
                 Shipment::create([
-                    'shipment_number' => 'SHP-' . $salesOrder->so_number . '-' . strtoupper(substr(uniqid(), -5)),
-                    'sales_order_id'  => $salesOrder->id,
-                    'transaction_id'  => $transaction->id,
-                    'carrier_id'      => $carrier->id,
+                    'shipment_number' => 'SHP-'.$salesOrder->so_number.'-'.strtoupper(substr(uniqid(), -5)),
+                    'sales_order_id' => $salesOrder->id,
+                    'transaction_id' => $transaction->id,
+                    'carrier_id' => $carrier->id,
                     'tracking_number' => $request->tracking_number,
-                    'status'          => 'shipped',
-                    'shipped_at'      => now(),
-                    'notes'           => $request->notes ?? null,
+                    'status' => 'shipped',
+                    'shipped_at' => now(),
+                    'notes' => $request->notes ?? null,
                 ]);
 
                 // --- Phase 6.3: Mark shipped serials as sold (opt-in) ---
@@ -529,13 +529,19 @@ class SalesOrderController extends Controller
 
                     foreach ($request->lines as $item) {
                         $serialIds = $item['serial_ids'] ?? [];
-                        if (empty($serialIds)) continue;
+                        if (empty($serialIds)) {
+                            continue;
+                        }
 
                         $soLine = $soLines->get($item['so_line_id']);
-                        if (! $soLine) continue;
+                        if (! $soLine) {
+                            continue;
+                        }
 
                         $txLine = $txLinesByProductId->get($soLine->product_id);
-                        if (! $txLine) continue;
+                        if (! $txLine) {
+                            continue;
+                        }
 
                         $serialsToShip = ProductSerial::whereIn('id', $serialIds)
                             ->where('product_id', $soLine->product_id)
@@ -543,7 +549,7 @@ class SalesOrderController extends Controller
 
                         foreach ($serialsToShip as $serial) {
                             $serial->update([
-                                'status'              => ProductSerial::STATUS_SOLD,
+                                'status' => ProductSerial::STATUS_SOLD,
                                 'current_location_id' => null,
                             ]);
                             $txLine->serials()->syncWithoutDetaching([$serial->id]);

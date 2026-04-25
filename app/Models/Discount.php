@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Discount extends Model
 {
     public const TYPE_PERCENTAGE = 'percentage';
-    public const TYPE_FIXED      = 'fixed';
+
+    public const TYPE_FIXED = 'fixed';
 
     protected $fillable = [
         'name',
@@ -24,10 +25,10 @@ class Discount extends Model
     ];
 
     protected $casts = [
-        'value'      => 'decimal:4',
+        'value' => 'decimal:4',
         'start_date' => 'date',
-        'end_date'   => 'date',
-        'is_active'  => 'boolean',
+        'end_date' => 'date',
+        'is_active' => 'boolean',
     ];
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

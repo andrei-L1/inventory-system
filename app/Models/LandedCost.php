@@ -15,7 +15,8 @@ class LandedCost extends Model
     /**
      * Valid allocation methods.
      */
-    public const METHOD_BY_VALUE    = 'by_value';
+    public const METHOD_BY_VALUE = 'by_value';
+
     public const METHOD_BY_QUANTITY = 'by_quantity';
 
     protected $fillable = [
@@ -30,7 +31,7 @@ class LandedCost extends Model
     ];
 
     protected $casts = [
-        'amount'       => 'decimal:8',
+        'amount' => 'decimal:8',
         'allocated_at' => 'datetime',
     ];
 

@@ -38,7 +38,7 @@ class PriceListController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'     => 'required|string|max:100|unique:price_lists,name',
+            'name' => 'required|string|max:100|unique:price_lists,name',
             'currency' => 'required|string|max:3',
             'is_active' => 'boolean',
         ]);
@@ -53,8 +53,8 @@ class PriceListController extends Controller
     public function update(Request $request, PriceList $priceList): JsonResponse
     {
         $validated = $request->validate([
-            'name'      => "required|string|max:100|unique:price_lists,name,{$priceList->id}",
-            'currency'  => 'required|string|max:3',
+            'name' => "required|string|max:100|unique:price_lists,name,{$priceList->id}",
+            'currency' => 'required|string|max:3',
             'is_active' => 'boolean',
         ]);
 
@@ -86,16 +86,16 @@ class PriceListController extends Controller
     public function upsertItem(Request $request, PriceList $priceList): JsonResponse
     {
         $validated = $request->validate([
-            'product_id'   => 'required|exists:products,id',
-            'price'        => 'required|numeric|min:0',
+            'product_id' => 'required|exists:products,id',
+            'price' => 'required|numeric|min:0',
             'min_quantity' => 'nullable|numeric|min:0',
         ]);
 
         $item = PriceListItem::updateOrCreate(
             [
                 'price_list_id' => $priceList->id,
-                'product_id'    => $validated['product_id'],
-                'min_quantity'  => FinancialMath::round((string) ($validated['min_quantity'] ?? 0), 4),
+                'product_id' => $validated['product_id'],
+                'min_quantity' => FinancialMath::round((string) ($validated['min_quantity'] ?? 0), 4),
             ],
             [
                 'price' => FinancialMath::round((string) $validated['price'], 6),
@@ -126,7 +126,7 @@ class PriceListController extends Controller
     {
         $request->validate([
             'product_id' => 'required|exists:products,id',
-            'qty'        => 'nullable|numeric|min:0',
+            'qty' => 'nullable|numeric|min:0',
         ]);
 
         $resolved = $priceList->resolvePrice(
@@ -136,8 +136,8 @@ class PriceListController extends Controller
 
         return response()->json([
             'price_list_id' => $priceList->id,
-            'product_id'    => $request->product_id,
-            'qty'           => $request->qty ?? 1,
+            'product_id' => $request->product_id,
+            'qty' => $request->qty ?? 1,
             'resolved_price' => $resolved,
         ]);
     }
@@ -147,27 +147,27 @@ class PriceListController extends Controller
     private function format(PriceList $list): array
     {
         return [
-            'id'             => $list->id,
-            'name'           => $list->name,
-            'currency'       => $list->currency,
-            'is_active'      => $list->is_active,
+            'id' => $list->id,
+            'name' => $list->name,
+            'currency' => $list->currency,
+            'is_active' => $list->is_active,
             'customers_count' => $list->customers_count ?? null,
-            'items'          => $list->relationLoaded('items')
+            'items' => $list->relationLoaded('items')
                 ? $list->items->map(fn ($i) => $this->formatItem($i))->values()
                 : null,
-            'created_at'     => $list->created_at?->toDateString(),
+            'created_at' => $list->created_at?->toDateString(),
         ];
     }
 
     private function formatItem(PriceListItem $item): array
     {
         return [
-            'id'           => $item->id,
-            'product_id'   => $item->product_id,
-            'sku'          => $item->product?->sku,
+            'id' => $item->id,
+            'product_id' => $item->product_id,
+            'sku' => $item->product?->sku,
             'product_name' => $item->product?->name,
             'selling_price' => $item->product?->selling_price ? (string) $item->product->selling_price : null,
-            'price'        => (string) $item->price,
+            'price' => (string) $item->price,
             'min_quantity' => (string) $item->min_quantity,
         ];
     }

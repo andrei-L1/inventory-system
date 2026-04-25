@@ -28,7 +28,7 @@ class ProductSerialController extends Controller
         }
 
         if ($request->filled('serial_number')) {
-            $query->where('serial_number', 'like', '%' . $request->serial_number . '%');
+            $query->where('serial_number', 'like', '%'.$request->serial_number.'%');
         }
 
         $serials = $query->latest('id')->paginate($request->get('limit', 50));
@@ -46,10 +46,10 @@ class ProductSerialController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'product_id'         => 'required|exists:products,id',
-            'serial_number'      => 'required|string|max:100',
-            'status'             => 'in:in_stock,sold,returned,damaged',
-            'current_location_id'=> 'nullable|exists:locations,id',
+            'product_id' => 'required|exists:products,id',
+            'serial_number' => 'required|string|max:100',
+            'status' => 'in:in_stock,sold,returned,damaged',
+            'current_location_id' => 'nullable|exists:locations,id',
         ]);
 
         // Enforce uniqueness per product
@@ -64,9 +64,9 @@ class ProductSerialController extends Controller
         }
 
         $serial = ProductSerial::create([
-            'product_id'          => $data['product_id'],
-            'serial_number'       => $data['serial_number'],
-            'status'              => $data['status'] ?? ProductSerial::STATUS_IN_STOCK,
+            'product_id' => $data['product_id'],
+            'serial_number' => $data['serial_number'],
+            'status' => $data['status'] ?? ProductSerial::STATUS_IN_STOCK,
             'current_location_id' => $data['current_location_id'] ?? null,
         ]);
 
@@ -80,7 +80,7 @@ class ProductSerialController extends Controller
     public function update(Request $request, ProductSerial $serial): ProductSerialResource
     {
         $data = $request->validate([
-            'status'              => 'sometimes|in:in_stock,sold,returned,damaged',
+            'status' => 'sometimes|in:in_stock,sold,returned,damaged',
             'current_location_id' => 'nullable|exists:locations,id',
         ]);
 

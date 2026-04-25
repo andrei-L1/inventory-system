@@ -13,9 +13,12 @@ class ProductSerial extends Model
 
     // Status lifecycle: in_stock → sold | returned | damaged
     const STATUS_IN_STOCK = 'in_stock';
-    const STATUS_SOLD     = 'sold';
+
+    const STATUS_SOLD = 'sold';
+
     const STATUS_RETURNED = 'returned';
-    const STATUS_DAMAGED  = 'damaged';
+
+    const STATUS_DAMAGED = 'damaged';
 
     protected $fillable = [
         'product_id',

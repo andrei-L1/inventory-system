@@ -39,14 +39,14 @@ class LandedCostController extends Controller
     {
         $validated = $request->validate([
             'cost_type' => ['required', 'string', Rule::in(LandedCost::COST_TYPES)],
-            'amount'    => 'required|numeric|min:0.00000001',
-            'notes'     => 'nullable|string|max:500',
+            'amount' => 'required|numeric|min:0.00000001',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         $cost = $purchaseOrder->landedCosts()->create([
             'cost_type' => $validated['cost_type'],
-            'amount'    => FinancialMath::round((string) $validated['amount'], FinancialMath::LINE_SCALE),
-            'notes'     => $validated['notes'] ?? null,
+            'amount' => FinancialMath::round((string) $validated['amount'], FinancialMath::LINE_SCALE),
+            'notes' => $validated['notes'] ?? null,
         ]);
 
         return response()->json(['data' => $this->format($cost)], 201);
@@ -140,12 +140,12 @@ class LandedCostController extends Controller
             // ── Step 2: Apply proportional per-unit adjustment to cost layers ─
             foreach ($receivedLines as $line) {
                 if ($method === LandedCost::METHOD_BY_VALUE) {
-                    $lineValue  = FinancialMath::mul(
+                    $lineValue = FinancialMath::mul(
                         (string) $line->net_received_qty,
                         (string) $line->unit_cost,
                     );
-                    $proportion      = FinancialMath::div($lineValue, $denominator);
-                    $lineShare       = FinancialMath::mul($totalCost, $proportion);
+                    $proportion = FinancialMath::div($lineValue, $denominator);
+                    $lineShare = FinancialMath::mul($totalCost, $proportion);
                     $perUnitAddition = FinancialMath::div($lineShare, (string) $line->net_received_qty);
                 } else {
                     // by_quantity: uniform per-unit split
@@ -174,8 +174,8 @@ class LandedCostController extends Controller
             // ── Step 3: Stamp allocation metadata ─────────────────────────────
             $landedCost->update([
                 'allocation_method' => $method,
-                'allocated_at'      => now(),
-                'allocated_by'      => auth()->id(),
+                'allocated_at' => now(),
+                'allocated_by' => auth()->id(),
             ]);
         });
 
@@ -183,7 +183,7 @@ class LandedCostController extends Controller
 
         return response()->json([
             'message' => 'Landed cost successfully allocated into inventory cost layers.',
-            'data'    => $this->format($landedCost),
+            'data' => $this->format($landedCost),
         ]);
     }
 
@@ -192,19 +192,19 @@ class LandedCostController extends Controller
     private function format(LandedCost $lc): array
     {
         return [
-            'id'                  => $lc->id,
-            'purchase_order_id'   => $lc->purchase_order_id,
-            'product_id'          => $lc->product_id,
-            'product'             => $lc->product ? ['id' => $lc->product->id, 'name' => $lc->product->name, 'sku' => $lc->product->sku] : null,
-            'cost_type'           => $lc->cost_type,
-            'amount'              => (string) $lc->amount,
-            'formatted_amount'    => FinancialMath::format($lc->amount, 2),
-            'notes'               => $lc->notes,
-            'is_allocated'        => $lc->is_allocated,
-            'allocation_method'   => $lc->allocation_method,
-            'allocated_at'        => $lc->allocated_at?->toDateTimeString(),
-            'allocated_by'        => $lc->allocatedByUser?->name,
-            'created_at'          => $lc->created_at?->toDateTimeString(),
+            'id' => $lc->id,
+            'purchase_order_id' => $lc->purchase_order_id,
+            'product_id' => $lc->product_id,
+            'product' => $lc->product ? ['id' => $lc->product->id, 'name' => $lc->product->name, 'sku' => $lc->product->sku] : null,
+            'cost_type' => $lc->cost_type,
+            'amount' => (string) $lc->amount,
+            'formatted_amount' => FinancialMath::format($lc->amount, 2),
+            'notes' => $lc->notes,
+            'is_allocated' => $lc->is_allocated,
+            'allocation_method' => $lc->allocation_method,
+            'allocated_at' => $lc->allocated_at?->toDateTimeString(),
+            'allocated_by' => $lc->allocatedByUser?->name,
+            'created_at' => $lc->created_at?->toDateTimeString(),
         ];
     }
 }
