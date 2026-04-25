@@ -22,6 +22,12 @@ class Shipment extends Model
         'notes',
     ];
 
+    protected $casts = [
+        'shipped_at'   => 'datetime',
+        'delivered_at' => 'datetime',
+        'shipping_cost'=> 'decimal:2',
+    ];
+
     public function carrier()
     {
         return $this->belongsTo(Carrier::class);

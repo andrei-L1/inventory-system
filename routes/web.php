@@ -44,6 +44,7 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/location-center', fn () => Inertia::render('LocationCenter'))->name('location-center');
     Route::get('/uom-center', fn () => Inertia::render('UomCenter'))->name('uom-center');
     Route::get('/category-center', fn () => Inertia::render('CategoryCenter'))->name('category-center');
+    Route::get('/carriers', fn () => Inertia::render('Carriers/Index'))->name('carriers.index');
 
     Route::get('/customer-center', fn () => Inertia::render('CustomerCenter'))->name('customer-center');
     Route::get('/vendor-center', fn () => Inertia::render('VendorCenter'))->name('vendor-center');

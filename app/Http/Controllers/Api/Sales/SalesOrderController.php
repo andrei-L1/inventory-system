@@ -10,8 +10,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Sales\SalesOrderStoreRequest;
 use App\Http\Requests\Sales\SalesOrderUpdateRequest;
 use App\Http\Resources\Sales\SalesOrderResource;
+use App\Models\Carrier;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderStatus;
+use App\Models\Shipment;
 use App\Models\TransactionStatus;
 use App\Models\TransactionType;
 use App\Services\Inventory\StockService;
@@ -72,6 +74,7 @@ class SalesOrderController extends Controller
             'approver',
             'transactions.createdBy',
             'transactions.lines.product.uom',
+            'shipments.carrier',
         ]);
 
         return new SalesOrderResource($salesOrder);
@@ -398,14 +401,16 @@ class SalesOrderController extends Controller
     public function ship(Request $request, SalesOrder $salesOrder, StockService $stockService): JsonResponse
     {
         $request->validate([
-            'lines' => 'required|array|min:1',
-            'lines.*.so_line_id' => 'required|exists:sales_order_lines,id',
-            'lines.*.shipped_qty' => 'required|numeric|min:0.0001',
-            'carrier' => 'required|string|max:100',
+            'lines'           => 'required|array|min:1',
+            'lines.*.so_line_id'   => 'required|exists:sales_order_lines,id',
+            'lines.*.shipped_qty'  => 'required|numeric|min:0.0001',
+            'carrier_id'      => 'required|exists:carriers,id',
             'tracking_number' => 'nullable|string|max:100',
+            'notes'           => 'nullable|string|max:1000',
         ], [
-            'lines.min' => 'Please select at least one item to ship.',
-            'carrier.required' => 'A carrier service is required for fulfillment.',
+            'lines.min'          => 'Please select at least one item to ship.',
+            'carrier_id.required' => 'A carrier is required for fulfillment.',
+            'carrier_id.exists'   => 'The selected carrier does not exist.',
         ]);
 
         if (! $salesOrder->canBeShipped()) {
@@ -482,11 +487,26 @@ class SalesOrderController extends Controller
                 $statusName = $allShipped ? SalesOrderStatus::SHIPPED : SalesOrderStatus::PARTIALLY_SHIPPED;
                 $status = SalesOrderStatus::where('name', $statusName)->firstOrFail();
 
+                // Resolve the carrier model for name storage and Shipment creation
+                $carrier = Carrier::findOrFail($request->carrier_id);
+
                 $salesOrder->update([
-                    'status_id' => $status->id,
-                    'shipped_at' => now(),
-                    'carrier' => $request->carrier,
+                    'status_id'      => $status->id,
+                    'shipped_at'     => now(),
+                    'carrier'        => $carrier->name,
+                    'tracking_number'=> $request->tracking_number,
+                ]);
+
+                // --- Phase 6.1: Auto-create a Shipment entity ---
+                Shipment::create([
+                    'shipment_number' => 'SHP-' . $salesOrder->so_number . '-' . strtoupper(substr(uniqid(), -5)),
+                    'sales_order_id'  => $salesOrder->id,
+                    'transaction_id'  => $transaction->id,
+                    'carrier_id'      => $carrier->id,
                     'tracking_number' => $request->tracking_number,
+                    'status'          => 'shipped',
+                    'shipped_at'      => now(),
+                    'notes'           => $request->notes ?? null,
                 ]);
 
                 return $transaction;

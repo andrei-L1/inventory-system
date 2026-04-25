@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inventory;
 
 use App\Helpers\UomHelper;
+use App\Models\Carrier;
 use App\Models\Category;
 use App\Models\CostingMethod;
 use App\Models\Customer;
@@ -225,14 +226,20 @@ class SalesOrderTest extends TestCase
         ])->assertStatus(200);
 
         // Ship
+        // Create a carrier for Option A compliance
+        $carrier = Carrier::create([
+            'name'     => 'FedEx',
+            'is_active'=> true,
+        ]);
+
         $payload = [
             'lines' => [
                 [
-                    'so_line_id' => $line->id,
+                    'so_line_id'  => $line->id,
                     'shipped_qty' => 10,
                 ],
             ],
-            'carrier' => 'FedEx',
+            'carrier_id'      => $carrier->id,
             'tracking_number' => 'TRK123456',
         ];
 
