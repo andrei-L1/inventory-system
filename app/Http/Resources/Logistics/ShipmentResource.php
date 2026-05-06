@@ -15,20 +15,20 @@ class ShipmentResource extends JsonResource
         }
 
         return [
-            'id'              => $this->id,
+            'id' => $this->id,
             'shipment_number' => $this->shipment_number,
-            'sales_order_id'  => $this->sales_order_id,
-            'transaction_id'  => $this->transaction_id,
-            'carrier'         => $this->whenLoaded('carrier', fn () => new CarrierResource($this->carrier)),
+            'sales_order_id' => $this->sales_order_id,
+            'transaction_id' => $this->transaction_id,
+            'carrier' => $this->whenLoaded('carrier', fn () => new CarrierResource($this->carrier)),
             'tracking_number' => $this->tracking_number,
-            'tracking_url'    => $trackingUrl,
-            'status'          => $this->status,
-            'shipping_cost'   => (string) $this->shipping_cost,
-            'notes'           => $this->notes,
-            'shipped_at'      => $this->shipped_at?->toDateTimeString(),
-            'delivered_at'    => $this->delivered_at?->toDateTimeString(),
-            'created_at'      => $this->created_at,
-            'updated_at'      => $this->updated_at,
+            'tracking_url' => $trackingUrl,
+            'status' => $this->status,
+            'shipping_cost' => (string) $this->shipping_cost,
+            'notes' => $this->notes,
+            'shipped_at' => $this->shipped_at?->toDateTimeString(),
+            'delivered_at' => $this->delivered_at?->toDateTimeString(),
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

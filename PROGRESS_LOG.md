@@ -539,3 +539,37 @@ Based on the full system audit conducted on 2026-03-30, here is the verified com
 - **A/P Mirroring**: Procurement generation and Accounts Payable (Bills) workflows are perfectly architected to mathematically match the existing Sales Order (Invoicing) capabilities, enabling 100% systemic parity between A/R and A/P.
 - **UI Integrations**: Re-engineered Vue `PurchaseOrders/Form.vue` and `Finance/BillForm.vue` forms with inline discount/tax input parameters. Forms dynamically display live financial gross-to-net aggregations, pulling vendor configuration presets downward automatically.
 
+---
+
+### 2026-04-25: Audit & Stabilization — Phase 6.1–7.2 Hardening (Commit `01ad544`)
+
+- **Serial Registry Guard**: Hardened SO fulfillment to prevent re-shipping serials already in `sold` or `damaged` status. Added `in_stock` guard in `SalesOrderController` serial query.
+- **Price List Decoupled**: Price Lists are architecturally incompatible with UOM-scaled unit pricing (a single price list entry cannot represent a price across multiple packaging units). UI removed; backend schema remains dormant for future re-evaluation.
+- **Landed Cost Integrity**:
+  - Added PO status guards in `LandedCostController` to block allocation on `cancelled` or `closed` POs.
+  - Fixed `$request->method` shadowing the HTTP verb helper — replaced with `$request->input('method')`.
+  - Normalized all status comparisons to lowercase (`cancelled`, `closed`) to match DB schema.
+- **Discount Validation**: Raised minimum discount value from `0` to `0.01` to reject semantically meaningless zero-value discounts.
+- **Test Verification**: Full suite 46/46 PASSING after all hardening changes.
+- **Code Quality**: Ran Laravel Pint across all changed files before commit.
+
+---
+
+### 2026-05-06: Purchase Order UI Polish
+
+- **Layout Fix — Critical Grid Bug**: The Landed Costs panel on `PurchaseOrders/Show.vue` had no `col-span` CSS grid wrapper, causing it to float as an implicit full-width block and push Line Items below it. Fixed by absorbing Landed Costs into the left `col-span-3` sidebar. Final grid: `3 + 9 = 12`.
+- **Left Sidebar (col-span-3)**: Order Metadata → GRN History (conditional) → Return History (conditional) → Landed Costs — all stacked vertically.
+- **Right Content (col-span-9)**: Line Items DataTable now has a proper card header with a line-count badge and a **Financial Summary Footer** showing Order Total + Overhead (when landed costs exist).
+- **Action Buttons**: Changed container from `flex gap-3` to `flex-wrap gap-2 justify-end` — buttons now wrap gracefully on narrower viewports.
+
+#### Architecture Decision — Landed Cost Types
+
+Cost types (`Freight`, `Duty`, `Insurance`, `Handling`, `Other`) are **hardcoded** in two places:
+- **Backend**: `LandedCost::COST_TYPES` constant in `app/Models/LandedCost.php` — enforced via `Rule::in()` validation.
+- **Frontend**: `const COST_TYPES = [...]` in `PurchaseOrders/Show.vue` line 60 — populates the Add Landed Cost dialog.
+
+**Decision**: Keep hardcoded. These 5 types map 1:1 to standard customs/freight invoice categories and are stable. If the list ever grows, the fix is a `GET /api/landed-cost-types` passthrough (no DB table needed) — logged as a future option, not required now.
+
+---
+
+*Last Updated: 2026-05-06*

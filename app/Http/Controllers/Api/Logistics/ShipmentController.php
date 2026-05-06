@@ -38,23 +38,23 @@ class ShipmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'sales_order_id'  => 'required|exists:sales_orders,id',
-            'carrier_id'      => 'required|exists:carriers,id',
+            'sales_order_id' => 'required|exists:sales_orders,id',
+            'carrier_id' => 'required|exists:carriers,id',
             'tracking_number' => 'nullable|string|max:100',
-            'shipping_cost'   => 'nullable|numeric|min:0',
-            'notes'           => 'nullable|string|max:1000',
-            'shipped_at'      => 'nullable|date',
+            'shipping_cost' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+            'shipped_at' => 'nullable|date',
         ]);
 
         $shipment = Shipment::create([
-            'shipment_number' => 'SHP-' . strtoupper(substr(uniqid(), -8)),
-            'sales_order_id'  => $data['sales_order_id'],
-            'carrier_id'      => $data['carrier_id'],
+            'shipment_number' => 'SHP-'.strtoupper(substr(uniqid(), -8)),
+            'sales_order_id' => $data['sales_order_id'],
+            'carrier_id' => $data['carrier_id'],
             'tracking_number' => $data['tracking_number'] ?? null,
-            'status'          => 'shipped',
-            'shipping_cost'   => $data['shipping_cost'] ?? 0,
-            'notes'           => $data['notes'] ?? null,
-            'shipped_at'      => $data['shipped_at'] ?? now(),
+            'status' => 'shipped',
+            'shipping_cost' => $data['shipping_cost'] ?? 0,
+            'notes' => $data['notes'] ?? null,
+            'shipped_at' => $data['shipped_at'] ?? now(),
         ]);
 
         $shipment->load('carrier');
@@ -67,13 +67,13 @@ class ShipmentController extends Controller
     public function update(Request $request, Shipment $shipment): ShipmentResource
     {
         $data = $request->validate([
-            'carrier_id'      => 'sometimes|exists:carriers,id',
+            'carrier_id' => 'sometimes|exists:carriers,id',
             'tracking_number' => 'nullable|string|max:100',
-            'status'          => 'sometimes|in:pending,shipped,in_transit,delivered,failed',
-            'shipping_cost'   => 'nullable|numeric|min:0',
-            'notes'           => 'nullable|string|max:1000',
-            'shipped_at'      => 'nullable|date',
-            'delivered_at'    => 'nullable|date',
+            'status' => 'sometimes|in:pending,shipped,in_transit,delivered,failed',
+            'shipping_cost' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+            'shipped_at' => 'nullable|date',
+            'delivered_at' => 'nullable|date',
         ]);
 
         $shipment->update($data);

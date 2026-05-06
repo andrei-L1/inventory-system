@@ -275,7 +275,7 @@ const cancel = () => {
                         icon="pi pi-save" 
                         :loading="loading" 
                         @click="submit"
-                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
+                        class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
                     />
                 </div>
             </div>
@@ -448,24 +448,24 @@ const cancel = () => {
 
 <style scoped>
 :deep(.p-select), :deep(.p-datepicker), :deep(.p-inputnumber-input), :deep(.p-inputtext) {
-    background: #09090b !important;
-    border-color: #27272a;
-    color: white;
+    background: var(--bg-input) !important;
+    border-color: var(--bg-panel-border);
+    color: var(--text-primary);
 }
 :deep(.p-select-panel), :deep(.p-datepicker-panel) {
-    background: #18181b;
-    border: 1px solid #27272a;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
 }
 :deep(.p-select-item), :deep(.p-datepicker-day) {
-    color: #a1a1aa;
+    color: var(--text-secondary);
 }
 :deep(.p-select-item.p-highlight) {
     background: rgba(249, 115, 22, 0.1);
-    color: #fb923c;
+    color: #f97316;
 }
 :deep(.p-select-item:hover) {
-    background: #27272a;
-    color: white;
+    background: var(--bg-panel-hover);
+    color: var(--text-primary);
 }
 </style>
 

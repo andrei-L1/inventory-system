@@ -8,6 +8,7 @@ import '../css/app.css';
 
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
+import Tooltip from 'primevue/tooltip';
 import axios from 'axios';
 
 window.axios = axios;
@@ -39,6 +40,7 @@ createInertiaApp({
                    }
                }
            })
+           .directive('tooltip', Tooltip)
            .mount(el);
     },
     progress: {

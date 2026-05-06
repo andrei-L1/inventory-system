@@ -368,22 +368,42 @@ const printVoucher = () => {
     window.open(window.location.href + '/print', '_blank');
 };
 
-const openShipDialog = () => {
+const openShipDialog = async () => {
     shipForm.value.lines = so.value.lines
         .filter(l => Number(l.shipped_qty) < Number(l.packed_qty))
         .map(l => ({
             so_line_id: l.id,
             product_name: l.product_name,
             sku: l.sku,
+            product_id: l.product_id,
+            location_id: l.location_id,
             packed_qty: Number(l.packed_qty),
             shipped_qty: Number(l.shipped_qty),
             to_ship: Number(l.remaining_ship_qty),
-            uom: l.uom?.abbreviation
+            uom: l.uom?.abbreviation,
+            // Phase 6.3: optional serial selection
+            serial_ids: [],
+            available_serials: [],
+            loadingSerials: false,
         }));
     shipForm.value.carrier_id = null;
     shipForm.value.tracking_number = '';
     shipForm.value.notes = '';
     shipDialog.value = true;
+
+    // Phase 6.3: eagerly load available in_stock serials per line
+    for (const line of shipForm.value.lines) {
+        if (line.product_id) {
+            line.loadingSerials = true;
+            try {
+                const params = { status: 'in_stock', product_id: line.product_id, limit: 200 };
+                if (line.location_id) params.location_id = line.location_id;
+                const res = await axios.get('/api/serials', { params });
+                line.available_serials = res.data.data;
+            } catch { /* silent — no serials available */ }
+            finally { line.loadingSerials = false; }
+        }
+    }
 };
 
 const fulfill = async () => {
@@ -400,7 +420,9 @@ const fulfill = async () => {
             notes: shipForm.value.notes,
             lines: shipForm.value.lines.filter(l => Number(l.to_ship) > 0).map(l => ({
                 so_line_id: l.so_line_id,
-                shipped_qty: l.to_ship
+                shipped_qty: l.to_ship,
+                // Phase 6.3: only send if serials were selected
+                serial_ids: l.serial_ids?.length ? l.serial_ids : undefined,
             }))
         };
         await axios.post(`/api/sales-orders/${so.value.id}/ship`, payload);
@@ -615,7 +637,7 @@ const totalDiscount = computed(() => {
                         v-if="canShip && can('manage-sales-orders')" 
                         label="Ship / Fulfill" 
                         icon="pi pi-truck" 
-                        class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
+                        class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] tracking-widest uppercase font-mono transition-all" 
                         @click="openShipDialog"
                     />
 
@@ -1185,6 +1207,31 @@ const totalDiscount = computed(() => {
                                 </div>
                             </template>
                         </Column>
+                        <!-- Phase 6.3: Optional Serial Selection -->
+                        <Column header="ASSIGN SERIALS (OPT.)" style="width: 200px">
+                            <template #body="{ data }">
+                                <div class="flex flex-col gap-1">
+                                    <span v-if="data.loadingSerials" class="text-[9px] text-muted font-mono italic">Loading serials...</span>
+                                    <span v-else-if="data.available_serials.length === 0" class="text-[9px] text-muted font-mono italic">No serials tracked</span>
+                                    <template v-else>
+                                        <div class="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-1 bg-deep/50 rounded-lg border border-panel-border/50">
+                                            <label v-for="serial in data.available_serials" :key="serial.id"
+                                                class="flex items-center gap-1 cursor-pointer hover:bg-panel/50 px-1.5 py-0.5 rounded transition-colors">
+                                                <input type="checkbox"
+                                                    :value="serial.id"
+                                                    v-model="data.serial_ids"
+                                                    class="accent-violet-500 w-3 h-3" />
+                                                <span class="text-[9px] font-mono text-violet-300">{{ serial.serial_number }}</span>
+                                            </label>
+                                        </div>
+                                        <span v-if="data.serial_ids.length > 0 && data.serial_ids.length !== Math.round(data.to_ship)"
+                                            class="text-[8px] text-amber-400 font-mono">
+                                            ⚠ {{ data.serial_ids.length }} selected ≠ qty {{ Math.round(data.to_ship) }}
+                                        </span>
+                                    </template>
+                                </div>
+                            </template>
+                        </Column>
                     </DataTable>
                 </div>
 
@@ -1377,7 +1424,7 @@ const totalDiscount = computed(() => {
                             label="EXECUTE RETURN" 
                             @click="submitReturn" 
                             :loading="returnLoading" 
-                            class="!min-h-[2.5rem] !px-10 !bg-amber-500 hover:!bg-amber-400 !text-zinc-950 !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
+                            class="!min-h-[2.5rem] !px-10 !bg-amber-500 hover:!bg-amber-400 !text-primary !font-black !text-[11px] !tracking-widest !rounded-xl !border-none transition-all uppercase shadow-[0_0_20px_rgba(245,158,11,0.3)]" 
                         />
                     </div>
                 </div>
@@ -1389,9 +1436,9 @@ const totalDiscount = computed(() => {
 
 <style scoped>
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: transparent;
-    border-bottom: 1px solid rgba(20, 184, 166, 0.1);
-    color: #52525b;
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 8px;
     font-weight: 900;
     text-transform: uppercase;
@@ -1399,22 +1446,22 @@ const totalDiscount = computed(() => {
     padding: 1rem 0.75rem;
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5);
+    border-bottom: 1px solid var(--bg-panel-border);
     padding: 1rem 0.75rem;
 }
 :deep(.p-dialog) {
-    background: #09090b;
-    border: 1px solid #27272a;
+    background: var(--bg-panel);
+    border: 1px solid var(--bg-panel-border);
     border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 :deep(.p-dialog-header) {
-    background: #09090b;
-    color: white;
+    background: var(--bg-panel);
+    color: var(--text-primary);
     padding: 1.5rem 1.5rem 1rem 1.5rem;
 }
 :deep(.p-dialog-content) {
-    background: #09090b;
+    background: var(--bg-panel);
     padding: 0 1.5rem 1.5rem 1.5rem;
 }
 .no-print {

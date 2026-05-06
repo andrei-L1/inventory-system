@@ -70,7 +70,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
             <div class="max-w-6xl mx-auto">
 
                 <!-- Toolbar -->
-                <div class="flex justify-between items-center mb-10 pb-6 border-b border-zinc-900">
+                <div class="flex justify-between items-center mb-10 pb-6 border-b border-panel-border">
                     <div class="flex flex-col">
                         <div class="flex items-center gap-3 mb-1">
                             <span class="text-[9px] font-bold text-sky-400 uppercase tracking-[0.3em] font-mono">Ledger Document</span>
@@ -117,7 +117,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 </div>
                                 <div class="flex flex-col gap-2">
                                     <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Transaction Date</label>
-                                    <span class="text-zinc-300 font-mono text-sm">{{ transaction.transaction_date }}</span>
+                                    <span class="text-secondary font-mono text-sm">{{ transaction.transaction_date }}</span>
                                 </div>
                                 <div class="h-px bg-panel-hover"></div>
                                 <div v-if="transaction.from_location_name" class="flex flex-col gap-2">
@@ -160,10 +160,14 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                     <div class="col-span-12 lg:col-span-8 flex flex-col gap-8">
                         <section class="bg-panel/60 border border-panel-border rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
                             <div class="px-8 py-5 border-b border-panel-border flex justify-between items-center bg-deep/40">
-                                <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Consigned Items Manifest</span>
+                                <span class="text-[10px] font-bold text-secondary tracking-[0.2em] uppercase font-mono">Consigned Items Manifest</span>
                                 <span class="bg-panel border border-panel-border text-secondary px-3 py-1 rounded text-[10px] font-bold font-mono tracking-tighter">{{ transaction.lines?.length || 0 }} ITEMS FOUND</span>
                             </div>
-                            <DataTable :value="transaction.lines" class="gh-table" :pt="{ root: { class: '!bg-transparent' }, bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' } }">
+                            <DataTable :value="transaction.lines" class="gh-table" :pt="{ 
+                                root: { class: '!bg-transparent' }, 
+                                headercell: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' },
+                                bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' } 
+                            }">
                                 <Column header="S/N" style="width: 60px">
                                     <template #body="slotProps">
                                         <span class="text-[10px] font-bold text-muted font-mono">{{ slotProps.index + 1 }}</span>
@@ -196,7 +200,7 @@ const jumpToPo = (poId) => { router.visit(`/purchase-orders/${poId}`); };
                                 </Column>
                                 <Column header="Stock Value" style="width: 120px">
                                     <template #body="{ data }">
-                                        <span class="font-mono text-zinc-300 font-bold text-[11px]">{{ formatCurrency(data.unit_cost * Math.abs(data.quantity)) }}</span>
+                                        <span class="font-mono text-secondary font-bold text-[11px]">{{ formatCurrency(data.unit_cost * Math.abs(data.quantity)) }}</span>
                                     </template>
                                 </Column>
                             </DataTable>

@@ -181,6 +181,11 @@ class Product extends Model
         return $this->hasMany(InventoryCostLayer::class);
     }
 
+    public function serials(): HasMany
+    {
+        return $this->hasMany(ProductSerial::class);
+    }
+
     /**
      * Get the average cost scaled to the primary unit of measure.
      * Stored value is now "Cost per Piece" (Atomic).

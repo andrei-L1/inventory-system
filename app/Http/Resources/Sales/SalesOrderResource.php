@@ -43,11 +43,11 @@ class SalesOrderResource extends JsonResource
             'notes' => $this->notes,
             'carrier' => $this->carrier,
             'tracking_number' => $this->tracking_number,
-            'lines'        => SalesOrderLineResource::collection($this->whenLoaded('lines')),
+            'lines' => SalesOrderLineResource::collection($this->whenLoaded('lines')),
             'transactions' => TransactionResource::collection($this->whenLoaded('transactions')),
-            'shipments'    => ShipmentResource::collection($this->whenLoaded('shipments')),
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
+            'shipments' => ShipmentResource::collection($this->whenLoaded('shipments')),
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

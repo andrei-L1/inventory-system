@@ -20,7 +20,7 @@ class CarrierController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         $carriers = $query->orderBy('name')->paginate($request->get('limit', 100));
@@ -36,11 +36,11 @@ class CarrierController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'                  => 'required|string|max:100|unique:carriers,name',
-            'contact_person'        => 'nullable|string|max:100',
-            'phone'                 => 'nullable|string|max:30',
+            'name' => 'required|string|max:100|unique:carriers,name',
+            'contact_person' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30',
             'tracking_url_template' => 'nullable|string|max:255',
-            'is_active'             => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $carrier = Carrier::create($data);
@@ -53,11 +53,11 @@ class CarrierController extends Controller
     public function update(Request $request, Carrier $carrier): CarrierResource
     {
         $data = $request->validate([
-            'name'                  => 'sometimes|required|string|max:100|unique:carriers,name,' . $carrier->id,
-            'contact_person'        => 'nullable|string|max:100',
-            'phone'                 => 'nullable|string|max:30',
+            'name' => 'sometimes|required|string|max:100|unique:carriers,name,'.$carrier->id,
+            'contact_person' => 'nullable|string|max:100',
+            'phone' => 'nullable|string|max:30',
             'tracking_url_template' => 'nullable|string|max:255',
-            'is_active'             => 'boolean',
+            'is_active' => 'boolean',
         ]);
 
         $carrier->update($data);

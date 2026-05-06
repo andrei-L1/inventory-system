@@ -228,18 +228,18 @@ class SalesOrderTest extends TestCase
         // Ship
         // Create a carrier for Option A compliance
         $carrier = Carrier::create([
-            'name'     => 'FedEx',
-            'is_active'=> true,
+            'name' => 'FedEx',
+            'is_active' => true,
         ]);
 
         $payload = [
             'lines' => [
                 [
-                    'so_line_id'  => $line->id,
+                    'so_line_id' => $line->id,
                     'shipped_qty' => 10,
                 ],
             ],
-            'carrier_id'      => $carrier->id,
+            'carrier_id' => $carrier->id,
             'tracking_number' => 'TRK123456',
         ];
 

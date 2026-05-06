@@ -164,7 +164,7 @@ const formatReason = (reason) => {
                                 v-model="search" 
                                 @input="loadPurchaseOrders"
                                 placeholder="Search orders..." 
-                                class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-zinc-300 focus:!border-orange-500/50 !h-11 !rounded-xl transition-all"
+                                class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-primary focus:!border-orange-500/50 !h-11 !rounded-xl transition-all"
                             />
                         </div>
                         <Link href="/purchase-orders/create" class="no-underline pb-1">
@@ -172,7 +172,7 @@ const formatReason = (reason) => {
                                 v-if="can('manage-purchase-orders')" 
                                 icon="pi pi-plus" 
                                 label="Draft PO" 
-                                class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
+                                class="p-button-sm !bg-orange-500 hover:!bg-orange-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all"
                             />
                         </Link>
                     </template>
@@ -191,7 +191,7 @@ const formatReason = (reason) => {
                             :label="`Draft ${selectedSuggestions.length} POs`" 
                             :loading="bulkLoading"
                             @click="createBulkPO"
-                            class="p-button-sm !bg-sky-500 hover:!bg-sky-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all uppercase tracking-widest"
+                            class="p-button-sm !bg-sky-500 hover:!bg-sky-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all uppercase tracking-widest"
                         />
                     </template>
                 </div>
@@ -328,8 +328,8 @@ const formatReason = (reason) => {
     display: flex;
     align-items: center;
     gap: 2px;
-    background: #09090b; /* zinc-950 */
-    border: 1px solid rgba(39, 39, 42, 0.9); /* zinc-800 */
+    background: var(--bg-deep);
+    border: 1px solid var(--bg-panel-border);
     border-radius: 12px;
     padding: 4px;
 }
@@ -359,24 +359,25 @@ const formatReason = (reason) => {
 }
 
 .tab-btn--active {
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(39, 39, 42, 0.9) 100%);
-    color: #fff;
-    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8);
+    border: 1px solid var(--bg-panel-border);
 }
 
 .tab-btn--active .tab-btn__icon {
-    color: #fb923c; /* orange-400 */
+    color: #f97316; /* orange-500 */
     opacity: 1;
 }
 
 .tab-btn--inactive {
     background: transparent;
-    color: #52525b; /* zinc-600 */
+    color: var(--text-muted);
 }
 
 .tab-btn--inactive:hover {
-    background: rgba(39, 39, 42, 0.5);
-    color: #a1a1aa; /* zinc-400 */
+    background: var(--bg-panel-hover);
+    color: var(--text-secondary);
 }
 
 .tab-btn__badge {
@@ -397,9 +398,9 @@ const formatReason = (reason) => {
 
 /* ─── DataTable ────────────────────────────────────────────────── */
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #18181b; /* zinc-950 */
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
-    color: #a1a1aa; /* zinc-400 */
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -412,40 +413,57 @@ const formatReason = (reason) => {
     cursor: pointer;
 }
 :deep(.p-datatable .p-datatable-tbody > tr:hover) {
-    background: rgba(39, 39, 42, 0.4); /* zinc-800/40 */
+    background: var(--bg-panel-hover);
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5); /* zinc-800/50 */
-    color: #e4e4e7; /* zinc-200 */
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 1rem;
 }
 :deep(.p-tag) {
-    background: rgba(39, 39, 42, 0.8);
+    background: var(--bg-panel-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--bg-panel-border);
 }
 :deep(.p-tag.p-tag-warning) {
     background: rgba(245, 158, 11, 0.1);
-    color: #fbbf24;
+    color: #d97706; /* Amber 600 - Darker for better visibility on light bg */
     border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-warning) {
+    color: #fbbf24; /* Amber 400 - Original for dark mode */
 }
 :deep(.p-tag.p-tag-info) {
     background: rgba(14, 165, 233, 0.1);
-    color: #38bdf8;
+    color: #0284c7; /* Sky 600 */
     border: 1px solid rgba(14, 165, 233, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-info) {
+    color: #38bdf8;
 }
 :deep(.p-tag.p-tag-success) {
     background: rgba(16, 185, 129, 0.1);
-    color: #34d399;
+    color: #059669; /* Emerald 600 */
     border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-success) {
+    color: #34d399;
 }
 :deep(.p-tag.p-tag-danger) {
     background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    color: #dc2626; /* Red 600 */
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-danger) {
+    color: #f87171;
 }
 :deep(.p-tag.p-tag-help) {
     background: rgba(139, 92, 246, 0.1);
-    color: #a78bfa;
+    color: #7c3aed; /* Violet 600 */
     border: 1px solid rgba(139, 92, 246, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-help) {
+    color: #a78bfa;
 }
 </style>
 

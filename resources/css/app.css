@@ -28,8 +28,8 @@
         --accent-subtle: #0369a1; /* Sky 700 */
         
         --text-primary: #0f172a; /* Slate 900 */
-        --text-secondary: #475569; /* Slate 600 */
-        --text-muted: #94a3b8; /* Slate 400 */
+        --text-secondary: #334155; /* Slate 700 - Crisper for secondary text */
+        --text-muted: #64748b; /* Slate 500 - Better readability (4.5:1 ratio) */
 
         --bg-input: #ffffff;
     }

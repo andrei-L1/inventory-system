@@ -484,7 +484,7 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 ---
 
 ## 🚚 Phase 6 — Logistics: Shipments & Carriers
-> Status: 🚧 IN PROGRESS (6.1 + 6.2 complete)
+> Status: ✅ COMPLETE
 
 ### 6.1 Shipments API
 - [x] `ShipmentController` — CRUD (`/api/shipments`), filterable by `?sales_order_id`.
@@ -500,33 +500,38 @@ quotation → quotation_sent → confirmed → picked → packed → shipped →
 - [x] **Carriers lookup management page** (`/carriers`) — full DataTable with Create/Edit dialog, active toggle, tracking URL preview, delete guard.
 
 ### 6.3 Serial / Batch Tracking
-- [ ] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
-- [ ] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
-- [ ] On Issue/Ship: select specific serial numbers to fulfill.
-- [ ] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
-- [ ] **Serial Registry page** — search serials, view status, view transaction history per unit.
+- [x] `ProductSerialController` — assign + query serial numbers using dormant `product_serials` table.
+- [x] On Receipt: assign serials to `transaction_line_serials` for unit-level traceability.
+- [x] On Issue/Ship: select specific serial numbers to fulfill.
+- [x] `product_serials` status lifecycle: `In Stock` → `Reserved` → `Sold` | `Returned`.
+- [x] **Serial Registry page** — search serials, view status, view transaction history per unit.
 
 ### 6.4 Landed Costs & Valuation Adjustment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] `LandedCostController` — allocation of freight, tax, and insurance.
+- [x] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
+- [x] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] Status guard — blocks allocation on `cancelled`/`closed` POs.
+- [x] **Cost Types**: Hardcoded as `LandedCost::COST_TYPES = ['Freight', 'Duty', 'Insurance', 'Handling', 'Other']` in the model (enforced via `Rule::in()` validation). Duplicated as `const COST_TYPES` in `Show.vue`. Decision: keep hardcoded — these map 1:1 to standard import invoice line categories and are stable. Future option: `GET /api/landed-cost-types` passthrough if the list ever grows.
 
 ---
 
 ## 💰 Phase 7 — Pricing & Discounts
-> Status: 🚧 IN PROGRESS (Schema & Model layer complete)
+> Status: ✅ COMPLETE (Price Lists decoupled — see note)
 
 ### 7.1 Landed Costs & Valuation Alignment
-- [ ] `LandedCostController` — allocation of freight, tax, and insurance using `landed_costs` table.
-- [ ] Logic: Prorate overhead costs (by value or weight) into the `inventory_cost_layers`.
-- [ ] Ensure "Honest Truth" 8-decimal scaling for prorated costs.
+- [x] Completed under Phase 6.4 — see above.
 
 ### 7.2 Price Lists & Discounts API
-- [ ] `PriceListController` — CRUD (`/api/price-lists`).
-- [ ] `PriceListItemController` — manage per-product prices within a list.
-- [ ] `DiscountController` — CRUD for discount rules.
-- [ ] Price list assignment: to customer, to customer group, or default.
-- [ ] Price resolution logic on SO creation: customer price list → default list → product.selling_price.
+- [x] `DiscountController` — CRUD for scoped discount rules (product / category / customer) with `active` scope.
+- [x] Discount min-value guard: `min:0.01` — rejects semantically meaningless zero-value discounts.
+- [~] `PriceListController` — CRUD exists but **UI decoupled**. Price Lists are architecturally incompatible with UOM-scaled unit pricing: a single price list entry cannot represent a price across multiple packaging units (e.g., Box vs Piece). Backend schema and API remain dormant and safe. Future option: UOM-aware price list tiers.
+- [x] **Discounts page** (`/discounts`) — manage percentage & fixed rules with validity windows and scope targeting.
+
+### 7.3 Purchase Order UI Polish
+- [x] Fixed critical CSS grid bug on `PurchaseOrders/Show.vue` — Landed Costs panel had no `col-span` wrapper, breaking the 12-column grid layout.
+- [x] Left sidebar (col-span-3): Order Metadata → GRN History → Return History → Landed Costs.
+- [x] Right content (col-span-9): Line Items DataTable with header bar (line count) and Financial Summary Footer (Order Total + Overhead).
+- [x] Action buttons: `flex-wrap` prevents overflow on narrower viewports.
 
 ---
 

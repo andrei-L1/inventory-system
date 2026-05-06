@@ -80,7 +80,7 @@ onMounted(loadDashboard);
             </div>
             <div class="flex items-center gap-4">
                 <button @click="loadDashboard" 
-                        class="bg-panel border border-panel-border text-secondary hover:text-primary px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 flex items-center gap-3 shadow-lg hover:border-zinc-700"
+                        class="bg-panel border border-panel-border text-secondary hover:text-primary px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 flex items-center gap-3 shadow-lg hover:border-panel-border-hover"
                 >
                     <i class="pi pi-refresh" :class="{ 'pi-spin': loading }"></i>
                     <span>REFRESH</span>
@@ -253,7 +253,7 @@ onMounted(loadDashboard);
                         </div>
                     </div>
                     <div v-else class="py-12 flex flex-col items-center justify-center border border-dashed border-panel-border/50 rounded-2xl bg-deep/20">
-                        <i class="pi pi-inbox text-zinc-800 text-3xl mb-4"></i>
+                        <i class="pi pi-inbox text-muted/20 text-3xl mb-4"></i>
                         <span class="text-muted font-mono text-[10px] uppercase tracking-[0.3em]">No recent activity found</span>
                     </div>
                  </div>

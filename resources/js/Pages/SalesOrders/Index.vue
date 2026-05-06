@@ -74,7 +74,7 @@ const getStatusColor = (statusName) => {
                             v-model="search" 
                             @input="loadSalesOrders"
                             placeholder="Search orders..." 
-                            class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-zinc-300 focus:!border-teal-500/50 !h-11 !rounded-xl transition-all"
+                            class="!w-full md:!w-72 !pl-11 !pr-4 !bg-deep !border-panel-border !text-sm !text-primary focus:!border-teal-500/50 !h-11 !rounded-xl transition-all"
                         />
                     </div>
                     <Link href="/sales-orders/create" class="no-underline pb-1">
@@ -82,7 +82,7 @@ const getStatusColor = (statusName) => {
                             v-if="can('manage-sales-orders')" 
                             icon="pi pi-plus" 
                             label="New Quotation" 
-                            class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-zinc-950 font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all"
+                            class="p-button-sm !bg-teal-500 hover:!bg-teal-600 !border-none !text-primary font-bold shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all"
                         />
                     </Link>
                 </div>
@@ -159,9 +159,9 @@ const getStatusColor = (statusName) => {
 <style scoped>
 /* ─── DataTable ────────────────────────────────────────────────── */
 :deep(.p-datatable .p-datatable-thead > tr > th) {
-    background: #09090b; /* zinc-950 */
-    border-bottom: 1px solid rgba(39, 39, 42, 0.8); /* zinc-800 */
-    color: #a1a1aa; /* zinc-400 */
+    background: var(--bg-panel-hover);
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
@@ -174,40 +174,57 @@ const getStatusColor = (statusName) => {
     cursor: pointer;
 }
 :deep(.p-datatable .p-datatable-tbody > tr:hover) {
-    background: rgba(39, 39, 42, 0.4); /* zinc-800/40 */
+    background: var(--bg-panel-hover);
 }
 :deep(.p-datatable .p-datatable-tbody > tr > td) {
-    border-bottom: 1px solid rgba(39, 39, 42, 0.5); /* zinc-800/50 */
-    color: #e4e4e7; /* zinc-200 */
+    border-bottom: 1px solid var(--bg-panel-border);
+    color: var(--text-primary);
     padding: 1rem;
 }
 :deep(.p-tag) {
-    background: rgba(39, 39, 42, 0.8);
+    background: var(--bg-panel-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--bg-panel-border);
 }
 :deep(.p-tag.p-tag-warning) {
     background: rgba(245, 158, 11, 0.1);
-    color: #fbbf24;
+    color: #d97706; /* Amber 600 - Darker for better visibility on light bg */
     border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-warning) {
+    color: #fbbf24; /* Amber 400 - Original for dark mode */
 }
 :deep(.p-tag.p-tag-info) {
     background: rgba(14, 165, 233, 0.1);
-    color: #38bdf8;
+    color: #0284c7; /* Sky 600 */
     border: 1px solid rgba(14, 165, 233, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-info) {
+    color: #38bdf8;
 }
 :deep(.p-tag.p-tag-success) {
     background: rgba(16, 185, 129, 0.1);
-    color: #34d399;
+    color: #059669; /* Emerald 600 */
     border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-success) {
+    color: #34d399;
 }
 :deep(.p-tag.p-tag-danger) {
     background: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    color: #dc2626; /* Red 600 */
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-danger) {
+    color: #f87171;
 }
 :deep(.p-tag.p-tag-help) {
     background: rgba(139, 92, 246, 0.1);
-    color: #a78bfa;
+    color: #7c3aed; /* Violet 600 */
     border: 1px solid rgba(139, 92, 246, 0.2);
+}
+.app-dark :deep(.p-tag.p-tag-help) {
+    color: #a78bfa;
 }
 </style>
 

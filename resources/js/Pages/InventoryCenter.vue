@@ -445,8 +445,8 @@ const listboxPt = {
 
 const tablePt = {
     root: { class: '!bg-transparent' },
-    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' },
-    header: { class: '!bg-panel/60 !border-panel-border !text-secondary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
+    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' },
+    header: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
 };
 </script>
 
@@ -488,7 +488,7 @@ const tablePt = {
                             <template #option="slotProps">
                                 <div class="flex flex-col gap-1 w-full py-1">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-[11px] font-bold text-zinc-100 uppercase tracking-tight">{{ slotProps.option.abbreviation }}</span>
+                                        <span class="text-[11px] font-bold text-primary uppercase tracking-tight">{{ slotProps.option.abbreviation }}</span>
                                         <span v-if="uomConversions.find(c => c.product_id === selectedProduct?.id && c.from_uom_id === slotProps.option.id)" 
                                               class="text-[8px] px-1.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded font-black tracking-widest leading-none">
                                             CUSTOM
@@ -502,14 +502,14 @@ const tablePt = {
                         </Select>
                     </div>
                     <button @click="toggleMenu" 
-                            class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
+                            class="bg-emerald-500 hover:bg-emerald-400 text-primary px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center gap-3">
                         <i class="pi pi-plus text-sm"></i>
                         <span>New Movement</span>
                     </button>
                     <Menu ref="menu" :model="movementOptions" :popup="true" class="!bg-panel !border-panel-border !p-2 !rounded-xl !min-w-[200px]" :pt="{
-                        itemlink: { class: 'hover:!bg-panel-hover !rounded-lg !p-3 transition-all' },
-                        itemlabel: { class: '!text-[10px] !font-bold !text-secondary !uppercase !tracking-widest' },
-                        itemicon: { class: '!text-secondary !text-sm' }
+                        itemlink: { class: 'hover:!bg-panel-hover !rounded-lg !p-3 transition-all text-primary' },
+                        itemlabel: { class: '!text-[10px] !font-bold !uppercase !tracking-widest !text-primary' },
+                        itemicon: { class: '!text-primary !text-sm' }
                     }" />
                 </div>
             </div>
@@ -521,7 +521,7 @@ const tablePt = {
                     <div class="p-4 border-b border-panel-border bg-panel/60">
                         <div class="flex items-center gap-3 mb-5">
                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Product List</span>
+                            <span class="text-[10px] font-bold text-secondary tracking-[0.2em] uppercase font-mono leading-none">Product List</span>
                         </div>
                         <div class="relative">
                             <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"></i>
@@ -578,11 +578,11 @@ const tablePt = {
                                         <div class="flex items-center gap-4 mb-3">
                                             <h1 class="text-3xl font-bold text-primary tracking-tighter m-0">{{ selectedProduct.name }}</h1>
                                             <div class="flex flex-wrap gap-2">
-                                                <span class="text-[9px] font-bold px-3 py-1 bg-panel-hover/80 border border-zinc-700 rounded-full text-secondary uppercase tracking-widest font-mono">{{ selectedProduct.category?.name || 'PRODUCT' }}</span>
+                                                <span class="text-[9px] font-bold px-3 py-1 bg-panel-hover/80 border border-panel-border rounded-full text-secondary uppercase tracking-widest font-mono">{{ selectedProduct.category?.name || 'PRODUCT' }}</span>
                                                 <span v-if="selectedProduct.preferred_vendor" class="text-[9px] font-bold px-3 py-1 bg-sky-500/10 border border-sky-500/20 rounded-full text-sky-400 uppercase tracking-widest font-mono">OWNED BY: {{ selectedProduct.preferred_vendor.name }}</span>
                                                 <span v-else class="text-[9px] font-bold px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-amber-400 uppercase tracking-widest font-mono">STOCK: INTERNAL</span>
                                                 <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest font-mono border"
-                                                      :class="selectedProduct.is_active !== false ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-panel-hover/80 border-zinc-700 text-secondary'"
+                                                      :class="selectedProduct.is_active !== false ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-panel-hover/80 border-panel-border text-secondary'"
                                                 >STATUS: {{ selectedProduct.is_active !== false ? 'ACTIVE' : 'INACTIVE' }}</span>
                                             </div>
                                         </div>
@@ -620,7 +620,7 @@ const tablePt = {
                                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-x-4 gap-y-4">
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">SKU</label>
-                                        <div class="h-10 bg-deep border border-zinc-900 rounded-lg flex items-center px-4">
+                                        <div class="h-10 bg-deep border border-panel-border rounded-lg flex items-center px-4">
                                             <span class="text-secondary font-mono text-xs font-bold">{{ selectedProduct.sku }}</span>
                                         </div>
                                     </div>
@@ -645,11 +645,11 @@ const tablePt = {
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Reorder Point</label>
-                                        <span class="text-zinc-300 font-mono font-bold text-lg tracking-tight">{{ getScaledQty(selectedViewUomId || selectedProduct.uom_id, selectedProduct.reorder_point, selectedProduct.id) }}</span>
+                                        <span class="text-secondary font-mono font-bold text-lg tracking-tight">{{ getScaledQty(selectedViewUomId || selectedProduct.uom_id, selectedProduct.reorder_point, selectedProduct.id) }}</span>
                                     </div>
                                     <div class="flex flex-col gap-2">
                                         <label class="text-[10px] font-bold text-muted uppercase tracking-widest font-mono">Unit of Measure</label>
-                                        <span class="text-zinc-300 font-bold uppercase text-xs">
+                                        <span class="text-secondary font-bold uppercase text-xs">
                                             {{ selectedViewUomId ? uoms.find(u => u.id === selectedViewUomId)?.name : selectedProduct.uom?.name }}
                                         </span>
                                     </div>
@@ -660,7 +660,7 @@ const tablePt = {
                                 </div>
 
                                 <!-- Quick Actions Toolbar -->
-                                <div class="mt-6 pt-6 border-t border-zinc-900 flex items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-1000">
+                                <div class="mt-6 pt-6 border-t border-panel-border flex items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-1000">
                                     <div class="flex flex-col">
                                         <span class="text-[9px] font-bold text-muted uppercase tracking-[0.3em] font-mono leading-none mb-1">Actions</span>
                                         <span class="text-[11px] font-bold text-secondary uppercase tracking-tight">Post Movement</span>
@@ -685,7 +685,7 @@ const tablePt = {
                                         <button @click="openReorderRulesDialog" 
                                                 class="px-6 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-500 hover:text-primary transition-all active:scale-95 flex items-center gap-2 ml-4 relative">
                                             <i class="pi pi-cog" /> Reorder Rules
-                                            <span class="absolute -top-2 -right-2 w-3 h-3 bg-indigo-500 rounded-full animate-pulse border-2 border-zinc-900"></span>
+                                            <span class="absolute -top-2 -right-2 w-3 h-3 bg-indigo-500 rounded-full animate-pulse border-2 border-panel-border"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -704,7 +704,7 @@ const tablePt = {
                             <div class="px-8 py-4 border-b border-panel-border bg-panel/60 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <i class="pi pi-map-marker text-emerald-400 text-xs"></i>
-                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Storage Breakdown</span>
+                                    <span class="text-[10px] font-bold text-secondary tracking-[0.25em] uppercase font-mono">Storage Breakdown</span>
                                 </div>
                                 <span class="text-[9px] font-bold text-emerald-500 font-mono tracking-tighter uppercase">Available in these areas</span>
                             </div>
@@ -734,7 +734,7 @@ const tablePt = {
                             <div class="px-8 py-4 border-b border-panel-border bg-panel/60 flex items-center justify-between">
                                 <div class="flex items-center gap-4">
                                     <i class="pi pi-database text-sky-400 text-xs"></i>
-                                    <span class="text-[10px] font-bold text-zinc-300 tracking-[0.25em] uppercase font-mono">Inventory Costing ({{ selectedProduct?.costing_method || 'FIFO' }})</span>
+                                    <span class="text-[10px] font-bold text-secondary tracking-[0.25em] uppercase font-mono">Inventory Costing ({{ selectedProduct?.costing_method || 'FIFO' }})</span>
                                 </div>
                                 <span class="text-[9px] font-bold text-sky-400 font-mono tracking-tighter uppercase">In Stock</span>
                             </div>
@@ -808,16 +808,16 @@ const tablePt = {
                         <div class="px-5 py-4 border-b border-panel-border/60 bg-panel/80 flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                                <span class="text-[11px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono">Transaction History</span>
+                                <span class="text-[11px] font-bold text-secondary tracking-[0.2em] uppercase font-mono">Transaction History</span>
                             </div>
                             <div class="flex items-center gap-4">
                                 <div class="flex items-center gap-2 px-3 py-1.5 bg-deep border border-panel-border rounded-lg group hover:border-sky-500/30 transition-all cursor-pointer" @click="showHighPrecision = !showHighPrecision">
                                     <div class="w-6 h-3 rounded-full bg-panel-hover relative transition-colors duration-300" :class="showHighPrecision ? 'bg-sky-500/20' : ''">
-                                        <div class="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-zinc-500 transition-all duration-300 shadow-lg" :class="showHighPrecision ? 'translate-x-3 !bg-sky-400' : ''"></div>
+                                        <div class="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-muted transition-all duration-300 shadow-lg" :class="showHighPrecision ? 'translate-x-3 !bg-sky-400' : ''"></div>
                                     </div>
                                     <span class="text-[9px] font-bold uppercase tracking-widest font-mono transition-colors" :class="showHighPrecision ? 'text-sky-400' : 'text-muted'">Audit Mode</span>
                                 </div>
-                                <span class="bg-panel-hover/60 text-secondary px-3 py-1 rounded text-[10px] font-bold border border-zinc-700 font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
+                                <span class="bg-panel-hover/60 text-secondary px-3 py-1 rounded text-[10px] font-bold border border-panel-border font-mono tracking-tighter">{{ historyMeta.total }} RECORDS</span>
                             </div>
                         </div>
 
@@ -828,7 +828,7 @@ const tablePt = {
                                 <input
                                     type="date"
                                     v-model="historyFilters.date_from"
-                                    class="h-9 px-3 bg-deep border border-panel-border rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                    class="h-9 px-3 bg-deep border border-panel-border rounded-lg text-primary text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
                                 />
                             </div>
                             <div class="flex flex-col gap-1">
@@ -836,7 +836,7 @@ const tablePt = {
                                 <input
                                     type="date"
                                     v-model="historyFilters.date_to"
-                                    class="h-9 px-3 bg-deep border border-panel-border rounded-lg text-zinc-300 text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
+                                    class="h-9 px-3 bg-deep border border-panel-border rounded-lg text-primary text-xs font-mono focus:border-emerald-500/40 focus:outline-none transition-colors"
                                 />
                             </div>
                             <div class="flex flex-col gap-1">
@@ -847,17 +847,17 @@ const tablePt = {
                                     optionLabel="label"
                                     optionValue="value"
                                     class="!bg-deep !border-panel-border !h-9 !rounded-lg !text-[11px] font-mono !w-40"
-                                    pt:label:class="!text-zinc-300 !p-2 !text-[11px]"
+                                    pt:label:class="!text-primary !p-2 !text-[11px]"
                                     pt:dropdown:class="!text-muted !w-6"
                                 />
                             </div>
                             <div class="flex gap-2 pb-0.5">
                                 <button @click="applyHistoryFilters"
-                                        class="h-9 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-zinc-950 transition-all active:scale-95">
+                                        class="h-9 px-5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-primary transition-all active:scale-95">
                                     Apply
                                 </button>
                                 <button @click="resetHistoryFilters"
-                                        class="h-9 px-4 rounded-lg bg-panel-hover/60 border border-zinc-700 text-secondary text-[10px] font-bold uppercase tracking-widest hover:text-primary hover:border-zinc-500 transition-all">
+                                        class="h-9 px-4 rounded-lg bg-panel-hover/60 border border-panel-border text-secondary text-[10px] font-bold uppercase tracking-widest hover:text-primary hover:border-panel-border-hover transition-all">
                                     Reset
                                 </button>
                             </div>
@@ -977,14 +977,14 @@ const tablePt = {
                                             <i class="pi pi-send text-[10px]"></i> {{ data.so_number || data.reference_doc }}
                                         </div>
                                         <span v-else-if="data.reference_doc" class="text-muted font-mono text-[10px] uppercase truncate max-w-[140px]">{{ data.reference_doc }}</span>
-                                        <span v-else class="text-zinc-800 font-mono text-[11px]">Internal</span>
+                                        <span v-else class="text-muted font-mono text-[11px]">Internal</span>
                                     </template>
                                 </Column>
 
                                 <Column field="status" header="Status" style="width: 110px">
                                      <template #body="{ data }">
                                         <div class="inline-flex items-center gap-2">
-                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'"></span>
+                                            <span class="w-1.5 h-1.5 rounded-full" :class="data.status.name.toLowerCase() === 'posted' ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]' : 'bg-panel-hover border border-panel-border'"></span>
                                             <span class="text-[10px] font-bold tracking-widest font-mono" :class="data.status.name.toLowerCase() === 'posted' ? 'text-primary' : 'text-muted'">{{ data.status.name.toUpperCase() }}</span>
                                         </div>
                                     </template>
@@ -1001,12 +1001,12 @@ const tablePt = {
                                 <button
                                     @click="loadHistory(historyMeta.current_page - 1)"
                                     :disabled="historyMeta.current_page <= 1"
-                                    class="h-8 px-4 rounded-lg bg-panel-hover border border-zinc-700 text-secondary text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    class="h-8 px-4 rounded-lg bg-panel-hover border border-panel-border text-secondary text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                 ><i class="pi pi-chevron-left text-[9px]"></i> Prev</button>
                                 <button
                                     @click="loadHistory(historyMeta.current_page + 1)"
                                     :disabled="historyMeta.current_page >= historyMeta.last_page"
-                                    class="h-8 px-4 rounded-lg bg-panel-hover border border-zinc-700 text-secondary text-[10px] font-bold uppercase tracking-widest hover:border-zinc-500 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    class="h-8 px-4 rounded-lg bg-panel-hover border border-panel-border text-secondary text-[10px] font-bold uppercase tracking-widest hover:border-panel-border-hover hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                 >Next <i class="pi pi-chevron-right text-[9px]"></i></button>
                             </div>
                         </div>
@@ -1048,7 +1048,7 @@ const tablePt = {
                         <div v-for="rule in reorderRules" :key="rule.id" 
                              @click="editRule(rule)"
                              class="p-4 rounded-xl border cursor-pointer transition-all group"
-                             :class="ruleForm.id === rule.id ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-deep border-panel-border hover:border-zinc-700'">
+                             :class="ruleForm.id === rule.id ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-deep border-panel-border hover:border-panel-border-hover'">
                             <div class="flex justify-between items-start mb-2">
                                 <span class="text-xs font-bold text-primary truncate max-w-[150px]">{{ rule.location_name }}</span>
                                 <span class="text-[9px] font-bold px-2 py-0.5 rounded text-primary" :class="rule.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-panel-hover text-secondary'">{{ rule.is_active ? 'ACTIVE' : 'INACTIVE' }}</span>
@@ -1104,8 +1104,8 @@ const tablePt = {
                     <div class="pt-8 mt-8 border-t border-panel-border flex justify-between items-center gap-4">
                         <button v-if="ruleForm.id" @click="deleteRule(ruleForm.id)" class="px-5 h-12 rounded-lg text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20">Delete</button>
                         <div class="flex-1"></div>
-                        <button @click="prepareNewRule" class="bg-transparent border border-panel-border text-secondary hover:text-primary hover:border-zinc-600 px-8 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest transition-colors flex items-center justify-center">Clear</button>
-                        <button @click="saveRule" :disabled="savingRule" class="bg-emerald-500 border-none text-zinc-950 px-10 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center min-w-[140px]">
+                        <button @click="prepareNewRule" class="bg-transparent border border-panel-border text-secondary hover:text-primary hover:border-panel-border-hover px-8 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest transition-colors flex items-center justify-center">Clear</button>
+                        <button @click="saveRule" :disabled="savingRule" class="bg-emerald-500 border-none text-primary px-10 h-12 rounded-lg font-bold text-[11px] uppercase tracking-widest hover:bg-emerald-400 active:scale-95 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center min-w-[140px]">
                             <i v-if="savingRule" class="pi pi-spin pi-spinner mr-2"></i>
                             {{ savingRule ? 'SAVING...' : 'SAVE RULE' }}
                         </button>

@@ -8,11 +8,11 @@
             :class="[
                 collapsed ? 'w-20' : 'w-72',
                 'fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-500 ease-in-out',
-                isDark ? 'bg-[#111113] border-r border-zinc-900/80' : 'bg-white border-r border-slate-200 shadow-sm'
+                isDark ? 'bg-[#111113] border-r border-panel-border/80' : 'bg-panel border-r border-panel-border shadow-sm'
             ]"
         >
             <!-- Sidebar Header: Brand -->
-            <div :class="['h-20 flex items-center px-6 border-b transition-colors', isDark ? 'border-zinc-900/80 bg-zinc-900/20' : 'border-slate-100 bg-slate-50/50']">
+            <div :class="['h-20 flex items-center px-6 border-b transition-colors', isDark ? 'border-panel-border/80 bg-panel/20' : 'border-panel-border/30 bg-panel/50']">
                 <div class="flex items-center gap-4 overflow-hidden">
                     <div class="min-w-[32px] w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.3)]">
                         <i class="pi pi-server text-white text-sm"></i>
@@ -29,7 +29,7 @@
                 <div v-for="(section, sIndex) in navSections" :key="section.label" :class="{ 'mt-8': sIndex > 0 }">
                     <!-- Section Header -->
                     <div v-if="!collapsed" class="px-4 mb-3">
-                        <span :class="['text-[9px] font-black uppercase tracking-[0.3em] font-mono leading-none', isDark ? 'text-zinc-500' : 'text-slate-400']">
+                        <span :class="['text-[9px] font-black uppercase tracking-[0.3em] font-mono leading-none', isDark ? 'text-muted' : 'text-secondary']">
                             {{ section.label }}
                         </span>
                     </div>
@@ -42,8 +42,8 @@
                                 :href="item.href"
                                 :class="[
                                     page.url.startsWith(item.href) 
-                                        ? (isDark ? 'bg-zinc-900/60 text-white border-zinc-700/50 shadow-[inset_0_1px_10px_rgba(0,0,0,0.2)]' : 'bg-sky-50 text-sky-700 border-sky-200 shadow-sm')
-                                        : (isDark ? 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40 border-transparent' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border-transparent'),
+                                        ? (isDark ? 'bg-panel-hover/60 text-white border-panel-border/50 shadow-[inset_0_1px_10px_rgba(0,0,0,0.2)]' : 'bg-sky-50 text-sky-700 border-sky-200 shadow-sm')
+                                        : (isDark ? 'text-muted hover:text-white hover:bg-panel-hover/40 border-transparent' : 'text-secondary hover:text-primary hover:bg-panel-hover border-transparent'),
                                     'group flex items-center gap-4 px-4 py-3.5 rounded-xl border transition-all duration-300 no-underline'
                                 ]"
                                 :title="item.label"
@@ -70,10 +70,10 @@
             </nav>
 
             <!-- Sidebar Footer: Collapse Toggle -->
-            <div :class="['p-4 border-t', isDark ? 'border-zinc-900/80 bg-[#111113]' : 'border-slate-200 bg-slate-50']">
+            <div :class="['p-4 border-t', isDark ? 'border-panel-border/80 bg-[#111113]' : 'border-panel-border bg-panel']">
                 <button 
                     @click="toggleSidebar" 
-                    :class="['w-full h-12 flex items-center justify-center rounded-xl transition-all border group no-underline', isDark ? 'bg-zinc-900/40 text-zinc-500 hover:text-white hover:bg-zinc-800/60 border-zinc-900/50 hover:border-zinc-700/50' : 'bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-100 border-slate-200 shadow-sm']"
+                    :class="['w-full h-12 flex items-center justify-center rounded-xl transition-all border group no-underline', isDark ? 'bg-panel/40 text-muted hover:text-white hover:bg-panel-hover/60 border-panel-border/50 hover:border-panel-border' : 'bg-panel-hover text-secondary hover:text-primary hover:bg-panel border-panel-border shadow-sm']"
                 >
                     <i :class="collapsed ? 'pi pi-angle-right' : 'pi pi-angle-left'" class="text-sm group-hover:scale-125 transition-transform"></i>
                     <span v-if="!collapsed" class="ml-3 text-[10px] font-bold tracking-[0.15em] uppercase font-mono">Collapse</span>
@@ -89,11 +89,11 @@
             ]"
         >
             <!-- Identity & Topbar Status -->
-            <header :class="['h-20 flex items-center justify-between px-10 sticky top-0 z-40 backdrop-blur-xl border-b transition-colors', isDark ? 'bg-[#111113]/80 border-zinc-900/80' : 'bg-white/80 border-slate-200']">
+            <header :class="['h-20 flex items-center justify-between px-10 sticky top-0 z-40 backdrop-blur-xl border-b transition-colors', isDark ? 'bg-[#111113]/80 border-panel-border/80' : 'bg-panel/80 border-panel-border']">
                 <div class="flex items-center gap-6">
                     <div class="hidden md:flex flex-col">
                         <div class="flex items-center gap-2 mb-0.5">
-                            <span :class="['text-[10px] font-bold uppercase tracking-widest font-mono', isDark ? 'text-zinc-600' : 'text-slate-400']">STATUS</span>
+                            <span :class="['text-[10px] font-bold uppercase tracking-widest font-mono', isDark ? 'text-muted' : 'text-secondary']">STATUS</span>
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                         </div>
                         <span :class="['text-[11px] font-bold tracking-tight uppercase font-mono', isDark ? 'text-white' : 'text-slate-900']">ONLINE // SECURE</span>
@@ -102,7 +102,7 @@
 
                 <div class="flex items-center gap-8">
                     <!-- Notifications -->
-                    <button :class="['relative w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer group outline-none border', isDark ? 'bg-zinc-900/40 border-zinc-800/60 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-amber-500 hover:bg-amber-50']" title="Alerts">
+                    <button :class="['relative w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer group outline-none border', isDark ? 'bg-panel/40 border-panel-border/60 text-muted hover:text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/20' : 'bg-panel-hover border-panel-border text-secondary hover:text-amber-500 hover:bg-amber-50']" title="Alerts">
                         <i class="pi pi-bell text-sm group-hover:-rotate-12 transition-transform"></i>
                         <span class="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-amber-500 border shadow-[0_0_10px_rgba(245,158,11,0.6)] animate-pulse" :class="isDark ? 'border-[#111113]' : 'border-white'"></span>
                     </button>
@@ -110,7 +110,7 @@
                     <!-- Theme Toggle -->
                     <button 
                         @click="toggleDark()"
-                        :class="['w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer group outline-none border', isDark ? 'bg-zinc-900/40 border-zinc-800/60 text-zinc-500 hover:text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/20' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-sky-600 hover:bg-sky-50']"
+                        :class="['w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer group outline-none border', isDark ? 'bg-panel/40 border-panel-border/60 text-muted hover:text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/20' : 'bg-panel-hover border-panel-border text-secondary hover:text-sky-600 hover:bg-sky-50']"
                         :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
                     >
                         <i :class="isDark ? 'pi pi-palette' : 'pi pi-palette'" class="text-sm group-hover:rotate-12 transition-transform"></i>
@@ -121,13 +121,13 @@
                         <span :class="['font-black text-[10px] tracking-widest uppercase font-mono mb-0.5', isDark ? 'text-white' : 'text-slate-900']">{{ user.username }}</span>
                         <div class="flex items-center gap-2">
                              <div class="w-1 h-1 rounded-full bg-sky-500"></div>
-                             <span :class="['text-[9px] font-bold uppercase tracking-wider font-mono', isDark ? 'text-zinc-600' : 'text-slate-400']">ROLE: {{ user.role?.toUpperCase() || 'USER' }}</span>
+                             <span :class="['text-[9px] font-bold uppercase tracking-wider font-mono', isDark ? 'text-muted' : 'text-secondary']">ROLE: {{ user.role?.toUpperCase() || 'USER' }}</span>
                         </div>
                     </div>
 
                     <!-- Logout -->
                     <Link href="/logout" method="post" as="button" 
-                          :class="['w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95 group no-underline border', isDark ? 'bg-zinc-900/40 border-zinc-800/60 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-red-500 hover:bg-red-50']"
+                          :class="['w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95 group no-underline border', isDark ? 'bg-panel/40 border-panel-border/60 text-muted hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20' : 'bg-panel-hover border-panel-border text-secondary hover:text-red-500 hover:bg-red-50']"
                           title="Log Out"
                     >
                         <i class="pi pi-power-off text-base group-hover:rotate-12 transition-transform"></i>
@@ -136,11 +136,11 @@
             </header>
 
             <!-- Secondary Topbar (Global Breadcrumbs) -->
-            <div :class="['h-10 border-b flex items-center px-10', isDark ? 'bg-zinc-900/20 border-zinc-900/50' : 'bg-slate-50 border-slate-200']">
-                <div :class="['flex items-center gap-2 text-[9px] font-bold font-mono tracking-widest uppercase', isDark ? 'text-zinc-600' : 'text-slate-400']">
+            <div :class="['h-10 border-b flex items-center px-10', isDark ? 'bg-panel/20 border-panel-border/50' : 'bg-panel-hover border-panel-border']">
+                <div :class="['flex items-center gap-2 text-[9px] font-bold font-mono tracking-widest uppercase', isDark ? 'text-muted' : 'text-secondary']">
                     <span :class="['cursor-pointer', isDark ? 'hover:text-zinc-400' : 'hover:text-slate-600']">SYSTEM</span>
                     <i class="pi pi-chevron-right text-[7px]" />
-                    <span :class="isDark ? 'text-zinc-400' : 'text-slate-600'">{{ page.url.split('/')[1]?.toUpperCase() || 'DASHBOARD' }}</span>
+                    <span :class="isDark ? 'text-zinc-400' : 'text-secondary'">{{ page.url.split('/')[1]?.toUpperCase() || 'DASHBOARD' }}</span>
                     <i v-if="page.url.split('/').length > 2" class="pi pi-chevron-right text-[7px]" />
                     <span v-if="page.url.split('/').length > 2" class="text-sky-400/80">{{ page.url.split('/').pop().toUpperCase().replace(/-/g, ' ') }}</span>
                 </div>
@@ -213,6 +213,9 @@ const navSections = [
             { label: 'Categories', href: '/category-center', icon: 'pi pi-tags', color: 'text-orange-400' },
             { label: 'UOM Config', href: '/uom-center', icon: 'pi pi-sort-alt', color: 'text-fuchsia-400' },
             { label: 'Carriers', href: '/carriers', icon: 'pi pi-truck', color: 'text-sky-400' },
+            { label: 'Serial Registry', href: '/serials', icon: 'pi pi-barcode', color: 'text-violet-400' },
+            { label: 'Price Lists', href: '/price-lists', icon: 'pi pi-list', color: 'text-violet-500 dark:text-violet-300' },
+            { label: 'Discounts', href: '/discounts', icon: 'pi pi-percentage', color: 'text-rose-400' },
         ]
     }
 ];

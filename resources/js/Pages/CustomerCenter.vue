@@ -111,8 +111,8 @@ const listboxPt = {
 
 const tablePt = {
     root: { class: '!bg-transparent' },
-    bodyrow: { class: 'hover:!bg-white/[0.02] !transition-all duration-200' },
-    header: { class: '!bg-panel/60 !border-panel-border !text-secondary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
+    bodyrow: { class: 'hover:!bg-panel-hover !transition-all duration-200' },
+    header: { class: '!bg-panel-hover !border-panel-border !text-primary !text-[10px] !uppercase !font-bold !tracking-[0.15em] !py-4 !px-8' }
 };
 
 const loadCustomers = async () => {
@@ -267,7 +267,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                 
                 <div class="flex gap-4 items-center">
                     <button v-if="can('manage-customers')" @click="openNew" 
-                            class="bg-sky-500 hover:bg-sky-400 text-zinc-950 px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(14,165,233,0.2)] flex items-center gap-3">
+                            class="bg-sky-500 hover:bg-sky-400 text-primary px-6 h-12 font-bold text-[10px] uppercase tracking-[0.2em] transition-all rounded-xl active:scale-95 shadow-[0_0_20px_rgba(14,165,233,0.2)] flex items-center gap-3">
                         <i class="pi pi-user-plus text-sm"></i>
                         <span>New Customer</span>
                     </button>
@@ -277,9 +277,9 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                         <span>Quick Actions</span>
                     </button>
                     <Menu ref="menu" :model="actionOptions" :popup="true" class="!bg-panel !border-panel-border !p-2 !rounded-xl !min-w-[200px]" :pt="{
-                        itemlink: { class: 'hover:!bg-panel-hover !rounded-lg !p-3 transition-all' },
-                        itemlabel: { class: '!text-[10px] !font-bold !text-secondary !uppercase !tracking-widest' },
-                        itemicon: { class: '!text-secondary !text-sm' }
+                        itemlink: { class: 'hover:!bg-panel-hover !rounded-lg !p-3 transition-all text-primary' },
+                        itemlabel: { class: '!text-[10px] !font-bold !uppercase !tracking-widest !text-primary' },
+                        itemicon: { class: '!text-primary !text-sm' }
                     }" />
                 </div>
             </div>
@@ -292,7 +292,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                     <div class="p-4 border-b border-panel-border bg-panel/60">
                         <div class="flex items-center gap-3 mb-5">
                             <div class="w-2 h-2 rounded-full bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]"></div>
-                            <span class="text-[10px] font-bold text-zinc-300 tracking-[0.2em] uppercase font-mono leading-none">Customer Registry</span>
+                            <span class="text-[10px] font-bold text-secondary tracking-[0.2em] uppercase font-mono leading-none">Customer Registry</span>
                         </div>
                         <div class="relative">
                             <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-sm"></i>
@@ -346,7 +346,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                                         <div class="flex items-center gap-4 mb-3">
                                             <h1 class="text-3xl font-bold text-primary tracking-tighter m-0">{{ selectedCustomer.name }}</h1>
                                             <div class="flex flex-wrap gap-2">
-                                                <span class="text-[9px] font-bold px-3 py-1 bg-panel-hover/80 border border-zinc-700 rounded-full text-secondary uppercase tracking-widest font-mono">CUSTOMER</span>
+                                                <span class="text-[9px] font-bold px-3 py-1 bg-panel-hover/80 border border-panel-border rounded-full text-secondary uppercase tracking-widest font-mono">CUSTOMER</span>
                                                 <span class="text-[9px] font-bold px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 uppercase tracking-widest font-mono">TIN: {{ selectedCustomer.tax_number || 'N/A' }}</span>
                                                 <span class="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest font-mono border"
                                                       :class="selectedCustomer.is_active ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'"
@@ -403,7 +403,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                         <!-- Activity Tabs & Ledgers -->
                         <section class="bg-panel/40 border border-panel-border/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col backdrop-blur-sm min-h-[500px]">
                             <!-- Tab Bar -->
-                            <div class="px-8 border-b border-panel-border/60 bg-panel/60 flex items-center gap-8 h-16 divide-x divide-zinc-800/40">
+                            <div class="px-8 border-b border-panel-border/60 bg-panel/60 flex items-center gap-8 h-16 divide-x divide-panel-border/40">
                                 <button @click="activeTab = 'orders'"
                                     class="h-full px-2 text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative border-none bg-transparent cursor-pointer"
                                     :class="activeTab === 'orders' ? 'text-sky-400' : 'text-secondary hover:text-zinc-300'">
@@ -649,19 +649,19 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                                 </Column>
                                 <Column field="description" header="Description">
                                     <template #body="{ data }">
-                                        <span class="text-zinc-300 text-xs">{{ data.description }}</span>
+                                        <span class="text-secondary text-xs">{{ data.description }}</span>
                                     </template>
                                 </Column>
                                 <Column header="Debit" style="width: 130px" class="text-right">
                                     <template #body="{ data }">
-                                        <span v-if="Number(data.debit) > 0" class="font-mono text-xs text-zinc-300 font-bold">{{ formatCurrency(data.debit) }}</span>
-                                        <span v-else class="text-zinc-800 font-mono">-</span>
+                                        <span v-if="Number(data.debit) > 0" class="font-mono text-xs text-secondary font-bold">{{ formatCurrency(data.debit) }}</span>
+                                        <span v-else class="text-muted font-mono">-</span>
                                     </template>
                                 </Column>
                                 <Column header="Credit" style="width: 130px" class="text-right">
                                     <template #body="{ data }">
                                         <span v-if="Number(data.credit) > 0" class="font-mono text-xs text-emerald-400 font-bold">{{ formatCurrency(data.credit) }}</span>
-                                        <span v-else class="text-zinc-800 font-mono">-</span>
+                                        <span v-else class="text-muted font-mono">-</span>
                                     </template>
                                 </Column>
                                 <Column field="running_balance" header="Running Balance" style="width: 150px; text-align: right">
@@ -710,7 +710,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
             >
                 <div class="bg-deep border border-panel-border rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden ring-1 ring-white/5">
                     <!-- Dialog Header -->
-                    <div class="px-8 py-6 border-b border-zinc-900 bg-panel/50 flex justify-between items-center relative overflow-hidden">
+                    <div class="px-8 py-6 border-b border-panel-border bg-panel/50 flex justify-between items-center relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-full h-1 bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.5)]"></div>
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
@@ -744,16 +744,16 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
 
                             <div class="col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Email</label>
-                                <InputText v-model="customerForm.email" placeholder="client@company.com" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30 font-mono text-xs" />
+                                <InputText v-model="customerForm.email" placeholder="client@company.com" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30 font-mono text-xs" />
                             </div>
                             <div class="col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Phone</label>
-                                <InputText v-model="customerForm.phone" placeholder="+63 000 000 0000" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30 font-mono text-xs" />
+                                <InputText v-model="customerForm.phone" placeholder="+63 000 000 0000" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30 font-mono text-xs" />
                             </div>
 
                             <div class="col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Tax / VAT Number</label>
-                                <InputText v-model="customerForm.tax_number" placeholder="VAT-000000" class="!bg-panel/50 !border-panel-border !text-zinc-300 !h-12 focus:!border-sky-500/30 font-mono text-xs" />
+                                <InputText v-model="customerForm.tax_number" placeholder="VAT-000000" class="!bg-panel/50 !border-panel-border !text-secondary !h-12 focus:!border-sky-500/30 font-mono text-xs" />
                             </div>
                             <div class="col-span-6 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Credit Limit</label>
@@ -763,12 +763,12 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
 
                             <div class="col-span-12 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Billing Address</label>
-                                <Textarea v-model="customerForm.billing_address" rows="2" placeholder="Full billing address..." class="!bg-panel/50 !border-panel-border !text-zinc-300 focus:!border-sky-500/30 text-xs" />
+                                <Textarea v-model="customerForm.billing_address" rows="2" placeholder="Full billing address..." class="!bg-panel/50 !border-panel-border !text-secondary focus:!border-sky-500/30 text-xs" />
                             </div>
 
                             <div class="col-span-12 flex flex-col gap-2">
                                 <label class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Shipping Address</label>
-                                <Textarea v-model="customerForm.shipping_address" rows="2" placeholder="Primary delivery address..." class="!bg-panel/50 !border-panel-border !text-zinc-300 focus:!border-sky-500/30 text-xs" />
+                                <Textarea v-model="customerForm.shipping_address" rows="2" placeholder="Primary delivery address..." class="!bg-panel/50 !border-panel-border !text-secondary focus:!border-sky-500/30 text-xs" />
                             </div>
 
                             <div class="col-span-12 p-4 bg-panel/40 border border-panel-border/60 rounded-xl flex items-center justify-between">
@@ -777,17 +777,17 @@ const formatCurrency = (val) => new Intl.NumberFormat('en-PH', { style: 'currenc
                                     <p class="text-secondary text-[10px] font-mono m-0 mt-0.5 uppercase tracking-tighter">{{ customerForm.is_active ? 'ENABLED — Full System Access' : 'DISABLED — Read-Only Archive' }}</p>
                                 </div>
                                 <ToggleSwitch v-model="customerForm.is_active"
-                                              :pt="{ slider: ({ props }) => ({ class: props.modelValue ? '!bg-sky-500' : '!bg-zinc-700' }) }" />
+                                              :pt="{ slider: ({ props }) => ({ class: props.modelValue ? '!bg-sky-500' : '!bg-panel-border' }) }" />
                             </div>
                         </div>
                     </div>
 
                     <!-- Dialog Footer -->
-                    <div class="px-8 py-5 border-t border-zinc-900 bg-panel/50 flex justify-end gap-3">
-                        <button @click="dialogVisible = false" class="px-5 py-2.5 rounded-xl bg-transparent border border-panel-border text-secondary hover:text-primary hover:border-zinc-600 font-bold text-[10px] uppercase tracking-widest transition-colors">
+                    <div class="px-8 py-5 border-t border-panel-border bg-panel/50 flex justify-end gap-3">
+                        <button @click="dialogVisible = false" class="px-5 py-2.5 rounded-xl bg-transparent border border-panel-border text-secondary hover:text-primary hover:border-panel-border font-bold text-[10px] uppercase tracking-widest transition-colors">
                             Cancel
                         </button>
-                        <button @click="saveCustomer" class="px-8 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-zinc-950 font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-sky-500/10 active:scale-95">
+                        <button @click="saveCustomer" class="px-8 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-primary font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-sky-500/10 active:scale-95">
                             {{ customerForm.id ? 'Push Updates' : 'Commit Registry' }}
                         </button>
                     </div>
