@@ -688,7 +688,7 @@ const openPrint = () => {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 z-10">
+                <div class="flex flex-wrap items-center gap-2 z-10 justify-end">
                     <!-- Actions based on status -->
                     <Button 
                         v-if="po.status === 'draft' && can('manage-purchase-orders')" 
@@ -889,9 +889,9 @@ const openPrint = () => {
                             </div>
                         </div>
                     </div>
-                </div>
 
                 <!-- Landed Costs (Phase 6.4) -->
+
                 <div class="bg-panel/40 border border-amber-500/20 rounded-2xl p-4 shadow-xl flex flex-col gap-3 animate-in fade-in slide-in-from-left duration-700">
                     <div class="flex items-center justify-between border-b border-white/[0.03] pb-2">
                         <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest font-mono">Landed Costs</span>
@@ -953,11 +953,15 @@ const openPrint = () => {
                         </span>
                     </div>
                 </div>
+                </div><!-- end left sidebar -->
 
                 <!-- Lines Data -->
                 <div class="col-span-12 lg:col-span-9 flex flex-col gap-4">
-                    <div class="flex-1 bg-panel/40 border border-panel-border/80 rounded-2xl flex flex-col overflow-hidden shadow-xl p-4">
-                        <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono border-b border-panel-border/50 pb-2 mb-3 block">Line Items</span>
+                    <div class="bg-panel/40 border border-panel-border/80 rounded-2xl flex flex-col overflow-hidden shadow-xl">
+                        <div class="flex items-center justify-between px-5 py-3 border-b border-panel-border/50">
+                            <span class="text-[10px] font-bold text-secondary uppercase tracking-widest font-mono">Line Items</span>
+                            <span class="text-[10px] font-mono text-muted">{{ po.lines?.length }} line{{ po.lines?.length !== 1 ? 's' : '' }}</span>
+                        </div>
                         
                         <DataTable 
                             :value="po.lines" 
@@ -1027,6 +1031,23 @@ const openPrint = () => {
                                 </template>
                             </Column>
                         </DataTable>
+
+                        <!-- Financial Summary Footer -->
+                        <div class="border-t border-panel-border/60 px-5 py-4 flex items-center justify-between bg-deep/30">
+                            <span class="text-[10px] font-mono text-muted">
+                                {{ po.lines?.length }} line{{ po.lines?.length !== 1 ? 's' : '' }}
+                            </span>
+                            <div class="flex items-center gap-8">
+                                <div v-if="landedCosts.length > 0" class="flex flex-col items-end">
+                                    <span class="text-[9px] text-muted font-mono uppercase tracking-widest">Overhead</span>
+                                    <span class="text-xs font-black font-mono text-amber-400">+₱{{ landedCosts.reduce((s, lc) => +(s + parseFloat(lc.amount || 0)).toFixed(2), 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) }}</span>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] text-muted font-mono uppercase tracking-widest">Order Total</span>
+                                    <span class="text-lg font-black font-mono text-primary">₱{{ po.formatted_total_amount }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
